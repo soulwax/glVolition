@@ -48,6 +48,8 @@ final class Scene {
   final List<AudioListener> _audioListeners = [];
   final List<AudioSource> _audioSources = [];
   final List<LineRenderer> _lines = [];
+  final List<VolumetricLightSource> _volumetricSources = [];
+  final List<ThermalSourceComponent> _thermalSources = [];
   final SpriteBatch _worldSprites = SpriteBatch(
     initialCapacity: 2048,
     sort: SpriteSort.layerThenY,
@@ -369,6 +371,21 @@ final class Scene {
     }
 
     final rs = renderSettings;
+    final camEye = graphics.camera?.eye ?? Vec3.zero;
+    final volSources = _volumetricSources.isEmpty
+        ? const <VolumetricSource>[]
+        : selectVolumetricSources(
+            sources: [
+              for (final vs in _volumetricSources)
+                if (vs._active) vs.toVolumetricSource(),
+            ],
+            referencePosition: camEye,
+          );
+    final thermSources = <ThermalSource>[
+      for (final ts in _thermalSources)
+        if (ts._active) ts.toThermalSource(),
+    ];
+
     graphics.environment = graphics.environment.copyWith(
       skybox: rs.skybox,
       clearColor: rs.clearColor,
@@ -385,9 +402,26 @@ final class Scene {
       directionalLight: sun,
       pointLights: points,
       spotLights: spots,
+      volumetricSources: volSources,
+      thermalSources: thermSources,
     );
     graphics.post = rs.post;
   }
+
+  /// Evaluates the combined thermal dissolution (`0..1`) at [worldPosition]
+  /// from all active [ThermalSourceComponent]s in this scene (E13-3).
+  double sampleThermalDissolution(
+    Vec3 worldPosition, {
+    double lingeringMemory01 = 0.0,
+  }) =>
+      ThermalFieldEngine.dissolutionAt(
+        position: worldPosition,
+        sources: [
+          for (final ts in _thermalSources)
+            if (ts._active) ts.toThermalSource(),
+        ],
+        lingeringMemory01: lingeringMemory01,
+      );
 
   void _encode(RenderEncoder encoder, FrameInput? frame) {
     if (frame != null) {

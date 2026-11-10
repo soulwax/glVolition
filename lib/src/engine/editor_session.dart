@@ -18,6 +18,10 @@ final class EditorSession {
   bool _freeLookEnabled = false;
   CameraController? _savedSceneCamera;
 
+  final int maxUndoSteps;
+  final List<_EditorHistoryEntry> _undoStack = [];
+  final List<_EditorHistoryEntry> _redoStack = [];
+
   final OrbitCameraController freeLookCamera = OrbitCameraController(
     target: Vec3.zero,
     distance: 18,
@@ -25,11 +29,69 @@ final class EditorSession {
     elevationRadians: 0.35,
   );
 
-  EditorSession(this.engine, {this.prefabs = const {}});
+  EditorSession(
+    this.engine, {
+    this.prefabs = const {},
+    this.maxUndoSteps = 32,
+  });
 
   bool get isPlaying => _inPlayMode;
   bool get isFreeLookEnabled => _freeLookEnabled;
   bool get hasSnapshot => _playModeSnapshot != null;
+  bool get canUndo => _undoStack.isNotEmpty;
+  bool get canRedo => _redoStack.isNotEmpty;
+  int get undoCount => _undoStack.length;
+  int get redoCount => _redoStack.length;
+
+  /// Records the current scene state onto the undo stack before an authoring
+  /// mutation (E13-2).
+  void recordUndoState([String label = 'edit']) {
+    _undoStack.add(_captureHistoryEntry(label));
+    if (_undoStack.length > maxUndoSteps) {
+      _undoStack.removeAt(0);
+    }
+    _redoStack.clear();
+  }
+
+  /// Reverts the scene to the most recent state pushed via [recordUndoState]
+  /// and pushes the current state onto the redo stack (E13-2).
+  bool undo() {
+    if (_undoStack.isEmpty) return false;
+    _redoStack.add(_captureHistoryEntry('redo'));
+    final prev = _undoStack.removeLast();
+    _restoreHistoryEntry(prev);
+    return true;
+  }
+
+  /// Re-applies the most recent undone state (E13-2).
+  bool redo() {
+    if (_redoStack.isEmpty) return false;
+    _undoStack.add(_captureHistoryEntry('undo'));
+    final next = _redoStack.removeLast();
+    _restoreHistoryEntry(next);
+    return true;
+  }
+
+  void clearUndoHistory() {
+    _undoStack.clear();
+    _redoStack.clear();
+  }
+
+  _EditorHistoryEntry _captureHistoryEntry(String label) => _EditorHistoryEntry(
+        label: label,
+        sceneJson: SceneSerializer.toJson(engine.scene, registry: engine.registry),
+        selectedName: selected?.name,
+      );
+
+  void _restoreHistoryEntry(_EditorHistoryEntry entry) {
+    final restored = SceneSerializer.fromJson(
+      entry.sceneJson,
+      registry: engine.registry,
+      prefabs: prefabs,
+    );
+    engine.loadScene(restored);
+    selected = entry.selectedName != null ? engine.scene.find(entry.selectedName!) : null;
+  }
 
   /// Captures the current scene as the baseline snapshot that [stopPlayMode]
   /// will restore to.
@@ -152,4 +214,16 @@ final class EditorSession {
     final s1 = projectRayOntoAxis(currentRay, initialWorldPosition, unitAxis);
     return initialWorldPosition + unitAxis * (s1 - s0);
   }
+}
+
+final class _EditorHistoryEntry {
+  final String label;
+  final Map<String, Object?> sceneJson;
+  final String? selectedName;
+
+  const _EditorHistoryEntry({
+    required this.label,
+    required this.sceneJson,
+    this.selectedName,
+  });
 }

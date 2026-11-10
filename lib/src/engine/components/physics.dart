@@ -73,6 +73,82 @@ final class BoxCollider extends Collider {
   double? _raycast(Ray ray) => ray.intersectAabb(worldBounds);
 }
 
+/// Vertical or rotated 3D capsule collider defined by a hemispherical [radius]
+/// and total [height] (E13-1).
+final class CapsuleCollider extends Collider {
+  double radius;
+  double height;
+
+  CapsuleCollider({
+    this.radius = 0.4,
+    this.height = 1.8,
+    super.center,
+    super.isTrigger,
+    super.collidesWithMask,
+  });
+
+  double get worldRadius => radius * transform.lossyScale;
+
+  /// Half-length of the interior line segment between the two hemisphere centers.
+  double get halfSegmentLength =>
+      math.max(0.0, (height * 0.5 - radius) * transform.lossyScale);
+
+  /// Bottom hemisphere center in world space.
+  Vec3 get segmentStart =>
+      worldCenter - transform.up * halfSegmentLength;
+
+  /// Top hemisphere center in world space.
+  Vec3 get segmentEnd =>
+      worldCenter + transform.up * halfSegmentLength;
+
+  /// Returns the point on the capsule's interior segment `[segmentStart, segmentEnd]`
+  /// closest to [point].
+  Vec3 closestPointOnAxis(Vec3 point) {
+    final a = segmentStart;
+    final b = segmentEnd;
+    final ab = b - a;
+    final lenSq = ab.lengthSquared;
+    if (lenSq < 1e-12) return a;
+    final t = ((point - a).dot(ab) / lenSq).clamp(0.0, 1.0);
+    return a + ab * t;
+  }
+
+  @override
+  Aabb get worldBounds {
+    final a = segmentStart;
+    final b = segmentEnd;
+    final r = Vec3(worldRadius, worldRadius, worldRadius);
+    final minPt = Vec3(
+      math.min(a.x, b.x) - r.x,
+      math.min(a.y, b.y) - r.y,
+      math.min(a.z, b.z) - r.z,
+    );
+    final maxPt = Vec3(
+      math.max(a.x, b.x) + r.x,
+      math.max(a.y, b.y) + r.y,
+      math.max(a.z, b.z) + r.z,
+    );
+    return Aabb(minPt, maxPt);
+  }
+
+  @override
+  double? _raycast(Ray ray) {
+    // Sample spheres along the capsule segment (top, middle, bottom) and AABB
+    if (ray.intersectAabb(worldBounds) == null) return null;
+    final r = worldRadius;
+    final a = segmentStart;
+    final b = segmentEnd;
+    double? best;
+    const samples = 5;
+    for (var i = 0; i <= samples; i++) {
+      final p = Vec3.lerp(a, b, i / samples);
+      final t = ray.intersectSphere(BoundingSphere(p, r));
+      if (t != null && (best == null || t < best)) best = t;
+    }
+    return best;
+  }
+}
+
 final class PhysicsHit {
   final Collider collider;
   final Vec3 point;
@@ -250,6 +326,7 @@ final class PhysicsWorld {
       final hit = switch (c) {
         SphereCollider s => _sphereAabb(s.worldCenter, s.worldRadius, bounds),
         BoxCollider b => _aabbAabb(b.worldBounds, bounds),
+        CapsuleCollider cap => _capsuleAabb(cap, bounds),
       };
       if (hit) yield c;
     }
@@ -321,6 +398,9 @@ final class PhysicsWorld {
           ),
         BoxCollider b => ray.intersectAabb(
             Aabb(b.worldBounds.min - pad, b.worldBounds.max + pad),
+          ),
+        CapsuleCollider cap => ray.intersectAabb(
+            Aabb(cap.worldBounds.min - pad, cap.worldBounds.max + pad),
           ),
       };
       if (t != null && t <= bestT) {
@@ -500,6 +580,11 @@ final class PhysicsWorld {
         (SphereCollider s, BoxCollider box) || (BoxCollider box, SphereCollider s) =>
           _sphereAabb(s.worldCenter, s.worldRadius, box.worldBounds),
         (BoxCollider b1, BoxCollider b2) => _aabbAabb(b1.worldBounds, b2.worldBounds),
+        (CapsuleCollider cap, SphereCollider s) || (SphereCollider s, CapsuleCollider cap) =>
+          _sphereSphere(cap.closestPointOnAxis(s.worldCenter), cap.worldRadius, s.worldCenter, s.worldRadius),
+        (CapsuleCollider cap, BoxCollider box) || (BoxCollider box, CapsuleCollider cap) =>
+          _capsuleAabb(cap, box.worldBounds),
+        (CapsuleCollider c1, CapsuleCollider c2) => _capsuleCapsule(c1, c2),
       };
 
   static bool _aabbAabb(Aabb a, Aabb b) =>
@@ -513,7 +598,22 @@ final class PhysicsWorld {
   static bool _intersectsSphere(Collider c, Vec3 center, double radius) => switch (c) {
         SphereCollider s => _sphereSphere(s.worldCenter, s.worldRadius, center, radius),
         BoxCollider b => _sphereAabb(center, radius, b.worldBounds),
+        CapsuleCollider cap => _sphereSphere(cap.closestPointOnAxis(center), cap.worldRadius, center, radius),
       };
+
+  static bool _capsuleAabb(CapsuleCollider cap, Aabb box) {
+    final clampedBoxCenter = cap.closestPointOnAxis(box.center);
+    return _sphereAabb(clampedBoxCenter, cap.worldRadius, box) ||
+        _sphereAabb(cap.segmentStart, cap.worldRadius, box) ||
+        _sphereAabb(cap.segmentEnd, cap.worldRadius, box);
+  }
+
+  static bool _capsuleCapsule(CapsuleCollider c1, CapsuleCollider c2) {
+    final p1 = c1.closestPointOnAxis(c2.worldCenter);
+    final p2 = c2.closestPointOnAxis(p1);
+    final p1Refined = c1.closestPointOnAxis(p2);
+    return _sphereSphere(p1Refined, c1.worldRadius, p2, c2.worldRadius);
+  }
 
   static bool _sphereSphere(Vec3 c1, double r1, Vec3 c2, double r2) {
     final r = r1 + r2;

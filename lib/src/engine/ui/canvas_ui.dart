@@ -320,6 +320,110 @@ final class UIWorldAnchor extends UIElement {
   bool get isInFrontOfCamera => _inFrontOfCamera;
 }
 
+/// Interactive single-line text input widget rendered on a [UICanvas] (E13-4).
+///
+/// Clicking inside the widget focuses it; while focused it accepts `KeyA`..`KeyZ`,
+/// `Digit0`..`Digit9`, `Space`, `Minus`, `Period`, `Backspace`, and `Enter`
+/// (which invokes [onSubmitted]).
+final class UITextField extends UIElement {
+  String text;
+  String placeholder;
+  int maxLength;
+  bool isFocused;
+  void Function(String text)? onChanged;
+  void Function(String text)? onSubmitted;
+
+  int backgroundColor;
+  int focusedBorderColor;
+  int borderColor;
+  int textColor;
+  int placeholderColor;
+  double textScale;
+
+  UITextField({
+    this.text = '',
+    this.placeholder = '',
+    this.maxLength = 64,
+    this.isFocused = false,
+    this.onChanged,
+    this.onSubmitted,
+    super.anchor,
+    super.x,
+    super.y,
+    super.width = 160,
+    super.height = 24,
+    this.backgroundColor = 0x121020F2,
+    this.focusedBorderColor = 0x5CE1E6FF,
+    this.borderColor = 0x56507AFF,
+    this.textColor = 0xFFFFFFFF,
+    this.placeholderColor = 0x8A84AAFF,
+    this.textScale = 1.0,
+    super.visible,
+  });
+
+  static const List<(String, String, String)> _keyTable = [
+    ('KeyA', 'a', 'A'),
+    ('KeyB', 'b', 'B'),
+    ('KeyC', 'c', 'C'),
+    ('KeyD', 'd', 'D'),
+    ('KeyE', 'e', 'E'),
+    ('KeyF', 'f', 'F'),
+    ('KeyG', 'g', 'G'),
+    ('KeyH', 'h', 'H'),
+    ('KeyI', 'i', 'I'),
+    ('KeyJ', 'j', 'J'),
+    ('KeyK', 'k', 'K'),
+    ('KeyL', 'l', 'L'),
+    ('KeyM', 'm', 'M'),
+    ('KeyN', 'n', 'N'),
+    ('KeyO', 'o', 'O'),
+    ('KeyP', 'p', 'P'),
+    ('KeyQ', 'q', 'Q'),
+    ('KeyR', 'r', 'R'),
+    ('KeyS', 's', 'S'),
+    ('KeyT', 't', 'T'),
+    ('KeyU', 'u', 'U'),
+    ('KeyV', 'v', 'V'),
+    ('KeyW', 'w', 'W'),
+    ('KeyX', 'x', 'X'),
+    ('KeyY', 'y', 'Y'),
+    ('KeyZ', 'z', 'Z'),
+    ('Digit0', '0', '0'),
+    ('Digit1', '1', '1'),
+    ('Digit2', '2', '2'),
+    ('Digit3', '3', '3'),
+    ('Digit4', '4', '4'),
+    ('Digit5', '5', '5'),
+    ('Digit6', '6', '6'),
+    ('Digit7', '7', '7'),
+    ('Digit8', '8', '8'),
+    ('Digit9', '9', '9'),
+    ('Space', ' ', ' '),
+    ('Minus', '-', '_'),
+    ('Period', '.', '.'),
+  ];
+
+  void _handleInput(Input raw) {
+    if (!isFocused) return;
+    if (raw.wasPressed('Backspace')) {
+      if (text.isNotEmpty) {
+        text = text.substring(0, text.length - 1);
+        onChanged?.call(text);
+      }
+    }
+    final shift = raw.isDown('ShiftLeft') || raw.isDown('ShiftRight');
+    for (final (code, lower, upper) in _keyTable) {
+      if (raw.wasPressed(code) && text.length < maxLength) {
+        text = '$text${shift ? upper : lower}';
+        onChanged?.call(text);
+      }
+    }
+    if (raw.wasPressed('Enter')) {
+      onSubmitted?.call(text);
+    }
+  }
+}
+
 /// DOM-free in-canvas UI overlay rendered on `SpriteStage.overlay` (E4-4).
 final class UICanvas extends Behaviour {
   double designWidth;
@@ -426,6 +530,12 @@ final class UICanvas extends Behaviour {
           final t = slider.width > 0 ? (pt.x - rx) / slider.width : 0.0;
           slider.setFromNormalized(t);
         }
+      case UITextField field:
+        final hit = field.containsPoint(pt.x, pt.y, designWidth, designHeight);
+        if (raw.pointerPressed) {
+          field.isFocused = hit;
+        }
+        field._handleInput(raw);
       case UIPanel() || UILabel() || UIProgressBar():
         break;
     }
@@ -548,6 +658,28 @@ final class UICanvas extends Behaviour {
         final thumbW = math.max(4.0, slider.height * 0.5);
         final thumbX = rx + (slider.width - thumbW) * frac;
         _batch.drawRect(thumbX, ry - 1, thumbW, slider.height + 2, color: slider.thumbColor);
+      case UITextField field:
+        _batch.drawRect(rx, ry, field.width, field.height, color: field.backgroundColor);
+        _drawBorder(
+          rx,
+          ry,
+          field.width,
+          field.height,
+          field.isFocused ? 2 : 1,
+          field.isFocused ? field.focusedBorderColor : field.borderColor,
+        );
+        final f = font;
+        final shown = field.text.isNotEmpty ? field.text : field.placeholder;
+        if (f != null && shown.isNotEmpty) {
+          f.draw(
+            _batch,
+            shown,
+            rx + 5,
+            ry + (field.height - f.lineHeight * field.textScale) * 0.5,
+            scale: field.textScale,
+            color: field.text.isNotEmpty ? field.textColor : field.placeholderColor,
+          );
+        }
     }
   }
 

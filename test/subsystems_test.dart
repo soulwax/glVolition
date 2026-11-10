@@ -1378,6 +1378,163 @@ void main() {
       expect(engine.saves.listSlots(), isEmpty);
     });
   });
+
+  group('E13 — CapsuleCollider, Volumetric/Thermal Sources, Editor Undo/Redo & UITextField', () {
+    test('CapsuleCollider intersects spheres/boxes/rays and round-trips via SceneSerializer', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final pillar = engine.scene.createGameObject(
+        'Pillar',
+        position: const Vec3(0, 1.0, -5.0),
+        components: [CapsuleCollider(radius: 0.5, height: 2.0, isTrigger: false)],
+      );
+
+      // Ray aimed at top hemisphere (y = 1.5) hits Pillar
+      final hit = engine.physics.raycast(
+        const Ray(origin: Vec3(0, 1.5, 0), direction: Vec3(0, 0, -1)),
+      );
+      expect(hit, isNotNull);
+      expect(hit!.gameObject, same(pillar));
+
+      // Overlap sphere near bottom hemisphere (y = 0.5) hits Pillar
+      final overlaps = engine.physics.overlapSphere(const Vec3(0.4, 0.5, -5.0), 0.3).toList();
+      expect(overlaps.length, 1);
+      expect(overlaps.first.gameObject, same(pillar));
+
+      // Serialization round-trip preserves CapsuleCollider radius and height
+      final json = SceneSerializer.toJson(engine.scene, registry: engine.registry);
+      final restored = SceneSerializer.fromJson(json, registry: engine.registry);
+      final restoredCap = restored.find('Pillar')?.getComponent<CapsuleCollider>();
+      expect(restoredCap, isNotNull);
+      expect(restoredCap!.radius, closeTo(0.5, 1e-5));
+      expect(restoredCap.height, closeTo(2.0, 1e-5));
+    });
+
+    test('VolumetricLightSource and ThermalSourceComponent populate FrameEnvironment and sampleThermalDissolution', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      engine.scene.createGameObject(
+        'Cam',
+        position: const Vec3(0, 2, 6),
+        components: [Camera()],
+      );
+      engine.scene.createGameObject(
+        'Brazier',
+        position: const Vec3(2, 0, 0),
+        components: [
+          VolumetricLightSource(
+            color: const LinearColor(1.0, 0.6, 0.2),
+            luminousIntensity: 4.0,
+          ),
+          ThermalSourceComponent(radiusMeters: 3.0, dissolution01: 1.0),
+        ],
+      );
+
+      engine.step(0.016);
+      expect(host.graphics.environment.volumetricSources.length, 1);
+      expect(host.graphics.environment.thermalSources.length, 1);
+
+      // Inside radius (distance = 1 <= 3.0) -> dissolution == 1.0
+      expect(engine.scene.sampleThermalDissolution(const Vec3(3, 0, 0)), closeTo(1.0, 1e-4));
+      // At distance = 6.0 (2x radius) -> dissolution == 0.5
+      expect(engine.scene.sampleThermalDissolution(const Vec3(8, 0, 0)), closeTo(0.5, 1e-4));
+    });
+
+    test('EditorSession recordUndoState, undo, and redo restore scene hierarchy and properties', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final crate = engine.scene.createGameObject('Crate', position: const Vec3(1, 2, 3));
+      engine.editor.selected = crate;
+
+      engine.editor.recordUndoState('move crate');
+      crate.transform.localPosition = const Vec3(10, 20, 30);
+
+      engine.editor.recordUndoState('create barrel');
+      engine.scene.createGameObject('Barrel', position: const Vec3(-4, 0, 0));
+
+      expect(engine.editor.canUndo, isTrue);
+      expect(engine.editor.undoCount, 2);
+
+      // First undo removes Barrel
+      expect(engine.editor.undo(), isTrue);
+      expect(engine.scene.find('Barrel'), isNull);
+      expect(engine.scene.find('Crate')?.transform.localPosition.x, closeTo(10.0, 1e-4));
+
+      // Second undo restores Crate position to (1, 2, 3)
+      expect(engine.editor.undo(), isTrue);
+      expect(engine.scene.find('Crate')?.transform.localPosition.x, closeTo(1.0, 1e-4));
+
+      // Redo brings Crate back to (10, 20, 30)
+      expect(engine.editor.canRedo, isTrue);
+      expect(engine.editor.redo(), isTrue);
+      expect(engine.scene.find('Crate')?.transform.localPosition.x, closeTo(10.0, 1e-4));
+    });
+
+    test('UITextField focuses on click, edits text on key presses, and fires onSubmitted on Enter', () {
+      final host = HeadlessHost();
+      host.graphics
+        ..viewportWidth = 640
+        ..viewportHeight = 360;
+      final engine = Engine(host);
+
+      String? submittedText;
+      final field = UITextField(
+        anchor: UIAnchor.topLeft,
+        x: 20,
+        y: 20,
+        width: 140,
+        height: 24,
+        onSubmitted: (t) => submittedText = t,
+      );
+      final canvas = UICanvas(designWidth: 640, designHeight: 360)..add(field);
+      engine.scene.createGameObject('UI', components: [canvas]);
+
+      // Click inside UITextField to focus
+      host.input
+        ..pointerX = 40
+        ..pointerY = 30
+        ..pointerDown = true
+        ..pointerPressed = true;
+      engine.step(0.016);
+      host.input.endFrame();
+      expect(field.isFocused, isTrue);
+
+      // Type 'H', 'i', '!', Backspace, 'Enter'
+      host.input
+        ..press('ShiftLeft')
+        ..press('KeyH');
+      engine.step(0.016);
+      host.input
+        ..release('ShiftLeft')
+        ..release('KeyH')
+        ..endFrame();
+
+      host.input
+        ..press('KeyI')
+        ..press('Digit1');
+      engine.step(0.016);
+      host.input
+        ..release('KeyI')
+        ..release('Digit1')
+        ..endFrame();
+      expect(field.text, 'Hi1');
+
+      host.input
+        ..press('Backspace')
+        ..press('Enter');
+      engine.step(0.016);
+      host.input
+        ..release('Backspace')
+        ..release('Enter')
+        ..endFrame();
+
+      expect(field.text, 'Hi');
+      expect(submittedText, 'Hi');
+    });
+  });
 }
 
 final class _CollisionSpy extends Behaviour {

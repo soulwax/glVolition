@@ -141,3 +141,80 @@ final class AtmosphereVolume extends Behaviour {
     }
   }
 }
+
+/// Emits volumetric light scattering ([VolumetricSource]) into the scene's
+/// [FrameEnvironment] (E13-3).
+final class VolumetricLightSource extends Component {
+  LinearColor color;
+  double luminousIntensity;
+  double referenceDistance;
+  double cutoffDistance;
+
+  VolumetricLightSource({
+    this.color = const LinearColor(1.0, 0.85, 0.6),
+    this.luminousIntensity = 2.0,
+    this.referenceDistance = 1.0,
+    this.cutoffDistance = 40.0,
+  });
+
+  static final spec = ComponentSpec<VolumetricLightSource>(
+    'VolumetricLightSource',
+    VolumetricLightSource.new,
+    [
+      Field.color('color', (v) => v.color, (v, c) => v.color = c),
+      Field.number('luminousIntensity', (v) => v.luminousIntensity, (v, n) => v.luminousIntensity = n),
+      Field.number('referenceDistance', (v) => v.referenceDistance, (v, n) => v.referenceDistance = n),
+      Field.number('cutoffDistance', (v) => v.cutoffDistance, (v, n) => v.cutoffDistance = n),
+    ],
+  );
+
+  VolumetricSource toVolumetricSource() => VolumetricSource(
+        id: 'vol_${gameObject.name}_$instanceId',
+        position: transform.position,
+        color: Vec3(color.r, color.g, color.b),
+        luminousIntensity: math.max(0.0, luminousIntensity),
+        referenceDistance: math.max(0.01, referenceDistance),
+        cutoffDistance: math.max(0.1, cutoffDistance),
+      );
+
+  @override
+  void _onEnableInternal() => scene._volumetricSources.add(this);
+
+  @override
+  void _onDisableInternal() => scene._volumetricSources.remove(this);
+}
+
+/// Emits a spherical thermal conduction field ([ThermalSource]) into the
+/// scene's [FrameEnvironment] and [Scene.sampleThermalDissolution] queries
+/// (E13-3).
+final class ThermalSourceComponent extends Component {
+  double radiusMeters;
+  double dissolution01;
+
+  ThermalSourceComponent({
+    this.radiusMeters = 4.0,
+    this.dissolution01 = 1.0,
+  });
+
+  static final spec = ComponentSpec<ThermalSourceComponent>(
+    'ThermalSourceComponent',
+    ThermalSourceComponent.new,
+    [
+      Field.number('radiusMeters', (t) => t.radiusMeters, (t, v) => t.radiusMeters = v),
+      Field.number('dissolution01', (t) => t.dissolution01, (t, v) => t.dissolution01 = v),
+    ],
+  );
+
+  ThermalSource toThermalSource() => ThermalSource(
+        id: 'therm_${gameObject.name}_$instanceId',
+        position: transform.position,
+        radiusMeters: math.max(0.05, radiusMeters),
+        dissolution01: dissolution01.clamp(0.0, 1.0),
+      );
+
+  @override
+  void _onEnableInternal() => scene._thermalSources.add(this);
+
+  @override
+  void _onDisableInternal() => scene._thermalSources.remove(this);
+}

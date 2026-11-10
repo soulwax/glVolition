@@ -281,6 +281,19 @@ final class ComponentRegistry {
         ],
       ),
     );
+    register<CapsuleCollider>(
+      ComponentSpec<CapsuleCollider>(
+        'CapsuleCollider',
+        CapsuleCollider.new,
+        [
+          Field.number('radius', (c) => c.radius, (c, v) => c.radius = v),
+          Field.number('height', (c) => c.height, (c, v) => c.height = v),
+          Field.vec3('center', (c) => c.center, (c, v) => c.center = v),
+          Field.boolean('isTrigger', (c) => c.isTrigger, (c, v) => c.isTrigger = v),
+          Field.integer('collidesWithMask', (c) => c.collidesWithMask, (c, v) => c.collidesWithMask = v),
+        ],
+      ),
+    );
     register<AudioSource>(
       ComponentSpec<AudioSource>(
         'AudioSource',
@@ -419,5 +432,7 @@ final class ComponentRegistry {
     register<WaterSurfaceComponent>(WaterSurfaceComponent.spec);
     register<SmoothFollowCamera>(SmoothFollowCamera.spec);
     register<CinematicTourCamera>(CinematicTourCamera.spec);
+    register<VolumetricLightSource>(VolumetricLightSource.spec);
+    register<ThermalSourceComponent>(ThermalSourceComponent.spec);
   }
 }

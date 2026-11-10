@@ -182,6 +182,7 @@ final class InspectorOverlay {
     newObjBtn.addEventListener(
       'click',
       ((web.Event _) {
+        engine.editor.recordUndoState('create object');
         final count = engine.scene.rootGameObjects.length + 1;
         final created = engine.scene.createGameObject('GameObject_$count');
         _selected = created;
@@ -189,7 +190,35 @@ final class InspectorOverlay {
       }).toJS,
     );
 
+    final undoBtn = doc.createElement('button') as web.HTMLButtonElement
+      ..textContent = 'Undo'
+      ..style.cssText = btnCss;
+    undoBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        if (engine.editor.undo()) {
+          _selected = engine.editor.selected;
+          refresh();
+        }
+      }).toJS,
+    );
+
+    final redoBtn = doc.createElement('button') as web.HTMLButtonElement
+      ..textContent = 'Redo'
+      ..style.cssText = btnCss;
+    redoBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        if (engine.editor.redo()) {
+          _selected = engine.editor.selected;
+          refresh();
+        }
+      }).toJS,
+    );
+
     controls.append(newObjBtn);
+    controls.append(undoBtn);
+    controls.append(redoBtn);
     controls.append(playStopBtn);
     controls.append(freeCamBtn);
     controls.append(exportBtn);
