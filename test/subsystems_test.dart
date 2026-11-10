@@ -1621,6 +1621,132 @@ void main() {
       expect(manifold.$2, greaterThan(0));
     });
   });
+
+  group('E15 — Gizmos & Catalog Prefab Shortcut', () {
+    test('Gizmos collect collider wireframes, contacts and selection, project to screen, and clear after encode', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final scene = engine.scene;
+
+      scene.createGameObject('Cam', position: const Vec3(0, 2, 10), components: [Camera()]);
+      final box = scene.createGameObject(
+        'Box',
+        components: [BoxCollider(size: const Vec3(2, 2, 2), isTrigger: true)],
+      );
+      scene.createGameObject(
+        'Ball',
+        position: const Vec3(0.8, 0, 0),
+        components: [SphereCollider(radius: 0.5, isTrigger: true)],
+      );
+      scene.createGameObject(
+        'Pill',
+        position: const Vec3(-4, 0, 0),
+        components: [CapsuleCollider(radius: 0.3, height: 1.5)],
+      );
+
+      // Disabled by default: nothing is queued.
+      scene.gizmos.line(Vec3.zero, const Vec3(1, 0, 0));
+      expect(scene.gizmos.lineCount, 0);
+
+      engine.step(0.05);
+      expect(scene.physics.contactPairs.length, 1);
+
+      scene.gizmos
+        ..enabled = true
+        ..showContacts = false
+        ..showSelection = false;
+      scene.gizmos.collectAuto();
+      final boxLines = 12;
+      final sphereLines = 3 * scene.gizmos.circleSegments;
+      final collidersOnly = scene.gizmos.lineCount;
+      expect(collidersOnly, greaterThan(boxLines + sphereLines));
+
+      scene.gizmos
+        ..clear()
+        ..showContacts = true;
+      scene.gizmos.collectAuto();
+      expect(scene.gizmos.lineCount, collidersOnly + 4); // cross (3) + normal ray (1)
+      expect(
+        scene.gizmos.lines.where((l) => l.color == scene.gizmos.contactColor).length,
+        4,
+      );
+
+      scene.gizmos
+        ..clear()
+        ..showColliders = false
+        ..showContacts = false
+        ..showSelection = true;
+      engine.editor.selected = box;
+      scene.gizmos.collectAuto();
+      // 3 axis rays + the selected box's 12 edges in selection colour.
+      expect(scene.gizmos.lineCount, 15);
+      expect(
+        scene.gizmos.lines.where((l) => l.color == scene.gizmos.selectionColor).length,
+        12,
+      );
+
+      // Projection lands on-screen around the viewport centre.
+      final projected = scene.gizmos.project(Camera.of(scene)!);
+      expect(projected.length, 15);
+      for (final s in projected) {
+        expect(s.x0, inInclusiveRange(0, 1280));
+        expect(s.y0, inInclusiveRange(0, 720));
+      }
+
+      // A segment crossing behind the camera is clipped, not dropped or flipped.
+      scene.gizmos
+        ..clear()
+        ..line(Vec3.zero, const Vec3(0, 2, 20));
+      final clipped = scene.gizmos.project(Camera.of(scene)!);
+      expect(clipped.length, 1);
+    });
+
+    test('AssetCatalog.prefab lazily wraps ModelAssets and spawn instantiates them', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final cube = Primitives.cube();
+      final root = SceneNode.group(name: 'Crate');
+      root.addChild(SceneNode(name: 'Body', meshData: cube));
+      final glb = GlbResult(
+        rootNode: root,
+        meshes: [cube],
+        materials: [MaterialDefinition(key: 'wood')],
+      );
+      final asset = ModelAsset.fromGlb(glb, _HeadlessResources(host.graphics), name: 'crate');
+      engine.catalog.putModel('crate', asset);
+
+      expect(engine.catalog.hasPrefab('crate'), isTrue);
+      final p1 = engine.catalog.prefab('crate');
+      expect(engine.catalog.prefab('crate'), same(p1));
+
+      final go = engine.catalog.spawn('crate', position: const Vec3(3, 0, 0));
+      expect(go.name, 'crate');
+      expect(go.transform.position.x, closeTo(3, 1e-6));
+      expect(go.children.single.getComponent<MeshRenderer>()?.mesh, isNotNull);
+      expect(() => engine.catalog.prefab('missing'), throwsArgumentError);
+
+      engine.catalog.clear();
+      expect(engine.catalog.hasPrefab('crate'), isFalse);
+    });
+  });
+}
+
+final class _HeadlessResources implements ResourceLibrary {
+  final HeadlessGraphics graphics;
+  _HeadlessResources(this.graphics);
+
+  @override
+  MeshHandle registerMesh(MeshData data, {String? debugLabel}) =>
+      graphics.createMesh(data, debugLabel: debugLabel);
+
+  @override
+  MaterialHandle registerMaterial(MaterialDefinition definition) => graphics.createMaterial(definition);
+
+  // `Invocation` is shadowed by the engine's invoke handle, so widen the
+  // parameter to Object (a valid override) and forward dynamically.
+  @override
+  dynamic noSuchMethod(Object invocation) => super.noSuchMethod(invocation as dynamic);
 }
 
 final class _CollisionSpy extends Behaviour {

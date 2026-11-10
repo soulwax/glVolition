@@ -30,6 +30,7 @@ final class Scene {
   final SceneEvents events = SceneEvents();
   final AudioMixer audioMixer = AudioMixer();
   late final PhysicsWorld physics = PhysicsWorld._(this);
+  late final Gizmos gizmos = Gizmos._(this);
 
   Engine? _engine;
   final List<GameObject> _roots = [];
@@ -451,6 +452,9 @@ final class Scene {
       for (final ui in _uiCanvases) {
         if (ui._active) ui._encode(encoder, vw, vh);
       }
+      gizmos
+        ..collectAuto()
+        .._encode(encoder, vw, vh);
     }
   }
 

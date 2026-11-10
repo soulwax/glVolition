@@ -276,6 +276,14 @@ final class PhysicsWorld {
   List<Collider> get colliders => List.unmodifiable(_colliders);
   List<RigidBody> get bodies => List.unmodifiable(_bodies);
 
+  /// Collider pairs that overlapped during the last fixed step (E15-1).
+  Iterable<(Collider, Collider)> get contactPairs sync* {
+    for (final (ia, ib) in _overlaps) {
+      final a = _byId[ia], b = _byId[ib];
+      if (a != null && b != null && a._active && b._active) yield (a, b);
+    }
+  }
+
   void _register(Collider c) {
     _colliders.add(c);
     _byId[c.instanceId] = c;

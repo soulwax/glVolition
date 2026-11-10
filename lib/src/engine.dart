@@ -22,6 +22,7 @@ part 'engine/scene.dart';
 part 'engine/engine.dart';
 part 'engine/debug_controller.dart';
 part 'engine/editor_session.dart';
+part 'engine/gizmos.dart';
 part 'engine/events_coroutines.dart';
 part 'engine/tween.dart';
 part 'engine/state_machine.dart';

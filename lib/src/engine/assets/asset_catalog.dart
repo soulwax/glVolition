@@ -61,6 +61,7 @@ final class AssetCatalog {
   final Map<String, MaterialHandle> _materials = {};
   final Map<String, String> _texts = {};
   final Map<String, Uint8List> _bytes = {};
+  final Map<String, Prefab> _prefabs = {};
 
   AssetCatalog._(this._engine);
 
@@ -152,6 +153,44 @@ final class AssetCatalog {
   Uint8List bytes(String key) =>
       _bytes[key] ?? (throw ArgumentError.value(key, 'key', 'Bytes asset not found in catalog'));
 
+  void putPrefab(String key, Prefab prefab) => _prefabs[key] = prefab;
+
+  bool hasPrefab(String key) => _prefabs.containsKey(key) || _models.containsKey(key);
+
+  /// Returns the [Prefab] registered under [key], or lazily builds (and
+  /// caches) one from the [ModelAsset] loaded under the same key so a loaded
+  /// GLB spawns in one line: `scene.instantiate(catalog.prefab('ship'))`
+  /// (E15-2).
+  Prefab prefab(String key) {
+    final cached = _prefabs[key];
+    if (cached != null) return cached;
+    final asset = _models[key];
+    if (asset == null) {
+      throw ArgumentError.value(key, 'key', 'Prefab/ModelAsset not found in catalog');
+    }
+    return _prefabs[key] = Prefab.fromModelAsset(asset, name: key);
+  }
+
+  /// Instantiates the prefab for [key] into [scene] (defaults to the active
+  /// scene).
+  GameObject spawn(
+    String key, {
+    Scene? scene,
+    GameObject? parent,
+    Vec3? position,
+    Quat? rotation,
+    double? scale,
+    String? name,
+  }) =>
+      (scene ?? _engine.scene).instantiate(
+        prefab(key),
+        parent: parent,
+        position: position,
+        rotation: rotation,
+        scale: scale,
+        name: name,
+      );
+
   /// Releases all GPU meshes, materials, and textures owned by this catalog.
   void clear() {
     for (final m in _meshes.values) {
@@ -164,6 +203,7 @@ final class AssetCatalog {
       _engine.graphics.releaseTexture(t);
     }
     _models.clear();
+    _prefabs.clear();
     _clips.clear();
     _textures.clear();
     _meshes.clear();

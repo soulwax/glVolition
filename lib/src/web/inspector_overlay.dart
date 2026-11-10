@@ -20,6 +20,7 @@ final class InspectorOverlay {
   GameObject? _selected;
   String _filter = '';
   bool _visible = false;
+  bool _gizmosOn = false;
 
   late final JSFunction _onKeyDown = ((web.KeyboardEvent e) {
     if (e.code == 'F12' || (e.altKey && e.code == 'KeyI')) {
@@ -81,6 +82,10 @@ final class InspectorOverlay {
   void refresh() {
     if (!_visible) return;
     _ensureDom();
+    // Keep editor selection + gizmo state in sync across scene reloads
+    // (undo/redo/import swap the active Scene instance).
+    engine.editor.selected = _selected;
+    engine.scene.gizmos.enabled = _gizmosOn;
     _renderTree();
     _renderInspector();
   }
@@ -216,11 +221,25 @@ final class InspectorOverlay {
       }).toJS,
     );
 
+    final gizmoBtn = doc.createElement('button') as web.HTMLButtonElement
+      ..textContent = 'Gizmos'
+      ..title = 'Collider wireframes, contact normals and selection axes'
+      ..style.cssText = btnCss;
+    gizmoBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        _gizmosOn = !_gizmosOn;
+        engine.scene.gizmos.enabled = _gizmosOn;
+        gizmoBtn.style.background = _gizmosOn ? '#5e4b9e' : '#322c56';
+      }).toJS,
+    );
+
     controls.append(newObjBtn);
     controls.append(undoBtn);
     controls.append(redoBtn);
     controls.append(playStopBtn);
     controls.append(freeCamBtn);
+    controls.append(gizmoBtn);
     controls.append(exportBtn);
     header.append(title);
     header.append(controls);
