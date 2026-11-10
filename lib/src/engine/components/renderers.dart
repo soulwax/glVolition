@@ -160,10 +160,10 @@ final class InstancedMeshRenderer extends Component {
   final MeshData? meshData;
   MaterialHandle? _material;
   final MaterialDefinition? materialDefinition;
-  bool _castsShadow;
-  bool _receivesShadow;
-  DrawMode _drawMode;
-  BlendMode _blendMode;
+  bool _castsShadow = true;
+  bool _receivesShadow = true;
+  DrawMode _drawMode = DrawMode.opaque;
+  BlendMode _blendMode = BlendMode.alpha;
   final List<Transform> _initialTransforms;
 
   InstancedMeshNode? _node;
@@ -178,13 +178,14 @@ final class InstancedMeshRenderer extends Component {
     bool receivesShadow = true,
     DrawMode drawMode = DrawMode.opaque,
     BlendMode blendMode = BlendMode.alpha,
-  })  : _mesh = mesh,
-        _material = material,
-        _castsShadow = castsShadow,
-        _receivesShadow = receivesShadow,
-        _drawMode = drawMode,
-        _blendMode = blendMode,
-        _initialTransforms = List.of(transforms);
+  }) : _initialTransforms = List.of(transforms) {
+    _mesh = mesh;
+    _material = material;
+    _castsShadow = castsShadow;
+    _receivesShadow = receivesShadow;
+    _drawMode = drawMode;
+    _blendMode = blendMode;
+  }
 
   InstancedMeshNode? get instancedNode => _node;
 

@@ -171,7 +171,20 @@ final class Scene {
   /// Raycasts the rendered meshes in this scene and maps the hit back to its
   /// owning [GameObject]. For collider raycasts use [PhysicsWorld.raycast].
   (GameObject, RaycastHit)? raycastVisuals(Ray ray, {bool precise = false}) {
-    final hit = root.raycast(ray, precise: precise);
+    var best = root.raycast(
+      ray,
+      where: (node) => node is! InstancedMeshNode,
+      precise: precise,
+    );
+    root.traverse((node) {
+      if (node is InstancedMeshNode) {
+        final instHit = node.raycast(ray, precise: precise);
+        if (instHit != null && (best == null || instHit.distance < best!.distance)) {
+          best = instHit;
+        }
+      }
+    });
+    final hit = best;
     if (hit == null) return null;
     final go = _ownerOf(hit.node);
     return go == null ? null : (go, hit);
