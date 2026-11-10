@@ -1,0 +1,40 @@
+/// The engine core is one library split into parts so that the lifecycle
+/// plumbing (awake/enable/start/destroy bookkeeping) can stay private while
+/// living next to the component types that need it.
+library;
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+import 'package:pixeldart/pixeldart.dart';
+
+part 'engine/host.dart';
+part 'engine/headless.dart';
+part 'engine/math_ext.dart';
+part 'engine/time.dart';
+part 'engine/input_actions.dart';
+part 'engine/component.dart';
+part 'engine/game_object.dart';
+part 'engine/transform.dart';
+part 'engine/scene.dart';
+part 'engine/engine.dart';
+part 'engine/debug_controller.dart';
+part 'engine/prefab.dart';
+part 'engine/serialization/component_spec.dart';
+part 'engine/serialization/scene_serializer.dart';
+part 'engine/assets/asset_catalog.dart';
+part 'engine/components/camera.dart';
+part 'engine/components/light.dart';
+part 'engine/components/renderers.dart';
+part 'engine/components/particle_system.dart';
+part 'engine/components/audio_source.dart';
+part 'engine/components/physics.dart';
+part 'engine/components/sprites_2d.dart';
+part 'engine/components/tilemap.dart';
+part 'engine/components/animator.dart';
+part 'engine/components/spline.dart';
+part 'engine/components/terrain_water.dart';
+part 'engine/components/atmosphere_volume.dart';
+part 'engine/ui/canvas_ui.dart';

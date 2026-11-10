@@ -1,0 +1,3 @@
+[submodule "pixeldart"]
+	path = pixeldart
+	url = https://github.com/soulwax/pixeldart.git

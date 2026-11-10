@@ -1,0 +1,213 @@
+# Engine plan (`package:rocket`)
+
+A Unity-style game engine (`GameObject`, `Component`, `Behaviour`, scenes, prefabs, pools, triggers/kinematics, 2D sprites/tilemaps/UI, 3D terrain/water/atmosphere, live inspector, and CLI) built in [`engine/`](engine/) on top of [`pixeldart`](pixeldart/)'s public facade.
+
+---
+
+## 0. Ground rules & frame architecture (optimized for fast iteration)
+
+1. **VM-first inner loop (<0.5 s).** `package:rocket/rocket.dart` never imports `package:web` or `dart:io`. Every subsystem and every game's logic runs on the Dart VM against [`HeadlessHost`](engine/lib/src/engine/headless.dart) so `dart test` steps 1,000 frames of gameplay in <25 ms with zero browser startup.
+2. **Zero `build_runner` in the edit-run cycle.** Scene/prefab serialization and the live inspector use explicit, strongly typed [`ComponentSpec<T>`](#e3-zero-codegen-scenes-prefabs-pools--assets) descriptors rather than AST code generation. Editing a `Behaviour` and running `dart test` or reloading the browser takes <1 s.
+3. **Strict facade boundary.** `engine/lib/rocket.dart` imports only `package:pixeldart/pixeldart.dart` (and `pixeldart_advanced.dart` where needed). Browser bindings (`package:web`, `PixeldartApp`, `HTMLAudioElement`, `localStorage`) are isolated to `engine/lib/rocket_web.dart`.
+4. **Two-phase frame contract (`step` + `encode`).**
+   `PixeldartApp` splits each browser frame into `onBeforeFrame` (before `renderer.beginFrame`) and `onFrame(FrameContext)` (while `RenderEncoder` is open). `Engine` mirrors this split so retained 3D nodes and transient encoder draws (`SpriteBatch`, `AtmosphericParticleField`, `FlowParticleField`, gizmos, UI overlays) both work cleanly:
+
+   ```text
+   onBeforeFrame(t, dt) ──▶ Engine.step(dt)
+     ├─ 1. Swap pending Scene (if loadScene was called mid-frame)
+     ├─ 2. Time._beginFrame(dt)  [clamp to maximumDeltaTime, scale by timeScale]
+     ├─ 3. Run due Engine.invoke / Behaviour.invoke timers
+     ├─ 4. Fixed-step loop (while accumulator >= fixedDeltaTime, max 8 steps):
+     │     ├─ Drain pending Behaviour.start() (sorted by executionOrder)
+     │     ├─ Behaviour.fixedUpdate()         (sorted by executionOrder)
+     │     └─ PhysicsWorld._step()            (kinematic integrate + trigger Enter/Stay/Exit)
+     ├─ 5. Variable-step loop:
+     │     ├─ Drain pending Behaviour.start()
+     │     ├─ Behaviour.update()              (sorted by executionOrder)
+     │     └─ Behaviour.lateUpdate()          (sorted by executionOrder)
+     ├─ 6. Flush deferred GameObject.destroy() / Component.destroy()
+     └─ 7. Scene._syncToRenderer(host.graphics)
+           [SceneNode tree, Camera, Directional/Point/Spot lights, ParticleSystems, RenderSettings]
+
+   renderer.beginFrame(world, frameInput)
+
+   onFrame(FrameContext) ──▶ Engine.encodeFrame(RenderEncoder, FrameInput)
+     ├─ 1. Submit active AtmosphericParticleFields & FlowParticleFields
+     ├─ 2. Prepare & submit world-space 2D passes (TilemapRenderer, SpriteRenderer batches by layer)
+     ├─ 3. Submit transient 3D gizmos / collider wireframes (when DebugHud or Editor is active)
+     └─ 4. Prepare & submit SpriteStage.overlay passes (CanvasUI & DebugHud)
+
+   renderer.endFrame()
+   ```
+
+5. **Definition of done per item.**
+   - `dart analyze` reports 0 issues in both `pixeldart/` and `engine/`.
+   - `dart test` passes in `engine/` (every item adds its own VM test).
+   - `dart run tools/test_package_boundaries.dart` passes in `pixeldart/`.
+
+---
+
+## E0: Unblock & package boundary
+
+- [x] **E0-1. Restore `pixeldart/lib`.** Moved `pixeldart/shaders/lib` back to `pixeldart/lib` so `package:pixeldart/...` resolves across examples, tools, and downstream packages.
+- [x] **E0-2. Verify renderer & boundary suite.** `dart analyze` (0 issues), `tools/test_package_boundaries.dart` (14/14), `tools/test_plib01_facades.dart`, and `tools/renderer/check_boundary.dart` pass.
+- [x] **E0-3. Create `engine/` (`package:rocket`).** Configured `engine/pubspec.yaml` with `lib/rocket.dart` (pure Dart) and `lib/rocket_web.dart` (browser host).
+
+---
+
+## E1: Runtime core & Pixel Rocket vertical slice
+
+- [x] **E1-1. Platform host contract (`EngineHost`).**
+  - _Files:_ `engine/lib/src/engine/host.dart`, `engine/lib/src/engine/headless.dart`.
+  - _APIs:_ `EngineHost`, `Input`, `Graphics`, `AssetLoader`, `AudioDevice`, `AudioClip`, `AudioChannel`, `KeyValueStore`; plus `HeadlessHost`, `ScriptedInput`, `HeadlessGraphics`, `SilentAudio`, `MemoryStore`.
+- [x] **E1-2. Fixed/variable loop, `Time`, and `invoke`.**
+  - _Files:_ `engine/lib/src/engine/time.dart`, `engine/lib/src/engine/engine.dart`.
+  - _APIs:_ `Time` (`deltaTime` auto-switches to `fixedDeltaTime` inside `fixedUpdate`, `time`, `unscaledTime`, `unscaledDeltaTime`, `fixedTime`, `timeScale`, `fixedInterpolation`, `maximumDeltaTime = 0.1`, `maxFixedStepsPerFrame = 8`), `Engine.step(rawDeltaSeconds)`, `Engine.invoke(delay, action, {repeatEvery, owner})`, `Invocation.cancel()`.
+- [x] **E1-3. `InputActions`.**
+  - _Files:_ `engine/lib/src/engine/input_actions.dart`.
+  - _APIs:_ `button(name, keys)`, `axis(name, {negative, positive})`, `isDown`, `wasPressed`, `wasReleased`, `getAxis`; pre-bound `Horizontal`, `Vertical`, `Submit`, `Cancel`.
+- [x] **E1-4. `GameObject`, `Component`, `Behaviour`, `TransformComponent`, `Scene`.**
+  - _Files:_ `engine/lib/src/engine/component.dart`, `game_object.dart`, `transform.dart`, `scene.dart`.
+  - _APIs:_ Unity lifecycle (`awake → onEnable → start → fixedUpdate → update → lateUpdate → onDisable → onDestroy`), `executionOrder`, `setActive`, `activeSelf`, `activeInHierarchy`, `setParent(parent, {worldPositionStays})`, `getComponent<T>()`, `getComponents<T>()`, `getComponentInChildren<T>()`, `getComponentInParent<T>()`, `find('A/B/C')`, `findWithTag`, `findObjectsOfType<T>()`, `raycastVisuals`, deferred `destroy()`.
+- [x] **E1-5. Core 3D components & trigger physics.**
+  - _Files:_ `engine/lib/src/engine/components/{camera,light,renderers,particle_system,audio_source,physics}.dart`.
+  - _APIs:_ `Camera`, `Light` (`directional`, `point`, `spot`), `MeshRenderer`, `ModelRenderer` (`centerOrigin`, `boundingRadius`), `ParticleSystem`, `AudioSource`, `SphereCollider`, `BoxCollider`, `PhysicsWorld` (`onTriggerEnter`/`Stay`/`Exit`, `overlapSphere`, `raycast`, 32-bit `layer` + `collidesWithMask`).
+- [x] **E1-6. Browser host (`WebEngineHost`).**
+  - _Files:_ `engine/lib/rocket_web.dart`, `engine/lib/src/web/web_host.dart`.
+  - _APIs:_ `WebEngineHost.mount(canvas, ...)`, `WebEngineRunner`, `WebAudioDevice` (pooled `HTMLAudioElement` voices + autoplay-rejection guard), `localStorage` `KeyValueStore`.
+- [x] **E1-7. Port `example_1` (Pixel Rocket).**
+  - _Files:_ `engine/example/pixel_rocket/{chase_camera,pixel_rocket_scene,main}.dart`, `engine/test/{engine_test,pixel_rocket_test}.dart`.
+  - _Verified:_ 11/11 VM tests green (`dart test`) and `dart compile js -O2 --no-source-maps` builds cleanly (502 KB).
+
+---
+
+## E2: Sub-second dev loop, encoder hook & in-game diagnostics
+
+Goal: edit a `Behaviour` or tweak a number → see the result in `dart test` (<0.4 s) or a live browser tab (<1.0 s), with an in-engine pause/step/timescale scrubber and live state retention.
+
+- [x] **E2-1. Add `Engine.encodeFrame` & `Graphics` texture/encoder plumbing.**
+  - _Scope:_
+    - Add `void encodeFrame(RenderEncoder encoder, [FrameInput? frame])` to `Engine` and `void _encode(RenderEncoder encoder, FrameInput? frame)` to `Scene`.
+    - Extend `Graphics` in `lib/src/engine/host.dart` with:
+      - `int get viewportWidth; int get viewportHeight;`
+      - `TextureHandle createTexture({required int width, required int height, Uint8List? pixels, GpuTextureFilter minFilter, GpuTextureFilter magFilter, GpuTextureWrap wrap, bool hasMips, double anisotropy, String? debugLabel});`
+      - `void releaseMesh(MeshHandle handle); void releaseMaterial(MaterialHandle handle); void releaseTexture(TextureHandle handle);`
+    - In `WebEngineHost._bind`: hook both `app.onBeforeFrame = (_, dt) => engine.step(dt)` and `app.onFrame = (ctx) => engine.encodeFrame(ctx.encoder)`.
+  - _Touches:_ `lib/src/engine/{host,headless,engine,scene}.dart`, `lib/src/web/web_host.dart`.
+  - _Verify:_ `test/subsystems_test.dart` verifying resource release tracking on `HeadlessGraphics`.
+
+- [x] **E2-2. `volition` / `rocket` CLI (`bin/volition.dart`, `bin/rocket.dart`).**
+  - _Scope:_ Single `dart:io` CLI executable registered under `executables: {volition: volition, rocket: volition}` in `pubspec.yaml`:
+    - `dart run gl_volition:volition test [filter]` — runs `dart test`.
+    - `dart run gl_volition:volition serve <entry.dart> [--port 8080] [--root <dir>]`:
+      1. Serves static files from the target directory (with fallback to `pixeldart/web/`).
+      2. Injects a `<script>` snippet before `</body>` on `index.html` that opens `new EventSource('/__rocket_events')` and calls `location.reload()` on `reload` events or renders a compiler error banner on `compile_error`.
+      3. Watches `lib/**/*.dart` and the target directory's `.dart`/`.html` files (debounced 80 ms), compiles with `dart compile js -O0 --no-source-maps`, and broadcasts `reload` or `compile_error` SSE events.
+    - `dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows] [--out outDir]` — production build (`-O4 --no-source-maps`).
+  - _Touches:_ `bin/volition.dart`, `bin/rocket.dart`, `pubspec.yaml`.
+
+- [x] **E2-3. Hot-reload state snapshot (`captureSessionSnapshot` / `restoreSessionSnapshot`).**
+  - _Scope:_
+    - `Engine.captureSessionSnapshot()` and `Engine.restoreSessionSnapshot(Map<String, Object?>)` serialize and restore `timeScale`, `fixedDeltaTime`, `MemoryStore` entries, and `SceneSerializer.toJson(scene)`.
+    - `WebEngineHost` saves to `sessionStorage['__rocket_hot_state']` on `beforeunload` when `enableHotState: true` and restores on mount via `tryRestoreHotState()`.
+  - _Touches:_ `lib/src/engine/engine.dart`, `lib/src/web/web_host.dart`.
+  - _Verify:_ Unit test in `test/subsystems_test.dart` round-tripping `captureSessionSnapshot()` / `restoreSessionSnapshot(snap)` on `HeadlessHost`.
+
+- [x] **E2-4. In-game debug & time-control overlay (`DebugController`).**
+  - _Scope:_ Built-in `Behaviour` toggled by `Backquote` (`` ` ``):
+    - Keyboard shortcuts while open: `Space` pause/resume (`timeScale = 0` / `1`), `.` (Period) single-step one `fixedDeltaTime` while paused, `[` / `]` halve/double `timeScale` (`0.125×` .. `4×`).
+    - Exposes `DebugMetrics` snapshot: rolling p50/p95 frame time, fixed steps taken last frame, active `GameObject` / `Behaviour` / `Collider` / `ParticleSystem` / `Light` counts.
+  - _Touches:_ `lib/src/engine/debug_controller.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (pause, single-step advances `fixedUpdate`, resume restores prior `timeScale`, `metrics()`).
+
+---
+
+## E3: Zero-codegen scenes, prefabs, pools & assets
+
+Goal: author scenes and prefabs in code or JSON, pool high-churn objects in 3 lines, and preload assets by logical ID so `awake`/`start` never `await`.
+
+- [x] **E3-1. `ComponentSpec<T>` & `Field<T, V>` reflection-free descriptor table.**
+  - _Touches:_ `lib/src/engine/serialization/component_spec.dart`.
+  - _Verify:_ `test/subsystems_test.dart` reading/writing fields on built-in (`Camera`, `Light`, `SphereCollider`, `BoxCollider`, `AudioSource`) and custom `Behaviour` components by name and JSON value.
+
+- [x] **E3-2. `Prefab`, `Scene.instantiate`, and `ObjectPool<T>`.**
+  - _Touches:_ `lib/src/engine/prefab.dart`, `lib/src/engine/scene.dart`.
+  - _Verify:_ `test/subsystems_test.dart` verifying `warmUp`, `acquire`/`release` reuse without allocations, and `onSpawned`/`onDespawned` callbacks.
+
+- [x] **E3-3. `SceneSerializer` (JSON round-trip + prefab overrides).**
+  - _Touches:_ `lib/src/engine/serialization/scene_serializer.dart`.
+  - _Verify:_ `test/subsystems_test.dart` round-tripping a multi-level hierarchy with lights, camera, colliders, custom `Behaviour`s, and prefab overrides.
+
+- [x] **E3-4. `AssetCatalog` (manifest preloading + synchronous handle lookup + release).**
+  - _Touches:_ `lib/src/engine/assets/asset_catalog.dart`.
+  - _Verify:_ `test/subsystems_test.dart` verifying progress ticks, sync lookup, and `clear()` GPU resource disposal.
+
+---
+
+## E4: 2D, sprites, tilemaps & in-canvas UI
+
+Goal: expose both of pixeldart's 2D styles — **lit 3D-ortho dungeon** and **pure 2D `Camera2D` + `TileLayer` + y-sorted `SpriteBatch`** — plus a DOM-free `UICanvas` so games work unchanged on native builds.
+
+- [x] **E4-1. Orthographic 3D camera support (`Camera.ortho` + `screenToGroundPlane`).**
+  - _Touches:_ `lib/src/engine/components/camera.dart`.
+  - _Verify:_ `test/subsystems_test.dart` checking orthographic projection raycasts onto `y == groundHeight`.
+
+- [x] **E4-2. 2D rendering pipeline (`Camera2DComponent`, `SpriteRenderer`, `SpriteAnimator`).**
+  - _Touches:_ `lib/src/engine/components/sprites_2d.dart`, `lib/src/engine/scene.dart`.
+  - _Verify:_ `test/subsystems_test.dart` checking animation frame stepping and `SpriteRenderer` updates.
+
+- [x] **E4-3. `TilemapComponent` & `moveAndSlideCircle`.**
+  - _Touches:_ `lib/src/engine/components/tilemap.dart`.
+  - _Verify:_ `test/subsystems_test.dart` testing corner sliding and solid-tile blocking.
+
+- [x] **E4-4. `UICanvas` (in-canvas HUD on `SpriteStage.overlay`).**
+  - _Touches:_ `lib/src/engine/ui/canvas_ui.dart`.
+  - _Verify:_ `test/subsystems_test.dart` testing anchor layout and `UIButton` click dispatch via `ScriptedInput`.
+
+- [x] **E4-5. 2D Dungeon validation scene (`example/dungeon_2d/game.dart`).**
+  - _Touches:_ `example/dungeon_2d/game.dart`, `test/subsystems_test.dart`.
+  - _Verify:_ `test/subsystems_test.dart` stepping `buildDungeon2DScene()` headlessly with `InputActions` movement and `TilemapComponent.moveAndSlideCircle`.
+
+---
+
+## E5: Rich 3D gameplay systems
+
+Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner water, buoyancy, solar cycle, and volumetric atmosphere as components.
+
+- [x] **E5-1. `Animator` component.**
+  - _Touches:_ `lib/src/engine/components/animator.dart`.
+  - _Verify:_ `test/subsystems_test.dart` sampling `Vector3Track` and `RotationTrack` keyframes.
+
+- [x] **E5-2. `SplinePath` & `SplineFollower` components.**
+  - _Touches:_ `lib/src/engine/components/spline.dart`.
+  - _Verify:_ `test/subsystems_test.dart` verifying constant arc-length speed and arrival callback.
+
+- [x] **E5-3. `TerrainComponent`, `WaterSurfaceComponent`, and `BuoyantBody`.**
+  - _Touches:_ `lib/src/engine/components/terrain_water.dart`.
+  - _Verify:_ `test/subsystems_test.dart` verifying `BuoyantBody` heave/roll on `GerstnerWaveEvaluator` and `TerrainComponent.sampleHeight`.
+
+- [x] **E5-4. `AtmosphereVolume` (`SolarCycleEngine` + volumetric fog + weather fields).**
+  - _Touches:_ `lib/src/engine/components/atmosphere_volume.dart`.
+  - _Verify:_ `test/subsystems_test.dart` stepping `timeOfDayHours` and asserting sun intensity, skybox, and fog transitions.
+
+- [x] **E5-5. 3D Island validation scene (`example/island_3d/game.dart`).**
+  - _Touches:_ `example/island_3d/game.dart`, `test/subsystems_test.dart`.
+  - _Verify:_ `test/subsystems_test.dart` stepping `buildIsland3DScene()` headlessly.
+
+---
+
+## E6: Build targets (JS, Wasm, Windows bundle)
+
+- [x] **E6-1. WebAssembly & JS targets (`volition build --target js|wasm`).**
+  - _Touches:_ `bin/volition.dart`.
+- [x] **E6-2. Windows desktop bundler (`volition build --target windows`).**
+  - _Touches:_ `bin/volition.dart`.
+- [ ] **E6-3. Native AOT backend (`GlesDevice` + `SdlEngineHost` via `dart:ffi`).**
+
+---
+
+## E7: In-engine live inspector & scene editor
+
+- [x] **E7-1. Hierarchy & `ComponentSpec` Inspector panel (`InspectorOverlay`).**
+  - _Touches:_ `lib/src/web/inspector_overlay.dart`, `lib/src/web/web_host.dart`.
+  - _APIs:_ Toggle with `F12` or `Alt+I`, viewport picking with `Alt + LeftClick`, live hierarchy tree with active checkboxes & search filter, live `Transform` + `ComponentSpec` field editors, and JSON scene export.
