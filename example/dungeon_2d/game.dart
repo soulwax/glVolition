@@ -21,7 +21,7 @@ final class BrazierBehaviour extends Behaviour {
     [
       Field.number('igniteRadius', (b) => b.igniteRadius, (b, v) => b.igniteRadius = v),
       Field.number('safeRadius', (b) => b.safeRadius, (b, v) => b.safeRadius = v),
-      Field.flag('isLit', (b) => b.isLit, (b, v) => b.isLit = v),
+      Field.boolean('isLit', (b) => b.isLit, (b, v) => b.isLit = v),
     ],
   );
 
@@ -53,7 +53,7 @@ final class MoteBehaviour extends Behaviour {
     MoteBehaviour.new,
     [
       Field.number('pickupRadius', (m) => m.pickupRadius, (m, v) => m.pickupRadius = v),
-      Field.flag('collected', (m) => m.collected, (m, v) => m.collected = v),
+      Field.boolean('collected', (m) => m.collected, (m, v) => m.collected = v),
     ],
   );
 }

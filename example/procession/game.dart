@@ -83,8 +83,8 @@ final class VillagerBehaviour extends Behaviour {
     'VillagerBehaviour',
     VillagerBehaviour.new,
     [
-      Field.flag('recruited', (v) => v.recruited, (v, val) => v.recruited = val),
-      Field.flag('delivered', (v) => v.delivered, (v, val) => v.delivered = val),
+      Field.boolean('recruited', (v) => v.recruited, (v, val) => v.recruited = val),
+      Field.boolean('delivered', (v) => v.delivered, (v, val) => v.delivered = val),
     ],
   );
 }

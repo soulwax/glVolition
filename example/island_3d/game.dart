@@ -35,7 +35,7 @@ final class LighthouseBehaviour extends Behaviour {
     final cam = scene.findObjectOfType<Camera>();
     final raw = input.raw;
     if (cam != null && (raw.pointerX != 0 || raw.pointerY != 0)) {
-      final hit = cam.screenToGroundPlane(raw.pointerX, raw.pointerY, groundHeight: 0.0);
+      final hit = cam.screenToGroundPlane(raw.pointerX, raw.pointerY, groundY: 0.0);
       if (hit != null) {
         aimPoint = hit;
       }
