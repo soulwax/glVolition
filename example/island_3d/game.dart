@@ -59,6 +59,15 @@ final class FlareBehaviour extends Behaviour {
 
   FlareBehaviour({this.verticalSpeed = 9.0, this.lifetime = 3.0});
 
+  static final spec = ComponentSpec<FlareBehaviour>(
+    'FlareBehaviour',
+    FlareBehaviour.new,
+    [
+      Field.number('verticalSpeed', (f) => f.verticalSpeed, (f, v) => f.verticalSpeed = v),
+      Field.number('lifetime', (f) => f.lifetime, (f, v) => f.lifetime = v),
+    ],
+  );
+
   @override
   void update() {
     elapsed += time.deltaTime;
@@ -140,7 +149,9 @@ final class HarbourDirector extends Behaviour {
 
 /// Registers custom [ComponentSpec]s for the Island3D (Tidewatch) scene.
 void registerIsland3DSpecs(ComponentRegistry registry) {
-  registry.register(LighthouseBehaviour.spec);
+  registry
+    ..register(LighthouseBehaviour.spec)
+    ..register(FlareBehaviour.spec);
 }
 
 /// Builds a 3D coastal island [Scene] (Tidewatch port) combining procedural

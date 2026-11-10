@@ -290,5 +290,50 @@ final class ComponentRegistry {
         ],
       ),
     );
+    register<AtmosphereVolume>(
+      ComponentSpec<AtmosphereVolume>(
+        'AtmosphereVolume',
+        AtmosphereVolume.new,
+        [
+          Field.number('timeOfDayHours', (a) => a.timeOfDayHours, (a, v) => a.timeOfDayHours = v),
+          Field.number('hoursPerSecond', (a) => a.hoursPerSecond, (a, v) => a.hoursPerSecond = v),
+          Field.number('latitudeRadians', (a) => a.latitudeRadians, (a, v) => a.latitudeRadians = v),
+          Field.number('solarDeclinationRadians', (a) => a.solarDeclinationRadians, (a, v) => a.solarDeclinationRadians = v),
+          Field.number('cloudCoverage', (a) => a.cloudCoverage, (a, v) => a.cloudCoverage = v),
+          Field.number('cloudDensity', (a) => a.cloudDensity, (a, v) => a.cloudDensity = v),
+          Field.number('aerosolTurbidity', (a) => a.aerosolTurbidity, (a, v) => a.aerosolTurbidity = v),
+          Field.number('fogStart', (a) => a.fogStart, (a, v) => a.fogStart = v),
+          Field.number('fogEnd', (a) => a.fogEnd, (a, v) => a.fogEnd = v),
+          Field.boolean('coherentHorizon', (a) => a.coherentHorizon, (a, v) => a.coherentHorizon = v),
+        ],
+      ),
+    );
+    register<Camera2DComponent>(
+      ComponentSpec<Camera2DComponent>(
+        'Camera2DComponent',
+        Camera2DComponent.new,
+        [
+          Field.number('zoom', (c) => c.zoom, (c, v) => c.zoom = v),
+          Field.number('rotation', (c) => c.rotation, (c, v) => c.rotation = v),
+          Field.boolean('followTransform', (c) => c.followTransform, (c, v) => c.followTransform = v),
+        ],
+      ),
+    );
+    register<SpriteRenderer>(
+      ComponentSpec<SpriteRenderer>(
+        'SpriteRenderer',
+        () => SpriteRenderer(region: SpriteRegion.white),
+        [
+          Field.number('rotation', (s) => s.rotation, (s, v) => s.rotation = v),
+          Field.boolean('flipX', (s) => s.flipX, (s, v) => s.flipX = v),
+          Field.boolean('flipY', (s) => s.flipY, (s, v) => s.flipY = v),
+          Field.integer('color', (s) => s.color, (s, v) => s.color = v),
+          Field.number('additive', (s) => s.additive, (s, v) => s.additive = v),
+          Field.number('glow', (s) => s.glow, (s, v) => s.glow = v),
+          Field.number('flash', (s) => s.flash, (s, v) => s.flash = v),
+          Field.integer('layer', (s) => s.layer, (s, v) => s.layer = v),
+        ],
+      ),
+    );
   }
 }
