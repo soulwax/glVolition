@@ -95,6 +95,21 @@ abstract class Behaviour extends Component {
   /// collides with another solid collider (E9-3).
   void onCollisionEnter(Collision collision) {}
 
+  /// Called when the pointer enters a collider attached to this GameObject (E16-1).
+  void onPointerEnter(PointerRaycastHit hit) {}
+
+  /// Called when the pointer exits a collider attached to this GameObject (E16-1).
+  void onPointerExit(PointerRaycastHit hit) {}
+
+  /// Called when the pointer is pressed down over a collider attached to this GameObject (E16-1).
+  void onPointerDown(PointerRaycastHit hit) {}
+
+  /// Called when the pointer is released over a collider attached to this GameObject (E16-1).
+  void onPointerUp(PointerRaycastHit hit) {}
+
+  /// Called when the pointer is pressed and released over the same collider (E16-1).
+  void onPointerClick(PointerRaycastHit hit) {}
+
   /// Runs [action] after [delaySeconds] of game time, then every
   /// [repeatEvery] seconds if given. Cancelled automatically when this
   /// behaviour is destroyed.

@@ -1730,6 +1730,159 @@ void main() {
       expect(engine.catalog.hasPrefab('crate'), isFalse);
     });
   });
+
+  group('E16 — PhysicsRaycaster 3D Interaction, LayerMask & Gizmo Extensions', () {
+    test('PhysicsRaycaster dispatches enter, down, up, click, and exit to 3D Behaviour colliders', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      engine.scene.createGameObject(
+        'MainCamera',
+        position: const Vec3(0, 0, 5),
+        components: [
+          Camera(),
+          PhysicsRaycaster(),
+        ],
+      );
+
+      final spy = _PointerSpy();
+      final target = engine.scene.createGameObject(
+        'InteractiveChest',
+        position: const Vec3(0, 0, 0),
+        components: [
+          BoxCollider(size: const Vec3(2, 2, 2)),
+          spy,
+        ],
+      );
+
+      // Frame 1: Pointer at (640, 360) aiming straight through center at target.
+      host.input.pointerX = 640;
+      host.input.pointerY = 360;
+      engine.step(0.016);
+      expect(spy.events, ['enter']);
+      expect(spy.lastHit?.gameObject, same(target));
+
+      // Frame 2: Pointer pressed -> fires onPointerDown.
+      host.input.pointerPressed = true;
+      host.input.pointerDown = true;
+      engine.step(0.016);
+      expect(spy.events, ['enter', 'down']);
+
+      // Frame 3: Pointer released over same target -> fires onPointerUp and onPointerClick.
+      host.input.pointerPressed = false;
+      host.input.pointerReleased = true;
+      host.input.pointerDown = false;
+      engine.step(0.016);
+      expect(spy.events, ['enter', 'down', 'up', 'click']);
+
+      // Frame 4: Pointer moves away to (50, 50) -> fires onPointerExit.
+      host.input.pointerReleased = false;
+      host.input.pointerX = 50;
+      host.input.pointerY = 50;
+      engine.step(0.016);
+      expect(spy.events, ['enter', 'down', 'up', 'click', 'exit']);
+    });
+
+    test('LayerMask calculates bitmasks and filters physics queries', () {
+      expect(LayerMask.none.value, 0);
+      expect(LayerMask.all.value, -1);
+      expect(LayerMask.defaultLayer.value, 1);
+
+      final mask = LayerMask.fromLayers([1, 3, 5]);
+      expect(mask.contains(0), isFalse);
+      expect(mask.contains(1), isTrue);
+      expect(mask.contains(2), isFalse);
+      expect(mask.contains(3), isTrue);
+      expect(mask.contains(5), isTrue);
+
+      final modified = mask.withLayer(2).withoutLayer(1);
+      expect(modified.contains(1), isFalse);
+      expect(modified.contains(2), isTrue);
+
+      // Verify layer mask filtering in PhysicsWorld
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.scene.createGameObject(
+        'HiddenObstacle',
+        layer: 8,
+        position: const Vec3(0, 0, 0),
+        components: [BoxCollider(size: const Vec3(2, 2, 2))],
+      );
+
+      final ray = const Ray(origin: Vec3(0, 0, 5), direction: Vec3(0, 0, -1));
+
+      // Query excluding layer 8 finds nothing
+      final hitDefault = engine.scene.physics.raycast(
+        ray,
+        layerMask: LayerMask.fromLayer(0),
+      );
+      expect(hitDefault, isNull);
+
+      // Query including layer 8 hits HiddenObstacle
+      final hitLayer8 = engine.scene.physics.raycast(
+        ray,
+        layerMask: LayerMask.fromLayer(8),
+      );
+      expect(hitLayer8, isNotNull);
+      expect(hitLayer8!.gameObject.name, 'HiddenObstacle');
+    });
+
+    test('Gizmos.arrow and Gizmos.wireDisc queue segments and project properly', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final cam = engine.scene.createGameObject(
+        'Cam',
+        position: const Vec3(0, 0, 5),
+        components: [Camera()],
+      ).getComponent<Camera>()!;
+
+      engine.scene.gizmos.enabled = true;
+      engine.scene.gizmos.arrow(const Vec3(0, 0, 0), const Vec3(0, 1, 0), headSize: 0.2);
+      // Shaft (1) + 4 head base lines = 5 lines
+      expect(engine.scene.gizmos.lineCount, 5);
+
+      engine.scene.gizmos.wireDisc(const Vec3(0, 0, 0), 1.0, const Vec3(0, 1, 0));
+      expect(engine.scene.gizmos.lineCount, 5 + engine.scene.gizmos.circleSegments);
+
+      final projected = engine.scene.gizmos.project(cam);
+      expect(projected.length, 5 + engine.scene.gizmos.circleSegments);
+    });
+  });
+}
+
+final class _PointerSpy extends Behaviour {
+  final List<String> events = [];
+  PointerRaycastHit? lastHit;
+
+  @override
+  void onPointerEnter(PointerRaycastHit hit) {
+    events.add('enter');
+    lastHit = hit;
+  }
+
+  @override
+  void onPointerExit(PointerRaycastHit hit) {
+    events.add('exit');
+    lastHit = hit;
+  }
+
+  @override
+  void onPointerDown(PointerRaycastHit hit) {
+    events.add('down');
+    lastHit = hit;
+  }
+
+  @override
+  void onPointerUp(PointerRaycastHit hit) {
+    events.add('up');
+    lastHit = hit;
+  }
+
+  @override
+  void onPointerClick(PointerRaycastHit hit) {
+    events.add('click');
+    lastHit = hit;
+  }
 }
 
 final class _HeadlessResources implements ResourceLibrary {

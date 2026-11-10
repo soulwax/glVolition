@@ -55,6 +55,30 @@ final class Gizmos {
   void ray(Vec3 origin, Vec3 direction, {double length = 1, int? color}) =>
       line(origin, origin + direction.normalized * length, color: color);
 
+  void arrow(Vec3 from, Vec3 to, {double headSize = 0.25, int? color}) {
+    line(from, to, color: color);
+    final dir = to - from;
+    final len = dir.length;
+    if (len < 1e-6) return;
+    final unitDir = dir * (1.0 / len);
+    final helper = unitDir.y.abs() < 0.99 ? const Vec3(0, 1, 0) : const Vec3(1, 0, 0);
+    final side = unitDir.cross(helper).normalized * headSize;
+    final up = unitDir.cross(side).normalized * headSize;
+    final headBase = to - unitDir * headSize;
+    line(to, headBase + side, color: color);
+    line(to, headBase - side, color: color);
+    line(to, headBase + up, color: color);
+    line(to, headBase - up, color: color);
+  }
+
+  void wireDisc(Vec3 center, double radius, Vec3 normal, {int? color}) {
+    final n = normal.lengthSquared > 1e-10 ? normal.normalized : const Vec3(0, 1, 0);
+    final helper = n.y.abs() < 0.99 ? const Vec3(0, 1, 0) : const Vec3(1, 0, 0);
+    final u = n.cross(helper).normalized;
+    final v = n.cross(u).normalized;
+    circle(center, radius, u, v, color: color);
+  }
+
   void cross(Vec3 p, {double size = 0.25, int? color}) {
     line(p - Vec3(size, 0, 0), p + Vec3(size, 0, 0), color: color);
     line(p - Vec3(0, size, 0), p + Vec3(0, size, 0), color: color);

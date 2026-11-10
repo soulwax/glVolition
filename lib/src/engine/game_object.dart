@@ -175,3 +175,40 @@ final class GameObject {
   @override
   String toString() => 'GameObject($name)';
 }
+
+/// Type-safe 32-bit layer bitmask utility matching Unity's `LayerMask` (E16-2).
+final class LayerMask {
+  final int value;
+  const LayerMask([this.value = -1]);
+
+  static const LayerMask all = LayerMask(-1);
+  static const LayerMask none = LayerMask(0);
+  static const LayerMask defaultLayer = LayerMask(1 << 0);
+
+  static int fromLayer(int layer) {
+    if (layer < 0 || layer > 31) throw RangeError.range(layer, 0, 31, 'layer');
+    return 1 << layer;
+  }
+
+  static LayerMask fromLayers(Iterable<int> layers) {
+    var mask = 0;
+    for (final l in layers) {
+      if (l < 0 || l > 31) throw RangeError.range(l, 0, 31, 'layer');
+      mask |= (1 << l);
+    }
+    return LayerMask(mask);
+  }
+
+  bool contains(int layer) => (value & (1 << layer)) != 0;
+  LayerMask withLayer(int layer) => LayerMask(value | fromLayer(layer));
+  LayerMask withoutLayer(int layer) => LayerMask(value & ~fromLayer(layer));
+
+  @override
+  bool operator ==(Object other) => other is LayerMask && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() => 'LayerMask(0x${value.toRadixString(16).toUpperCase()})';
+}

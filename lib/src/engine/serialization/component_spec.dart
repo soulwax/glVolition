@@ -434,5 +434,6 @@ final class ComponentRegistry {
     register<CinematicTourCamera>(CinematicTourCamera.spec);
     register<VolumetricLightSource>(VolumetricLightSource.spec);
     register<ThermalSourceComponent>(ThermalSourceComponent.spec);
+    register<PhysicsRaycaster>(PhysicsRaycaster.spec);
   }
 }

@@ -41,6 +41,7 @@ part 'engine/components/lod_billboard.dart';
 part 'engine/components/particle_system.dart';
 part 'engine/components/audio_source.dart';
 part 'engine/components/physics.dart';
+part 'engine/components/physics_raycaster.dart';
 part 'engine/components/character_controller.dart';
 part 'engine/components/trail_renderer.dart';
 part 'engine/components/sprites_2d.dart';
