@@ -14,6 +14,15 @@ final class LighthouseBehaviour extends Behaviour {
     this.beamRadius = 12.0,
   });
 
+  static final spec = ComponentSpec<LighthouseBehaviour>(
+    'LighthouseBehaviour',
+    LighthouseBehaviour.new,
+    [
+      Field.vec3('aimPoint', (l) => l.aimPoint, (l, v) => l.aimPoint = v),
+      Field.number('beamRadius', (l) => l.beamRadius, (l, v) => l.beamRadius = v),
+    ],
+  );
+
   bool illuminates(Vec3 worldPos) {
     final dx = worldPos.x - aimPoint.x;
     final dz = worldPos.z - aimPoint.z;
@@ -22,6 +31,19 @@ final class LighthouseBehaviour extends Behaviour {
 
   @override
   void update() {
+    // Allow pointer aiming onto the ocean surface when a Camera is active
+    final cam = scene.findObjectOfType<Camera>();
+    final raw = input.raw;
+    if (cam != null && (raw.pointerX != 0 || raw.pointerY != 0)) {
+      final hit = cam.screenToGroundPlane(raw.pointerX, raw.pointerY, groundHeight: 0.0);
+      if (hit != null) {
+        aimPoint = hit;
+      }
+    }
+    if (raw.pointerPressed) {
+      scene.findObjectOfType<HarbourDirector>()?.launchFlareAt(aimPoint);
+    }
+
     final dir = aimPoint - transform.position;
     if (dir.lengthSquared > 1e-6) {
       transform.rotation = lookRotation(dir);

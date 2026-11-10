@@ -74,8 +74,19 @@ final class LeaderBehaviour extends Behaviour {
 }
 
 final class VillagerBehaviour extends Behaviour {
-  bool recruited = false;
-  bool delivered = false;
+  bool recruited;
+  bool delivered;
+
+  VillagerBehaviour({this.recruited = false, this.delivered = false});
+
+  static final spec = ComponentSpec<VillagerBehaviour>(
+    'VillagerBehaviour',
+    VillagerBehaviour.new,
+    [
+      Field.flag('recruited', (v) => v.recruited, (v, val) => v.recruited = val),
+      Field.flag('delivered', (v) => v.delivered, (v, val) => v.delivered = val),
+    ],
+  );
 }
 
 /// Night swarm enemy repelled when inside the leader's `torchRadius` (E4-5).
@@ -83,6 +94,14 @@ final class SwarmEnemyBehaviour extends Behaviour {
   double speed;
 
   SwarmEnemyBehaviour({this.speed = 42.0});
+
+  static final spec = ComponentSpec<SwarmEnemyBehaviour>(
+    'SwarmEnemyBehaviour',
+    SwarmEnemyBehaviour.new,
+    [
+      Field.number('speed', (s) => s.speed, (s, val) => s.speed = val),
+    ],
+  );
 
   @override
   void update() {

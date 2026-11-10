@@ -5,11 +5,25 @@ import 'package:gl_volition/gl_volition.dart';
 /// Brazier in the dungeon that ignites when the player approaches, emitting
 /// a safe light radius that repels [ShadeBehaviour]s (E4-5 Lantern).
 final class BrazierBehaviour extends Behaviour {
-  final double igniteRadius;
-  final double safeRadius;
-  bool isLit = false;
+  double igniteRadius;
+  double safeRadius;
+  bool isLit;
 
-  BrazierBehaviour({this.igniteRadius = 22.0, this.safeRadius = 48.0});
+  BrazierBehaviour({
+    this.igniteRadius = 22.0,
+    this.safeRadius = 48.0,
+    this.isLit = false,
+  });
+
+  static final spec = ComponentSpec<BrazierBehaviour>(
+    'BrazierBehaviour',
+    BrazierBehaviour.new,
+    [
+      Field.number('igniteRadius', (b) => b.igniteRadius, (b, v) => b.igniteRadius = v),
+      Field.number('safeRadius', (b) => b.safeRadius, (b, v) => b.safeRadius = v),
+      Field.flag('isLit', (b) => b.isLit, (b, v) => b.isLit = v),
+    ],
+  );
 
   void ignite() {
     if (isLit) return;
@@ -29,10 +43,19 @@ final class BrazierBehaviour extends Behaviour {
 
 /// Collectible light mote that restores torch fuel and awards score (E4-5).
 final class MoteBehaviour extends Behaviour {
-  final double pickupRadius;
-  bool collected = false;
+  double pickupRadius;
+  bool collected;
 
-  MoteBehaviour({this.pickupRadius = 14.0});
+  MoteBehaviour({this.pickupRadius = 14.0, this.collected = false});
+
+  static final spec = ComponentSpec<MoteBehaviour>(
+    'MoteBehaviour',
+    MoteBehaviour.new,
+    [
+      Field.number('pickupRadius', (m) => m.pickupRadius, (m, v) => m.pickupRadius = v),
+      Field.flag('collected', (m) => m.collected, (m, v) => m.collected = v),
+    ],
+  );
 }
 
 /// Shadow enemy that chases the explorer unless repelled by a lit
@@ -42,6 +65,15 @@ final class ShadeBehaviour extends Behaviour {
   double hitRadius;
 
   ShadeBehaviour({this.speed = 36.0, this.hitRadius = 10.0});
+
+  static final spec = ComponentSpec<ShadeBehaviour>(
+    'ShadeBehaviour',
+    ShadeBehaviour.new,
+    [
+      Field.number('speed', (s) => s.speed, (s, v) => s.speed = v),
+      Field.number('hitRadius', (s) => s.hitRadius, (s, v) => s.hitRadius = v),
+    ],
+  );
 
   @override
   void update() {
@@ -162,6 +194,16 @@ final class DungeonExplorer extends Behaviour {
     // Check portal exit
     if (portalUnlocked && Vec2(next.x - portalPosition.x, next.y - portalPosition.y).length <= 16.0) {
       levelCompleted = true;
+    }
+
+    // Update HUD fuel bar if present
+    final hud = scene.findObjectOfType<UICanvas>();
+    if (hud != null) {
+      for (final el in hud.elements) {
+        if (el is UIProgressBar) {
+          el.value = torchFuel;
+        }
+      }
     }
   }
 }
