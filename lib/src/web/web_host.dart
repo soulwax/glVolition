@@ -57,6 +57,7 @@ final class WebEngineHost implements EngineHost {
     bool showStats = false,
     bool enableInspector = true,
     bool enableHotState = false,
+    void Function(ComponentRegistry registry)? registerSpecs,
     Scene? initialScene,
   }) async {
     final app = await PixeldartApp.mount(
@@ -69,6 +70,7 @@ final class WebEngineHost implements EngineHost {
     if (app == null) return null;
     final host = WebEngineHost(app).._hotStateEnabled = enableHotState;
     final engine = Engine(host, initialScene: initialScene);
+    registerSpecs?.call(engine.registry);
     host._bind(engine, enableInspector: enableInspector);
     if (enableHotState) {
       host.tryRestoreHotState();

@@ -123,6 +123,13 @@ final class SwarmEnemyBehaviour extends Behaviour {
   }
 }
 
+/// Registers custom [ComponentSpec]s for the Procession scene.
+void registerProcessionSpecs(ComponentRegistry registry) {
+  registry
+    ..register(VillagerBehaviour.spec)
+    ..register(SwarmEnemyBehaviour.spec);
+}
+
 /// Builds the Procession 2D escort scene (`example_4` port).
 Scene buildProcessionScene({double designWidth = 320, double designHeight = 180}) {
   final scene = Scene('Procession');

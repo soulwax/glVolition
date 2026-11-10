@@ -7,6 +7,8 @@ Future<void> main() async {
   final canvas = web.document.getElementById('viewport') as web.HTMLCanvasElement;
   final runner = await WebEngineHost.mount(
     canvas,
+    enableHotState: true,
+    registerSpecs: registerIsland3DSpecs,
     initialScene: buildIsland3DScene(),
   );
   runner?.start();

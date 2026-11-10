@@ -748,6 +748,7 @@ final class NativeEngineHost implements EngineHost {
     Directory? assetsDirectory,
     File? storageFile,
     bool rethrowErrors = true,
+    void Function(ComponentRegistry registry)? registerSpecs,
     Scene? initialScene,
   }) async {
     final gpu = device ?? GlesDevice();
@@ -791,6 +792,7 @@ final class NativeEngineHost implements EngineHost {
     );
 
     final engine = Engine(host, initialScene: initialScene);
+    registerSpecs?.call(engine.registry);
     host._engine = engine;
     return NativeEngineRunner._(host, engine);
   }

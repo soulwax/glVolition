@@ -138,6 +138,11 @@ final class HarbourDirector extends Behaviour {
   }
 }
 
+/// Registers custom [ComponentSpec]s for the Island3D (Tidewatch) scene.
+void registerIsland3DSpecs(ComponentRegistry registry) {
+  registry.register(LighthouseBehaviour.spec);
+}
+
 /// Builds a 3D coastal island [Scene] (Tidewatch port) combining procedural
 /// [TerrainComponent], dynamic [WaterSurfaceComponent] waves, a [BuoyantBody]
 /// vessel with [ShipAgentBehaviour], a [LighthouseBehaviour] spotlight, a

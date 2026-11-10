@@ -208,6 +208,14 @@ final class DungeonExplorer extends Behaviour {
   }
 }
 
+/// Registers custom [ComponentSpec]s for the Dungeon2D (Lantern) scene.
+void registerDungeon2DSpecs(ComponentRegistry registry) {
+  registry
+    ..register(BrazierBehaviour.spec)
+    ..register(MoteBehaviour.spec)
+    ..register(ShadeBehaviour.spec);
+}
+
 /// Builds a playable 2D dungeon [Scene] (Lantern port) with a walled room,
 /// braziers, light motes, shade enemies, portal, animated explorer, camera,
 /// and in-canvas HUD.

@@ -7,6 +7,8 @@ Future<void> main() async {
   final canvas = web.document.getElementById('viewport') as web.HTMLCanvasElement;
   final runner = await WebEngineHost.mount(
     canvas,
+    enableHotState: true,
+    registerSpecs: registerProcessionSpecs,
     initialScene: buildProcessionScene(),
   );
   runner?.start();
