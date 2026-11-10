@@ -21,6 +21,7 @@ part 'engine/transform.dart';
 part 'engine/scene.dart';
 part 'engine/engine.dart';
 part 'engine/debug_controller.dart';
+part 'engine/editor_session.dart';
 part 'engine/prefab.dart';
 part 'engine/serialization/component_spec.dart';
 part 'engine/serialization/scene_serializer.dart';

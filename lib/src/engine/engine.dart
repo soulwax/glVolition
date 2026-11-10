@@ -29,6 +29,7 @@ final class Engine {
   final Time time = Time();
   late final InputActions input = InputActions(host.input);
   late final AssetCatalog catalog = AssetCatalog._(this);
+  late final EditorSession editor = EditorSession(this);
   final ComponentRegistry registry;
 
   Scene _scene;

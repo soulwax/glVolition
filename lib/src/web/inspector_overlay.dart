@@ -109,14 +109,53 @@ final class InspectorOverlay {
     header.style.cssText =
         'display:flex;align-items:center;justify-content:space-between;'
         'padding:6px 10px;background:#1c1930;border-bottom:1px solid #3c365c;'
-        'font-weight:bold;';
+        'font-weight:bold;gap:6px;';
     final title = doc.createElement('span') as web.HTMLSpanElement
-      ..textContent = 'glVolition Inspector';
-    final exportBtn = doc.createElement('button') as web.HTMLButtonElement
-      ..textContent = 'Export JSON';
-    exportBtn.style.cssText =
+      ..textContent = 'glVolition';
+
+    final controls = doc.createElement('div') as web.HTMLDivElement;
+    controls.style.cssText = 'display:flex;gap:4px;';
+
+    const btnCss =
         'background:#322c56;color:#fff;border:1px solid #59508a;'
-        'border-radius:4px;padding:2px 8px;cursor:pointer;font:inherit;';
+        'border-radius:4px;padding:2px 6px;cursor:pointer;font:inherit;';
+
+    final playStopBtn = doc.createElement('button') as web.HTMLButtonElement
+      ..textContent = engine.editor.isPlaying ? 'Stop' : 'Play'
+      ..style.cssText = btnCss;
+    playStopBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        if (engine.editor.isPlaying) {
+          if (!engine.editor.hasSnapshot) {
+            engine.editor.captureBaselineSnapshot();
+          }
+          engine.editor.stopPlayMode();
+          playStopBtn.textContent = 'Play';
+        } else {
+          engine.editor.enterPlayMode();
+          playStopBtn.textContent = 'Stop';
+        }
+        refresh();
+      }).toJS,
+    );
+
+    final freeCamBtn = doc.createElement('button') as web.HTMLButtonElement
+      ..textContent = 'FreeCam'
+      ..style.cssText = btnCss;
+    freeCamBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        engine.editor.selected = _selected;
+        final next = !engine.editor.isFreeLookEnabled;
+        engine.editor.setFreeLook(next);
+        freeCamBtn.style.background = next ? '#5e4b9e' : '#322c56';
+      }).toJS,
+    );
+
+    final exportBtn = doc.createElement('button') as web.HTMLButtonElement
+      ..textContent = 'Save JSON'
+      ..style.cssText = btnCss;
     exportBtn.addEventListener(
       'click',
       ((web.Event _) {
@@ -124,11 +163,24 @@ final class InspectorOverlay {
           engine.scene.toJson(registry: engine.registry),
         );
         web.console.log(json.toJS);
-        exportBtn.textContent = 'Logged!';
+        web.window
+            .fetch(
+              '/__rocket_save_scene'.toJS,
+              web.RequestInit(method: 'POST', body: json.toJS),
+            )
+            .toDart
+            .then(
+              (_) => exportBtn.textContent = 'Saved!',
+              onError: (Object _) => exportBtn.textContent = 'Logged!',
+            );
       }).toJS,
     );
+
+    controls.append(playStopBtn);
+    controls.append(freeCamBtn);
+    controls.append(exportBtn);
     header.append(title);
-    header.append(exportBtn);
+    header.append(controls);
 
     // Search input
     final search = doc.createElement('input') as web.HTMLInputElement

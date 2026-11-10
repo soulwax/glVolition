@@ -136,6 +136,18 @@ Future<void> _runServe(List<String> args) async {
 
   await for (final req in server) {
     final path = req.uri.path;
+    if (path == '/__rocket_save_scene' && req.method == 'POST') {
+      final body = await utf8.decoder.bind(req).join();
+      final saveFile = File('${serveRoot.path}/scene.json');
+      await saveFile.writeAsString(body);
+      stdout.writeln('[volition] Saved scene JSON -> ${saveFile.path}');
+      req.response
+        ..statusCode = HttpStatus.ok
+        ..write('ok');
+      await req.response.close();
+      continue;
+    }
+
     if (path == '/__rocket_events') {
       req.response
         ..statusCode = HttpStatus.ok
@@ -286,26 +298,7 @@ Future<void> _runBuild(List<String> args) async {
       }
       stdout.writeln('[volition] Built $outWasm');
     case 'windows':
-      final outJs = '${destDir.path}/main.dart.js';
-      stdout.writeln('[volition] Packaging Windows desktop bundle -> ${destDir.path}');
-      final res = await Process.run(Platform.resolvedExecutable, [
-        'compile',
-        'js',
-        '-O4',
-        '--no-source-maps',
-        '-o',
-        outJs,
-        entryFile.path,
-      ]);
-      if (res.exitCode != 0) {
-        stderr.writeln(res.stdout);
-        stderr.writeln(res.stderr);
-        exit(res.exitCode);
-      }
-      File('${destDir.path}/launch_desktop.cmd').writeAsStringSync(
-        '@echo off\r\nstart "" msedge --app="%~dp0index.html"\r\n',
-      );
-      stdout.writeln('[volition] Packaged Windows bundle in ${destDir.path}');
+      await _buildWindowsExecutable(entryFile, destDir);
     default:
       stderr.writeln('Unsupported --target "$target" (expected js, wasm, or windows).');
       exit(64);
@@ -317,10 +310,11 @@ void _copyStaticAssets(Directory sourceDir, Directory destDir) {
   if (indexFile.existsSync()) {
     indexFile.copySync('${destDir.path}/index.html');
   }
-  for (final folder in const ['models', 'audio', 'assets']) {
+  for (final folder in const ['models', 'audio', 'assets', 'res']) {
     final candidates = [
       Directory('${sourceDir.path}/$folder'),
       Directory('vendor/pixeldart/web/$folder'),
+      Directory('vendor/pixeldart/examples/example_1/$folder'),
     ];
     for (final src in candidates) {
       if (src.existsSync()) {
@@ -329,6 +323,91 @@ void _copyStaticAssets(Directory sourceDir, Directory destDir) {
       }
     }
   }
+}
+
+Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
+  final buildSubdir = Directory('${destDir.path}/build')..createSync(recursive: true);
+  final outJs = '${destDir.path}/main.dart.js';
+  final outBuildJs = '${buildSubdir.path}/main.dart.js';
+  stdout.writeln('[volition] Compiling JS bundle for Windows desktop host...');
+  final res = await Process.run(Platform.resolvedExecutable, [
+    'compile',
+    'js',
+    '-O4',
+    '--no-source-maps',
+    '-o',
+    outJs,
+    entryFile.path,
+  ]);
+  if (res.exitCode != 0) {
+    stderr.writeln(res.stdout);
+    stderr.writeln(res.stderr);
+    exit(res.exitCode);
+  }
+  File(outJs).copySync(outBuildJs);
+
+  File('${destDir.path}/launch_desktop.cmd').writeAsStringSync(
+    '@echo off\r\nstart "" msedge --app="%~dp0index.html"\r\n',
+  );
+
+  final hostCs = File('vendor/pixeldart/examples/desktop_host/Program.cs');
+  if (!hostCs.existsSync()) {
+    stdout.writeln('[volition] Packaged Windows web bundle in ${destDir.path}');
+    return;
+  }
+
+  final desktopDir = Directory('${destDir.path}/desktop')..createSync(recursive: true);
+  final csproj = File('${desktopDir.path}/GlVolitionGame.csproj');
+  final hostAbs = hostCs.absolute.path;
+  csproj.writeAsStringSync('''
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>GlVolitionGame</AssemblyName>
+    <AssemblyTitle>glVolition Game</AssemblyTitle>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3856.49" />
+    <Compile Include="$hostAbs" Link="Program.cs" />
+    <EmbeddedResource Include="..\\index.html" LogicalName="game/index.html" />
+    <EmbeddedResource Include="..\\main.dart.js" LogicalName="game/main.dart.js" />
+    <EmbeddedResource Include="..\\build\\main.dart.js" LogicalName="game/build/main.dart.js" />
+    <EmbeddedResource Include="..\\res\\**\\*" LogicalName="game/res/%(RecursiveDir)%(Filename)%(Extension)" Condition="Exists('..\\res')" />
+  </ItemGroup>
+</Project>
+''');
+
+  try {
+    final pubDir = '${desktopDir.path}/publish';
+    final pubRes = await Process.run('dotnet', [
+      'publish',
+      csproj.path,
+      '-c',
+      'Release',
+      '-o',
+      pubDir,
+    ]);
+    if (pubRes.exitCode == 0) {
+      final builtExe = File('$pubDir/GlVolitionGame.exe');
+      final finalExe = File('${destDir.path}/GlVolitionGame.exe');
+      if (builtExe.existsSync()) {
+        builtExe.copySync(finalExe.path);
+        stdout.writeln('[volition] Built single-file Windows executable -> ${finalExe.path}');
+        return;
+      }
+    }
+  } catch (_) {}
+
+  stdout.writeln('[volition] Packaged Windows desktop project in ${destDir.path}');
 }
 
 void _copyDirectory(Directory src, Directory dst) {

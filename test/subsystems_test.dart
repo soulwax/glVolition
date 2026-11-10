@@ -511,4 +511,71 @@ void main() {
       expect(tourCam.getComponent<SplineFollower>()!.distance, greaterThan(0));
     });
   });
+
+  group('E7 — EditorSession (Play/Stop Snapshot, Free-Look Camera & 3D Gizmo Drag)', () {
+    test('enterPlayMode and stopPlayMode discard runtime mutations and destroyed objects', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.registry.register(_HealthBehaviour.spec);
+
+      final crate = engine.scene.createGameObject(
+        'Crate',
+        position: const Vec3(2, 0, -4),
+        components: [_HealthBehaviour(hp: 100)],
+      );
+      final enemy = engine.scene.createGameObject('TempEnemy', position: const Vec3(5, 0, 0));
+
+      engine.editor.enterPlayMode();
+
+      // Mutate crate and destroy TempEnemy during Play mode
+      crate.transform.localPosition = const Vec3(99, 50, 12);
+      crate.getComponent<_HealthBehaviour>()!.hp = 10;
+      enemy.destroy();
+      engine.step(0.016);
+      expect(engine.scene.find('TempEnemy'), isNull);
+
+      // Stop Play mode -> scene restores to pre-Play snapshot
+      engine.editor.stopPlayMode();
+      expect(engine.editor.isPlaying, isFalse);
+      expect(engine.time.timeScale, 0.0);
+
+      final restoredCrate = engine.scene.find('Crate');
+      expect(restoredCrate, isNotNull);
+      expect(restoredCrate!.transform.localPosition, const Vec3(2, 0, -4));
+      expect(restoredCrate.getComponent<_HealthBehaviour>()!.hp, 100);
+      expect(engine.scene.find('TempEnemy'), isNotNull);
+    });
+
+    test('setFreeLook overrides scene camera with editor OrbitCameraController', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.scene.createGameObject('MainCam', components: [Camera()]);
+      engine.step(0.016);
+      expect(host.graphics.camera, isNot(same(engine.editor.freeLookCamera)));
+
+      engine.editor.setFreeLook(true);
+      engine.step(0.016);
+      expect(host.graphics.camera, same(engine.editor.freeLookCamera));
+
+      engine.editor.setFreeLook(false);
+      engine.step(0.016);
+      expect(host.graphics.camera, isNot(same(engine.editor.freeLookCamera)));
+    });
+
+    test('computeAxisDragPosition translates object along +X axis from pointer rays', () {
+      const origin = Vec3(0, 0, 0);
+      final startRay = Ray(const Vec3(0, 0, 10), const Vec3(0, 0, -1));
+      final dragRay = Ray(const Vec3(4.5, 0, 10), const Vec3(0, 0, -1));
+
+      final nextPos = EditorSession.computeAxisDragPosition(
+        initialWorldPosition: origin,
+        axisDir: const Vec3(1, 0, 0),
+        startRay: startRay,
+        currentRay: dragRay,
+      );
+      expect(nextPos.x, closeTo(4.5, 1e-5));
+      expect(nextPos.y, closeTo(0.0, 1e-5));
+      expect(nextPos.z, closeTo(0.0, 1e-5));
+    });
+  });
 }

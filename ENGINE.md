@@ -211,3 +211,9 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E7-1. Hierarchy & `ComponentSpec` Inspector panel (`InspectorOverlay`).**
   - _Touches:_ `lib/src/web/inspector_overlay.dart`, `lib/src/web/web_host.dart`.
   - _APIs:_ Toggle with `F12` or `Alt+I`, viewport picking with `Alt + LeftClick`, live hierarchy tree with active checkboxes & search filter, live `Transform` + `ComponentSpec` field editors, and JSON scene export.
+- [x] **E7-2. Free-look editor camera & 3D transform gizmo drag math (`EditorSession`).**
+  - _Touches:_ `lib/src/engine/editor_session.dart`, `lib/src/web/inspector_overlay.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`setFreeLook` camera override and `computeAxisDragPosition` along +X axis).
+- [x] **E7-3. Play / Stop snapshot & save-to-disk via `volition serve`.**
+  - _Touches:_ `lib/src/engine/editor_session.dart`, `lib/src/web/inspector_overlay.dart`, `bin/volition.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`enterPlayMode` / `stopPlayMode` discarding runtime mutations and restoring destroyed objects).

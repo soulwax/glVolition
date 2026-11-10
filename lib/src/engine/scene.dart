@@ -280,7 +280,9 @@ final class Scene {
       p._syncTransform();
     }
     final mainCam = _cameras.lastOrNull;
-    if (mainCam != null) {
+    if (_engine != null && _engine!.editor.isFreeLookEnabled) {
+      graphics.camera = _engine!.editor.freeLookCamera;
+    } else if (mainCam != null) {
       mainCam._sync();
       graphics.camera = mainCam.controller;
     }
