@@ -21,8 +21,8 @@ final class EditorSession {
   final OrbitCameraController freeLookCamera = OrbitCameraController(
     target: Vec3.zero,
     distance: 18,
-    yaw: 0.4,
-    pitch: 0.35,
+    azimuthRadians: 0.4,
+    elevationRadians: 0.35,
   );
 
   EditorSession(this.engine, {this.prefabs = const {}});

@@ -564,8 +564,8 @@ void main() {
 
     test('computeAxisDragPosition translates object along +X axis from pointer rays', () {
       const origin = Vec3(0, 0, 0);
-      final startRay = Ray(const Vec3(0, 0, 10), const Vec3(0, 0, -1));
-      final dragRay = Ray(const Vec3(4.5, 0, 10), const Vec3(0, 0, -1));
+      const startRay = Ray(origin: Vec3(0, 0, 10), direction: Vec3(0, 0, -1));
+      const dragRay = Ray(origin: Vec3(4.5, 0, 10), direction: Vec3(0, 0, -1));
 
       final nextPos = EditorSession.computeAxisDragPosition(
         initialWorldPosition: origin,
