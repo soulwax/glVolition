@@ -144,12 +144,178 @@ final class UIButton extends UIElement {
   });
 }
 
+/// Interactive boolean checkbox/switch rendered by a [UICanvas] (E8-3).
+final class UIToggle extends UIElement {
+  String label;
+  bool value;
+  void Function(bool value)? onChanged;
+  int boxColor;
+  int activeColor;
+  int borderColor;
+  int textColor;
+  double textScale;
+
+  bool isHovered = false;
+
+  UIToggle({
+    this.label = '',
+    this.value = false,
+    super.anchor,
+    super.x,
+    super.y,
+    super.width = 16,
+    super.height = 16,
+    this.onChanged,
+    this.boxColor = 0x181526FF,
+    this.activeColor = 0x4DFFAAFF,
+    this.borderColor = 0x8F88B8FF,
+    this.textColor = 0xFFFFFFFF,
+    this.textScale = 1,
+    super.visible,
+  });
+}
+
+/// Interactive horizontal value slider rendered by a [UICanvas] (E8-3).
+final class UISlider extends UIElement {
+  double value;
+  double min;
+  double max;
+  void Function(double value)? onChanged;
+  int trackColor;
+  int fillColor;
+  int thumbColor;
+  int? borderColor;
+
+  bool isDragging = false;
+
+  UISlider({
+    super.anchor,
+    super.x,
+    super.y,
+    required super.width,
+    super.height = 12,
+    this.value = 0.5,
+    this.min = 0.0,
+    this.max = 1.0,
+    this.onChanged,
+    this.trackColor = 0x141220E6,
+    this.fillColor = 0x5CE1E6FF,
+    this.thumbColor = 0xFFFFFFFF,
+    this.borderColor = 0x7A749EFF,
+    super.visible,
+  });
+
+  double get normalized =>
+      max > min ? ((value - min) / (max - min)).clamp(0.0, 1.0) : 0.0;
+
+  void setFromNormalized(double t) {
+    final clamped = t.clamp(0.0, 1.0);
+    final next = min + (max - min) * clamped;
+    if ((next - value).abs() > 1e-6) {
+      value = next;
+      onChanged?.call(value);
+    }
+  }
+}
+
+enum UIStackAxis { vertical, horizontal }
+
+/// Auto-layout stack container that positions child [UIElement]s sequentially
+/// with [spacing] and [padding] (E8-3).
+final class UIStack extends UIElement {
+  UIStackAxis axis;
+  double spacing;
+  double padding;
+  int? backgroundColor;
+  int? borderColor;
+  final List<UIElement> children = [];
+
+  UIStack({
+    this.axis = UIStackAxis.vertical,
+    this.spacing = 4,
+    this.padding = 6,
+    this.backgroundColor,
+    this.borderColor,
+    super.anchor,
+    super.x,
+    super.y,
+    super.width = 120,
+    super.height = 80,
+    super.visible,
+    List<UIElement> children = const [],
+  }) {
+    this.children.addAll(children);
+    layout();
+  }
+
+  T add<T extends UIElement>(T child) {
+    children.add(child);
+    layout();
+    return child;
+  }
+
+  /// Recomputes each child's `(anchor, x, y)` so they flow along [axis] inside
+  /// this stack's resolved rectangle, and updates this stack's `width`/`height`
+  /// to fit its children.
+  void layout({double canvasW = 640, double canvasH = 360}) {
+    var cursor = padding;
+    var maxCross = 0.0;
+    for (final child in children) {
+      if (!child.visible) continue;
+      if (axis == UIStackAxis.vertical) {
+        cursor += child.height + spacing;
+        if (child.width > maxCross) maxCross = child.width;
+      } else {
+        cursor += child.width + spacing;
+        if (child.height > maxCross) maxCross = child.height;
+      }
+    }
+    final totalMain = children.where((c) => c.visible).isEmpty
+        ? padding * 2
+        : cursor - spacing + padding;
+    if (axis == UIStackAxis.vertical) {
+      if (maxCross + padding * 2 > width) width = maxCross + padding * 2;
+      height = totalMain;
+    } else {
+      width = totalMain;
+      if (maxCross + padding * 2 > height) height = maxCross + padding * 2;
+    }
+
+    final (rx, ry) = resolveTopLeft(canvasW, canvasH);
+    var offset = padding;
+    for (final child in children) {
+      if (!child.visible) continue;
+      child.anchor = UIAnchor.topLeft;
+      if (axis == UIStackAxis.vertical) {
+        child
+          ..x = rx + padding
+          ..y = ry + offset;
+        offset += child.height + spacing;
+      } else {
+        child
+          ..x = rx + offset
+          ..y = ry + padding;
+        offset += child.width + spacing;
+      }
+    }
+  }
+}
+
 /// DOM-free in-canvas UI overlay rendered on `SpriteStage.overlay` (E4-4).
 final class UICanvas extends Behaviour {
-  final double designWidth;
-  final double designHeight;
+  double designWidth;
+  double designHeight;
   BitmapFont? font;
   final List<UIElement> elements = [];
+
+  static final spec = ComponentSpec<UICanvas>(
+    'UICanvas',
+    UICanvas.new,
+    [
+      Field.number('designWidth', (c) => c.designWidth, (c, v) => c.designWidth = v),
+      Field.number('designHeight', (c) => c.designHeight, (c, v) => c.designHeight = v),
+    ],
+  );
 
   late final Camera2D _camera = Camera2D(
     designWidth: designWidth,
@@ -191,20 +357,53 @@ final class UICanvas extends Behaviour {
     final raw = engine.host.input;
     final pt = pointerToCanvas(raw.pointerX, raw.pointerY);
     for (final el in List.of(elements)) {
-      if (el is UIButton) {
-        final hit = el.containsPoint(pt.x, pt.y, designWidth, designHeight);
-        el.isHovered = hit;
-        if (hit && raw.pointerPressed) {
-          el.isPressed = true;
+      _updateElement(el, pt, raw);
+    }
+  }
+
+  void _updateElement(UIElement el, Vec2 pt, Input raw) {
+    if (!el.visible) return;
+    switch (el) {
+      case UIStack stack:
+        stack.layout(canvasW: designWidth, canvasH: designHeight);
+        for (final child in List.of(stack.children)) {
+          _updateElement(child, pt, raw);
         }
-        if (el.isPressed && raw.pointerReleased) {
-          el.isPressed = false;
-          if (hit) el.onPressed?.call();
+      case UIButton btn:
+        final hit = btn.containsPoint(pt.x, pt.y, designWidth, designHeight);
+        btn.isHovered = hit;
+        if (hit && raw.pointerPressed) {
+          btn.isPressed = true;
+        }
+        if (btn.isPressed && raw.pointerReleased) {
+          btn.isPressed = false;
+          if (hit) btn.onPressed?.call();
         }
         if (!raw.pointerDown) {
-          el.isPressed = false;
+          btn.isPressed = false;
         }
-      }
+      case UIToggle toggle:
+        final hit = toggle.containsPoint(pt.x, pt.y, designWidth, designHeight);
+        toggle.isHovered = hit;
+        if (hit && raw.pointerPressed) {
+          toggle.value = !toggle.value;
+          toggle.onChanged?.call(toggle.value);
+        }
+      case UISlider slider:
+        final hit = slider.containsPoint(pt.x, pt.y, designWidth, designHeight);
+        if (hit && raw.pointerPressed) {
+          slider.isDragging = true;
+        }
+        if (!raw.pointerDown) {
+          slider.isDragging = false;
+        }
+        if (slider.isDragging || (hit && raw.pointerPressed)) {
+          final (rx, _) = slider.resolveTopLeft(designWidth, designHeight);
+          final t = slider.width > 0 ? (pt.x - rx) / slider.width : 0.0;
+          slider.setFromNormalized(t);
+        }
+      case UIPanel() || UILabel() || UIProgressBar():
+        break;
     }
   }
 
@@ -218,57 +417,109 @@ final class UICanvas extends Behaviour {
     _batch.clear();
 
     for (final el in elements) {
-      if (!el.visible) continue;
-      final (rx, ry) = el.resolveTopLeft(designWidth, designHeight);
-      switch (el) {
-        case UIPanel p:
-          _batch.drawRect(rx, ry, p.width, p.height, color: p.fillColor);
-          if (p.borderColor != null) {
-            _drawBorder(rx, ry, p.width, p.height, p.borderThickness, p.borderColor!);
-          }
-        case UILabel l:
-          font?.draw(
-            _batch,
-            l.text,
-            rx,
-            ry,
-            scale: l.scale,
-            alignX: l.alignX,
-            color: l.color,
-          );
-        case UIProgressBar bar:
-          _batch.drawRect(rx, ry, bar.width, bar.height, color: bar.backgroundColor);
-          final frac = bar.value.clamp(0.0, 1.0);
-          final fillCol = (bar.lowFillColor != null && frac <= bar.lowThreshold)
-              ? bar.lowFillColor!
-              : bar.fillColor;
-          if (frac > 0) {
-            _batch.drawRect(rx, ry, bar.width * frac, bar.height, color: fillCol);
-          }
-          if (bar.borderColor != null) {
-            _drawBorder(rx, ry, bar.width, bar.height, 1, bar.borderColor!);
-          }
-        case UIButton btn:
-          final bg = btn.isPressed
-              ? btn.pressedColor
-              : (btn.isHovered ? btn.hoverColor : btn.normalColor);
-          _batch.drawRect(rx, ry, btn.width, btn.height, color: bg);
-          final f = font;
-          if (f != null && btn.label.isNotEmpty) {
-            f.draw(
-              _batch,
-              btn.label,
-              rx + btn.width * 0.5,
-              ry + (btn.height - f.lineHeight * btn.textScale) * 0.5,
-              scale: btn.textScale,
-              alignX: 0.5,
-              color: btn.textColor,
-            );
-          }
-      }
+      _drawElement(el);
     }
 
     encoder.drawSprites(_batch, _camera, stage: SpriteStage.overlay);
+  }
+
+  void _drawElement(UIElement el) {
+    if (!el.visible) return;
+    final (rx, ry) = el.resolveTopLeft(designWidth, designHeight);
+    switch (el) {
+      case UIStack stack:
+        stack.layout(canvasW: designWidth, canvasH: designHeight);
+        final (sx, sy) = stack.resolveTopLeft(designWidth, designHeight);
+        if (stack.backgroundColor != null) {
+          _batch.drawRect(sx, sy, stack.width, stack.height, color: stack.backgroundColor!);
+        }
+        if (stack.borderColor != null) {
+          _drawBorder(sx, sy, stack.width, stack.height, 1, stack.borderColor!);
+        }
+        for (final child in stack.children) {
+          _drawElement(child);
+        }
+      case UIPanel p:
+        _batch.drawRect(rx, ry, p.width, p.height, color: p.fillColor);
+        if (p.borderColor != null) {
+          _drawBorder(rx, ry, p.width, p.height, p.borderThickness, p.borderColor!);
+        }
+      case UILabel l:
+        font?.draw(
+          _batch,
+          l.text,
+          rx,
+          ry,
+          scale: l.scale,
+          alignX: l.alignX,
+          color: l.color,
+        );
+      case UIProgressBar bar:
+        _batch.drawRect(rx, ry, bar.width, bar.height, color: bar.backgroundColor);
+        final frac = bar.value.clamp(0.0, 1.0);
+        final fillCol = (bar.lowFillColor != null && frac <= bar.lowThreshold)
+            ? bar.lowFillColor!
+            : bar.fillColor;
+        if (frac > 0) {
+          _batch.drawRect(rx, ry, bar.width * frac, bar.height, color: fillCol);
+        }
+        if (bar.borderColor != null) {
+          _drawBorder(rx, ry, bar.width, bar.height, 1, bar.borderColor!);
+        }
+      case UIButton btn:
+        final bg = btn.isPressed
+            ? btn.pressedColor
+            : (btn.isHovered ? btn.hoverColor : btn.normalColor);
+        _batch.drawRect(rx, ry, btn.width, btn.height, color: bg);
+        final f = font;
+        if (f != null && btn.label.isNotEmpty) {
+          f.draw(
+            _batch,
+            btn.label,
+            rx + btn.width * 0.5,
+            ry + (btn.height - f.lineHeight * btn.textScale) * 0.5,
+            scale: btn.textScale,
+            alignX: 0.5,
+            color: btn.textColor,
+          );
+        }
+      case UIToggle toggle:
+        _batch.drawRect(rx, ry, toggle.height, toggle.height, color: toggle.boxColor);
+        _drawBorder(rx, ry, toggle.height, toggle.height, 1, toggle.borderColor);
+        if (toggle.value) {
+          final inset = math.max(2.0, toggle.height * 0.22);
+          _batch.drawRect(
+            rx + inset,
+            ry + inset,
+            toggle.height - inset * 2,
+            toggle.height - inset * 2,
+            color: toggle.activeColor,
+          );
+        }
+        final f = font;
+        if (f != null && toggle.label.isNotEmpty) {
+          f.draw(
+            _batch,
+            toggle.label,
+            rx + toggle.height + 5,
+            ry + (toggle.height - f.lineHeight * toggle.textScale) * 0.5,
+            scale: toggle.textScale,
+            color: toggle.textColor,
+          );
+        }
+      case UISlider slider:
+        _batch.drawRect(rx, ry, slider.width, slider.height, color: slider.trackColor);
+        final frac = slider.normalized;
+        if (frac > 0) {
+          _batch.drawRect(rx, ry, slider.width * frac, slider.height, color: slider.fillColor);
+        }
+        if (slider.borderColor != null) {
+          _drawBorder(rx, ry, slider.width, slider.height, 1, slider.borderColor!);
+        }
+        final thumbW = math.max(4.0, slider.height * 0.5);
+        final thumbX = rx + (slider.width - thumbW) * frac;
+        _batch.drawRect(thumbX, ry - 1, thumbW, slider.height + 2, color: slider.thumbColor);
+    }
   }
 
   void _drawBorder(double x, double y, double w, double h, double t, int color) {

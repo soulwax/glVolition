@@ -179,6 +179,16 @@ final class FieldBody extends Behaviour with Poolable {
 
   FieldBody(this.kind, {required this.baseRadius});
 
+  static final spec = ComponentSpec<FieldBody>(
+    'FieldBody',
+    () => FieldBody(BodyKind.meteor, baseRadius: 0.85),
+    [
+      Field.vec3('spinAxis', (b) => b.spinAxis, (b, v) => b.spinAxis = v),
+      Field.number('spinRate', (b) => b.spinRate, (b, v) => b.spinRate = v),
+      Field.boolean('consumed', (b) => b.consumed, (b, v) => b.consumed = v),
+    ],
+  );
+
   @override
   int get executionOrder => 10;
 
@@ -368,7 +378,24 @@ final class RocketDirector extends Behaviour {
   double _overTimer = 0;
   double _scoreDebt = 0;
 
-  RocketDirector({required this.hud, math.Random? random}) : rng = random ?? math.Random();
+  RocketDirector({RocketHud? hud, math.Random? random})
+      : hud = hud ?? NullRocketHud(),
+        rng = random ?? math.Random();
+
+  static final spec = ComponentSpec<RocketDirector>(
+    'RocketDirector',
+    RocketDirector.new,
+    [
+      Field.number('speed', (d) => d.speed, (d, v) => d.speed = v),
+      Field.integer('score', (d) => d.score, (d, v) => d.score = v),
+      Field.integer('best', (d) => d.best, (d, v) => d.best = v),
+      Field.number('fuel', (d) => d.fuel, (d, v) => d.fuel = v),
+      Field.integer('shields', (d) => d.shields, (d, v) => d.shields = v),
+      Field.number('invulnerable', (d) => d.invulnerable, (d, v) => d.invulnerable = v),
+      Field.boolean('boosting', (d) => d.boosting, (d, v) => d.boosting = v),
+      Field.boolean('retro', (d) => d.retro, (d, v) => d.retro = v),
+    ],
+  );
 
   @override
   void awake() {
@@ -594,6 +621,13 @@ final class RocketDirector extends Behaviour {
 
 /// Populates [engine.scene] with the complete Pixel Rocket hierarchy and
 /// returns the [RocketDirector] driving it.
+/// Registers custom [ComponentSpec]s for the Pixel Rocket scene.
+void registerPixelRocketSpecs(ComponentRegistry registry) {
+  registry
+    ..register(FieldBody.spec)
+    ..register(RocketDirector.spec);
+}
+
 RocketDirector buildPixelRocketScene(
   Engine engine, {
   required RocketHud hud,

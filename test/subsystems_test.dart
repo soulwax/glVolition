@@ -666,4 +666,190 @@ void main() {
       expect(device.liveObjectCount, 0);
     });
   });
+
+  group('E8 — SceneEvents, Coroutines, PostProcessVolume & Modular UICanvas Controls', () {
+    test('SceneEvents dispatches typed events and unsubscribes automatically when owner is disabled/destroyed', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final go = engine.scene.createGameObject('ListenerObj', components: [_HealthBehaviour(hp: 100)]);
+      final health = go.getComponent<_HealthBehaviour>()!;
+
+      var hits = 0;
+      health.listen<int>((dmg) {
+        health.hp -= dmg;
+        hits++;
+      });
+
+      engine.scene.events.emit<int>(25);
+      expect(health.hp, 75);
+      expect(hits, 1);
+
+      // Inactive object skips listener
+      go.setActive(false);
+      engine.scene.events.emit<int>(25);
+      expect(health.hp, 75);
+      expect(hits, 1);
+
+      // Re-activated object receives listener again
+      go.setActive(true);
+      engine.scene.events.emit<int>(15);
+      expect(health.hp, 60);
+      expect(hits, 2);
+
+      // Destroyed object is removed from bus
+      go.destroy();
+      engine.step(0.016);
+      engine.scene.events.emit<int>(10);
+      expect(hits, 2);
+    });
+
+    test('Behaviour.startCoroutine steps through NextFrame, WaitForSeconds, and WaitUntil', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final go = engine.scene.createGameObject('Runner', components: [_HealthBehaviour(hp: 0)]);
+      final beh = go.getComponent<_HealthBehaviour>()!;
+
+      final stages = <String>[];
+      var gateOpen = false;
+
+      beh.startCoroutine(() sync* {
+        stages.add('start');
+        yield const NextFrame();
+        stages.add('after_next_frame');
+        yield const WaitForSeconds(0.15);
+        stages.add('after_wait_seconds');
+        yield WaitUntil(() => gateOpen);
+        stages.add('after_gate');
+      });
+
+      // Immediately ran up to the first yield
+      expect(stages, ['start']);
+
+      engine.step(0.05);
+      expect(stages, ['start', 'after_next_frame']);
+
+      engine.step(0.08);
+      expect(stages, ['start', 'after_next_frame']);
+
+      engine.step(0.08);
+      expect(stages, ['start', 'after_next_frame', 'after_wait_seconds']);
+
+      engine.step(0.05);
+      expect(stages, ['start', 'after_next_frame', 'after_wait_seconds']);
+
+      gateOpen = true;
+      engine.step(0.05);
+      expect(stages, ['start', 'after_next_frame', 'after_wait_seconds', 'after_gate']);
+    });
+
+    test('PostProcessVolume blends spatial exposure, bloom, and vignette by camera distance', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final camGo = engine.scene.createGameObject(
+        'MainCam',
+        position: const Vec3(0, 0, 20),
+        components: [Camera()],
+      );
+      engine.scene.createGameObject(
+        'BossZoneVolume',
+        position: Vec3.zero,
+        components: [
+          PostProcessVolume(
+            isGlobal: false,
+            radius: 5.0,
+            blendDistance: 5.0,
+            exposure: 2.0,
+            bloomStrength: 0.8,
+            vignette: 0.6,
+          ),
+        ],
+      );
+
+      // Outside radius + blendDistance (dist = 20 > 10): weight = 0
+      engine.scene.renderSettings.post = const PostProcessState(exposure: 1.0, bloomStrength: 0.0, vignette: 0.0);
+      engine.step(0.016);
+      expect(engine.scene.renderSettings.post.exposure, closeTo(1.0, 1e-5));
+
+      // Halfway through feather band (dist = 7.5, radius = 5, blend = 5 -> weight = 0.5)
+      camGo.transform.localPosition = const Vec3(0, 0, 7.5);
+      engine.scene.renderSettings.post = const PostProcessState(exposure: 1.0, bloomStrength: 0.0, vignette: 0.0);
+      engine.step(0.016);
+      expect(engine.scene.renderSettings.post.exposure, closeTo(1.5, 1e-5));
+      expect(engine.scene.renderSettings.post.bloomStrength, closeTo(0.4, 1e-5));
+      expect(engine.scene.renderSettings.post.vignette, closeTo(0.3, 1e-5));
+
+      // Inside core radius (dist = 2 <= 5 -> weight = 1.0)
+      camGo.transform.localPosition = const Vec3(0, 0, 2.0);
+      engine.scene.renderSettings.post = const PostProcessState(exposure: 1.0, bloomStrength: 0.0, vignette: 0.0);
+      engine.step(0.016);
+      expect(engine.scene.renderSettings.post.exposure, closeTo(2.0, 1e-5));
+      expect(engine.scene.renderSettings.post.bloomStrength, closeTo(0.8, 1e-5));
+      expect(engine.scene.renderSettings.post.vignette, closeTo(0.6, 1e-5));
+    });
+
+    test('UIStack lays out UIToggle and UISlider and dispatches pointer interactions', () {
+      final host = HeadlessHost();
+      host.graphics
+        ..viewportWidth = 640
+        ..viewportHeight = 360;
+      final engine = Engine(host);
+
+      final canvas = UICanvas(designWidth: 640, designHeight: 360);
+      var toggledValue = false;
+      var sliderValue = 0.0;
+
+      final toggle = UIToggle(
+        label: 'Mute',
+        width: 20,
+        height: 20,
+        onChanged: (v) => toggledValue = v,
+      );
+      final slider = UISlider(
+        width: 100,
+        height: 12,
+        min: 0,
+        max: 100,
+        value: 20,
+        onChanged: (v) => sliderValue = v,
+      );
+      final stack = UIStack(
+        anchor: UIAnchor.topLeft,
+        x: 10,
+        y: 10,
+        padding: 4,
+        spacing: 6,
+        children: [toggle, slider],
+      );
+      canvas.add(stack);
+      engine.scene.createGameObject('HUD', components: [canvas]);
+
+      // Verify vertical layout coordinates
+      stack.layout(canvasW: 640, canvasH: 360);
+      expect(toggle.x, closeTo(14, 1e-5));
+      expect(toggle.y, closeTo(14, 1e-5));
+      expect(slider.x, closeTo(14, 1e-5));
+      expect(slider.y, closeTo(40, 1e-5));
+
+      // Click toggle at (20, 20)
+      host.input
+        ..pointerX = 20
+        ..pointerY = 20
+        ..pointerDown = true
+        ..pointerPressed = true;
+      engine.step(0.016);
+      host.input.endFrame();
+      expect(toggle.value, isTrue);
+      expect(toggledValue, isTrue);
+
+      // Drag slider to 75% at x = 14 + 75 = 89, y = 45
+      host.input
+        ..pointerX = 89
+        ..pointerY = 45
+        ..pointerDown = true
+        ..pointerPressed = true;
+      engine.step(0.016);
+      host.input.endFrame();
+      expect(sliderValue, closeTo(75.0, 1e-4));
+    });
+  });
 }

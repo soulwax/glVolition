@@ -16,13 +16,34 @@ final class LeaderBehaviour extends Behaviour {
   int deliveredCount = 0;
 
   LeaderBehaviour({
-    required this.tilemap,
+    TilemapComponent? tilemap,
     this.moveSpeed = 85.0,
     this.radius = 6.0,
     this.torchRadius = 56.0,
     this.sanctuaryCenter = const Vec2(240, 80),
     this.sanctuaryRadius = 28.0,
-  });
+  }) : tilemap = tilemap ??
+            TilemapComponent(
+              TileLayer(
+                columns: 1,
+                rows: 1,
+                tileWidth: 16,
+                tileHeight: 16,
+                tileset: [SpriteRegion.white],
+              ),
+            );
+
+  static final spec = ComponentSpec<LeaderBehaviour>(
+    'LeaderBehaviour',
+    LeaderBehaviour.new,
+    [
+      Field.number('moveSpeed', (l) => l.moveSpeed, (l, v) => l.moveSpeed = v),
+      Field.number('radius', (l) => l.radius, (l, v) => l.radius = v),
+      Field.number('torchRadius', (l) => l.torchRadius, (l, v) => l.torchRadius = v),
+      Field.number('sanctuaryRadius', (l) => l.sanctuaryRadius, (l, v) => l.sanctuaryRadius = v),
+      Field.integer('deliveredCount', (l) => l.deliveredCount, (l, v) => l.deliveredCount = v),
+    ],
+  );
 
   @override
   void update() {
@@ -126,6 +147,7 @@ final class SwarmEnemyBehaviour extends Behaviour {
 /// Registers custom [ComponentSpec]s for the Procession scene.
 void registerProcessionSpecs(ComponentRegistry registry) {
   registry
+    ..register(LeaderBehaviour.spec)
     ..register(VillagerBehaviour.spec)
     ..register(SwarmEnemyBehaviour.spec);
 }

@@ -225,6 +225,9 @@ final class ComponentRegistry {
   ComponentSpec<dynamic>? specByName(String typeName) => _byName[typeName];
   ComponentSpec<dynamic>? specFor(Component component) => _byType[component.runtimeType];
 
+  /// All registered [ComponentSpec]s in registration order.
+  Iterable<ComponentSpec<dynamic>> get registeredSpecs => _byName.values;
+
   void _registerBuiltIns() {
     register<Camera>(
       ComponentSpec<Camera>(
@@ -333,6 +336,46 @@ final class ComponentRegistry {
           Field.number('flash', (s) => s.flash, (s, v) => s.flash = v),
           Field.integer('layer', (s) => s.layer, (s, v) => s.layer = v),
         ],
+      ),
+    );
+    register<PostProcessVolume>(PostProcessVolume.spec);
+    register<UICanvas>(UICanvas.spec);
+    register<DebugController>(
+      ComponentSpec<DebugController>(
+        'DebugController',
+        DebugController.new,
+        [
+          Field.boolean('isOpen', (d) => d.isOpen, (d, v) => d.isOpen = v),
+        ],
+      ),
+    );
+    register<SplineFollower>(
+      ComponentSpec<SplineFollower>(
+        'SplineFollower',
+        () => SplineFollower(path: SplinePath.fromPoints(const [Vec3.zero, Vec3(0, 0, -5)])),
+        [
+          Field.number('speed', (s) => s.speed, (s, v) => s.speed = v),
+          Field.number('distance', (s) => s.distance, (s, v) => s.distance = v),
+          Field.boolean('alignToTangent', (s) => s.alignToTangent, (s, v) => s.alignToTangent = v),
+          Field.vec3('localOffset', (s) => s.localOffset, (s, v) => s.localOffset = v),
+        ],
+      ),
+    );
+    register<SpriteAnimator>(
+      ComponentSpec<SpriteAnimator>(
+        'SpriteAnimator',
+        () => SpriteAnimator(clips: {'idle': [SpriteRegion.white]}, initialClip: 'idle'),
+        [
+          Field.number('fps', (s) => s.fps, (s, v) => s.fps = v),
+          Field.boolean('loop', (s) => s.loop, (s, v) => s.loop = v),
+        ],
+      ),
+    );
+    register<BuoyantBody>(
+      ComponentSpec<BuoyantBody>(
+        'BuoyantBody',
+        BuoyantBody.new,
+        const [],
       ),
     );
   }

@@ -176,6 +176,20 @@ final class InspectorOverlay {
       }).toJS,
     );
 
+    final newObjBtn = doc.createElement('button') as web.HTMLButtonElement
+      ..textContent = '+ Object'
+      ..style.cssText = btnCss;
+    newObjBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        final count = engine.scene.rootGameObjects.length + 1;
+        final created = engine.scene.createGameObject('GameObject_$count');
+        _selected = created;
+        refresh();
+      }).toJS,
+    );
+
+    controls.append(newObjBtn);
     controls.append(playStopBtn);
     controls.append(freeCamBtn);
     controls.append(exportBtn);
@@ -325,6 +339,57 @@ final class InspectorOverlay {
         }
       }
     }
+
+    // Action row: + Add Component dropdown and Delete Object button
+    final actionRow = web.document.createElement('div') as web.HTMLDivElement;
+    actionRow.style.cssText =
+        'display:flex;gap:6px;margin-top:12px;padding-top:8px;'
+        'border-top:1px solid #2b2742;align-items:center;';
+
+    final addSelect = web.document.createElement('select') as web.HTMLSelectElement;
+    addSelect.style.cssText =
+        'flex:1;background:#18152b;color:#ece9f8;border:1px solid #3c365c;'
+        'border-radius:4px;padding:3px 6px;font:inherit;';
+    final placeholder = web.document.createElement('option') as web.HTMLOptionElement
+      ..value = ''
+      ..textContent = '+ Add Component...';
+    addSelect.append(placeholder);
+    for (final spec in engine.registry.registeredSpecs) {
+      final opt = web.document.createElement('option') as web.HTMLOptionElement
+        ..value = spec.typeName
+        ..textContent = spec.typeName;
+      addSelect.append(opt);
+    }
+    addSelect.addEventListener(
+      'change',
+      ((web.Event _) {
+        final chosen = addSelect.value;
+        if (chosen.isEmpty) return;
+        final spec = engine.registry.specByName(chosen);
+        if (spec != null) {
+          go.addComponent(spec.create());
+          refresh();
+        }
+      }).toJS,
+    );
+
+    final deleteBtn = web.document.createElement('button') as web.HTMLButtonElement
+      ..textContent = 'Delete'
+      ..style.cssText =
+          'background:#541f2d;color:#ffd2d8;border:1px solid #8a344c;'
+          'border-radius:4px;padding:3px 8px;cursor:pointer;font:inherit;';
+    deleteBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        go.destroy();
+        _selected = null;
+        refresh();
+      }).toJS,
+    );
+
+    actionRow.append(addSelect);
+    actionRow.append(deleteBtn);
+    container.append(actionRow);
   }
 
   void _appendNumberEditor(
@@ -457,6 +522,19 @@ final class InspectorOverlay {
         parent.append(row);
       case FieldKind.vec3:
       case FieldKind.color:
+        _appendVec3Editor(
+          parent,
+          field.name,
+          () {
+            final list = field.readJson(comp) as List<Object?>;
+            return Vec3(
+              (list[0] as num).toDouble(),
+              (list[1] as num).toDouble(),
+              (list[2] as num).toDouble(),
+            );
+          },
+          (v) => field.writeJson(comp, [v.x, v.y, v.z]),
+        );
       case FieldKind.quat:
         break;
     }

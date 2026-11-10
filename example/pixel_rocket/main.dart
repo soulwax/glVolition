@@ -11,6 +11,8 @@ void main() async {
   final runner = await WebEngineHost.mount(
     canvas,
     requestedProfile: QualityProfile.clean,
+    enableHotState: true,
+    registerSpecs: registerPixelRocketSpecs,
   );
   if (runner == null) {
     hud.message('WebGL2 unavailable', 'This browser cannot run Pixel Rocket.');

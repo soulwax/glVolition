@@ -131,11 +131,35 @@ final class DungeonExplorer extends Behaviour {
   Vec2 portalPosition;
 
   DungeonExplorer({
-    required this.tilemap,
+    TilemapComponent? tilemap,
     this.moveSpeed = 80.0,
     this.radius = 6.0,
     this.portalPosition = const Vec2(208, 112),
-  });
+  }) : tilemap = tilemap ??
+            TilemapComponent(
+              TileLayer(
+                columns: 1,
+                rows: 1,
+                tileWidth: 16,
+                tileHeight: 16,
+                tileset: [SpriteRegion.white],
+              ),
+            );
+
+  static final spec = ComponentSpec<DungeonExplorer>(
+    'DungeonExplorer',
+    DungeonExplorer.new,
+    [
+      Field.number('moveSpeed', (e) => e.moveSpeed, (e, v) => e.moveSpeed = v),
+      Field.number('radius', (e) => e.radius, (e, v) => e.radius = v),
+      Field.integer('motesCollected', (e) => e.motesCollected, (e, v) => e.motesCollected = v),
+      Field.integer('braziersLit', (e) => e.braziersLit, (e, v) => e.braziersLit = v),
+      Field.integer('hitsTaken', (e) => e.hitsTaken, (e, v) => e.hitsTaken = v),
+      Field.number('torchFuel', (e) => e.torchFuel, (e, v) => e.torchFuel = v),
+      Field.boolean('portalUnlocked', (e) => e.portalUnlocked, (e, v) => e.portalUnlocked = v),
+      Field.boolean('levelCompleted', (e) => e.levelCompleted, (e, v) => e.levelCompleted = v),
+    ],
+  );
 
   void takeShadeHit() {
     hitsTaken++;
@@ -213,7 +237,8 @@ void registerDungeon2DSpecs(ComponentRegistry registry) {
   registry
     ..register(BrazierBehaviour.spec)
     ..register(MoteBehaviour.spec)
-    ..register(ShadeBehaviour.spec);
+    ..register(ShadeBehaviour.spec)
+    ..register(DungeonExplorer.spec);
 }
 
 /// Builds a playable 2D dungeon [Scene] (Lantern port) with a walled room,

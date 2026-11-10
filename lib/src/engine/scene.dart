@@ -27,12 +27,14 @@ final class Scene {
   final String name;
   final SceneNode root;
   final RenderSettings renderSettings = RenderSettings();
+  final SceneEvents events = SceneEvents();
   late final PhysicsWorld physics = PhysicsWorld._(this);
 
   Engine? _engine;
   final List<GameObject> _roots = [];
   final List<Behaviour> _behaviours = [];
   final List<Behaviour> _pendingStart = [];
+  final List<Coroutine> _coroutines = [];
   final List<Light> _lights = [];
   final List<Camera> _cameras = [];
   final List<Camera2DComponent> _cameras2d = [];
@@ -204,6 +206,8 @@ final class Scene {
     _destroyObjects.clear();
     _destroyComponents.clear();
     _pendingStart.clear();
+    _coroutines.clear();
+    events.clear();
     root.removeFromParent();
     _engine = null;
   }
@@ -268,6 +272,17 @@ final class Scene {
     _drainStarts();
     for (final b in List.of(_behaviours)) {
       if (b._active && !b._destroyRequested) _guard(b.update);
+    }
+    if (_coroutines.isNotEmpty) {
+      final dt = _engine?.time.deltaTime ?? 0.0;
+      final unscaledDt = _engine?.time.unscaledDeltaTime ?? dt;
+      for (final co in List.of(_coroutines)) {
+        var keep = false;
+        _guard(() {
+          keep = co._step(dt, unscaledDt);
+        });
+        if (!keep) _coroutines.remove(co);
+      }
     }
     _drainStarts();
     for (final b in List.of(_behaviours)) {

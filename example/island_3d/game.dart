@@ -84,19 +84,32 @@ final class FlareBehaviour extends Behaviour {
 /// the reef when left in darkness (E5-5 Tidewatch).
 final class ShipAgentBehaviour extends Behaviour {
   final SplinePath route;
-  final Vec3 reefCenter;
-  final double reefRadius;
+  Vec3 reefCenter;
+  double reefRadius;
   double speed;
   double distance = 0;
   bool dockedSafely = false;
   bool wreckedOnReef = false;
 
   ShipAgentBehaviour({
-    required this.route,
+    SplinePath? route,
     this.reefCenter = const Vec3(10, 0, 0),
     this.reefRadius = 4.5,
     this.speed = 8.0,
-  });
+  }) : route = route ?? SplinePath.fromPoints(const [Vec3(14, 0.5, 10), Vec3(8, 0.5, -10)]);
+
+  static final spec = ComponentSpec<ShipAgentBehaviour>(
+    'ShipAgentBehaviour',
+    ShipAgentBehaviour.new,
+    [
+      Field.vec3('reefCenter', (s) => s.reefCenter, (s, v) => s.reefCenter = v),
+      Field.number('reefRadius', (s) => s.reefRadius, (s, v) => s.reefRadius = v),
+      Field.number('speed', (s) => s.speed, (s, v) => s.speed = v),
+      Field.number('distance', (s) => s.distance, (s, v) => s.distance = v),
+      Field.boolean('dockedSafely', (s) => s.dockedSafely, (s, v) => s.dockedSafely = v),
+      Field.boolean('wreckedOnReef', (s) => s.wreckedOnReef, (s, v) => s.wreckedOnReef = v),
+    ],
+  );
 
   @override
   void update() {
@@ -134,6 +147,14 @@ final class ShipAgentBehaviour extends Behaviour {
 final class HarbourDirector extends Behaviour {
   int flaresLaunched = 0;
 
+  static final spec = ComponentSpec<HarbourDirector>(
+    'HarbourDirector',
+    HarbourDirector.new,
+    [
+      Field.integer('flaresLaunched', (h) => h.flaresLaunched, (h, v) => h.flaresLaunched = v),
+    ],
+  );
+
   GameObject launchFlareAt(Vec3 worldPos) {
     flaresLaunched++;
     return scene.createGameObject(
@@ -151,7 +172,9 @@ final class HarbourDirector extends Behaviour {
 void registerIsland3DSpecs(ComponentRegistry registry) {
   registry
     ..register(LighthouseBehaviour.spec)
-    ..register(FlareBehaviour.spec);
+    ..register(FlareBehaviour.spec)
+    ..register(ShipAgentBehaviour.spec)
+    ..register(HarbourDirector.spec);
 }
 
 /// Builds a 3D coastal island [Scene] (Tidewatch port) combining procedural

@@ -219,3 +219,20 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E7-3. Play / Stop snapshot & save-to-disk via `volition serve`.**
   - _Touches:_ `lib/src/engine/editor_session.dart`, `lib/src/web/inspector_overlay.dart`, `bin/volition.dart`.
   - _Verify:_ `test/subsystems_test.dart` (`enterPlayMode` / `stopPlayMode` discarding runtime mutations and restoring destroyed objects).
+
+---
+
+## E8: Modularity, Events & Coroutines, Post-Process Volumes & UI/Inspector Authoring
+
+- [x] **E8-1. Typed `SceneEvents` pub/sub bus & generator `Coroutine` scheduler (`NextFrame`, `WaitForSeconds`, `WaitForRealtime`, `WaitUntil`).**
+  - _Touches:_ `lib/src/engine/events_coroutines.dart`, `lib/src/engine/component.dart`, `lib/src/engine/scene.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`SceneEvents` lifecycle-scoped listeners and `Behaviour.startCoroutine`).
+- [x] **E8-2. Spatial & global `PostProcessVolume` component.**
+  - _Touches:_ `lib/src/engine/components/post_process_volume.dart`, `lib/src/engine/serialization/component_spec.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`PostProcessVolume` feathering exposure, bloom, and vignette by camera distance).
+- [x] **E8-3. Modular `UICanvas` widgets (`UIToggle`, `UISlider`, `UIStack`) & live `InspectorOverlay` scene authoring (`+ Object`, `+ Add Component`, `Delete`, `Vec3`/`Color` editors).**
+  - _Touches:_ `lib/src/engine/ui/canvas_ui.dart`, `lib/src/web/inspector_overlay.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`UIStack` layout and `UIToggle` / `UISlider` pointer dispatch).
+- [x] **E8-4. 100% `ComponentSpec` inspector coverage across engine & example `Behaviour`s.**
+  - _Touches:_ `lib/src/engine/serialization/component_spec.dart`, `example/pixel_rocket/game.dart`, `example/dungeon_2d/game.dart`, `example/procession/game.dart`, `example/island_3d/game.dart`.
+  - _Verify:_ `volition_ux_debug.py audit-modularity` & `verify-render`.

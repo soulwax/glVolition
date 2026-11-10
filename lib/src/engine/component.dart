@@ -96,4 +96,31 @@ abstract class Behaviour extends Component {
   /// behaviour is destroyed.
   Invocation invoke(double delaySeconds, void Function() action, {double? repeatEvery}) =>
       engine.invoke(delaySeconds, action, repeatEvery: repeatEvery, owner: this);
+
+  /// Starts a generator [Coroutine] (`Iterable<YieldInstruction?> Function()`)
+  /// that steps each frame after `update()` and cancels automatically if this
+  /// behaviour is destroyed (E8-1).
+  Coroutine startCoroutine(Iterable<YieldInstruction?> Function() routine) {
+    final co = Coroutine._(this, routine());
+    scene._coroutines.add(co);
+    // Execute up to the first yield immediately.
+    if (!co._step(0, 0)) {
+      scene._coroutines.remove(co);
+    }
+    return co;
+  }
+
+  /// Cancels all active [Coroutine]s owned by this behaviour.
+  void stopAllCoroutines() {
+    for (final co in scene._coroutines) {
+      if (identical(co.owner, this)) {
+        co.cancel();
+      }
+    }
+  }
+
+  /// Subscribes [handler] to scene events of type [E], automatically scoped to
+  /// this behaviour's active/destroyed lifecycle (E8-1).
+  EventSubscription listen<E>(void Function(E event) handler) =>
+      scene.events.on<E>(handler, owner: this);
 }
