@@ -373,6 +373,22 @@ final class InspectorOverlay {
       }).toJS,
     );
 
+    final copyBtn = web.document.createElement('button') as web.HTMLButtonElement
+      ..textContent = 'Copy'
+      ..style.cssText =
+          'background:#242038;color:#ece9f8;border:1px solid #4e4675;'
+          'border-radius:4px;padding:3px 8px;cursor:pointer;font:inherit;';
+    copyBtn.addEventListener(
+      'click',
+      ((web.Event _) {
+        final clone = engine.editor.duplicate(go);
+        if (clone != null) {
+          _selected = clone;
+          refresh();
+        }
+      }).toJS,
+    );
+
     final deleteBtn = web.document.createElement('button') as web.HTMLButtonElement
       ..textContent = 'Delete'
       ..style.cssText =
@@ -388,6 +404,7 @@ final class InspectorOverlay {
     );
 
     actionRow.append(addSelect);
+    actionRow.append(copyBtn);
     actionRow.append(deleteBtn);
     container.append(actionRow);
   }

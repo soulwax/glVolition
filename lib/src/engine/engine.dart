@@ -31,6 +31,7 @@ final class Engine {
   late final AssetCatalog catalog = AssetCatalog._(this);
   late final EditorSession editor = EditorSession(this);
   late final SceneManager scenes = SceneManager._(this);
+  late final SaveSystem saves = SaveSystem._(this);
   final ComponentRegistry registry;
 
   Scene _scene;

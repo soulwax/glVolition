@@ -318,6 +318,9 @@ final class Scene {
       if (src._active) src._syncChannelVolume();
     }
     final mainCam = _cameras.lastOrNull;
+    if (mainCam != null && _engine != null) {
+      mainCam.shakeEngine.update(_engine!.time.deltaTime);
+    }
     if (_engine != null && _engine!.editor.isFreeLookEnabled) {
       graphics.camera = _engine!.editor.freeLookCamera;
     } else if (mainCam != null) {

@@ -1244,6 +1244,140 @@ void main() {
       expect(AudioListener.of(engine.scene)?.volume, closeTo(0.8, 1e-5));
     });
   });
+
+  group('E12 — SmoothFollowCamera, CinematicTourCamera, Spatial Physics Queries, SaveSystem & Editor Duplicate', () {
+    test('SmoothFollowCamera tracks target, CinematicTourCamera completes tour, and Camera.shake perturbs view', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final hero = engine.scene.createGameObject('Hero', position: const Vec3(10, 0, -5));
+      final follow = SmoothFollowCamera(target: hero, distance: 6.0, height: 2.0);
+      final cam = Camera();
+      final camGo = engine.scene.createGameObject('FollowCam', components: [cam, follow]);
+
+      engine.step(0.1);
+      expect((camGo.transform.position - hero.transform.position).length, lessThan(12.0));
+
+      // Trigger trauma shake and verify shakeEngine perturbs the view after stepping
+      final unshakenEye = cam.toCameraView(16 / 9).eye;
+      cam.shake(trauma: 0.8);
+      engine.step(0.05);
+      final shakenEye = cam.toCameraView(16 / 9).eye;
+      expect((shakenEye - unshakenEye).length, greaterThan(1e-4));
+
+      // CinematicTourCamera non-looping tour fires onCompleted
+      var tourFinished = false;
+      final tour = CinematicTourCamera(
+        waypoints: const [
+          CameraWaypoint(eye: Vec3(0, 2, 10), target: Vec3.zero),
+          CameraWaypoint(eye: Vec3(5, 4, 5), target: Vec3.zero),
+        ],
+        duration: 0.2,
+        loop: false,
+        onCompleted: () => tourFinished = true,
+      );
+      engine.scene.createGameObject('TourCam', components: [Camera(), tour]);
+      engine.step(0.1);
+      expect(tour.progress, closeTo(0.5, 1e-2));
+      expect(tourFinished, isFalse);
+
+      engine.step(0.15);
+      expect(tour.progress, closeTo(1.0, 1e-4));
+      expect(tourFinished, isTrue);
+    });
+
+    test('PhysicsWorld overlapBox, raycastAll, and sphereCast query colliders accurately', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      engine.scene.createGameObject(
+        'CrateA',
+        position: const Vec3(0, 0, -4),
+        components: [BoxCollider(size: const Vec3(1, 1, 1), isTrigger: false)],
+      );
+      engine.scene.createGameObject(
+        'CrateB',
+        position: const Vec3(0, 0, -9),
+        components: [SphereCollider(radius: 0.8, isTrigger: true)],
+      );
+      engine.scene.createGameObject(
+        'OffsetTarget',
+        position: const Vec3(1.2, 0, -6),
+        components: [SphereCollider(radius: 0.5, isTrigger: false)],
+      );
+
+      final boxHits = engine.physics
+          .overlapBox(Aabb(const Vec3(-2, -2, -5), const Vec3(2, 2, -3)))
+          .map((c) => c.gameObject.name)
+          .toList();
+      expect(boxHits, ['CrateA']);
+
+      final ray = Ray(origin: const Vec3(0, 0, 0), direction: const Vec3(0, 0, -1));
+      final allHits = engine.physics.raycastAll(ray);
+      expect(allHits.map((h) => h.gameObject.name).toList(), ['CrateA', 'CrateB']);
+      expect(allHits[0].distance, lessThan(allHits[1].distance));
+
+      // Excluding triggers omits CrateB
+      final solidHits = engine.physics.raycastAll(ray, includeTriggers: false);
+      expect(solidHits.map((h) => h.gameObject.name).toList(), ['CrateA']);
+
+      // Thin ray along X=0 misses OffsetTarget at X=1.2 (radius 0.5 -> min X=0.7),
+      // but sphereCast with radius 0.8 hits it!
+      final sweepHit = engine.physics.sphereCast(
+        Ray(origin: const Vec3(0, 0, -6), direction: const Vec3(1, 0, 0)),
+        0.8,
+      );
+      expect(sweepHit, isNotNull);
+      expect(sweepHit!.gameObject.name, 'OffsetTarget');
+    });
+
+    test('SaveSystem persists named data slots and full checkpoints, and EditorSession.duplicate clones subtrees', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final beacon = engine.scene.createGameObject(
+        'Beacon',
+        position: const Vec3(3, 4, 5),
+        tag: 'Landmark',
+        components: [
+          Light.point(color: const LinearColor(0.2, 0.8, 1.0), intensity: 3.5),
+        ],
+      );
+      engine.scene.createGameObject('ChildOrb', parent: beacon, position: const Vec3(0, 1, 0));
+
+      // Duplicate Beacon via EditorSession.duplicate
+      final copy = engine.editor.duplicate(beacon);
+      expect(copy, isNotNull);
+      expect(copy!.name, 'Beacon_Copy');
+      expect(copy.tag, 'Landmark');
+      expect(copy.transform.localPosition.x, closeTo(3.0, 1e-4));
+      expect(copy.getComponent<Light>()?.intensity, closeTo(3.5, 1e-4));
+      expect(copy.find('ChildOrb'), isNotNull);
+
+      // Save data + checkpoint into slot 'slot_1'
+      engine.saves.saveData('slot_1', {'coins': 42, 'chapter': 'harbour'}, summary: 'Harbour Dock');
+      engine.saves.saveCheckpoint('slot_1', summary: 'Harbour Dock');
+
+      final slots = engine.saves.listSlots();
+      expect(slots.length, 1);
+      expect(slots.first.slot, 'slot_1');
+      expect(slots.first.hasCheckpoint, isTrue);
+      expect(engine.saves.loadData('slot_1')?['coins'], 42);
+
+      // Mutate scene, then restore checkpoint
+      beacon.destroy();
+      copy.destroy();
+      engine.step(0.016);
+      expect(engine.scene.find('Beacon'), isNull);
+
+      expect(engine.saves.loadCheckpoint('slot_1'), isTrue);
+      expect(engine.scene.find('Beacon'), isNotNull);
+      expect(engine.scene.find('Beacon_Copy'), isNotNull);
+
+      engine.saves.deleteSlot('slot_1');
+      expect(engine.saves.listSlots(), isEmpty);
+    });
+  });
 }
 
 final class _CollisionSpy extends Behaviour {

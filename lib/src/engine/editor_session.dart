@@ -87,6 +87,43 @@ final class EditorSession {
     }
   }
 
+  /// Clones [target] (or [selected] when omitted) and its entire hierarchy/
+  /// serialized components into the active scene as a sibling [GameObject]
+  /// (`<name>_Copy`), selects the clone, and returns it (E12-4).
+  GameObject? duplicate([GameObject? target]) {
+    final src = target ?? selected;
+    if (src == null || src.isDestroyed) return null;
+    final data = Map<String, Object?>.of(
+      SceneSerializer._objectToJson(src, engine.registry),
+    );
+    data['name'] = '${src.name}_Copy';
+    final clone = SceneSerializer._buildObjectFromJson(
+      engine.scene,
+      src.parent,
+      data,
+      engine.registry,
+      prefabs,
+    );
+    selected = clone;
+    return clone;
+  }
+
+  /// Exports the active scene to a JSON string (E12-4).
+  String exportSceneJson() =>
+      SceneSerializer.toJsonString(engine.scene, registry: engine.registry);
+
+  /// Replaces the active scene with one deserialized from [jsonSource] (E12-4).
+  Scene importSceneJson(String jsonSource) {
+    final loaded = SceneSerializer.fromJsonString(
+      jsonSource,
+      registry: engine.registry,
+      prefabs: prefabs,
+    );
+    selected = null;
+    engine.loadScene(loaded);
+    return loaded;
+  }
+
   /// Computes the signed scalar parameter `s` along the line passing through
   /// [axisOrigin] in direction [axisDir] (unit vector) that is closest to
   /// [ray]. Used by 3D translation gizmos to drag an object along X, Y, or Z.

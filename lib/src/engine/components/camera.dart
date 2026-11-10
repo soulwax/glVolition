@@ -14,6 +14,9 @@ final class Camera extends Component {
   /// `forward` (-Z) from `transform.position`.
   CameraController? customController;
 
+  /// Deterministic trauma-based camera shake evaluator (E12-1).
+  final CameraShakeEngine shakeEngine = CameraShakeEngine();
+
   late final _TransformCameraController _transformController = _TransformCameraController(this);
 
   Camera({
@@ -44,8 +47,13 @@ final class Camera extends Component {
   /// The most recently enabled camera in the active scene.
   static Camera? of(Scene scene) => scene._cameras.lastOrNull;
 
-  void shake({double trauma = 0.5, double? rotation}) =>
+  void shake({double trauma = 0.5, double? rotation}) {
+    if (rotation != null) shakeEngine.rotationScale = rotation;
+    shakeEngine.addTrauma(trauma);
+    if (isAttached && scene.isLoaded) {
       engine.graphics.shakeCamera(trauma: trauma, rotation: rotation);
+    }
+  }
 
   Ray? screenPointToRay(double x, double y) {
     final hostRay = engine.graphics.screenRay(x, y);
@@ -82,7 +90,8 @@ final class Camera extends Component {
 
   CameraView toCameraView([double? aspect]) {
     _sync();
-    return controller.toCameraView(aspect ?? engine.graphics.aspect);
+    final base = controller.toCameraView(aspect ?? engine.graphics.aspect);
+    return shakeEngine.applyTo(base);
   }
 
   void _sync() {

@@ -222,21 +222,107 @@ final class PhysicsWorld {
 
   /// Every active collider overlapping the sphere ([center], [radius]) whose
   /// object layer is enabled in [layerMask].
-  Iterable<Collider> overlapSphere(Vec3 center, double radius, {int layerMask = -1}) sync* {
+  Iterable<Collider> overlapSphere(
+    Vec3 center,
+    double radius, {
+    int layerMask = -1,
+    bool includeTriggers = true,
+  }) sync* {
     for (final c in _colliders) {
       if (!c._active) continue;
+      if (!includeTriggers && c.isTrigger) continue;
       if ((layerMask & (1 << c.gameObject.layer)) == 0) continue;
       if (_intersectsSphere(c, center, radius)) yield c;
     }
   }
 
-  PhysicsHit? raycast(Ray ray, {double maxDistance = double.infinity, int layerMask = -1}) {
+  /// Every active collider overlapping the world-space AABB [bounds] whose
+  /// object layer is enabled in [layerMask] (E12-2).
+  Iterable<Collider> overlapBox(
+    Aabb bounds, {
+    int layerMask = -1,
+    bool includeTriggers = true,
+  }) sync* {
+    for (final c in _colliders) {
+      if (!c._active) continue;
+      if (!includeTriggers && c.isTrigger) continue;
+      if ((layerMask & (1 << c.gameObject.layer)) == 0) continue;
+      final hit = switch (c) {
+        SphereCollider s => _sphereAabb(s.worldCenter, s.worldRadius, bounds),
+        BoxCollider b => _aabbAabb(b.worldBounds, bounds),
+      };
+      if (hit) yield c;
+    }
+  }
+
+  PhysicsHit? raycast(
+    Ray ray, {
+    double maxDistance = double.infinity,
+    int layerMask = -1,
+    bool includeTriggers = true,
+  }) {
     Collider? best;
     var bestT = maxDistance;
     for (final c in _colliders) {
       if (!c._active) continue;
+      if (!includeTriggers && c.isTrigger) continue;
       if ((layerMask & (1 << c.gameObject.layer)) == 0) continue;
       final t = c._raycast(ray);
+      if (t != null && t <= bestT) {
+        bestT = t;
+        best = c;
+      }
+    }
+    return best == null ? null : PhysicsHit(collider: best, point: ray.at(bestT), distance: bestT);
+  }
+
+  /// Returns all colliders intersected by [ray] within [maxDistance], sorted by
+  /// ascending hit distance (E12-2).
+  List<PhysicsHit> raycastAll(
+    Ray ray, {
+    double maxDistance = double.infinity,
+    int layerMask = -1,
+    bool includeTriggers = true,
+  }) {
+    final hits = <PhysicsHit>[];
+    for (final c in _colliders) {
+      if (!c._active) continue;
+      if (!includeTriggers && c.isTrigger) continue;
+      if ((layerMask & (1 << c.gameObject.layer)) == 0) continue;
+      final t = c._raycast(ray);
+      if (t != null && t <= maxDistance) {
+        hits.add(PhysicsHit(collider: c, point: ray.at(t), distance: t));
+      }
+    }
+    hits.sort((a, b) => a.distance.compareTo(b.distance));
+    return hits;
+  }
+
+  /// Sweeps a sphere of [radius] along [ray] up to [maxDistance] and returns
+  /// the closest hit (E12-2).
+  PhysicsHit? sphereCast(
+    Ray ray,
+    double radius, {
+    double maxDistance = double.infinity,
+    int layerMask = -1,
+    bool includeTriggers = true,
+  }) {
+    final r = math.max(0.0, radius);
+    final pad = Vec3(r, r, r);
+    Collider? best;
+    var bestT = maxDistance;
+    for (final c in _colliders) {
+      if (!c._active) continue;
+      if (!includeTriggers && c.isTrigger) continue;
+      if ((layerMask & (1 << c.gameObject.layer)) == 0) continue;
+      final double? t = switch (c) {
+        SphereCollider s => ray.intersectSphere(
+            BoundingSphere(s.worldCenter, s.worldRadius + r),
+          ),
+        BoxCollider b => ray.intersectAabb(
+            Aabb(b.worldBounds.min - pad, b.worldBounds.max + pad),
+          ),
+      };
       if (t != null && t <= bestT) {
         bestT = t;
         best = c;

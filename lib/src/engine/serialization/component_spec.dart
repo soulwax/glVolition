@@ -417,5 +417,7 @@ final class ComponentRegistry {
     register<Billboard>(Billboard.spec);
     register<Animator>(Animator.spec);
     register<WaterSurfaceComponent>(WaterSurfaceComponent.spec);
+    register<SmoothFollowCamera>(SmoothFollowCamera.spec);
+    register<CinematicTourCamera>(CinematicTourCamera.spec);
   }
 }
