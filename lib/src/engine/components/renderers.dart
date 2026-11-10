@@ -149,3 +149,146 @@ final class ModelRenderer extends Component {
     _instance = null;
   }
 }
+
+/// Renders many instances of a single mesh in a single GPU draw call using
+/// pixeldart's [InstancedMeshNode] (E9-1).
+///
+/// Supports per-instance raycast picking (`RaycastHit.instanceIndex`) via
+/// [Scene.raycastVisuals].
+final class InstancedMeshRenderer extends Component {
+  MeshHandle? _mesh;
+  final MeshData? meshData;
+  MaterialHandle? _material;
+  final MaterialDefinition? materialDefinition;
+  bool _castsShadow;
+  bool _receivesShadow;
+  DrawMode _drawMode;
+  BlendMode _blendMode;
+  final List<Transform> _initialTransforms;
+
+  InstancedMeshNode? _node;
+
+  InstancedMeshRenderer({
+    MeshHandle? mesh,
+    this.meshData,
+    MaterialHandle? material,
+    this.materialDefinition,
+    Iterable<Transform> transforms = const [],
+    bool castsShadow = true,
+    bool receivesShadow = true,
+    DrawMode drawMode = DrawMode.opaque,
+    BlendMode blendMode = BlendMode.alpha,
+  })  : _mesh = mesh,
+        _material = material,
+        _castsShadow = castsShadow,
+        _receivesShadow = receivesShadow,
+        _drawMode = drawMode,
+        _blendMode = blendMode,
+        _initialTransforms = List.of(transforms);
+
+  InstancedMeshNode? get instancedNode => _node;
+
+  int get instanceCount => _node?.instanceCount ?? _initialTransforms.length;
+
+  List<Transform> get instanceTransforms =>
+      _node?.instanceTransforms ?? List.unmodifiable(_initialTransforms);
+
+  Transform getInstanceTransform(int index) =>
+      _node != null ? _node!.getInstanceTransform(index) : _initialTransforms[index];
+
+  void addInstance(Transform instanceTransform) {
+    final n = _node;
+    if (n != null) {
+      n.addInstance(instanceTransform);
+    } else {
+      _initialTransforms.add(instanceTransform);
+    }
+  }
+
+  void setInstanceTransform(int index, Transform instanceTransform) {
+    final n = _node;
+    if (n != null) {
+      n.setInstanceTransform(index, instanceTransform);
+    } else {
+      _initialTransforms[index] = instanceTransform;
+    }
+  }
+
+  void setTransforms(Iterable<Transform> transforms) {
+    final n = _node;
+    if (n != null) {
+      n.setTransforms(transforms);
+    } else {
+      _initialTransforms
+        ..clear()
+        ..addAll(transforms);
+    }
+  }
+
+  void clearInstances() {
+    final n = _node;
+    if (n != null) {
+      n.clearInstances();
+    } else {
+      _initialTransforms.clear();
+    }
+  }
+
+  bool get castsShadow => _castsShadow;
+  set castsShadow(bool value) {
+    _castsShadow = value;
+    _node?.castsShadow = value;
+  }
+
+  bool get receivesShadow => _receivesShadow;
+  set receivesShadow(bool value) {
+    _receivesShadow = value;
+    _node?.receivesShadow = value;
+  }
+
+  @override
+  void _onAttach() {
+    final node = InstancedMeshNode(
+      name: '${gameObject.name}#instanced',
+      mesh: _mesh,
+      meshData: meshData,
+      bounds: meshData?.bounds,
+      material: _material,
+      castsShadow: _castsShadow,
+      receivesShadow: _receivesShadow,
+      drawMode: _drawMode,
+      blendMode: _blendMode,
+      transforms: _initialTransforms,
+    )..visible = false;
+    gameObject.node.addChild(node);
+    _node = node;
+  }
+
+  @override
+  void _onEnableInternal() {
+    final n = _node;
+    if (n != null) {
+      if (n.mesh == null && meshData != null) {
+        _mesh = engine.graphics.createMesh(
+          meshData!,
+          debugLabel: '${gameObject.name}#instanced_mesh',
+        );
+        n.mesh = _mesh;
+      }
+      if (n.material == null && materialDefinition != null) {
+        _material = engine.graphics.createMaterial(materialDefinition!);
+        n.material = _material;
+      }
+      n.visible = true;
+    }
+  }
+
+  @override
+  void _onDisableInternal() => _node?.visible = false;
+
+  @override
+  void _onDestroyInternal() {
+    _node?.removeFromParent();
+    _node = null;
+  }
+}

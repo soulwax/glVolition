@@ -91,6 +91,10 @@ abstract class Behaviour extends Component {
 
   void onTriggerExit(Collider other) {}
 
+  /// Called when a solid (`isTrigger == false`) collider on this object first
+  /// collides with another solid collider (E9-3).
+  void onCollisionEnter(Collision collision) {}
+
   /// Runs [action] after [delaySeconds] of game time, then every
   /// [repeatEvery] seconds if given. Cancelled automatically when this
   /// behaviour is destroyed.

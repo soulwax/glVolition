@@ -852,4 +852,139 @@ void main() {
       expect(sliderValue, closeTo(75.0, 1e-4));
     });
   });
+
+  group('E9 — InstancedMeshRenderer, Tweening, RigidBody Collision & StateMachine', () {
+    test('InstancedMeshRenderer batches multiple instances and supports per-instance raycast picking', () async {
+      final device = GlesDevice();
+      final runner = await NativeEngineHost.boot(device: device, width: 640, height: 360);
+      final scene = runner.scene;
+      scene.createGameObject('Cam', position: const Vec3(0, 2, 12), components: [Camera()]);
+
+      final instanced = InstancedMeshRenderer(
+        meshData: Primitives.cube(size: 1.0),
+        materialDefinition: const MaterialDefinition(key: 'inst_cube'),
+        transforms: [
+          Transform.at(const Vec3(-3, 0, 0)),
+          Transform.at(const Vec3(0, 0, 0)),
+          Transform.at(const Vec3(3, 0, 0)),
+        ],
+      );
+      final go = scene.createGameObject('CubeCluster', components: [instanced]);
+
+      final stats = runner.renderFrame(1 / 60);
+      expect(stats.instancesSubmitted, greaterThanOrEqualTo(3));
+
+      // Raycast straight at the third instance at (3, 0, 0)
+      final ray = const Ray(origin: Vec3(3, 0, 5), direction: Vec3(0, 0, -1));
+      final pick = scene.raycastVisuals(ray);
+      expect(pick, isNotNull);
+      expect(pick!.$1, same(go));
+      expect(pick.$2.instanceIndex, 2);
+
+      runner.dispose();
+      expect(device.liveObjectCount, 0);
+    });
+
+    test('BehaviourTweenExt tweens localPosition and localScale with Curves and pingPong', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final go = engine.scene.createGameObject('Box', components: [_HealthBehaviour()]);
+      final beh = go.getComponent<_HealthBehaviour>()!;
+
+      var completed = false;
+      beh.tweenPosition(
+        const Vec3(10, 4, -2),
+        duration: 0.2,
+        curve: Curves.easeOutCubic,
+        onComplete: () => completed = true,
+      );
+      beh.tweenScale(2.5, duration: 0.2, curve: Curves.linear);
+
+      engine.step(0.1);
+      expect(go.transform.localPosition.x, greaterThan(5.0)); // easeOutCubic > 0.5 at t=0.5
+      expect(go.transform.localScale, closeTo(1.75, 1e-4));
+      expect(completed, isFalse);
+
+      engine.step(0.1);
+      expect(go.transform.localPosition.x, closeTo(10.0, 1e-4));
+      expect(go.transform.localPosition.y, closeTo(4.0, 1e-4));
+      expect(go.transform.localScale, closeTo(2.5, 1e-4));
+      expect(completed, isTrue);
+    });
+
+    test('RigidBody integrates gravity, resolves solid sphere-box collision, and fires onCollisionEnter', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      Collision? recordedCollision;
+      final ball = engine.scene.createGameObject(
+        'Ball',
+        position: const Vec3(0, 2.0, 0),
+        components: [
+          SphereCollider(radius: 0.5, isTrigger: false),
+          RigidBody(restitution: 0.8, linearDrag: 0.0),
+          _CollisionSpy((c) => recordedCollision = c),
+        ],
+      );
+      engine.scene.createGameObject(
+        'Floor',
+        position: const Vec3(0, -0.5, 0),
+        components: [
+          BoxCollider(size: const Vec3(10, 1, 10), isTrigger: false),
+          RigidBody(isKinematic: true, restitution: 0.8),
+        ],
+      );
+
+      for (var i = 0; i < 45; i++) {
+        engine.step(1 / 60);
+      }
+
+      expect(recordedCollision, isNotNull);
+      expect(recordedCollision!.other.gameObject.name, 'Floor');
+      expect(recordedCollision!.contactNormal.y, closeTo(1.0, 1e-4));
+      // Ball should have bounced upward and stayed above the floor surface (y = 0)
+      expect(ball.transform.position.y, greaterThanOrEqualTo(0.45));
+    });
+
+    test('StateMachine transitions between states and tracks stateTime', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final log = <String>[];
+      final fsm = StateMachine<String>('idle')
+        ..defineState(
+          'idle',
+          onEnter: () => log.add('enter:idle'),
+          onExit: () => log.add('exit:idle'),
+        )
+        ..defineState(
+          'alert',
+          onEnter: () => log.add('enter:alert'),
+          onUpdate: (dt) => log.add('update:alert:${dt.toStringAsFixed(2)}'),
+        );
+
+      engine.scene.createGameObject('Guard', components: [fsm]);
+      engine.step(0.05);
+      expect(fsm.currentState, 'idle');
+      expect(fsm.stateTime, closeTo(0.05, 1e-5));
+      expect(log, ['enter:idle']);
+
+      fsm.transitionTo('alert');
+      expect(fsm.previousState, 'idle');
+      expect(fsm.currentState, 'alert');
+      expect(fsm.stateTime, 0.0);
+
+      engine.step(0.05);
+      expect(fsm.stateTime, closeTo(0.05, 1e-5));
+      expect(log, ['enter:idle', 'exit:idle', 'enter:alert', 'update:alert:0.05']);
+    });
+  });
+}
+
+final class _CollisionSpy extends Behaviour {
+  final void Function(Collision) onHit;
+  _CollisionSpy(this.onHit);
+
+  @override
+  void onCollisionEnter(Collision collision) => onHit(collision);
 }

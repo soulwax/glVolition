@@ -236,3 +236,20 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E8-4. 100% `ComponentSpec` inspector coverage across engine & example `Behaviour`s.**
   - _Touches:_ `lib/src/engine/serialization/component_spec.dart`, `example/pixel_rocket/game.dart`, `example/dungeon_2d/game.dart`, `example/procession/game.dart`, `example/island_3d/game.dart`.
   - _Verify:_ `volition_ux_debug.py audit-modularity` & `verify-render`.
+
+---
+
+## E9: GPU Instancing, Tweening, RigidBody Collision & Finite State Machines
+
+- [x] **E9-1. `InstancedMeshRenderer` component (`InstancedMeshNode` wrapper with per-instance raycast picking).**
+  - _Touches:_ `lib/src/engine/components/renderers.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`InstancedMeshRenderer` batch submission and `RaycastHit.instanceIndex`).
+- [x] **E9-2. Tweening & Easing Engine (`BehaviourTweenExt`: `tween`, `tweenVec3`, `tweenPosition`, `tweenScale`).**
+  - _Touches:_ `lib/src/engine/tween.dart`, `lib/src/engine.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`tweenPosition` and `tweenScale` with `Curves.easeOutCubic`).
+- [x] **E9-3. `RigidBody` physics & solid sphere/AABB collision resolution (`onCollisionEnter`).**
+  - _Touches:_ `lib/src/engine/components/physics.dart`, `lib/src/engine/component.dart`, `lib/src/engine/serialization/component_spec.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`RigidBody` gravity, solid floor bounce, and `Collision` manifold).
+- [x] **E9-4. Generic `StateMachine<S>` component.**
+  - _Touches:_ `lib/src/engine/state_machine.dart`, `lib/src/engine.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`StateMachine` lifecycle callbacks and `stateTime` tracking).

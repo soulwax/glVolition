@@ -378,5 +378,6 @@ final class ComponentRegistry {
         const [],
       ),
     );
+    register<RigidBody>(RigidBody.spec);
   }
 }

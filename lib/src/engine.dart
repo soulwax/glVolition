@@ -23,6 +23,8 @@ part 'engine/engine.dart';
 part 'engine/debug_controller.dart';
 part 'engine/editor_session.dart';
 part 'engine/events_coroutines.dart';
+part 'engine/tween.dart';
+part 'engine/state_machine.dart';
 part 'engine/prefab.dart';
 part 'engine/serialization/component_spec.dart';
 part 'engine/serialization/scene_serializer.dart';

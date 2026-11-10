@@ -83,16 +83,122 @@ final class PhysicsHit {
   GameObject get gameObject => collider.gameObject;
 }
 
+/// Contact manifold reported to [Behaviour.onCollisionEnter] when two solid
+/// (`isTrigger == false`) [Collider]s collide (E9-3).
+final class Collision {
+  final Collider other;
+  final Vec3 contactNormal;
+  final double penetrationDepth;
+  final Vec3 relativeVelocity;
+
+  const Collision({
+    required this.other,
+    required this.contactNormal,
+    required this.penetrationDepth,
+    required this.relativeVelocity,
+  });
+
+  GameObject get gameObject => other.gameObject;
+}
+
+/// Dynamic or kinematic 3D/2D rigidbody integrated during [PhysicsWorld] fixed
+/// steps with solid sphere/AABB collision resolution and impulse restitution (E9-3).
+final class RigidBody extends Component {
+  Vec3 velocity;
+  double mass;
+  double gravityScale;
+  double linearDrag;
+  double restitution;
+  bool isKinematic;
+  bool useGravity;
+  bool freezeY;
+
+  Vec3 _accumulatedForce = Vec3.zero;
+
+  RigidBody({
+    this.velocity = Vec3.zero,
+    this.mass = 1.0,
+    this.gravityScale = 1.0,
+    this.linearDrag = 0.05,
+    this.restitution = 0.5,
+    this.isKinematic = false,
+    this.useGravity = true,
+    this.freezeY = false,
+  });
+
+  static final spec = ComponentSpec<RigidBody>(
+    'RigidBody',
+    RigidBody.new,
+    [
+      Field.vec3('velocity', (r) => r.velocity, (r, v) => r.velocity = v),
+      Field.number('mass', (r) => r.mass, (r, v) => r.mass = v),
+      Field.number('gravityScale', (r) => r.gravityScale, (r, v) => r.gravityScale = v),
+      Field.number('linearDrag', (r) => r.linearDrag, (r, v) => r.linearDrag = v),
+      Field.number('restitution', (r) => r.restitution, (r, v) => r.restitution = v),
+      Field.boolean('isKinematic', (r) => r.isKinematic, (r, v) => r.isKinematic = v),
+      Field.boolean('useGravity', (r) => r.useGravity, (r, v) => r.useGravity = v),
+      Field.boolean('freezeY', (r) => r.freezeY, (r, v) => r.freezeY = v),
+    ],
+  );
+
+  double get inverseMass => (isKinematic || mass <= 0) ? 0.0 : 1.0 / mass;
+
+  /// Applies a continuous force (in Newtons) for the next fixed step.
+  void addForce(Vec3 force) {
+    if (isKinematic) return;
+    _accumulatedForce += force;
+  }
+
+  /// Applies an instantaneous velocity impulse (`impulse / mass`).
+  void addImpulse(Vec3 impulse) {
+    if (isKinematic) return;
+    velocity += impulse * inverseMass;
+    if (freezeY) velocity = Vec3(velocity.x, 0, velocity.z);
+  }
+
+  void _integrate(double dt, Vec3 worldGravity) {
+    if (isKinematic || dt <= 0) {
+      _accumulatedForce = Vec3.zero;
+      return;
+    }
+    var accel = _accumulatedForce * inverseMass;
+    _accumulatedForce = Vec3.zero;
+    if (useGravity) {
+      accel += worldGravity * gravityScale;
+    }
+    velocity += accel * dt;
+    if (linearDrag > 0) {
+      final dampFactor = math.max(0.0, 1.0 - linearDrag * dt);
+      velocity *= dampFactor;
+    }
+    if (freezeY) {
+      velocity = Vec3(velocity.x, 0, velocity.z);
+    }
+    if (velocity.lengthSquared > 1e-12) {
+      transform.position += velocity * dt;
+    }
+  }
+
+  @override
+  void _onEnableInternal() => scene.physics._registerBody(this);
+
+  @override
+  void _onDisableInternal() => scene.physics._unregisterBody(this);
+}
+
 /// Per-scene collision world.
 final class PhysicsWorld {
   final Scene _scene;
+  Vec3 gravity = const Vec3(0, -9.81, 0);
   final List<Collider> _colliders = [];
+  final List<RigidBody> _bodies = [];
   Set<(int, int)> _overlaps = {};
   final Map<int, Collider> _byId = {};
 
   PhysicsWorld._(this._scene);
 
   List<Collider> get colliders => List.unmodifiable(_colliders);
+  List<RigidBody> get bodies => List.unmodifiable(_bodies);
 
   void _register(Collider c) {
     _colliders.add(c);
@@ -110,6 +216,9 @@ final class PhysicsWorld {
       if (other != null && other._active) _notify(other, c, _Phase.exit);
     }
   }
+
+  void _registerBody(RigidBody body) => _bodies.add(body);
+  void _unregisterBody(RigidBody body) => _bodies.remove(body);
 
   /// Every active collider overlapping the sphere ([center], [radius]) whose
   /// object layer is enabled in [layerMask].
@@ -137,6 +246,13 @@ final class PhysicsWorld {
   }
 
   void _step() {
+    final dt = _scene._engine?.time.fixedDeltaTime ?? (1.0 / 60.0);
+    for (final body in List.of(_bodies)) {
+      if (body._active && !body._destroyRequested) {
+        body._integrate(dt, gravity);
+      }
+    }
+
     final active = _colliders.where((c) => c._active && !c._destroyRequested).toList();
     final next = <(int, int)>{};
     final pairs = <(Collider, Collider)>[];
@@ -169,12 +285,108 @@ final class PhysicsWorld {
 
     for (final (a, b) in pairs) {
       final key = a.instanceId < b.instanceId ? (a.instanceId, b.instanceId) : (b.instanceId, a.instanceId);
-      final phase = _overlaps.contains(key) ? _Phase.stay : _Phase.enter;
+      final isNew = !_overlaps.contains(key);
+      final phase = isNew ? _Phase.enter : _Phase.stay;
+      if (!a.isTrigger && !b.isTrigger) {
+        _resolveSolidCollision(a, b, isNew: isNew);
+      }
       if (a._active && b._active) _notify(a, b, phase);
       if (a._active && b._active) _notify(b, a, phase);
     }
 
     _overlaps = next;
+  }
+
+  void _resolveSolidCollision(Collider a, Collider b, {required bool isNew}) {
+    final rbA = a.getComponent<RigidBody>();
+    final rbB = b.getComponent<RigidBody>();
+    final invMassA = rbA?.inverseMass ?? 0.0;
+    final invMassB = rbB?.inverseMass ?? 0.0;
+    final totalInvMass = invMassA + invMassB;
+    if (totalInvMass <= 0) return;
+
+    final manifold = _computeManifold(a, b);
+    if (manifold == null) return;
+    final (normal, depth) = manifold; // normal points from A toward B
+
+    // Positional correction
+    if (depth > 0) {
+      final corrA = normal * (-depth * (invMassA / totalInvMass));
+      final corrB = normal * (depth * (invMassB / totalInvMass));
+      if (invMassA > 0) a.transform.position += corrA;
+      if (invMassB > 0) b.transform.position += corrB;
+    }
+
+    final velA = rbA?.velocity ?? Vec3.zero;
+    final velB = rbB?.velocity ?? Vec3.zero;
+    final relVel = velB - velA;
+    final velAlongNormal = relVel.dot(normal);
+
+    if (velAlongNormal < 0) {
+      final e = math.min(rbA?.restitution ?? 0.5, rbB?.restitution ?? 0.5);
+      final j = -(1.0 + e) * velAlongNormal / totalInvMass;
+      final impulse = normal * j;
+      rbA?.addImpulse(-impulse);
+      rbB?.addImpulse(impulse);
+    }
+
+    if (isNew) {
+      if (a._active && b._active) {
+        _notifyCollision(
+          a,
+          Collision(
+            other: b,
+            contactNormal: -normal,
+            penetrationDepth: depth,
+            relativeVelocity: -relVel,
+          ),
+        );
+      }
+      if (a._active && b._active) {
+        _notifyCollision(
+          b,
+          Collision(
+            other: a,
+            contactNormal: normal,
+            penetrationDepth: depth,
+            relativeVelocity: relVel,
+          ),
+        );
+      }
+    }
+  }
+
+  void _notifyCollision(Collider receiver, Collision collision) {
+    for (final c in List.of(receiver.gameObject._components)) {
+      if (c is Behaviour && c._active && !c._destroyRequested) {
+        _scene._guard(() => c.onCollisionEnter(collision));
+      }
+    }
+  }
+
+  static (Vec3 normal, double depth)? _computeManifold(Collider a, Collider b) {
+    if (a is SphereCollider && b is SphereCollider) {
+      final delta = b.worldCenter - a.worldCenter;
+      final dist = delta.length;
+      final rSum = a.worldRadius + b.worldRadius;
+      if (dist >= rSum) return null;
+      final normal = dist > 1e-6 ? delta * (1.0 / dist) : Vec3.unitY;
+      return (normal, rSum - dist);
+    }
+    final boxA = a.worldBounds;
+    final boxB = b.worldBounds;
+    final ox = math.min(boxA.max.x, boxB.max.x) - math.max(boxA.min.x, boxB.min.x);
+    final oy = math.min(boxA.max.y, boxB.max.y) - math.max(boxA.min.y, boxB.min.y);
+    final oz = math.min(boxA.max.z, boxB.max.z) - math.max(boxA.min.z, boxB.min.z);
+    if (ox <= 0 || oy <= 0 || oz <= 0) return null;
+    final centerDelta = boxB.center - boxA.center;
+    if (ox <= oy && ox <= oz) {
+      return (Vec3(centerDelta.x >= 0 ? 1 : -1, 0, 0), ox);
+    } else if (oy <= ox && oy <= oz) {
+      return (Vec3(0, centerDelta.y >= 0 ? 1 : -1, 0), oy);
+    } else {
+      return (Vec3(0, 0, centerDelta.z >= 0 ? 1 : -1), oz);
+    }
   }
 
   void _notify(Collider receiver, Collider other, _Phase phase) {
