@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 
 import '../example/dungeon_2d/game.dart';
 import '../example/island_3d/game.dart';
+import '../example/procession/game.dart';
 
 final class _HealthBehaviour extends Behaviour {
   int hp;
@@ -486,29 +487,74 @@ void main() {
       expect(sunLight.intensity, greaterThan(0));
     });
 
-    test('Dungeon2D and Island3D validation scenes step cleanly on HeadlessHost', () {
+    test('Dungeon2D (Lantern), Procession, and Island3D (Tidewatch) full gameplay loops', () {
+      // 1. Lantern (Dungeon2D): collect mote, light both braziers, unlock portal
       final host = HeadlessHost();
       final engine = Engine(host, initialScene: buildDungeon2DScene());
 
       host.input.press('KeyD');
-      for (var i = 0; i < 10; i++) {
-        engine.step(0.016);
+      for (var i = 0; i < 90; i++) {
+        engine.step(0.02);
       }
       host.input.release('KeyD');
       host.input.endFrame();
 
-      final player = engine.scene.find('Player')!;
-      expect(player.transform.localPosition.x, greaterThan(64.0));
+      final explorer = engine.scene.findObjectOfType<DungeonExplorer>()!;
+      expect(explorer.motesCollected, 1);
+      expect(explorer.braziersLit, 2);
+      expect(explorer.portalUnlocked, isTrue);
 
-      // Switch to 3D Island scene
-      engine.loadScene(buildIsland3DScene());
-      for (var i = 0; i < 20; i++) {
-        engine.step(0.05);
+      // Move down to portal at (208, 112)
+      host.input.press('KeyS');
+      for (var i = 0; i < 45; i++) {
+        engine.step(0.02);
       }
-      final skiff = engine.scene.find('Skiff')!;
-      expect(skiff.transform.position.y.isFinite, isTrue);
-      final tourCam = engine.scene.find('TourCamera')!;
-      expect(tourCam.getComponent<SplineFollower>()!.distance, greaterThan(0));
+      host.input.release('KeyS');
+      host.input.endFrame();
+      expect(explorer.levelCompleted, isTrue);
+
+      // 2. Procession: recruit 3 villagers, repel swarm with torch, deliver to Sanctuary
+      engine.loadScene(buildProcessionScene());
+      final leader = engine.scene.findObjectOfType<LeaderBehaviour>()!;
+      final swarm = engine.scene.findObjectOfType<SwarmEnemyBehaviour>()!;
+      final initialSwarmDist = (swarm.transform.localPosition - leader.transform.localPosition).length;
+      engine.step(0.05);
+      final afterSwarmDist = (swarm.transform.localPosition - leader.transform.localPosition).length;
+      expect(afterSwarmDist, greaterThan(initialSwarmDist));
+
+      host.input.press('KeyD');
+      for (var i = 0; i < 140; i++) {
+        engine.step(0.02);
+      }
+      host.input.release('KeyD');
+      host.input.endFrame();
+      expect(leader.deliveredCount, 3);
+
+      // 3. Tidewatch (Island3D): guide ship with lighthouse beam or launch flare, test reef wreck
+      engine.loadScene(buildIsland3DScene());
+      final lighthouse = engine.scene.findObjectOfType<LighthouseBehaviour>()!;
+      final skiffAgent = engine.scene.findObjectOfType<ShipAgentBehaviour>()!;
+      final harbour = engine.scene.findObjectOfType<HarbourDirector>()!;
+
+      // Launch a flare so the ship stays guided along its full route into harbour
+      harbour.launchFlareAt(skiffAgent.transform.position);
+      expect(harbour.flaresLaunched, 1);
+
+      for (var i = 0; i < 40; i++) {
+        lighthouse.aimPoint = skiffAgent.transform.localPosition;
+        engine.step(0.1);
+      }
+      expect(skiffAgent.dockedSafely, isTrue);
+
+      // Verify unguided ship wrecks on reef when lighthouse aims away and no flare is active
+      engine.loadScene(buildIsland3DScene());
+      final unguidedLighthouse = engine.scene.findObjectOfType<LighthouseBehaviour>()!;
+      unguidedLighthouse.aimPoint = const Vec3(-100, 0, -100);
+      final unguidedShip = engine.scene.findObjectOfType<ShipAgentBehaviour>()!;
+      for (var i = 0; i < 30; i++) {
+        engine.step(0.1);
+      }
+      expect(unguidedShip.wreckedOnReef, isTrue);
     });
   });
 

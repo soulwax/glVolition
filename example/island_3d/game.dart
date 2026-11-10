@@ -2,8 +2,123 @@ import 'dart:math' as math;
 
 import 'package:gl_volition/gl_volition.dart';
 
-/// Builds a 3D coastal island [Scene] combining procedural [TerrainComponent],
-/// dynamic [WaterSurfaceComponent] waves, a [BuoyantBody] vessel, a
+/// Lighthouse beam controller that aims its [Light.spot] at [aimPoint] on the
+/// ocean surface and illuminates nearby ships so they avoid coastal reefs
+/// (E5-5 Tidewatch).
+final class LighthouseBehaviour extends Behaviour {
+  Vec3 aimPoint;
+  double beamRadius;
+
+  LighthouseBehaviour({
+    this.aimPoint = const Vec3(14, 0, 10),
+    this.beamRadius = 12.0,
+  });
+
+  bool illuminates(Vec3 worldPos) {
+    final dx = worldPos.x - aimPoint.x;
+    final dz = worldPos.z - aimPoint.z;
+    return (dx * dx + dz * dz) <= beamRadius * beamRadius;
+  }
+
+  @override
+  void update() {
+    final dir = aimPoint - transform.position;
+    if (dir.lengthSquared > 1e-6) {
+      transform.rotation = lookRotation(dir);
+    }
+  }
+}
+
+/// Rising signal flare launched from a tapped ship or ocean coordinate (E5-5).
+final class FlareBehaviour extends Behaviour {
+  double verticalSpeed;
+  double lifetime;
+  double elapsed = 0;
+
+  FlareBehaviour({this.verticalSpeed = 9.0, this.lifetime = 3.0});
+
+  @override
+  void update() {
+    elapsed += time.deltaTime;
+    if (elapsed >= lifetime) {
+      gameObject.destroy();
+      return;
+    }
+    transform.translate(Vec3(0, verticalSpeed * time.deltaTime, 0), relativeTo: Space.world);
+  }
+}
+
+/// Coastal vessel that follows a [SplinePath] into the harbour when illuminated
+/// by the [LighthouseBehaviour] (or a nearby [FlareBehaviour]), or drifts into
+/// the reef when left in darkness (E5-5 Tidewatch).
+final class ShipAgentBehaviour extends Behaviour {
+  final SplinePath route;
+  final Vec3 reefCenter;
+  final double reefRadius;
+  double speed;
+  double distance = 0;
+  bool dockedSafely = false;
+  bool wreckedOnReef = false;
+
+  ShipAgentBehaviour({
+    required this.route,
+    this.reefCenter = const Vec3(10, 0, 0),
+    this.reefRadius = 4.5,
+    this.speed = 8.0,
+  });
+
+  @override
+  void update() {
+    if (dockedSafely || wreckedOnReef) return;
+
+    final lighthouse = scene.findObjectOfType<LighthouseBehaviour>();
+    final hasFlare = scene.findObjectsOfType<FlareBehaviour>().isNotEmpty;
+    final pos = transform.localPosition;
+    final guided = (lighthouse != null && lighthouse.illuminates(pos)) || hasFlare;
+
+    if (guided) {
+      distance += speed * time.deltaTime;
+      if (distance >= route.totalLength) {
+        distance = route.totalLength;
+        dockedSafely = true;
+      }
+      final target = route.sampleAtDistance(distance);
+      transform.localPosition = Vec3(target.x, pos.y, target.z);
+    } else {
+      // Unilluminated ship drifts toward the reef hazard
+      final toReef = Vec3(reefCenter.x - pos.x, 0, reefCenter.z - pos.z);
+      final d = toReef.length;
+      if (d <= reefRadius) {
+        wreckedOnReef = true;
+        return;
+      }
+      final step = toReef * (math.min(d, speed * 0.75 * time.deltaTime) / d);
+      transform.localPosition = Vec3(pos.x + step.x, pos.y, pos.z + step.z);
+    }
+  }
+}
+
+/// Spawns signal flares and coordinates the harbour's [AtmosphereVolume] clock
+/// from golden hour (17:00) into night (E5-5 Tidewatch).
+final class HarbourDirector extends Behaviour {
+  int flaresLaunched = 0;
+
+  GameObject launchFlareAt(Vec3 worldPos) {
+    flaresLaunched++;
+    return scene.createGameObject(
+      'Flare_$flaresLaunched',
+      position: worldPos + const Vec3(0, 1.0, 0),
+      components: [
+        Light.point(color: const LinearColor(1.0, 0.35, 0.15), intensity: 3.0, range: 18.0),
+        FlareBehaviour(),
+      ],
+    );
+  }
+}
+
+/// Builds a 3D coastal island [Scene] (Tidewatch port) combining procedural
+/// [TerrainComponent], dynamic [WaterSurfaceComponent] waves, a [BuoyantBody]
+/// vessel with [ShipAgentBehaviour], a [LighthouseBehaviour] spotlight, a
 /// [SplinePath] + [SplineFollower] camera rail, a keyframe [Animator] beacon,
 /// and a live [AtmosphereVolume] solar cycle (Phase E5 validation).
 Scene buildIsland3DScene() {
@@ -15,11 +130,12 @@ Scene buildIsland3DScene() {
     components: [
       Light.directional(intensity: 1.2),
       AtmosphereVolume(
-        timeOfDayHours: 16.5, // Golden hour
-        hoursPerSecond: 0.25,
+        timeOfDayHours: 17.0, // Dusk / golden hour
+        hoursPerSecond: 0.5,
         cloudCoverage: 0.3,
       ),
       DebugController(),
+      HarbourDirector(),
     ],
   );
 
@@ -56,18 +172,39 @@ Scene buildIsland3DScene() {
     ],
   );
 
+  // Safe harbour shipping channel spline
+  final shipRoute = SplinePath.fromPoints(const [
+    Vec3(14, 0.5, 10),
+    Vec3(16, 0.5, 0),
+    Vec3(8, 0.5, -10),
+  ]);
+
   // Buoyant boat floating offshore
   scene.createGameObject(
     'Skiff',
     position: const Vec3(14, 0.5, 10),
-    components: [BuoyantBody(width: 2.0, length: 4.0)],
+    components: [
+      BuoyantBody(width: 2.0, length: 4.0),
+      shipRoute,
+      ShipAgentBehaviour(route: shipRoute),
+    ],
   );
 
-  // Lighthouse beacon animated with RotationTrack
+  // Lighthouse beacon + sweeping spotlight
   final peakY = terrainGen.sampleHeight(0, 0);
   final beacon = scene.createGameObject(
     'LighthouseBeacon',
     position: Vec3(0, peakY + 2.5, 0),
+    components: [
+      Light.spot(
+        color: const LinearColor(1.0, 0.92, 0.72),
+        intensity: 4.5,
+        range: 45.0,
+        innerSpotAngle: 0.18,
+        spotAngle: 0.42,
+      ),
+      LighthouseBehaviour(aimPoint: const Vec3(14, 0, 10), beamRadius: 20.0),
+    ],
   );
   final spinClip = AnimationClip(
     name: 'spin',

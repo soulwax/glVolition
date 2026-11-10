@@ -168,8 +168,9 @@ final class ChaseCameraController implements CameraController {
       );
 }
 
-/// One meteor, crystal or fuel canister streaming down +Z.
-final class FieldBody extends Behaviour {
+/// One meteor, crystal or fuel canister streaming down +Z, managed via
+/// [Prefab] and [ObjectPool].
+final class FieldBody extends Behaviour with Poolable {
   final BodyKind kind;
   final double baseRadius;
   Vec3 spinAxis = Vec3.unitY;
@@ -180,6 +181,12 @@ final class FieldBody extends Behaviour {
 
   @override
   int get executionOrder => 10;
+
+  @override
+  void onSpawned() => consumed = false;
+
+  @override
+  void onDespawned() => consumed = true;
 
   void spawn(math.Random rng, Vec3 shipPos, {bool initial = false}) {
     final z = initial
@@ -716,35 +723,36 @@ RocketDirector buildPixelRocketScene(
   shipGo.addComponent(shipCtrl);
   director.ship = shipCtrl;
 
-  // Streamed field bodies.
+  // Streamed field bodies built via Prefab + ObjectPool<FieldBody>.
   double radiusOf(ModelAsset? asset, double fallback) =>
       asset == null ? fallback : (asset.bounds.max - asset.bounds.min).length * 0.5;
 
-  void addBody(String name, BodyKind kind, ModelAsset? model, double baseRadius) {
-    final body = FieldBody(kind, baseRadius: baseRadius);
-    scene.createGameObject(
-      name,
-      layer: kFieldLayer,
-      components: [
-        if (model != null) ModelRenderer(model, centerOrigin: true),
-        SphereCollider(radius: baseRadius, collidesWithMask: 1 << kShipLayer),
-        body,
-      ],
-    );
-    director.bodies.add(body);
-  }
+  Prefab makeBodyPrefab(String name, BodyKind kind, ModelAsset? model, double baseRadius) =>
+      Prefab(name, (go) {
+        go.layer = kFieldLayer;
+        if (model != null) go.addComponent(ModelRenderer(model, centerOrigin: true));
+        go
+          ..addComponent(SphereCollider(radius: baseRadius, collidesWithMask: 1 << kShipLayer))
+          ..addComponent(FieldBody(kind, baseRadius: baseRadius));
+      });
 
   for (var i = 0; i < meteorCount; i++) {
     final model = visuals?.meteors[i % visuals.meteors.length];
-    addBody('Meteor_$i', BodyKind.meteor, model, radiusOf(model, 0.85) * 0.72);
+    final prefab = makeBodyPrefab('Meteor_$i', BodyKind.meteor, model, radiusOf(model, 0.85) * 0.72);
+    final pool = ObjectPool<FieldBody>(scene: scene, prefab: prefab, initialCapacity: 1);
+    director.bodies.add(pool.acquire());
   }
   for (var i = 0; i < crystalCount; i++) {
     final model = visuals?.crystal;
-    addBody('Crystal_$i', BodyKind.crystal, model, radiusOf(model, 0.45) * 1.4);
+    final prefab = makeBodyPrefab('Crystal_$i', BodyKind.crystal, model, radiusOf(model, 0.45) * 1.4);
+    final pool = ObjectPool<FieldBody>(scene: scene, prefab: prefab, initialCapacity: 1);
+    director.bodies.add(pool.acquire());
   }
   for (var i = 0; i < fuelCount; i++) {
     final model = visuals?.fuel;
-    addBody('Fuel_$i', BodyKind.fuel, model, radiusOf(model, 0.45) * 1.4);
+    final prefab = makeBodyPrefab('Fuel_$i', BodyKind.fuel, model, radiusOf(model, 0.45) * 1.4);
+    final pool = ObjectPool<FieldBody>(scene: scene, prefab: prefab, initialCapacity: 1);
+    director.bodies.add(pool.acquire());
   }
 
   // Particle systems.
