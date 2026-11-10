@@ -99,7 +99,7 @@ final class EditorSession {
     if (denom.abs() < 1e-6) return 0.0;
     final c = d1.dot(r);
     final f = d2.dot(r);
-    return (b * c - f) / denom;
+    return (f - b * c) / denom;
   }
 
   /// Translates [target] along world [axisDir] by the delta between [startRay]
