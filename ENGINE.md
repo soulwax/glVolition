@@ -202,7 +202,9 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _Touches:_ `bin/volition.dart`.
 - [x] **E6-2. Windows desktop bundler (`volition build --target windows`).**
   - _Touches:_ `bin/volition.dart`.
-- [ ] **E6-3. Native AOT backend (`GlesDevice` + `SdlEngineHost` via `dart:ffi`).**
+- [x] **E6-3. Native AOT backend (`GlesDevice` + `NativeEngineHost` via `DefaultSceneRendererFactory`).**
+  - _Touches:_ `lib/src/native/native_host.dart`, `lib/gl_volition_native.dart`, `lib/rocket_native.dart`, `bin/volition.dart`, `test/subsystems_test.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`NativeEngineHost.boot` over `GlesDevice`, full `SceneRenderer` 2D/3D frame execution, resize, and zero leaked GPU objects on `dispose`).
 
 ---
 

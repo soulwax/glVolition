@@ -299,8 +299,29 @@ Future<void> _runBuild(List<String> args) async {
       stdout.writeln('[volition] Built $outWasm');
     case 'windows':
       await _buildWindowsExecutable(entryFile, destDir);
+    case 'exe':
+    case 'native':
+      final ext = Platform.isWindows ? '.exe' : '';
+      final outExe = '${destDir.path}/game$ext';
+      stdout.writeln('[volition] Building native AOT executable -> $outExe');
+      final res = await Process.run(Platform.resolvedExecutable, [
+        'compile',
+        'exe',
+        '-o',
+        outExe,
+        entryFile.path,
+      ]);
+      if (res.exitCode != 0) {
+        stderr.writeln(res.stdout);
+        stderr.writeln(res.stderr);
+        exit(res.exitCode);
+      }
+      final sizeKb = (File(outExe).lengthSync() / 1024).toStringAsFixed(1);
+      stdout.writeln('[volition] Built $outExe ($sizeKb KB)');
     default:
-      stderr.writeln('Unsupported --target "$target" (expected js, wasm, or windows).');
+      stderr.writeln(
+        'Unsupported --target "$target" (expected js, wasm, windows, or exe).',
+      );
       exit(64);
   }
 }

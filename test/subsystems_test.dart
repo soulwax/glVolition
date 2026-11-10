@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:gl_volition/gl_volition.dart';
+import 'package:gl_volition/gl_volition_native.dart';
 import 'package:test/test.dart';
 
 import '../example/dungeon_2d/game.dart';
@@ -622,6 +622,48 @@ void main() {
       expect(nextPos.x, closeTo(4.5, 1e-5));
       expect(nextPos.y, closeTo(0.0, 1e-5));
       expect(nextPos.z, closeTo(0.0, 1e-5));
+    });
+  });
+
+  group('E6 — Native GlesDevice & NativeEngineHost (DefaultSceneRendererFactory)', () {
+    test('NativeEngineHost boots SceneRenderer on GlesDevice, renders 2D and 3D scenes, resizes, and releases all GPU objects on dispose', () async {
+      final commands = <String>[];
+      final device = GlesDevice(
+        onCommand: (cmd, _) => commands.add(cmd),
+      );
+
+      final runner = await NativeEngineHost.boot(
+        device: device,
+        width: 800,
+        height: 600,
+        requestedProfile: QualityProfile.clean,
+        initialScene: buildDungeon2DScene(),
+      );
+
+      expect(device.programCompileCalls, greaterThan(0));
+      expect(device.liveObjectCount, greaterThan(0));
+
+      // Render a frame of the 2D Dungeon (Lantern) scene through SceneRenderer
+      final stats2d = runner.renderFrame(1 / 60);
+      expect(stats2d.drawCalls, greaterThan(0));
+      expect(commands, contains('useProgram'));
+
+      // Switch to the 3D Island (Tidewatch) scene and render frames
+      runner.engine.loadScene(buildIsland3DScene());
+      final stats3d = runner.renderFrame(1 / 60);
+      expect(stats3d.drawCalls, greaterThan(0));
+      expect(stats3d.trianglesSubmitted, greaterThan(0));
+
+      // Resize native surface and render again
+      await runner.resize(1024, 768);
+      expect(runner.host.graphics.viewportWidth, 1024);
+      expect(runner.host.graphics.viewportHeight, 768);
+      final statsResized = runner.renderFrame(1 / 60);
+      expect(statsResized.drawCalls, greaterThan(0));
+
+      // Dispose runner and verify 100% of GPU objects are freed
+      runner.dispose();
+      expect(device.liveObjectCount, 0);
     });
   });
 }
