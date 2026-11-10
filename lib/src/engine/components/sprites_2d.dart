@@ -42,6 +42,26 @@ final class Camera2DComponent extends Component {
   Vec2 screenToWorld(double screenX, double screenY) => raw.screenToWorld(screenX, screenY);
   Vec2 worldToScreen(double worldX, double worldY) => raw.worldToScreen(worldX, worldY);
 
+  /// Smoothly interpolates the camera's 2D position towards [target] using exponential decay.
+  void smoothFollow(Vec2 target, {double smoothing = 10.0, double dt = 1 / 60}) {
+    final factor = 1.0 - math.exp(-smoothing * dt);
+    final curX = x;
+    final curY = y;
+    x = curX + (target.x - curX) * factor;
+    y = curY + (target.y - curY) * factor;
+  }
+
+  /// Clamps the 2D camera coordinates within the given world bounding rectangle `[minX..maxX, minY..maxY]`.
+  void clampToBounds({
+    required double minX,
+    required double maxX,
+    required double minY,
+    required double maxY,
+  }) {
+    x = x.clamp(minX, maxX);
+    y = y.clamp(minY, maxY);
+  }
+
   void _sync(int viewportWidth, int viewportHeight) {
     if (viewportWidth > 0 && viewportHeight > 0) {
       raw.setViewport(viewportWidth, viewportHeight);

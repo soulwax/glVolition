@@ -91,6 +91,27 @@ final class UILabel extends UIElement {
   });
 }
 
+/// Static or animated 2D sprite image rendered within a [UICanvas] (E19).
+final class UIImage extends UIElement {
+  SpriteRegion region;
+  int tintColor;
+  bool flipX;
+  bool flipY;
+
+  UIImage({
+    required this.region,
+    super.anchor,
+    super.x,
+    super.y,
+    required super.width,
+    required super.height,
+    this.tintColor = 0xFFFFFFFF,
+    this.flipX = false,
+    this.flipY = false,
+    super.visible,
+  });
+}
+
 final class UIProgressBar extends UIElement {
   double value;
   int backgroundColor;
@@ -536,7 +557,7 @@ final class UICanvas extends Behaviour {
           field.isFocused = hit;
         }
         field._handleInput(raw);
-      case UIPanel() || UILabel() || UIProgressBar():
+      case UIPanel() || UILabel() || UIProgressBar() || UIImage():
         break;
     }
   }
@@ -583,6 +604,17 @@ final class UICanvas extends Behaviour {
         if (p.borderColor != null) {
           _drawBorder(rx, ry, p.width, p.height, p.borderThickness, p.borderColor!);
         }
+      case UIImage img:
+        _batch.draw(
+          img.region,
+          rx,
+          ry,
+          width: img.width,
+          height: img.height,
+          color: img.tintColor,
+          flipX: img.flipX,
+          flipY: img.flipY,
+        );
       case UILabel l:
         font?.draw(
           _batch,

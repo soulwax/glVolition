@@ -382,3 +382,17 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E18-3. `TransformComponent` Directional Vectors & Euler Helpers.**
   - _Touches:_ `lib/src/engine/transform.dart`.
   - _Verify:_ `test/subsystems_test.dart` (`back`, `left`, `down`, `rotateX`, `rotateY`, `rotateZ`, and `resetLocal`).
+
+---
+
+## E19: 2D Spatial & Raycast Queries, UIImage, and Camera2D Follow/Clamp
+
+- [x] **E19-1. `TilemapComponent` 2D Grid & Raycast Queries (`cellToWorld`, `raycast`, `hasLineOfSight`).**
+  - _Touches:_ `lib/src/engine/components/tilemap.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (cell to world transform, obstacle line-of-sight raycasting).
+- [x] **E19-2. `UIImage` UIElement in Canvas UI.**
+  - _Touches:_ `lib/src/engine/ui/canvas_ui.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (textured sprite batch rendering in `UICanvas`).
+- [x] **E19-3. `Camera2DComponent.smoothFollow` and `clampToBounds`.**
+  - _Touches:_ `lib/src/engine/components/sprites_2d.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (exponential decay smooth follow and viewport bounding clamps).

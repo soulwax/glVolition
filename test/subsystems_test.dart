@@ -2056,6 +2056,102 @@ void main() {
       expect(t.localScale, 1.0);
     });
   });
+
+  group('E19 — 2D Spatial & Raycast Queries, UIImage, and Camera2D Follow/Clamp', () {
+    test('TilemapComponent cellToWorld, raycast, and hasLineOfSight', () {
+      final layer = TileLayer(
+        columns: 10,
+        rows: 10,
+        tileWidth: 16,
+        tileHeight: 16,
+        originX: 0,
+        originY: 0,
+        tileset: [SpriteRegion.white, SpriteRegion.white],
+      );
+      // Place a wall at column 5, row 2
+      layer.setTile(5, 2, 1);
+
+      final tilemap = TilemapComponent(layer, solidTiles: [1]);
+
+      // cellToWorld check
+      final originCorner = tilemap.cellToWorld(2, 3);
+      expect(originCorner.x, 32.0);
+      expect(originCorner.y, 48.0);
+
+      final centerPt = tilemap.cellToWorld(2, 3, center: true);
+      expect(centerPt.x, 40.0);
+      expect(centerPt.y, 56.0);
+
+      // Line of sight horizontally across row 2 (from col 1 to col 8) -> hits wall at col 5
+      final startBlocked = tilemap.cellToWorld(1, 2, center: true);
+      final endBlocked = tilemap.cellToWorld(8, 2, center: true);
+      final hit = tilemap.raycast(startBlocked, endBlocked);
+
+      expect(hit, isNotNull);
+      expect(hit!.column, 5);
+      expect(hit.row, 2);
+      expect(tilemap.hasLineOfSight(startBlocked, endBlocked), isFalse);
+
+      // Line of sight horizontally across row 3 (from col 1 to col 8) -> completely clear
+      final startClear = tilemap.cellToWorld(1, 3, center: true);
+      final endClear = tilemap.cellToWorld(8, 3, center: true);
+      final hitClear = tilemap.raycast(startClear, endClear);
+
+      expect(hitClear, isNull);
+      expect(tilemap.hasLineOfSight(startClear, endClear), isTrue);
+    });
+
+    test('UIImage renders into UICanvas SpriteBatch without crashing', () {
+      final host = HeadlessHost();
+      host.graphics
+        ..viewportWidth = 640
+        ..viewportHeight = 360;
+      final engine = Engine(host);
+
+      final canvas = UICanvas(designWidth: 640, designHeight: 360);
+      engine.scene.createGameObject('UI', components: [canvas]);
+
+      final img = canvas.add(UIImage(
+        region: SpriteRegion.white,
+        x: 10,
+        y: 20,
+        width: 64,
+        height: 64,
+        tintColor: 0xFF00FFFF,
+        flipX: true,
+      ));
+
+      expect(canvas.elements.contains(img), isTrue);
+
+      // Stepping engine runs UICanvas.update and renders batch
+      engine.step(0.016);
+    });
+
+    test('Camera2DComponent smoothFollow and clampToBounds constrain ortho camera view', () {
+      final cam = Camera2DComponent(designWidth: 400, designHeight: 225, followTransform: false);
+      cam.x = 0;
+      cam.y = 0;
+
+      // Smooth follow towards (100, 50)
+      cam.smoothFollow(const Vec2(100, 50), smoothing: 10.0, dt: 0.1);
+      expect(cam.x, greaterThan(0.0));
+      expect(cam.x, lessThan(100.0));
+      expect(cam.y, greaterThan(0.0));
+      expect(cam.y, lessThan(50.0));
+
+      // Repeated follow converges
+      for (var i = 0; i < 60; i++) {
+        cam.smoothFollow(const Vec2(100, 50), smoothing: 10.0, dt: 0.1);
+      }
+      expect(cam.x, closeTo(100.0, 1e-2));
+      expect(cam.y, closeTo(50.0, 1e-2));
+
+      // Clamping to bounds [10..80, 5..30]
+      cam.clampToBounds(minX: 10, maxX: 80, minY: 5, maxY: 30);
+      expect(cam.x, closeTo(80.0, 1e-5));
+      expect(cam.y, closeTo(30.0, 1e-5));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

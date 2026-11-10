@@ -22,13 +22,16 @@ final class TilemapComponent extends Component {
   void setTile(int column, int row, int id) => layer.setTile(column, row, id);
 
   bool isSolidTileId(int id) {
-    if (id < 0) return true; // Out-of-bounds is treated as solid wall.
+    if (id < 0) return false; // Empty tile (-1) or out-of-bounds is non-solid unless explicitly flagged
     final pred = isSolidPredicate;
     if (pred != null && pred(id)) return true;
     return solidTileIds.contains(id);
   }
 
-  bool isSolidCell(int column, int row) => isSolidTileId(layer.tileAt(column, row));
+  bool isSolidCell(int column, int row) {
+    if (column < 0 || row < 0 || column >= columns || row >= rows) return true; // Outside map bounds is solid
+    return isSolidTileId(layer.tileAt(column, row));
+  }
 
   (int, int) worldToCell(double worldX, double worldY) {
     final col = ((worldX - layer.originX) / layer.tileWidth).floor();
@@ -36,10 +39,63 @@ final class TilemapComponent extends Component {
     return (col, row);
   }
 
+  /// Converts a tile grid coordinate `(column, row)` into world coordinates.
+  /// When [center] is true, returns the center of the cell; otherwise returns the top-left origin.
+  Vec2 cellToWorld(int column, int row, {bool center = false}) {
+    final tw = layer.tileWidth;
+    final th = layer.tileHeight;
+    final ox = layer.originX + column * tw;
+    final oy = layer.originY + row * th;
+    return center ? Vec2(ox + tw * 0.5, oy + th * 0.5) : Vec2(ox, oy);
+  }
+
   bool isSolidAtWorld(double worldX, double worldY) {
     final (col, row) = worldToCell(worldX, worldY);
     return isSolidCell(col, row);
   }
+
+  /// Traces a 2D line from [start] to [end] across tile cells, returning the first solid hit,
+  /// or null if the path is clear.
+  ({int column, int row, Vec2 point, double distance})? raycast(Vec2 start, Vec2 end) {
+    final dx = end.x - start.x;
+    final dy = end.y - start.y;
+    final totalDist = math.sqrt(dx * dx + dy * dy);
+    if (totalDist < 1e-9) {
+      final (c, r) = worldToCell(start.x, start.y);
+      if (isSolidCell(c, r)) {
+        return (column: c, row: r, point: start, distance: 0.0);
+      }
+      return null;
+    }
+
+    final tw = layer.tileWidth;
+    final th = layer.tileHeight;
+    final stepSize = math.min(tw, th) * 0.5;
+    final numSteps = math.max(1, (totalDist / stepSize).ceil());
+
+    int lastCol = -999999;
+    int lastRow = -999999;
+
+    for (var i = 0; i <= numSteps; i++) {
+      final t = i / numSteps;
+      final px = start.x + dx * t;
+      final py = start.y + dy * t;
+      final (col, row) = worldToCell(px, py);
+      if (col == lastCol && row == lastRow) continue;
+      lastCol = col;
+      lastRow = row;
+
+      if (isSolidCell(col, row)) {
+        final hitPt = Vec2(px, py);
+        final dist = t * totalDist;
+        return (column: col, row: row, point: hitPt, distance: dist);
+      }
+    }
+    return null;
+  }
+
+  /// Returns true if there are no solid tiles along the straight line from [start] to [end].
+  bool hasLineOfSight(Vec2 start, Vec2 end) => raycast(start, end) == null;
 
   /// Moves a circle of [radius] from [position] by [delta] and slides smoothly
   /// along any solid tile edges it contacts.
