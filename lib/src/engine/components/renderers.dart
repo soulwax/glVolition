@@ -7,6 +7,8 @@ final class MeshRenderer extends Component {
   MeshHandle? _mesh;
   final MeshData? meshData;
   MaterialHandle? _material;
+  MaterialDefinition? _materialOverride;
+  LinearColor? _tintColor;
   Transform _localOffset = Transform.identity;
   bool _castsShadow = true;
   bool _receivesShadow = true;
@@ -19,6 +21,8 @@ final class MeshRenderer extends Component {
     MeshHandle? mesh,
     this.meshData,
     MaterialHandle? material,
+    MaterialDefinition? materialOverride,
+    LinearColor? tintColor,
     Transform localOffset = Transform.identity,
     bool castsShadow = true,
     bool receivesShadow = true,
@@ -27,6 +31,8 @@ final class MeshRenderer extends Component {
   }) {
     _mesh = mesh;
     _material = material;
+    _materialOverride = materialOverride;
+    _tintColor = tintColor;
     _localOffset = localOffset;
     _castsShadow = castsShadow;
     _receivesShadow = receivesShadow;
@@ -45,6 +51,31 @@ final class MeshRenderer extends Component {
     _material = value;
     _leaf?.material = value;
   }
+
+  MaterialDefinition? get materialOverride => _materialOverride;
+  set materialOverride(MaterialDefinition? value) {
+    _materialOverride = value;
+    if (value != null && isAttached && scene.isLoaded) {
+      material = engine.graphics.createMaterial(value);
+    }
+  }
+
+  /// Optional per-renderer tint color (E20-2).
+  /// When set, applies a dielectric/tinted material override if an engine graphics context is active.
+  LinearColor? get tintColor => _tintColor;
+  set tintColor(LinearColor? value) {
+    _tintColor = value;
+    if (value != null && isAttached && scene.isLoaded) {
+      material = engine.graphics.createMaterial(
+        _materialOverride != null
+            ? _materialOverride!.copyWith(tintR: value.r, tintG: value.g, tintB: value.b)
+            : MaterialDefinition.dielectric(key: '${gameObject.name}#tint', color: value),
+      );
+    }
+  }
+
+  /// Convenience setter for [tintColor].
+  void setTint(LinearColor? color) => tintColor = color;
 
   Transform get localOffset => _localOffset;
   set localOffset(Transform value) {
@@ -78,6 +109,13 @@ final class MeshRenderer extends Component {
 
   @override
   void _onAttach() {
+    if (_materialOverride != null && _material == null && scene.isLoaded) {
+      _material = engine.graphics.createMaterial(_materialOverride!);
+    } else if (_tintColor != null && _material == null && scene.isLoaded) {
+      _material = engine.graphics.createMaterial(
+        MaterialDefinition.dielectric(key: '${gameObject.name}#tint', color: _tintColor!),
+      );
+    }
     final leaf = SceneNode(
       name: '${gameObject.name}#mesh',
       transform: _localOffset,

@@ -83,6 +83,73 @@ final class NavGrid2D {
         originY + (row + 0.5) * cellHeight,
       );
 
+  /// Traces a 2D line from [startWorld] to [endWorld] on the grid.
+  /// Returns `true` if every cell intersected by the segment is walkable (E20-3).
+  bool hasLineOfSight(Vec2 startWorld, Vec2 endWorld) {
+    final dx = endWorld.x - startWorld.x;
+    final dy = endWorld.y - startWorld.y;
+    final totalDist = math.sqrt(dx * dx + dy * dy);
+    if (totalDist < 1e-9) {
+      final (c, r) = worldToCell(startWorld.x, startWorld.y);
+      return isWalkable(c, r);
+    }
+
+    final stepSize = math.min(cellWidth, cellHeight) * 0.5;
+    final numSteps = math.max(1, (totalDist / stepSize).ceil());
+
+    int lastCol = -999999;
+    int lastRow = -999999;
+
+    for (var i = 0; i <= numSteps; i++) {
+      final t = i / numSteps;
+      final px = startWorld.x + dx * t;
+      final py = startWorld.y + dy * t;
+      final (col, row) = worldToCell(px, py);
+      if (col == lastCol && row == lastRow) continue;
+      lastCol = col;
+      lastRow = row;
+
+      if (!isWalkable(col, row)) return false;
+    }
+    return true;
+  }
+
+  /// Traces a 2D ray from [startWorld] towards [endWorld].
+  /// Returns the first non-walkable cell hit, or `null` if the path is entirely walkable (E20-3).
+  ({int column, int row, Vec2 point, double distance})? raycast(Vec2 startWorld, Vec2 endWorld) {
+    final dx = endWorld.x - startWorld.x;
+    final dy = endWorld.y - startWorld.y;
+    final totalDist = math.sqrt(dx * dx + dy * dy);
+    if (totalDist < 1e-9) {
+      final (c, r) = worldToCell(startWorld.x, startWorld.y);
+      if (!isWalkable(c, r)) {
+        return (column: c, row: r, point: startWorld, distance: 0.0);
+      }
+      return null;
+    }
+
+    final stepSize = math.min(cellWidth, cellHeight) * 0.5;
+    final numSteps = math.max(1, (totalDist / stepSize).ceil());
+
+    int lastCol = -999999;
+    int lastRow = -999999;
+
+    for (var i = 0; i <= numSteps; i++) {
+      final t = i / numSteps;
+      final px = startWorld.x + dx * t;
+      final py = startWorld.y + dy * t;
+      final (col, row) = worldToCell(px, py);
+      if (col == lastCol && row == lastRow) continue;
+      lastCol = col;
+      lastRow = row;
+
+      if (!isWalkable(col, row)) {
+        return (column: col, row: row, point: Vec2(px, py), distance: t * totalDist);
+      }
+    }
+    return null;
+  }
+
   /// Computes an A* path of world-space cell centers from [startWorld] to
   /// [goalWorld]. Returns an empty list if no path exists.
   List<Vec2> findPath(Vec2 startWorld, Vec2 goalWorld) {

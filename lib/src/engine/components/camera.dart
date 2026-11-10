@@ -14,6 +14,9 @@ final class Camera extends Component {
   /// `forward` (-Z) from `transform.position`.
   CameraController? customController;
 
+  /// Bitmask of object layers (0..31) this camera renders. Defaults to `-1` (all layers).
+  int cullingMask;
+
   /// Deterministic trauma-based camera shake evaluator (E12-1).
   final CameraShakeEngine shakeEngine = CameraShakeEngine();
 
@@ -26,6 +29,7 @@ final class Camera extends Component {
     this.orthographic = false,
     this.orthoHeight = 12.0,
     this.customController,
+    this.cullingMask = -1,
   });
 
   factory Camera.ortho({
@@ -33,6 +37,7 @@ final class Camera extends Component {
     double near = 0.1,
     double far = 200,
     CameraController? customController,
+    int cullingMask = -1,
   }) =>
       Camera(
         orthographic: true,
@@ -40,6 +45,7 @@ final class Camera extends Component {
         near: near,
         far: far,
         customController: customController,
+        cullingMask: cullingMask,
       );
 
   CameraController get controller => customController ?? _transformController;
@@ -101,6 +107,38 @@ final class Camera extends Component {
     final sx = (ndcX * 0.5 + 0.5) * vw;
     final sy = (1.0 - (ndcY * 0.5 + 0.5)) * vh;
     return (x: sx, y: sy, depth: cw);
+  }
+
+  /// Projects a 3D world-space [worldPoint] into normalized viewport coordinates
+  /// `(x, y)` where `(0, 0)` is top-left, `(1, 1)` is bottom-right, and `depth`
+  /// is clip-space `w`. Returns `null` if the point is behind the camera (E20-1).
+  ({double x, double y, double depth})? worldToViewportPoint(Vec3 worldPoint) {
+    final vw = engine.graphics.viewportWidth;
+    final vh = engine.graphics.viewportHeight;
+    final aspect = (vw > 0 && vh > 0) ? (vw / vh) : 1.0;
+    final vp = toCameraView(aspect).viewProjection.m;
+    final cx = vp[0] * worldPoint.x + vp[4] * worldPoint.y + vp[8] * worldPoint.z + vp[12];
+    final cy = vp[1] * worldPoint.x + vp[5] * worldPoint.y + vp[9] * worldPoint.z + vp[13];
+    final cw = vp[3] * worldPoint.x + vp[7] * worldPoint.y + vp[11] * worldPoint.z + vp[15];
+    if (cw <= 1e-5) return null;
+    final ndcX = cx / cw;
+    final ndcY = cy / cw;
+    final vx = ndcX * 0.5 + 0.5;
+    final vy = 1.0 - (ndcY * 0.5 + 0.5);
+    return (x: vx, y: vy, depth: cw);
+  }
+
+  /// Reconstructs a 3D world-space position given normalized viewport coordinates
+  /// `(viewportPoint.x, viewportPoint.y)` in `[0..1]` and distance along the ray
+  /// `viewportPoint.z` (E20-1).
+  Vec3? viewportToWorldPoint(Vec3 viewportPoint) {
+    final vw = engine.graphics.viewportWidth;
+    final vh = engine.graphics.viewportHeight;
+    final sx = viewportPoint.x * (vw > 0 ? vw : 1.0);
+    final sy = viewportPoint.y * (vh > 0 ? vh : 1.0);
+    final ray = screenPointToRay(sx, sy);
+    if (ray == null) return null;
+    return ray.origin + ray.direction * viewportPoint.z;
   }
 
   CameraView toCameraView([double? aspect]) {

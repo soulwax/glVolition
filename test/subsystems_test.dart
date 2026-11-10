@@ -2152,6 +2152,101 @@ void main() {
       expect(cam.y, closeTo(30.0, 1e-5));
     });
   });
+
+  group('E20 — Camera Viewport Projections & Culling, MeshRenderer Material Overrides, and NavGrid2D Line-of-Sight', () {
+    test('Camera worldToViewportPoint, viewportToWorldPoint, and cullingMask serialization', () {
+      final host = HeadlessHost();
+      host.graphics
+        ..viewportWidth = 800
+        ..viewportHeight = 600;
+      final engine = Engine(host);
+
+      final camObj = engine.scene.createGameObject(
+        'MainCamera',
+        position: const Vec3(0, 0, 5),
+        components: [Camera(cullingMask: 0x05)],
+      );
+      final cam = camObj.getComponent<Camera>()!;
+      expect(cam.cullingMask, 0x05);
+
+      // Point right at the center of the camera's view (0, 0, 0)
+      final vpCenter = cam.worldToViewportPoint(const Vec3(0, 0, 0));
+      expect(vpCenter, isNotNull);
+      expect(vpCenter!.x, closeTo(0.5, 1e-3));
+      expect(vpCenter.y, closeTo(0.5, 1e-3));
+      expect(vpCenter.depth, greaterThan(0));
+
+      // Reconstruct world ray at distance = 5.0
+      final reconstructed = cam.viewportToWorldPoint(Vec3(0.5, 0.5, 5.0));
+      expect(reconstructed, isNotNull);
+      expect(reconstructed!.x, closeTo(0.0, 1e-3));
+      expect(reconstructed.y, closeTo(0.0, 1e-3));
+      expect(reconstructed.z, closeTo(0.0, 1e-3));
+
+      // Round-trip Camera via SceneSerializer to ensure cullingMask is preserved
+      final json = SceneSerializer.toJson(engine.scene, registry: engine.registry);
+      final restored = SceneSerializer.fromJson(json, registry: engine.registry);
+      final restoredCam = restored.find('MainCamera')?.getComponent<Camera>();
+      expect(restoredCam, isNotNull);
+      expect(restoredCam!.cullingMask, 0x05);
+    });
+
+    test('MeshRenderer tintColor and materialOverride dynamic updates', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final meshHandle = host.graphics.createMesh(Primitives.cube());
+      final renderer = MeshRenderer(
+        mesh: meshHandle,
+        tintColor: const LinearColor(1.0, 0.5, 0.2),
+      );
+
+      final obj = engine.scene.createGameObject('TintedBox', components: [renderer]);
+      engine.step(0.016);
+
+      expect(renderer.tintColor, isNotNull);
+      expect(renderer.material, isNotNull);
+
+      // Dynamically change tint
+      renderer.setTint(const LinearColor(0.1, 0.9, 0.3));
+      expect(renderer.tintColor?.g, closeTo(0.9, 1e-4));
+      expect(renderer.material, isNotNull);
+
+      // Set material override
+      renderer.materialOverride = const MaterialDefinition(
+        key: 'custom_override',
+        tintR: 0.0,
+        tintG: 0.0,
+        tintB: 1.0,
+      );
+      expect(renderer.materialOverride?.key, 'custom_override');
+      expect(renderer.material, isNotNull);
+    });
+
+    test('NavGrid2D hasLineOfSight and raycast verify straight-line traversability', () {
+      // 10x10 nav grid
+      final nav = NavGrid2D(columns: 10, rows: 10, cellWidth: 1.0, cellHeight: 1.0);
+      // Place a 1-cell pillar obstacle at (5, 5)
+      nav.setWalkable(5, 5, false);
+
+      // Line from (1, 5) to (8, 5) crosses (5, 5) => blocked
+      final blockedStart = Vec2(1.5, 5.5);
+      final blockedEnd = Vec2(8.5, 5.5);
+      expect(nav.hasLineOfSight(blockedStart, blockedEnd), isFalse);
+
+      final hit = nav.raycast(blockedStart, blockedEnd);
+      expect(hit, isNotNull);
+      expect(hit!.column, 5);
+      expect(hit.row, 5);
+      expect(hit.distance, greaterThan(0));
+
+      // Line from (1, 2) to (8, 2) does not cross row 5 => clear
+      final clearStart = Vec2(1.5, 2.5);
+      final clearEnd = Vec2(8.5, 2.5);
+      expect(nav.hasLineOfSight(clearStart, clearEnd), isTrue);
+      expect(nav.raycast(clearStart, clearEnd), isNull);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

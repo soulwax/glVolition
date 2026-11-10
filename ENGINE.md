@@ -396,3 +396,17 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E19-3. `Camera2DComponent.smoothFollow` and `clampToBounds`.**
   - _Touches:_ `lib/src/engine/components/sprites_2d.dart`.
   - _Verify:_ `test/subsystems_test.dart` (exponential decay smooth follow and viewport bounding clamps).
+
+---
+
+## E20: Camera Viewport Projections & Culling, MeshRenderer Material Overrides, and NavGrid2D Line-of-Sight
+
+- [x] **E20-1. Camera Viewport Projections & Culling Mask (`worldToViewportPoint`, `viewportToWorldPoint`, `cullingMask`).**
+  - _Touches:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/serialization/component_spec.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (viewport normalized coordinate projections and `SceneSerializer` culling mask round-trip).
+- [x] **E20-2. `MeshRenderer` Tint Color & Material Override (`tintColor`, `materialOverride`, `setTint`).**
+  - _Touches:_ `lib/src/engine/components/renderers.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (runtime tint and material override swapping).
+- [x] **E20-3. `NavGrid2D` Straight-Line Line-of-Sight & Raycasting (`hasLineOfSight`, `raycast`).**
+  - _Touches:_ `lib/src/engine/navigation.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (obstacle line-of-sight raycasts across navigation grids).
