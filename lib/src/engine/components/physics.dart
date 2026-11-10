@@ -232,6 +232,30 @@ final class RigidBody extends Component {
     if (freezeY) velocity = Vec3(velocity.x, 0, velocity.z);
   }
 
+  /// Applies a radial explosion impulse radiating outward from [epicenter]
+  /// within [explosionRadius] (E17-2).
+  ///
+  /// [upwardsModifier] shifts the effective epicenter downwards, imparting
+  /// an upward loft to objects.
+  void addExplosionForce(
+    double explosionForce,
+    Vec3 epicenter,
+    double explosionRadius, {
+    double upwardsModifier = 0.0,
+  }) {
+    if (isKinematic || explosionRadius <= 0) return;
+    var delta = transform.position - epicenter;
+    if (upwardsModifier != 0) {
+      delta = Vec3(delta.x, delta.y + upwardsModifier, delta.z);
+    }
+    final dist = delta.length;
+    if (dist >= explosionRadius) return;
+    final normDir = dist > 1e-6 ? delta * (1.0 / dist) : Vec3.unitY;
+    final factor = 1.0 - (dist / explosionRadius);
+    final impulse = normDir * (explosionForce * factor);
+    addImpulse(impulse);
+  }
+
   void _integrate(double dt, Vec3 worldGravity) {
     if (isKinematic || dt <= 0) {
       _accumulatedForce = Vec3.zero;
@@ -270,11 +294,53 @@ final class PhysicsWorld {
   final List<RigidBody> _bodies = [];
   Set<(int, int)> _overlaps = {};
   final Map<int, Collider> _byId = {};
+  final List<int> _layerCollisionMatrix = List.filled(32, -1);
 
   PhysicsWorld._(this._scene);
 
   List<Collider> get colliders => List.unmodifiable(_colliders);
   List<RigidBody> get bodies => List.unmodifiable(_bodies);
+
+  /// Returns whether objects on [layerA] (0..31) can collide with [layerB]
+  /// according to the global physics layer matrix (E17-1).
+  bool getLayerCollision(int layerA, int layerB) {
+    if (layerA < 0 || layerA > 31 || layerB < 0 || layerB > 31) return false;
+    return (_layerCollisionMatrix[layerA] & (1 << layerB)) != 0;
+  }
+
+  /// Enables or disables collisions between all objects on [layerA] and [layerB] (E17-1).
+  void setLayerCollision(int layerA, int layerB, bool canCollide) {
+    if (layerA < 0 || layerA > 31 || layerB < 0 || layerB > 31) {
+      throw RangeError('Layers must be in range 0..31');
+    }
+    if (canCollide) {
+      _layerCollisionMatrix[layerA] |= (1 << layerB);
+      _layerCollisionMatrix[layerB] |= (1 << layerA);
+    } else {
+      _layerCollisionMatrix[layerA] &= ~(1 << layerB);
+      _layerCollisionMatrix[layerB] &= ~(1 << layerA);
+    }
+  }
+
+  /// Applies [explosionForce] to all active dynamic [RigidBody]s within
+  /// [explosionRadius] of [epicenter] (E17-2).
+  void addExplosionForce(
+    double explosionForce,
+    Vec3 epicenter,
+    double explosionRadius, {
+    double upwardsModifier = 0.0,
+  }) {
+    for (final b in _bodies) {
+      if (b._active && !b.isKinematic && !b._destroyRequested) {
+        b.addExplosionForce(
+          explosionForce,
+          epicenter,
+          explosionRadius,
+          upwardsModifier: upwardsModifier,
+        );
+      }
+    }
+  }
 
   /// Collider pairs that overlapped during the last fixed step (E15-1).
   Iterable<(Collider, Collider)> get contactPairs sync* {
@@ -437,6 +503,7 @@ final class PhysicsWorld {
       for (var j = i + 1; j < active.length; j++) {
         final b = active[j];
         if (identical(a.gameObject, b.gameObject)) continue;
+        if (!getLayerCollision(a.gameObject.layer, b.gameObject.layer)) continue;
         final bBit = 1 << b.gameObject.layer;
         if ((a.collidesWithMask & bBit) == 0 || (b.collidesWithMask & aBit) == 0) continue;
         if (!_intersects(a, b)) continue;

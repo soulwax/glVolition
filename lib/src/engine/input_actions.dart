@@ -28,6 +28,21 @@ final class InputActions {
 
   bool isDown(String name) => _keys(name).any(raw.isDown);
 
+  /// Whether a button named [name] is registered.
+  bool hasButton(String name) => _buttons.containsKey(name);
+
+  /// Whether an axis named [name] is registered.
+  bool hasAxis(String name) => _axes.containsKey(name);
+
+  /// All registered button names.
+  Iterable<String> get buttonNames => _buttons.keys;
+
+  /// All registered axis names.
+  Iterable<String> get axisNames => _axes.keys;
+
+  /// Alias for [getAxis] matching Unity conventions.
+  double getAxisRaw(String name) => getAxis(name);
+
   bool wasPressed(String name) {
     final keys = _keys(name);
     // Pressed this frame, and not already held through another binding.

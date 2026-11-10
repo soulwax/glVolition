@@ -55,6 +55,21 @@ final class Camera extends Component {
     }
   }
 
+  /// Shakes this camera attenuated quadratically by distance from [epicenter]
+  /// within [maxDistance] (E17-3).
+  void shakeAt(
+    Vec3 epicenter, {
+    double trauma = 0.5,
+    double maxDistance = 25.0,
+    double? rotation,
+  }) {
+    if (maxDistance <= 0) return;
+    final dist = (transform.position - epicenter).length;
+    if (dist >= maxDistance) return;
+    final factor = 1.0 - (dist / maxDistance);
+    shake(trauma: trauma * factor * factor, rotation: rotation);
+  }
+
   Ray? screenPointToRay(double x, double y) {
     final hostRay = engine.graphics.screenRay(x, y);
     if (hostRay != null) return hostRay;

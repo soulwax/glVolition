@@ -197,6 +197,52 @@ final class Scene {
     return go == null ? null : (go, hit);
   }
 
+  /// Shakes all active cameras in the scene with distance-attenuated trauma
+  /// radiating from [epicenter] (E17-3).
+  void shakeCamerasAt(
+    Vec3 epicenter, {
+    double trauma = 0.5,
+    double maxDistance = 25.0,
+    double? rotation,
+  }) {
+    for (final cam in _cameras) {
+      if (cam._active) {
+        cam.shakeAt(
+          epicenter,
+          trauma: trauma,
+          maxDistance: maxDistance,
+          rotation: rotation,
+        );
+      }
+    }
+  }
+
+  /// Triggers a unified game explosion at [epicenter], applying radial
+  /// [explosionForce] to nearby [RigidBody]s and screen shake to nearby
+  /// [Camera]s (E17-3).
+  void explode(
+    Vec3 epicenter, {
+    double force = 12.0,
+    double radius = 8.0,
+    double cameraTrauma = 0.6,
+    double cameraMaxDistance = 25.0,
+    double upwardsModifier = 0.5,
+  }) {
+    physics.addExplosionForce(
+      force,
+      epicenter,
+      radius,
+      upwardsModifier: upwardsModifier,
+    );
+    if (cameraTrauma > 0) {
+      shakeCamerasAt(
+        epicenter,
+        trauma: cameraTrauma,
+        maxDistance: cameraMaxDistance,
+      );
+    }
+  }
+
   GameObject? _ownerOf(SceneNode target) {
     final byNode = <SceneNode, GameObject>{};
     for (final go in _allObjects(includeInactive: true)) {

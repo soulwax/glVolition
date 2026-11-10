@@ -1848,6 +1848,116 @@ void main() {
       expect(projected.length, 5 + engine.scene.gizmos.circleSegments);
     });
   });
+
+  group('E17 — Layer Collision Matrix, Radial Explosion Impulses & Spatial Camera Shake', () {
+    test('PhysicsWorld layer collision matrix selectively disables layer-pair collisions', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final physics = engine.scene.physics;
+
+      // By default all 32x32 layers can collide
+      expect(physics.getLayerCollision(2, 2), isTrue);
+      expect(physics.getLayerCollision(0, 1), isTrue);
+
+      engine.scene.createGameObject(
+        'DebrisA',
+        layer: 2,
+        position: const Vec3(0, 0, 0),
+        components: [SphereCollider(radius: 1.0, isTrigger: true)],
+      );
+      engine.scene.createGameObject(
+        'DebrisB',
+        layer: 2,
+        position: const Vec3(0.5, 0, 0),
+        components: [SphereCollider(radius: 1.0, isTrigger: true)],
+      );
+
+      // Disable layer 2 vs layer 2 collision
+      physics.setLayerCollision(2, 2, false);
+      expect(physics.getLayerCollision(2, 2), isFalse);
+
+      engine.step(0.05);
+      expect(physics.contactPairs.length, 0);
+
+      // Re-enable layer 2 vs layer 2 collision
+      physics.setLayerCollision(2, 2, true);
+      expect(physics.getLayerCollision(2, 2), isTrue);
+
+      engine.step(0.05);
+      expect(physics.contactPairs.length, 1);
+    });
+
+    test('RigidBody and PhysicsWorld radial explosion impulse applies outward velocity and upwards loft', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final body = engine.scene.createGameObject(
+        'Barrel',
+        position: const Vec3(2, 0, 0),
+        components: [
+          SphereCollider(radius: 0.5),
+          RigidBody(useGravity: false, linearDrag: 0.0),
+        ],
+      ).getComponent<RigidBody>()!;
+
+      // Explosion at origin, radius 5, force 10
+      // Distance is 2, factor is (1 - 2/5) = 0.6 -> impulse 6 along +X
+      body.addExplosionForce(10.0, Vec3.zero, 5.0, upwardsModifier: 1.5);
+      expect(body.velocity.x, greaterThan(0));
+      expect(body.velocity.y, greaterThan(0)); // lifted upwards by upwardsModifier
+
+      // Multiple bodies via PhysicsWorld.addExplosionForce
+      final farBody = engine.scene.createGameObject(
+        'FarBarrel',
+        position: const Vec3(10, 0, 0),
+        components: [
+          SphereCollider(radius: 0.5),
+          RigidBody(useGravity: false, linearDrag: 0.0),
+        ],
+      ).getComponent<RigidBody>()!;
+
+      engine.scene.physics.addExplosionForce(20.0, Vec3.zero, 6.0);
+      expect(farBody.velocity.length, 0.0); // beyond radius 6.0
+    });
+
+    test('Camera.shakeAt, Scene.shakeCamerasAt, and Scene.explode shake nearby cameras and query input metadata', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final nearCam = engine.scene.createGameObject(
+        'NearCam',
+        position: const Vec3(0, 0, 5),
+        components: [Camera()],
+      ).getComponent<Camera>()!;
+
+      final farCam = engine.scene.createGameObject(
+        'FarCam',
+        position: const Vec3(0, 0, 50),
+        components: [Camera()],
+      ).getComponent<Camera>()!;
+
+      // Unified scene.explode shakes nearCam but leaves farCam untouched
+      engine.scene.explode(
+        Vec3.zero,
+        force: 15.0,
+        radius: 6.0,
+        cameraTrauma: 0.8,
+        cameraMaxDistance: 20.0,
+      );
+
+      expect(nearCam.shakeEngine.trauma, greaterThan(0.0));
+      expect(farCam.shakeEngine.trauma, closeTo(0.0, 1e-6));
+
+      // InputActions queries
+      expect(engine.input.hasButton('Submit'), isTrue);
+      expect(engine.input.hasButton('UnknownButton'), isFalse);
+      expect(engine.input.hasAxis('Horizontal'), isTrue);
+      expect(engine.input.hasAxis('UnknownAxis'), isFalse);
+      expect(engine.input.buttonNames, contains('Submit'));
+      expect(engine.input.axisNames, contains('Vertical'));
+      expect(engine.input.getAxisRaw('Horizontal'), closeTo(0.0, 1e-6));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

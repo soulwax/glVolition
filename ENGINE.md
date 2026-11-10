@@ -253,3 +253,118 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E9-4. Generic `StateMachine<S>` component.**
   - _Touches:_ `lib/src/engine/state_machine.dart`, `lib/src/engine.dart`.
   - _Verify:_ `test/subsystems_test.dart` (`StateMachine` lifecycle callbacks and `stateTime` tracking).
+
+---
+
+## E10: Spatial 3D Audio, 3D Character Controller & Line/Trail Renderers
+
+- [x] **E10-1. Spatial 3D Audio (`AudioListener`, `AudioMixer`, `AudioBus`, `AudioSource`).**
+  - _Touches:_ `lib/src/engine/components/audio_source.dart`, `lib/src/engine/scene.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (3D attenuation, stereo panning, and mixer bus volume/mute control).
+- [x] **E10-2. Kinematic `CharacterController` 3D.**
+  - _Touches:_ `lib/src/engine/components/character_controller.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (capsule hemisphere depenetration, wall sliding, gravity, and ground clamping).
+- [x] **E10-3. `LineRenderer` & `TrailRenderer`.**
+  - _Touches:_ `lib/src/engine/components/trail_renderer.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (ribbon MeshData dynamic vertex generation and length fading).
+
+---
+
+## E11: 2D Navigation, LOD/Billboards, UI Anchoring & Scene Management
+
+- [x] **E11-1. `NavGrid2D` & `NavAgent`.**
+  - _Touches:_ `lib/src/engine/navigation.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (A* pathfinding with corner prevention, tilemap extraction, and waypoint steering).
+- [x] **E11-2. `LodGroup` & `Billboard`.**
+  - _Touches:_ `lib/src/engine/components/lod_billboard.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (camera-distance child switching and spherical/cylindrical camera facing).
+- [x] **E11-3. `Camera.worldToScreenPoint` & `UIWorldAnchor`.**
+  - _Touches:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/ui/canvas_ui.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (3D world position projection onto CanvasUI HUDs with behind-camera culling).
+- [x] **E11-4. `SceneManager` (`engine.scenes`).**
+  - _Touches:_ `lib/src/engine/scene_manager.dart`, `lib/src/engine/engine.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (named scene registration, loading, and `dontDestroyOnLoad` object migration).
+
+---
+
+## E12: Cinematic Cameras, Spatial Physics Queries, Save System & Editor Cloning
+
+- [x] **E12-1. `SmoothFollowCamera`, `CinematicTourCamera`, and `CameraShakeEngine`.**
+  - _Touches:_ `lib/src/engine/components/cinematic_camera.dart`, `lib/src/engine/components/camera.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (target follow smoothing, tour waypoint completion, and camera shake).
+- [x] **E12-2. Spatial Physics Queries (`PhysicsWorld.overlapBox`, `raycastAll`, `sphereCast`).**
+  - _Touches:_ `lib/src/engine/components/physics.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (overlapBox, sorted raycastAll, and sphereCast sweeps).
+- [x] **E12-3. `SaveSystem` (`engine.saves`).**
+  - _Touches:_ `lib/src/engine/save_system.dart`, `lib/src/engine/engine.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (named slot key-value persistence, full scene checkpointing, and slot listing).
+- [x] **E12-4. `EditorSession.duplicate` & Scene JSON import/export.**
+  - _Touches:_ `lib/src/engine/editor_session.dart`, `lib/src/web/inspector_overlay.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (subtree cloning, selected object duplicate, and JSON import/export).
+
+---
+
+## E13: Capsule Colliders, Volumetric/Thermal Lighting, Undo/Redo & Text Input
+
+- [x] **E13-1. `CapsuleCollider` 3D.**
+  - _Touches:_ `lib/src/engine/components/physics.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (capsule overlap, raycast, and SceneSerializer round-trip).
+- [x] **E13-2. `VolumetricLightSource` & `ThermalSourceComponent`.**
+  - _Touches:_ `lib/src/engine/components/atmosphere_volume.dart`, `lib/src/engine/scene.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (FrameEnvironment sync and `scene.sampleThermalDissolution`).
+- [x] **E13-3. Bounded Undo/Redo stack in `EditorSession`.**
+  - _Touches:_ `lib/src/engine/editor_session.dart`, `lib/src/web/inspector_overlay.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (undo/redo restoring scene hierarchy, selection, and component properties).
+- [x] **E13-4. `UITextField` Canvas UI widget.**
+  - _Touches:_ `lib/src/engine/ui/canvas_ui.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (focus on click, character typing, backspace, and submit on Enter).
+
+---
+
+## E14: Model Prefabs & Capsule Contact Manifolds
+
+- [x] **E14-1. Model Prefabs (`Prefab.fromModelAsset`, `Prefab.fromGlbResult`, `Prefab.fromGlbBytes`).**
+  - _Touches:_ `lib/src/engine/prefab.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (GLB hierarchy instantiation with MeshRenderers and shared GPU buffers).
+- [x] **E14-2. Accurate Capsule Contact Manifolds.**
+  - _Touches:_ `lib/src/engine/components/physics.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (capsule settling on solid box floor and axis-accurate normal restitution).
+
+---
+
+## E15: Immediate-Mode Gizmos, Auto-Gizmos & Catalog Shortcuts
+
+- [x] **E15-1. `Gizmos` immediate-mode wireframe and debug visualizer.**
+  - _Touches:_ `lib/src/engine/gizmos.dart`, `lib/src/engine/scene.dart`, `lib/src/web/inspector_overlay.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (wireBox, wireSphere, wireCapsule, contact normals, selection axes, and projection).
+- [x] **E15-2. `AssetCatalog.prefab` & `catalog.spawn` shortcuts.**
+  - _Touches:_ `lib/src/engine/assets/asset_catalog.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (lazy prefab caching and single-line GameObject spawning).
+
+---
+
+## E16: 3D PhysicsRaycaster Pointer Events, LayerMask & Gizmo Extensions
+
+- [x] **E16-1. `PhysicsRaycaster` & 3D Pointer Events (`Behaviour.onPointerEnter/Down/Up/Click/Exit`).**
+  - _Touches:_ `lib/src/engine/components/physics_raycaster.dart`, `lib/src/engine/component.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (pointer events dispatched to 3D colliders from mouse/touch input).
+- [x] **E16-2. Type-safe `LayerMask` utility.**
+  - _Touches:_ `lib/src/engine/game_object.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (bitmask composition, layer filtering in physics queries).
+- [x] **E16-3. `Gizmos.arrow` and `Gizmos.wireDisc`.**
+  - _Touches:_ `lib/src/engine/gizmos.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (vector and orientation wireframe projection).
+
+---
+
+## E17: Layer Collision Matrix, Radial Explosion Impulses & Spatial Camera Shake
+
+- [x] **E17-1. Physics Layer Collision Matrix (`PhysicsWorld.setLayerCollision` / `getLayerCollision`).**
+  - _Touches:_ `lib/src/engine/components/physics.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (selective layer collision disabling in fixed physics step).
+- [x] **E17-2. Radial Explosion Impulse (`RigidBody.addExplosionForce` & `PhysicsWorld.addExplosionForce`).**
+  - _Touches:_ `lib/src/engine/components/physics.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (distance-attenuated radial impulse and upwards modifier loft).
+- [x] **E17-3. Spatial Camera Shake & `Scene.explode`.**
+  - _Touches:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/scene.dart`, `lib/src/engine/input_actions.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (distance-attenuated camera shake and unified `scene.explode(...)`).
