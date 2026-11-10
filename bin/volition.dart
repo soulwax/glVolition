@@ -161,8 +161,8 @@ Future<void> _runServe(List<String> args) async {
 
     final rel = path == '/' ? 'index.html' : path.substring(1);
     var file = File('${serveRoot.path}/$rel');
-    if (!file.existsSync() && Directory('pixeldart/web').existsSync()) {
-      final fallback = File('pixeldart/web/$rel');
+    if (!file.existsSync() && Directory('vendor/pixeldart/web').existsSync()) {
+      final fallback = File('vendor/pixeldart/web/$rel');
       if (fallback.existsSync()) file = fallback;
     }
 
@@ -320,7 +320,7 @@ void _copyStaticAssets(Directory sourceDir, Directory destDir) {
   for (final folder in const ['models', 'audio', 'assets']) {
     final candidates = [
       Directory('${sourceDir.path}/$folder'),
-      Directory('pixeldart/web/$folder'),
+      Directory('vendor/pixeldart/web/$folder'),
     ];
     for (final src in candidates) {
       if (src.existsSync()) {

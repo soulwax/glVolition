@@ -23,4 +23,4 @@ dart run gl_volition:volition build example/pixel_rocket/main.dart --target js
 
 - **`package:gl_volition/gl_volition.dart`** (`lib/gl_volition.dart`): Platform-neutral core (`Engine`, `Scene`, `GameObject`, `Component`, `Behaviour`, `TransformComponent`, `Time`, `InputActions`, `PhysicsWorld`, `Prefab`, `ObjectPool`, `ComponentSpec`, `SceneSerializer`, `AssetCatalog`, 2D/3D components, `UICanvas`, `HeadlessHost`). Zero `package:web` or `dart:io` dependencies so full gameplay suites run headlessly on the Dart VM in milliseconds.
 - **`package:gl_volition/gl_volition_web.dart`** (`lib/gl_volition_web.dart`): Browser host (`WebEngineHost`, `WebEngineRunner`, `WebAudioDevice`, `InspectorOverlay`) backed by `pixeldart`.
-- **`pixeldart/`**: Git submodule providing the underlying WebGL2 rendering pipeline.
+- **`vendor/pixeldart/`**: Git submodule providing the underlying WebGL2 rendering pipeline.
