@@ -174,6 +174,43 @@ final class AudioSource extends Component {
 
   void stop() => _channel?.stop();
 
+  /// Plays [clip] at world position [position] on a transient GameObject
+  /// that automatically destroys itself after [duration] seconds (E18-2).
+  static GameObject? playClipAtPoint(
+    Scene scene,
+    AudioClip clip,
+    Vec3 position, {
+    double volume = 1.0,
+    double pitch = 1.0,
+    double spatialBlend = 1.0,
+    double minDistance = 1.0,
+    double maxDistance = 50.0,
+    String bus = 'sfx',
+    double duration = 5.0,
+  }) {
+    if (!scene.isLoaded) return null;
+    final go = scene.createGameObject(
+      'SpatialAudioOneShot_${clip.path}',
+      position: position,
+    );
+    final src = go.addComponent(
+      AudioSource(
+        clip: clip,
+        volume: volume,
+        pitch: pitch,
+        spatialBlend: spatialBlend,
+        minDistance: minDistance,
+        maxDistance: maxDistance,
+        bus: bus,
+      ),
+    );
+    src.play();
+    scene.engine.invoke(duration, () {
+      if (!go.isDestroyed) go.destroy();
+    });
+    return go;
+  }
+
   void playOneShot(AudioClip oneShot, {double volumeScale = 1.0, double pitch = 1.0}) {
     final eval = evaluateSpatial();
     engine.audio.playOneShot(

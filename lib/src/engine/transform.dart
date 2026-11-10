@@ -57,6 +57,9 @@ final class TransformComponent extends Component {
   Vec3 get forward => rotation.rotate(kForward);
   Vec3 get right => rotation.rotate(kRight);
   Vec3 get up => rotation.rotate(kUp);
+  Vec3 get back => -forward;
+  Vec3 get left => -right;
+  Vec3 get down => -up;
 
   // ── Operations ──────────────────────────────────────────────────────────
 
@@ -74,6 +77,22 @@ final class TransformComponent extends Component {
     } else {
       rotation = (q * rotation).normalized;
     }
+  }
+
+  void rotateX(double radians, {Space relativeTo = Space.self}) =>
+      rotate(kRight, radians, relativeTo: relativeTo);
+  void rotateY(double radians, {Space relativeTo = Space.self}) =>
+      rotate(kUp, radians, relativeTo: relativeTo);
+  void rotateZ(double radians, {Space relativeTo = Space.self}) =>
+      rotate(kForward, radians, relativeTo: relativeTo);
+
+  /// Resets local position to zero, rotation to identity, scale to 1, and
+  /// stretch to 1 (E18-3).
+  void resetLocal() {
+    localPosition = Vec3.zero;
+    localRotation = Quat.identity;
+    localScale = 1.0;
+    localStretch = const Vec3(1, 1, 1);
   }
 
   /// Points -Z (forward) at [target].

@@ -243,6 +243,32 @@ final class Scene {
     }
   }
 
+  /// Plays [clip] at [position] with 3D spatial attenuation on a temporary
+  /// [GameObject] that self-cleans after [duration] (E18-2).
+  GameObject? playClipAt(
+    AudioClip clip,
+    Vec3 position, {
+    double volume = 1.0,
+    double pitch = 1.0,
+    double spatialBlend = 1.0,
+    double minDistance = 1.0,
+    double maxDistance = 50.0,
+    String bus = 'sfx',
+    double duration = 5.0,
+  }) =>
+      AudioSource.playClipAtPoint(
+        this,
+        clip,
+        position,
+        volume: volume,
+        pitch: pitch,
+        spatialBlend: spatialBlend,
+        minDistance: minDistance,
+        maxDistance: maxDistance,
+        bus: bus,
+        duration: duration,
+      );
+
   GameObject? _ownerOf(SceneNode target) {
     final byNode = <SceneNode, GameObject>{};
     for (final go in _allObjects(includeInactive: true)) {

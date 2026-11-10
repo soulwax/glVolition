@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:gl_volition/gl_volition_native.dart';
@@ -1956,6 +1957,103 @@ void main() {
       expect(engine.input.buttonNames, contains('Submit'));
       expect(engine.input.axisNames, contains('Vertical'));
       expect(engine.input.getAxisRaw('Horizontal'), closeTo(0.0, 1e-6));
+    });
+  });
+
+  group('E18 — Particle System Presets, Spatial Audio One-Shots & Transform Ergonomics', () {
+    test('ParticleSystem preset factories instantiate emitters, burst, and reset active counts', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final mesh = host.graphics.createMesh(Primitives.cube());
+      final mat = host.graphics.createMaterial(MaterialDefinition(key: 'fire'));
+
+      final campfire = ParticleSystem.campfire(mesh: mesh, material: mat);
+      final explosion = ParticleSystem.explosion(mesh: mesh, material: mat);
+      final fireflies = ParticleSystem.fireflies(mesh: mesh, material: mat);
+
+      final go = engine.scene.createGameObject(
+        'VFX',
+        components: [campfire],
+      );
+
+      expect(campfire.activeParticleCount, 0);
+      final spawned = campfire.burst(25);
+      expect(spawned, 25);
+      expect(campfire.activeParticleCount, 25);
+
+      campfire.reset();
+      expect(campfire.activeParticleCount, 0);
+
+      // Verify explosion and fireflies can burst
+      go.addComponent(explosion);
+      final expSpawned = explosion.burst(50);
+      expect(expSpawned, 50);
+      expect(explosion.activeParticleCount, 50);
+      explosion.clear();
+      expect(explosion.activeParticleCount, 0);
+
+      go.addComponent(fireflies);
+      final ffSpawned = fireflies.burst(10);
+      expect(ffSpawned, 10);
+      expect(fireflies.activeParticleCount, 10);
+      fireflies.clear();
+      expect(fireflies.activeParticleCount, 0);
+    });
+
+    test('AudioSource.playClipAtPoint and Scene.playClipAt spawn spatial one-shot GameObject that auto-destroys', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final clip = host.audio.clip('explosion.wav');
+
+      final initialObjects = engine.scene.rootGameObjects.length;
+      final go = engine.scene.playClipAt(
+        clip,
+        const Vec3(10, 0, 0),
+        spatialBlend: 1.0,
+        minDistance: 2.0,
+        maxDistance: 30.0,
+        duration: 0.1,
+      );
+
+      expect(go, isNotNull);
+      expect(engine.scene.rootGameObjects.length, initialObjects + 1);
+      final src = go!.getComponent<AudioSource>();
+      expect(src, isNotNull);
+      expect(src!.spatialBlend, closeTo(1.0, 1e-6));
+      expect(src.minDistance, closeTo(2.0, 1e-6));
+      expect(src.maxDistance, closeTo(30.0, 1e-6));
+
+      // Advance time beyond duration (0.1s)
+      engine.step(0.06);
+      engine.step(0.06);
+      // Deferred destruction flushes at end of frame
+      expect(go.isDestroyed, isTrue);
+    });
+
+    test('TransformComponent directional properties and rotation helpers', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final go = engine.scene.createGameObject('Target');
+      final t = go.transform;
+
+      // Identity orientation: forward = (0, 0, 1), up = (0, 1, 0), right = (1, 0, 0)
+      expect(t.back, equals(-t.forward));
+      expect(t.left, equals(-t.right));
+      expect(t.down, equals(-t.up));
+
+      // Rotate 90 deg around Y
+      t.rotateY(math.pi * 0.5);
+      expect(t.right.x, closeTo(0, 1e-5));
+      expect(t.right.z, closeTo(-1, 1e-5));
+
+      // Reset
+      t.resetLocal();
+      expect(t.localPosition, Vec3.zero);
+      expect(t.localRotation, Quat.identity);
+      expect(t.localScale, 1.0);
     });
   });
 }

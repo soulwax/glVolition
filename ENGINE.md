@@ -368,3 +368,17 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E17-3. Spatial Camera Shake & `Scene.explode`.**
   - _Touches:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/scene.dart`, `lib/src/engine/input_actions.dart`.
   - _Verify:_ `test/subsystems_test.dart` (distance-attenuated camera shake and unified `scene.explode(...)`).
+
+---
+
+## E18: Particle System Presets, Spatial Audio One-Shots & Transform Ergonomics
+
+- [x] **E18-1. `ParticleSystem` Preset Factories (`campfire`, `explosion`, `smokePlume`, `bouncingSparks`, `fireflies`, `confetti`).**
+  - _Touches:_ `lib/src/engine/components/particle_system.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (preset instantiation, emitter burst, active particle count tracking, and reset).
+- [x] **E18-2. Spatial Audio One-Shots (`AudioSource.playClipAtPoint` & `Scene.playClipAt`).**
+  - _Touches:_ `lib/src/engine/components/audio_source.dart`, `lib/src/engine/scene.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (transient spatial 3D audio GameObject creation, playback, and automatic destruction).
+- [x] **E18-3. `TransformComponent` Directional Vectors & Euler Helpers.**
+  - _Touches:_ `lib/src/engine/transform.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (`back`, `left`, `down`, `rotateX`, `rotateY`, `rotateZ`, and `resetLocal`).
