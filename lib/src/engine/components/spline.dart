@@ -57,6 +57,17 @@ final class SplineFollower extends Behaviour {
     this.onReachedEnd,
   });
 
+  static final spec = ComponentSpec<SplineFollower>(
+    'SplineFollower',
+    () => SplineFollower(path: SplinePath.fromPoints(const [Vec3.zero, Vec3(0, 0, -5)])),
+    [
+      Field.number('speed', (s) => s.speed, (s, v) => s.speed = v),
+      Field.number('distance', (s) => s.distance, (s, v) => s.distance = v),
+      Field.boolean('alignToTangent', (s) => s.alignToTangent, (s, v) => s.alignToTangent = v),
+      Field.vec3('localOffset', (s) => s.localOffset, (s, v) => s.localOffset = v),
+    ],
+  );
+
   bool get isCompleted => _completed;
 
   @override

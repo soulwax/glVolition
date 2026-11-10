@@ -68,6 +68,14 @@ final class DebugController extends Behaviour {
     this.speedUpKey = 'BracketRight',
   });
 
+  static final spec = ComponentSpec<DebugController>(
+    'DebugController',
+    DebugController.new,
+    [
+      Field.boolean('isOpen', (d) => d.isOpen, (d, v) => d.isOpen = v),
+    ],
+  );
+
   bool get isPaused => _paused;
 
   void pause() {

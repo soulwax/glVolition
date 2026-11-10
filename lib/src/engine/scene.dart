@@ -28,6 +28,7 @@ final class Scene {
   final SceneNode root;
   final RenderSettings renderSettings = RenderSettings();
   final SceneEvents events = SceneEvents();
+  final AudioMixer audioMixer = AudioMixer();
   late final PhysicsWorld physics = PhysicsWorld._(this);
 
   Engine? _engine;
@@ -44,6 +45,9 @@ final class Scene {
   final List<WaterSurfaceComponent> _waters = [];
   final List<AtmosphereVolume> _atmospheres = [];
   final List<ParticleSystem> _particles = [];
+  final List<AudioListener> _audioListeners = [];
+  final List<AudioSource> _audioSources = [];
+  final List<LineRenderer> _lines = [];
   final SpriteBatch _worldSprites = SpriteBatch(
     initialCapacity: 2048,
     sort: SpriteSort.layerThenY,
@@ -306,6 +310,12 @@ final class Scene {
   void _syncToRenderer(Graphics graphics) {
     for (final p in _particles) {
       p._syncTransform();
+    }
+    for (final line in _lines) {
+      if (line._active) line._syncRibbon();
+    }
+    for (final src in _audioSources) {
+      if (src._active) src._syncChannelVolume();
     }
     final mainCam = _cameras.lastOrNull;
     if (_engine != null && _engine!.editor.isFreeLookEnabled) {

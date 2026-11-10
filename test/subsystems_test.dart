@@ -979,6 +979,116 @@ void main() {
       expect(log, ['enter:idle', 'exit:idle', 'enter:alert', 'update:alert:0.05']);
     });
   });
+
+  group('E10 — Spatial 3D Audio, CharacterController 3D & Line/Trail Renderers', () {
+    test('AudioListener, AudioMixer, and spatial AudioSource attenuate volume and pan', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      engine.scene.createGameObject(
+        'Listener',
+        position: Vec3.zero,
+        components: [AudioListener(volume: 1.0)],
+      );
+      final src = AudioSource(
+        clip: host.audio.clip('beacon.wav'),
+        volume: 1.0,
+        bus: 'sfx',
+        spatialBlend: 1.0,
+        minDistance: 2.0,
+        maxDistance: 12.0,
+        loop: true,
+        playOnAwake: true,
+      );
+      final beacon = engine.scene.createGameObject(
+        'Beacon',
+        position: const Vec3(7.0, 0, 0), // halfway between min=2 and max=12 -> t=0.5 -> atten=0.25, right=+1
+        components: [src],
+      );
+
+      engine.step(1 / 60);
+      final eval = src.evaluateSpatial();
+      expect(eval.volume, closeTo(0.25, 1e-4));
+      expect(eval.pan, closeTo(1.0, 1e-4));
+
+      // Mute the 'sfx' bus on Scene.audioMixer
+      engine.scene.audioMixer.bus('sfx').muted = true;
+      expect(src.evaluateSpatial().volume, 0.0);
+
+      // Unmute and move within minDistance on the left (-X)
+      engine.scene.audioMixer.bus('sfx').muted = false;
+      beacon.transform.position = const Vec3(-1.0, 0, 0);
+      final nearEval = src.evaluateSpatial();
+      expect(nearEval.volume, closeTo(1.0, 1e-4));
+      expect(nearEval.pan, closeTo(-1.0, 1e-4));
+    });
+
+    test('CharacterController slides along solid BoxCollider and grounds on floor', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      engine.scene.createGameObject(
+        'Floor',
+        position: const Vec3(0, -0.5, 0),
+        components: [BoxCollider(size: const Vec3(20, 1, 20), isTrigger: false)],
+      );
+      engine.scene.createGameObject(
+        'Wall',
+        position: const Vec3(2.0, 1.0, 0),
+        components: [BoxCollider(size: const Vec3(1, 3, 6), isTrigger: false)],
+      );
+
+      final cc = CharacterController(radius: 0.4, height: 1.8, center: const Vec3(0, 0.9, 0));
+      final player = engine.scene.createGameObject(
+        'Player',
+        position: const Vec3(0, 0.2, 0),
+        components: [cc],
+      );
+
+      // Step downward + forward into the floor and toward the wall at x=1.5
+      final flags = cc.move(const Vec3(3.0, -0.5, 1.5));
+      expect(cc.isGrounded, isTrue);
+      expect(flags & CollisionFlags.below, isNonZero);
+      expect(flags & CollisionFlags.sides, isNonZero);
+      // Stopped outside the wall's -X face (wall min.x = 1.5, minus radius ~0.42)
+      expect(player.transform.position.x, lessThanOrEqualTo(1.12));
+      // Still slid along Z!
+      expect(player.transform.position.z, closeTo(1.5, 1e-3));
+    });
+
+    test('LineRenderer and TrailRenderer build ribbon MeshData as GameObjects move', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final line = LineRenderer(
+        positions: const [Vec3(0, 0, 0), Vec3(0, 2, -4), Vec3(2, 3, -8)],
+        startWidth: 0.4,
+        endWidth: 0.1,
+      );
+      engine.scene.createGameObject('Beam', components: [line]);
+
+      final trail = TrailRenderer(
+        timeLength: 1.0,
+        minVertexDistance: 0.2,
+        startWidth: 0.3,
+        endWidth: 0.05,
+      );
+      final missile = engine.scene.createGameObject('Missile', components: [trail]);
+
+      engine.step(0.05);
+      expect(line.meshData, isNotNull);
+      expect(line.meshData!.vertexCount, 6); // 3 points * 2 vertices
+
+      missile.transform.position = const Vec3(0, 0, -1.0);
+      engine.step(0.05);
+      missile.transform.position = const Vec3(0, 0.5, -2.5);
+      engine.step(0.05);
+
+      expect(trail.sampleCount, 3);
+      expect(trail.meshData, isNotNull);
+      expect(trail.meshData!.vertexCount, 6);
+    });
+  });
 }
 
 final class _CollisionSpy extends Behaviour {

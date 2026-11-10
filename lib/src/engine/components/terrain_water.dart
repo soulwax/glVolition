@@ -102,6 +102,12 @@ final class WaterSurfaceComponent extends Behaviour {
     ),
   });
 
+  static final spec = ComponentSpec<WaterSurfaceComponent>(
+    'WaterSurfaceComponent',
+    () => throw StateError('WaterSurfaceComponent requires surface and waves'),
+    const [],
+  );
+
   @override
   void _onEnableInternal() {
     scene._waters.add(this);
@@ -164,6 +170,14 @@ final class BuoyantBody extends Behaviour {
           rightingStiffness: rightingStiffness,
           yaw: yaw,
         );
+
+  static final spec = ComponentSpec<BuoyantBody>(
+    'BuoyantBody',
+    BuoyantBody.new,
+    [
+      Field.number('yaw', (b) => b.yaw, (b, v) => b.yaw = v),
+    ],
+  );
 
   double get yaw => vessel.yaw;
   set yaw(double value) => vessel.yaw = value;

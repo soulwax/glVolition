@@ -16,6 +16,12 @@ final class Animator extends Behaviour {
     }
   }
 
+  static final spec = ComponentSpec<Animator>(
+    'Animator',
+    Animator.new,
+    const [],
+  );
+
   void addClip(AnimationClip clip) => clips[clip.name] = clip;
 
   void play(String clipName, {double speed = 1.0}) {

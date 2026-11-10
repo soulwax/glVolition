@@ -35,6 +35,8 @@ part 'engine/components/renderers.dart';
 part 'engine/components/particle_system.dart';
 part 'engine/components/audio_source.dart';
 part 'engine/components/physics.dart';
+part 'engine/components/character_controller.dart';
+part 'engine/components/trail_renderer.dart';
 part 'engine/components/sprites_2d.dart';
 part 'engine/components/tilemap.dart';
 part 'engine/components/animator.dart';

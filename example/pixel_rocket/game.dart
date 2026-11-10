@@ -271,6 +271,15 @@ final class ShipController extends Behaviour {
     required this.engineLight,
   });
 
+  static final spec = ComponentSpec<ShipController>(
+    'ShipController',
+    () => throw StateError('ShipController is constructed by buildPixelRocketScene'),
+    [
+      Field.vec3('logicalPos', (s) => s.logicalPos, (s, v) => s.logicalPos = v),
+      Field.vec3('velocity', (s) => s.velocity, (s, v) => s.velocity = v),
+    ],
+  );
+
   @override
   int get executionOrder => -10;
 
@@ -625,6 +634,7 @@ final class RocketDirector extends Behaviour {
 void registerPixelRocketSpecs(ComponentRegistry registry) {
   registry
     ..register(FieldBody.spec)
+    ..register(ShipController.spec)
     ..register(RocketDirector.spec);
 }
 

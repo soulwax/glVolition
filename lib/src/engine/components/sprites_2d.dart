@@ -146,6 +146,15 @@ final class SpriteAnimator extends Behaviour {
     String? initialClip,
   }) : _currentClip = initialClip;
 
+  static final spec = ComponentSpec<SpriteAnimator>(
+    'SpriteAnimator',
+    () => SpriteAnimator(clips: {'idle': [SpriteRegion.white]}, initialClip: 'idle'),
+    [
+      Field.number('fps', (s) => s.fps, (s, v) => s.fps = v),
+      Field.boolean('loop', (s) => s.loop, (s, v) => s.loop = v),
+    ],
+  );
+
   String? get currentClip => _currentClip;
   int get currentFrameIndex => _frameCursor.floor();
 

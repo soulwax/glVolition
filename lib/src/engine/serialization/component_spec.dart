@@ -290,6 +290,19 @@ final class ComponentRegistry {
           Field.number('pitch', (a) => a.pitch, (a, v) => a.pitch = v),
           Field.boolean('loop', (a) => a.loop, (a, v) => a.loop = v),
           Field.boolean('playOnAwake', (a) => a.playOnAwake, (a, v) => a.playOnAwake = v),
+          Field.text('bus', (a) => a.bus, (a, v) => a.bus = v),
+          Field.number('spatialBlend', (a) => a.spatialBlend, (a, v) => a.spatialBlend = v),
+          Field.number('minDistance', (a) => a.minDistance, (a, v) => a.minDistance = v),
+          Field.number('maxDistance', (a) => a.maxDistance, (a, v) => a.maxDistance = v),
+        ],
+      ),
+    );
+    register<AudioListener>(
+      ComponentSpec<AudioListener>(
+        'AudioListener',
+        AudioListener.new,
+        [
+          Field.number('volume', (a) => a.volume, (a, v) => a.volume = v),
         ],
       ),
     );
@@ -340,15 +353,7 @@ final class ComponentRegistry {
     );
     register<PostProcessVolume>(PostProcessVolume.spec);
     register<UICanvas>(UICanvas.spec);
-    register<DebugController>(
-      ComponentSpec<DebugController>(
-        'DebugController',
-        DebugController.new,
-        [
-          Field.boolean('isOpen', (d) => d.isOpen, (d, v) => d.isOpen = v),
-        ],
-      ),
-    );
+    register<DebugController>(DebugController.spec);
     register<SplineFollower>(
       ComponentSpec<SplineFollower>(
         'SplineFollower',
@@ -379,5 +384,33 @@ final class ComponentRegistry {
       ),
     );
     register<RigidBody>(RigidBody.spec);
+    register<CharacterController>(
+      ComponentSpec<CharacterController>(
+        'CharacterController',
+        CharacterController.new,
+        [
+          Field.number('radius', (c) => c.radius, (c, v) => c.radius = v),
+          Field.number('height', (c) => c.height, (c, v) => c.height = v),
+          Field.vec3('center', (c) => c.center, (c, v) => c.center = v),
+          Field.number('stepOffset', (c) => c.stepOffset, (c, v) => c.stepOffset = v),
+          Field.number('slopeLimitDegrees', (c) => c.slopeLimitDegrees, (c, v) => c.slopeLimitDegrees = v),
+          Field.boolean('useGravity', (c) => c.useGravity, (c, v) => c.useGravity = v),
+          Field.vec3('gravity', (c) => c.gravity, (c, v) => c.gravity = v),
+        ],
+      ),
+    );
+    register<LineRenderer>(
+      ComponentSpec<LineRenderer>(
+        'LineRenderer',
+        LineRenderer.new,
+        [
+          Field.number('startWidth', (l) => l.startWidth, (l, v) => l.startWidth = v),
+          Field.number('endWidth', (l) => l.endWidth, (l, v) => l.endWidth = v),
+          Field.color('color', (l) => l.color, (l, v) => l.color = v),
+          Field.boolean('useWorldSpace', (l) => l.useWorldSpace, (l, v) => l.useWorldSpace = v),
+        ],
+      ),
+    );
+    register<TrailRenderer>(TrailRenderer.spec);
   }
 }

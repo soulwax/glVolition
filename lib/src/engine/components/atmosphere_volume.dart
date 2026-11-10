@@ -36,6 +36,23 @@ final class AtmosphereVolume extends Behaviour {
     this.coherentHorizon = true,
   });
 
+  static final spec = ComponentSpec<AtmosphereVolume>(
+    'AtmosphereVolume',
+    AtmosphereVolume.new,
+    [
+      Field.number('timeOfDayHours', (a) => a.timeOfDayHours, (a, v) => a.timeOfDayHours = v),
+      Field.number('hoursPerSecond', (a) => a.hoursPerSecond, (a, v) => a.hoursPerSecond = v),
+      Field.number('latitudeRadians', (a) => a.latitudeRadians, (a, v) => a.latitudeRadians = v),
+      Field.number('solarDeclinationRadians', (a) => a.solarDeclinationRadians, (a, v) => a.solarDeclinationRadians = v),
+      Field.number('cloudCoverage', (a) => a.cloudCoverage, (a, v) => a.cloudCoverage = v),
+      Field.number('cloudDensity', (a) => a.cloudDensity, (a, v) => a.cloudDensity = v),
+      Field.number('aerosolTurbidity', (a) => a.aerosolTurbidity, (a, v) => a.aerosolTurbidity = v),
+      Field.number('fogStart', (a) => a.fogStart, (a, v) => a.fogStart = v),
+      Field.number('fogEnd', (a) => a.fogEnd, (a, v) => a.fogEnd = v),
+      Field.boolean('coherentHorizon', (a) => a.coherentHorizon, (a, v) => a.coherentHorizon = v),
+    ],
+  );
+
   SolarLightingState? get currentSolarState => _lastState;
 
   @override
