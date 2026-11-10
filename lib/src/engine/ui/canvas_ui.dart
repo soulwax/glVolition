@@ -301,6 +301,25 @@ final class UIStack extends UIElement {
   }
 }
 
+/// Positions a child [UIElement] at a 3D [target] [GameObject]'s projected
+/// canvas coordinate (plus [worldOffset]), hiding it automatically when behind
+/// the active 3D [Camera] (E11-3).
+final class UIWorldAnchor extends UIElement {
+  GameObject target;
+  Vec3 worldOffset;
+  final UIElement child;
+  bool _inFrontOfCamera = false;
+
+  UIWorldAnchor({
+    required this.target,
+    required this.child,
+    this.worldOffset = Vec3.zero,
+    super.visible = true,
+  }) : super(width: child.width, height: child.height);
+
+  bool get isInFrontOfCamera => _inFrontOfCamera;
+}
+
 /// DOM-free in-canvas UI overlay rendered on `SpriteStage.overlay` (E4-4).
 final class UICanvas extends Behaviour {
   double designWidth;
@@ -368,6 +387,11 @@ final class UICanvas extends Behaviour {
         stack.layout(canvasW: designWidth, canvasH: designHeight);
         for (final child in List.of(stack.children)) {
           _updateElement(child, pt, raw);
+        }
+      case UIWorldAnchor worldAnchor:
+        _syncWorldAnchor(worldAnchor);
+        if (worldAnchor._inFrontOfCamera) {
+          _updateElement(worldAnchor.child, pt, raw);
         }
       case UIButton btn:
         final hit = btn.containsPoint(pt.x, pt.y, designWidth, designHeight);
@@ -438,6 +462,11 @@ final class UICanvas extends Behaviour {
         }
         for (final child in stack.children) {
           _drawElement(child);
+        }
+      case UIWorldAnchor worldAnchor:
+        _syncWorldAnchor(worldAnchor);
+        if (worldAnchor._inFrontOfCamera) {
+          _drawElement(worldAnchor.child);
         }
       case UIPanel p:
         _batch.drawRect(rx, ry, p.width, p.height, color: p.fillColor);
@@ -520,6 +549,31 @@ final class UICanvas extends Behaviour {
         final thumbX = rx + (slider.width - thumbW) * frac;
         _batch.drawRect(thumbX, ry - 1, thumbW, slider.height + 2, color: slider.thumbColor);
     }
+  }
+
+  void _syncWorldAnchor(UIWorldAnchor worldAnchor) {
+    if (!worldAnchor.target.activeInHierarchy) {
+      worldAnchor._inFrontOfCamera = false;
+      return;
+    }
+    final cam = Camera.of(scene);
+    if (cam == null) {
+      worldAnchor._inFrontOfCamera = false;
+      return;
+    }
+    final screen = cam.worldToScreenPoint(
+      worldAnchor.target.transform.position + worldAnchor.worldOffset,
+    );
+    if (screen == null) {
+      worldAnchor._inFrontOfCamera = false;
+      return;
+    }
+    worldAnchor._inFrontOfCamera = true;
+    final canvasPt = pointerToCanvas(screen.x, screen.y);
+    worldAnchor.child
+      ..anchor = UIAnchor.topLeft
+      ..x = canvasPt.x - worldAnchor.child.width * 0.5
+      ..y = canvasPt.y - worldAnchor.child.height * 0.5;
   }
 
   void _drawBorder(double x, double y, double w, double h, double t, int color) {

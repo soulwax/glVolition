@@ -412,5 +412,10 @@ final class ComponentRegistry {
       ),
     );
     register<TrailRenderer>(TrailRenderer.spec);
+    register<NavAgent>(NavAgent.spec);
+    register<LodGroup>(LodGroup.spec);
+    register<Billboard>(Billboard.spec);
+    register<Animator>(Animator.spec);
+    register<WaterSurfaceComponent>(WaterSurfaceComponent.spec);
   }
 }

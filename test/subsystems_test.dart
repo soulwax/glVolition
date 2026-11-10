@@ -1089,6 +1089,161 @@ void main() {
       expect(trail.meshData!.vertexCount, 6);
     });
   });
+
+  group('E11 — NavGrid2D & NavAgent, LodGroup & Billboard, UIWorldAnchor, and SceneManager', () {
+    test('NavGrid2D A* routes around solid walls without corner-cutting and NavAgent reaches goal', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final grid = NavGrid2D(columns: 6, rows: 6, cellWidth: 1.0, cellHeight: 1.0);
+      // Vertical wall at col=2, rows 0..3
+      for (var r = 0; r <= 3; r++) {
+        grid.setWalkable(2, r, false);
+      }
+
+      final path = grid.findPath(const Vec2(0.5, 0.5), const Vec2(4.5, 0.5));
+      expect(path, isNotEmpty);
+      // Every waypoint must be on a walkable cell (never col==2 && row<=3)
+      for (final wp in path) {
+        final (c, r) = grid.worldToCell(wp.x, wp.y);
+        expect(grid.isWalkable(c, r), isTrue);
+      }
+
+      final agent = NavAgent(grid: grid, speed: 10.0, stoppingDistance: 0.15);
+      final go = engine.scene.createGameObject(
+        'Runner',
+        position: const Vec3(0.5, 0.5, 0),
+        components: [agent],
+      );
+      expect(agent.setDestination(const Vec3(4.5, 0.5, 0)), isTrue);
+
+      for (var i = 0; i < 60; i++) {
+        engine.step(1 / 30);
+      }
+
+      expect(agent.hasPath, isFalse);
+      expect((go.transform.position - const Vec3(4.5, 0.5, 0)).length, lessThan(0.25));
+    });
+
+    test('LodGroup switches active child by camera distance and Billboard faces camera', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final camGo = engine.scene.createGameObject(
+        'Cam',
+        position: const Vec3(0, 0, 5),
+        components: [Camera()],
+      );
+
+      final tree = engine.scene.createGameObject('Tree', position: Vec3.zero);
+      final lod0 = engine.scene.createGameObject('LOD0', parent: tree);
+      final lod1 = engine.scene.createGameObject('LOD1', parent: tree);
+      final lodGroup = LodGroup(
+        levels: [
+          LodLevel(maxDistance: 10.0, target: lod0),
+          LodLevel(maxDistance: 30.0, target: lod1),
+        ],
+        cullDistance: 50.0,
+      );
+      tree.addComponent(lodGroup);
+
+      final banner = engine.scene.createGameObject(
+        'Banner',
+        position: const Vec3(5, 0, 0),
+        components: [Billboard(cylindrical: true)],
+      );
+
+      // Distance = 5 -> LOD0 active
+      engine.step(0.016);
+      expect(lodGroup.activeLevelIndex, 0);
+      expect(lod0.activeSelf, isTrue);
+      expect(lod1.activeSelf, isFalse);
+      // Banner at (5,0,0) facing Cam at (0,0,5) -> forward points along (-1, 0, 1).normalized
+      expect(banner.transform.forward.x, closeTo(-0.70710678, 1e-3));
+      expect(banner.transform.forward.z, closeTo(0.70710678, 1e-3));
+
+      // Move camera to z = 20 -> LOD1 active
+      camGo.transform.position = const Vec3(0, 0, 20);
+      engine.step(0.016);
+      expect(lodGroup.activeLevelIndex, 1);
+      expect(lod0.activeSelf, isFalse);
+      expect(lod1.activeSelf, isTrue);
+
+      // Move camera to z = 60 -> culled (-1)
+      camGo.transform.position = const Vec3(0, 0, 60);
+      engine.step(0.016);
+      expect(lodGroup.activeLevelIndex, -1);
+      expect(lod0.activeSelf, isFalse);
+      expect(lod1.activeSelf, isFalse);
+    });
+
+    test('Camera.worldToScreenPoint and UIWorldAnchor project 3D target onto UICanvas', () {
+      final host = HeadlessHost();
+      host.graphics
+        ..viewportWidth = 640
+        ..viewportHeight = 360;
+      final engine = Engine(host);
+
+      final cam = Camera(fovYRadians: 1.0);
+      engine.scene.createGameObject(
+        'MainCam',
+        position: const Vec3(0, 0, 5),
+        components: [cam],
+      );
+      final unit = engine.scene.createGameObject('Unit', position: Vec3.zero);
+
+      final bar = UIProgressBar(width: 40, height: 6, value: 0.75);
+      final anchor = UIWorldAnchor(target: unit, child: bar);
+      final canvas = UICanvas(designWidth: 640, designHeight: 360)..add(anchor);
+      engine.scene.createGameObject('HUD', components: [canvas]);
+
+      engine.step(0.016);
+      expect(anchor.isInFrontOfCamera, isTrue);
+      // Unit at origin dead-center in front of camera -> bar centered at (320 - 20, 180 - 3)
+      expect(bar.x, closeTo(300.0, 1.0));
+      expect(bar.y, closeTo(177.0, 1.0));
+
+      // Move unit behind camera (z = 10 > cam.z = 5)
+      unit.transform.position = const Vec3(0, 0, 10);
+      engine.step(0.016);
+      expect(anchor.isInFrontOfCamera, isFalse);
+    });
+
+    test('SceneManager loads named scenes and migrates dontDestroyOnLoad objects', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      engine.scenes.register('level_1', () {
+        final s = Scene('Level1');
+        s.createGameObject('Level1Prop');
+        return s;
+      });
+      engine.scenes.register('level_2', () {
+        final s = Scene('Level2');
+        s.createGameObject('Level2Prop');
+        return s;
+      });
+
+      engine.scenes.load('level_1');
+      final sessionAudio = engine.scene.createGameObject(
+        'SessionAudio',
+        components: [AudioListener(volume: 0.8)],
+      );
+      engine.scenes.dontDestroyOnLoad(sessionAudio);
+
+      expect(engine.scene.name, 'Level1');
+      expect(engine.scene.find('Level1Prop'), isNotNull);
+      expect(engine.scene.find('SessionAudio'), same(sessionAudio));
+
+      // Transition to level_2: SessionAudio survives and re-registers AudioListener!
+      engine.scenes.load('level_2');
+      expect(engine.scene.name, 'Level2');
+      expect(engine.scene.find('Level1Prop'), isNull);
+      expect(engine.scene.find('Level2Prop'), isNotNull);
+      expect(engine.scene.find('SessionAudio'), same(sessionAudio));
+      expect(AudioListener.of(engine.scene)?.volume, closeTo(0.8, 1e-5));
+    });
+  });
 }
 
 final class _CollisionSpy extends Behaviour {

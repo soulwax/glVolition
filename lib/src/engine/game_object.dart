@@ -3,7 +3,7 @@ part of '../engine.dart';
 /// A named node in a [Scene] that owns a [TransformComponent] and any number
 /// of other components. Create one with [Scene.createGameObject].
 final class GameObject {
-  final Scene scene;
+  Scene _scene;
   String name;
   String tag;
 
@@ -23,12 +23,42 @@ final class GameObject {
   bool _destroyRequested = false;
   bool _destroyed = false;
 
-  GameObject._(this.scene, this.name, {this.tag = 'Untagged', this.layer = 0})
+  GameObject._(this._scene, this.name, {this.tag = 'Untagged', this.layer = 0})
       : node = SceneNode.group(name: name) {
     if (layer < 0 || layer > 31) throw RangeError.range(layer, 0, 31, 'layer');
     transform = TransformComponent._();
     transform._gameObject = this;
     _components.add(transform);
+  }
+
+  Scene get scene => _scene;
+
+  void _detachFromSceneForMigration(Scene outgoing) {
+    for (final c in _components) {
+      if (c is! TransformComponent && c._active) {
+        c._active = false;
+        c._onDisableInternal();
+      }
+      if (c is Behaviour) {
+        outgoing._behaviours.remove(c);
+        outgoing._pendingStart.remove(c);
+      }
+    }
+    for (final child in _children) {
+      child._detachFromSceneForMigration(outgoing);
+    }
+  }
+
+  void _attachToSceneAfterMigration(Scene incoming) {
+    _scene = incoming;
+    for (final c in _components) {
+      if (c is Behaviour) {
+        incoming._registerBehaviour(c);
+      }
+    }
+    for (final child in _children) {
+      child._attachToSceneAfterMigration(incoming);
+    }
   }
 
   GameObject? get parent => _parent;

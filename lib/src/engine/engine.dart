@@ -30,6 +30,7 @@ final class Engine {
   late final InputActions input = InputActions(host.input);
   late final AssetCatalog catalog = AssetCatalog._(this);
   late final EditorSession editor = EditorSession(this);
+  late final SceneManager scenes = SceneManager._(this);
   final ComponentRegistry registry;
 
   Scene _scene;
@@ -67,10 +68,12 @@ final class Engine {
 
   void _swapScene(Scene next) {
     if (identical(next, _scene)) return;
+    final migrated = scenes._extractPersistentFrom(_scene);
     _scene._detach();
     _invocations.clear();
     _scene = next;
     _scene._attach(this);
+    scenes._attachPersistentTo(_scene, migrated);
   }
 
   /// Schedules [action] to run after [delaySeconds] of scaled game time.
