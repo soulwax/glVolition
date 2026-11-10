@@ -530,6 +530,10 @@ final class PhysicsWorld {
     }
   }
 
+  /// Contact normal (pointing from [a] toward [b]) and penetration depth for
+  /// two colliders, or null when separated. Exposed for gizmos/inspectors.
+  static (Vec3 normal, double depth)? debugManifold(Collider a, Collider b) => _computeManifold(a, b);
+
   static (Vec3 normal, double depth)? _computeManifold(Collider a, Collider b) {
     if (a is SphereCollider && b is SphereCollider) {
       final delta = b.worldCenter - a.worldCenter;
@@ -538,6 +542,35 @@ final class PhysicsWorld {
       if (dist >= rSum) return null;
       final normal = dist > 1e-6 ? delta * (1.0 / dist) : Vec3.unitY;
       return (normal, rSum - dist);
+    }
+    // Capsule manifolds reduce to sphere-sphere between closest axis points
+    // (E14-2), so capsule bodies slide and roll instead of snapping to AABBs.
+    final capsulePoints = switch ((a, b)) {
+      (CapsuleCollider ca, SphereCollider sb) =>
+        (ca.closestPointOnAxis(sb.worldCenter), ca.worldRadius, sb.worldCenter, sb.worldRadius),
+      (SphereCollider sa, CapsuleCollider cb) =>
+        (sa.worldCenter, sa.worldRadius, cb.closestPointOnAxis(sa.worldCenter), cb.worldRadius),
+      (CapsuleCollider ca, CapsuleCollider cb) => () {
+          final p2 = cb.closestPointOnAxis(ca.closestPointOnAxis(cb.worldCenter));
+          final p1 = ca.closestPointOnAxis(p2);
+          return (p1, ca.worldRadius, p2, cb.worldRadius);
+        }(),
+      _ => null,
+    };
+    if (capsulePoints != null) {
+      final (pa, ra, pb, rb) = capsulePoints;
+      final delta = pb - pa;
+      final dist = delta.length;
+      final rSum = ra + rb;
+      if (dist >= rSum) return null;
+      final normal = dist > 1e-6 ? delta * (1.0 / dist) : Vec3.unitY;
+      return (normal, rSum - dist);
+    }
+    if (a is CapsuleCollider && b is BoxCollider) {
+      return _capsuleBoxManifold(a, b.worldBounds, flip: false);
+    }
+    if (a is BoxCollider && b is CapsuleCollider) {
+      return _capsuleBoxManifold(b, a.worldBounds, flip: true);
     }
     final boxA = a.worldBounds;
     final boxB = b.worldBounds;
@@ -553,6 +586,42 @@ final class PhysicsWorld {
     } else {
       return (Vec3(0, 0, centerDelta.z >= 0 ? 1 : -1), oz);
     }
+  }
+
+  /// Normal points from the capsule toward the box (or reversed when [flip]).
+  static (Vec3, double)? _capsuleBoxManifold(CapsuleCollider cap, Aabb box, {required bool flip}) {
+    final axisPoint = cap.closestPointOnAxis(box.center);
+    final closest = Vec3(
+      axisPoint.x.clamp(box.min.x, box.max.x),
+      axisPoint.y.clamp(box.min.y, box.max.y),
+      axisPoint.z.clamp(box.min.z, box.max.z),
+    );
+    final r = cap.worldRadius;
+    final delta = closest - axisPoint;
+    final dist = delta.length;
+    Vec3 normal;
+    double depth;
+    if (dist > 1e-6) {
+      if (dist >= r) return null;
+      normal = delta * (1.0 / dist);
+      depth = r - dist;
+    } else {
+      // Axis point is inside the box: push out along the shallowest face.
+      final dxMin = axisPoint.x - box.min.x, dxMax = box.max.x - axisPoint.x;
+      final dyMin = axisPoint.y - box.min.y, dyMax = box.max.y - axisPoint.y;
+      final dzMin = axisPoint.z - box.min.z, dzMax = box.max.z - axisPoint.z;
+      final options = <(Vec3, double)>[
+        (const Vec3(1, 0, 0), dxMin),
+        (const Vec3(-1, 0, 0), dxMax),
+        (const Vec3(0, 1, 0), dyMin),
+        (const Vec3(0, -1, 0), dyMax),
+        (const Vec3(0, 0, 1), dzMin),
+        (const Vec3(0, 0, -1), dzMax),
+      ]..sort((x, y) => x.$2.compareTo(y.$2));
+      normal = options.first.$1;
+      depth = options.first.$2 + r;
+    }
+    return flip ? (-normal, depth) : (normal, depth);
   }
 
   void _notify(Collider receiver, Collider other, _Phase phase) {

@@ -1535,6 +1535,92 @@ void main() {
       expect(submittedText, 'Hi');
     });
   });
+
+  group('E14 — Model Prefabs & Capsule Contact Manifolds', () {
+    test('Prefab.fromGlbResult builds GameObject hierarchy with MeshRenderers and shared GPU handles', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final cube = Primitives.cube();
+      final root = SceneNode.group(name: 'Ship');
+      final hull = SceneNode(
+        name: 'Hull',
+        meshData: cube,
+        transform: const Transform(translation: Vec3(0, 1, 0)),
+      );
+      final fin = SceneNode(name: 'Fin', meshData: cube);
+      root.addChild(hull);
+      hull.addChild(fin);
+      final glb = GlbResult(
+        rootNode: root,
+        meshes: [cube],
+        materials: [MaterialDefinition(key: 'paint')],
+        nodeMaterials: {hull: 0, fin: 0},
+      );
+
+      final meshesBefore = host.graphics.liveMeshes.length;
+      final prefab = Prefab.fromGlbResult('Ship', glb, engine);
+      // Shared MeshData is uploaded exactly once.
+      expect(host.graphics.liveMeshes.length - meshesBefore, 1);
+
+      final a = engine.scene.instantiate(prefab, position: const Vec3(5, 0, 0));
+      final b = engine.scene.instantiate(prefab, position: const Vec3(-5, 0, 0));
+      for (final ship in [a, b]) {
+        final hullGo = ship.children.single;
+        expect(hullGo.name, 'Hull');
+        expect(hullGo.transform.localPosition.y, closeTo(1.0, 1e-6));
+        expect(hullGo.getComponent<MeshRenderer>()?.mesh, isNotNull);
+        expect(hullGo.children.single.getComponent<MeshRenderer>(), isNotNull);
+      }
+      expect(a.transform.position.x, closeTo(5, 1e-6));
+      expect(
+        a.children.single.getComponent<MeshRenderer>()!.mesh,
+        same(b.children.single.getComponent<MeshRenderer>()!.mesh),
+      );
+      expect(host.graphics.liveMeshes.length - meshesBefore, 1);
+    });
+
+    test('Capsule RigidBody rests on a box floor and bounces off spheres with axis-accurate normals', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      engine.scene.createGameObject(
+        'Floor',
+        position: const Vec3(0, -0.5, 0),
+        components: [BoxCollider(size: const Vec3(20, 1, 20), isTrigger: false)],
+      );
+      final capsule = engine.scene.createGameObject(
+        'Capsule',
+        position: const Vec3(0, 3, 0),
+        components: [
+          CapsuleCollider(radius: 0.5, height: 2.0, isTrigger: false),
+          RigidBody(restitution: 0.0, linearDrag: 0.0),
+        ],
+      );
+
+      for (var i = 0; i < 240; i++) {
+        engine.step(1 / 60);
+      }
+      // Capsule half-height is 1.0, so its centre settles near y == 1.
+      expect(capsule.transform.position.y, closeTo(1.0, 0.15));
+      expect(capsule.getComponent<RigidBody>()!.velocity.y.abs(), lessThan(1.0));
+
+      // A sphere touching the capsule's side gets a horizontal normal, not a
+      // vertical AABB face normal.
+      final probe = engine.scene.createGameObject(
+        'Probe',
+        position: Vec3(0.8, capsule.transform.position.y + 0.6, 0),
+        components: [SphereCollider(radius: 0.4, isTrigger: false)],
+      );
+      final manifold = PhysicsWorld.debugManifold(
+        capsule.getComponent<CapsuleCollider>()!,
+        probe.getComponent<SphereCollider>()!,
+      );
+      expect(manifold, isNotNull);
+      expect(manifold!.$1.x, greaterThan(0.99));
+      expect(manifold.$2, greaterThan(0));
+    });
+  });
 }
 
 final class _CollisionSpy extends Behaviour {

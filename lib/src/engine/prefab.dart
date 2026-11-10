@@ -27,6 +27,146 @@ final class Prefab {
     });
   }
 
+  /// Creates a [Prefab] from a loaded [ModelAsset] hierarchy so every mesh
+  /// node becomes a [GameObject] with [MeshFilter] + [MeshRenderer] (E14-1).
+  factory Prefab.fromModelAsset(
+    ModelAsset asset, {
+    String? name,
+    bool castShadows = true,
+    bool receiveShadows = true,
+  }) {
+    final rootName = name ?? asset.name;
+    return Prefab.builder(rootName, (root) {
+      final templateRoot = asset.instantiate(name: rootName);
+      _populateFromSceneNode(
+        root,
+        templateRoot,
+        castShadows: castShadows,
+        receiveShadows: receiveShadows,
+      );
+    });
+  }
+
+  /// Creates a [Prefab] from a decoded [GlbResult], registering meshes and
+  /// materials on [engine]'s [Graphics] device (E14-1).
+  factory Prefab.fromGlbResult(
+    String name,
+    GlbResult result,
+    Engine engine, {
+    MaterialOverride? materialOverride,
+    bool castShadows = true,
+    bool receiveShadows = true,
+  }) {
+    final materials = <MaterialHandle>[];
+    for (var i = 0; i < result.materials.length; i++) {
+      final authored = result.materials[i];
+      var def = authored.copyWith(key: '$name/${authored.key}');
+      if (materialOverride != null) def = materialOverride(authored.key, def);
+      materials.add(engine.graphics.createMaterial(def));
+    }
+    if (materials.isEmpty) {
+      materials.add(
+        engine.graphics.createMaterial(MaterialDefinition(key: '$name/default')),
+      );
+    }
+
+    final meshes = <MeshData, MeshHandle>{};
+    result.rootNode.traverse((node) {
+      final data = node.meshData;
+      if (data != null && !meshes.containsKey(data)) {
+        meshes[data] = engine.graphics.createMesh(
+          data,
+          debugLabel: '$name/${node.name ?? "mesh"}',
+        );
+      }
+    });
+
+    return Prefab.builder(name, (root) {
+      void buildNode(GameObject targetGo, SceneNode srcNode) {
+        targetGo.transform
+          ..localPosition = srcNode.localTransform.translation
+          ..localRotation = srcNode.localTransform.rotation
+          ..localScale = srcNode.localTransform.scale;
+        final data = srcNode.meshData;
+        if (data != null) {
+          final meshHandle = meshes[data]!;
+          final matIdx = result.materialOf(srcNode).clamp(0, materials.length - 1);
+          targetGo.addComponent(
+            MeshRenderer(
+              mesh: meshHandle,
+              meshData: data,
+              material: materials[matIdx],
+              castsShadow: castShadows,
+              receivesShadow: receiveShadows,
+            ),
+          );
+        }
+        for (final childNode in srcNode.children) {
+          final childGo = targetGo.scene.createGameObject(
+            childNode.name ?? 'Node',
+            parent: targetGo,
+          );
+          buildNode(childGo, childNode);
+        }
+      }
+
+      buildNode(root, result.rootNode);
+    });
+  }
+
+  /// Decodes a binary GLB byte buffer and builds a [Prefab] hierarchy (E14-1).
+  factory Prefab.fromGlbBytes(
+    String name,
+    Uint8List glbBytes,
+    Engine engine, {
+    MaterialOverride? materialOverride,
+    bool castShadows = true,
+    bool receiveShadows = true,
+  }) =>
+      Prefab.fromGlbResult(
+        name,
+        GlbDecoder.decode(glbBytes),
+        engine,
+        materialOverride: materialOverride,
+        castShadows: castShadows,
+        receiveShadows: receiveShadows,
+      );
+
+  static void _populateFromSceneNode(
+    GameObject targetGo,
+    SceneNode srcNode, {
+    required bool castShadows,
+    required bool receiveShadows,
+  }) {
+    targetGo.transform
+      ..localPosition = srcNode.localTransform.translation
+      ..localRotation = srcNode.localTransform.rotation
+      ..localScale = srcNode.localTransform.scale;
+    if (srcNode.mesh != null && srcNode.material != null) {
+      targetGo.addComponent(
+        MeshRenderer(
+          mesh: srcNode.mesh,
+          meshData: srcNode.meshData,
+          material: srcNode.material,
+          castsShadow: castShadows,
+          receivesShadow: receiveShadows,
+        ),
+      );
+    }
+    for (final childNode in srcNode.children) {
+      final childGo = targetGo.scene.createGameObject(
+        childNode.name ?? 'Node',
+        parent: targetGo,
+      );
+      _populateFromSceneNode(
+        childGo,
+        childNode,
+        castShadows: castShadows,
+        receiveShadows: receiveShadows,
+      );
+    }
+  }
+
   /// Instantiates this prefab in [scene].
   GameObject instantiate(
     Scene scene, {
