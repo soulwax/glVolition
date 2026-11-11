@@ -1,0 +1,11 @@
+name: voxpath
+description: High-performance 2D grid pathfinding (A*, Jump Point Search), crowd flow fields, and path smoothing for Dart games.
+version: 0.1.0
+homepage: https://github.com/soulwax/voxpath
+repository: https://github.com/soulwax/voxpath
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dev_dependencies:
+  test: ^1.24.0

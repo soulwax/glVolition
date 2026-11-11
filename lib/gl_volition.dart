@@ -8,7 +8,5 @@ export 'package:voxui/voxui.dart';
 export 'package:voxecs/voxecs.dart';
 export 'package:voxai/voxai.dart';
 export 'package:voxsynth/voxsynth.dart';
-export 'package:voxtween/voxtween.dart';
-export 'package:voxgeom/voxgeom.dart';
 
 export 'src/engine.dart';
