@@ -13,6 +13,9 @@ import 'package:voxlog/voxlog.dart';
 import 'package:voxui/voxui.dart';
 import 'package:voxai/voxai.dart';
 import 'package:voxsynth/voxsynth.dart';
+import 'package:voxtween/voxtween.dart';
+import 'package:voxgeom/voxgeom.dart';
+import 'package:voxpath/voxpath.dart';
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -61,4 +64,5 @@ part 'engine/components/atmosphere_volume.dart';
 part 'engine/components/post_process_volume.dart';
 part 'engine/components/constraints.dart';
 part 'engine/components/ai.dart';
+part 'engine/components/navigation_2d.dart';
 part 'engine/ui/canvas_ui.dart';

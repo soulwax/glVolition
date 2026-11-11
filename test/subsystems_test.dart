@@ -3209,6 +3209,152 @@ void main() {
       expect(dl.commands.any((c) => c.text == 'Engine Diagnostics'), isTrue);
       expect(dl.commands.any((c) => c.text != null && c.text!.contains('Boot sequence ready')), isTrue);
     });
+
+    test('E29: Transform and GameObject tweening with voxtween', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.time.maximumDeltaTime = 10.0;
+
+      final go = engine.scene.createGameObject('Hero');
+      go.transform.position = Vec3.zero;
+      go.transform.localScale = 1.0;
+
+      var posCompleted = false;
+      var scaleCompleted = false;
+
+      go.transform.tweenPosition(const Vec3(10, 0, 0), 1.0, ease: Ease.linear)
+        .onComplete(() => posCompleted = true);
+
+      go.tweenScale(2.0, 1.0, ease: Ease.linear)
+        .onComplete(() => scaleCompleted = true);
+
+      // Step half second (0.5s)
+      engine.step(0.5);
+      expect(go.transform.position.x, closeTo(5.0, 1e-3));
+      expect(go.transform.localScale, closeTo(1.5, 1e-3));
+      expect(posCompleted, isFalse);
+      expect(scaleCompleted, isFalse);
+
+      // Step remaining half second
+      engine.step(0.5);
+      expect(go.transform.position.x, closeTo(10.0, 1e-3));
+      expect(go.transform.localScale, closeTo(2.0, 1e-3));
+      expect(posCompleted, isTrue);
+      expect(scaleCompleted, isTrue);
+
+      // Destroying GameObject cleans up active tweens
+      go.transform.tweenPosition(const Vec3(100, 0, 0), 1.0);
+      go.destroy();
+      engine.step(0.016);
+      expect(TweenManager.instance.activeCount, equals(0));
+    });
+
+    test('E29: Camera frustum extraction and visibility culling with voxgeom', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final camGo = engine.scene.createGameObject('MainCamera');
+      camGo.transform.position = const Vec3(0, 0, 10);
+      camGo.transform.lookAt(Vec3.zero);
+      final cam = camGo.addComponent(Camera(fovYRadians: 1.0, near: 0.1, far: 50.0));
+
+      final visibleGo = engine.scene.createGameObject('VisibleCube');
+      visibleGo.transform.position = const Vec3(0, 0, 0);
+      final visibleMesh = visibleGo.addComponent(MeshRenderer());
+
+      final behindGo = engine.scene.createGameObject('BehindCube');
+      behindGo.transform.position = const Vec3(0, 0, 20);
+      final behindMesh = behindGo.addComponent(MeshRenderer());
+
+      final farAwayGo = engine.scene.createGameObject('FarAwayCube');
+      farAwayGo.transform.position = const Vec3(100, 0, 0);
+      final farMesh = farAwayGo.addComponent(MeshRenderer());
+
+      engine.step(0.016);
+
+      final frustum = cam.calculateFrustum();
+      expect(frustum.planes, hasLength(6));
+
+      expect(cam.isMeshVisible(visibleMesh), isTrue);
+      expect(cam.isMeshVisible(behindMesh), isFalse);
+      expect(cam.isMeshVisible(farMesh), isFalse);
+    });
+
+    test('E29: Scene.raycastMeshes hits closest active MeshRenderer bounding box', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final cubeA = engine.scene.createGameObject('CubeNear');
+      cubeA.transform.position = const Vec3(0, 0, 5);
+      final meshA = cubeA.addComponent(MeshRenderer());
+
+      final cubeB = engine.scene.createGameObject('CubeFar');
+      cubeB.transform.position = const Vec3(0, 0, 15);
+      cubeB.addComponent(MeshRenderer());
+
+      engine.step(0.016);
+
+      final ray = Ray3(const GeomVec3(0, 0, 0), const GeomVec3(0, 0, 1));
+      final hit = engine.scene.raycastMeshes(ray);
+
+      expect(hit, isNotNull);
+      expect(hit!.gameObject, equals(cubeA));
+      expect(hit.renderer, equals(meshA));
+      expect(hit.distance, closeTo(4.5, 1e-3));
+    });
+
+    test('E30: NavAgent2D pathfinding, waypoint tracking, and arrival events with voxpath', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.time.maximumDeltaTime = 10.0;
+
+      final grid = NavGrid.fromAscii([
+        '.....',
+        '.###.',
+        '.....',
+      ]);
+
+      final agentGo = engine.scene.createGameObject('Minion');
+      agentGo.transform.position = const Vec3(0.5, 0, 0.5);
+
+      final agent = agentGo.addComponent(NavAgent2D(speed: 4.0, grid: grid));
+      var reachedDestination = false;
+      final visited = <Vec2>[];
+
+      agent.onWaypointReached = (idx, pt) => visited.add(pt);
+      agent.onDestinationReached = () => reachedDestination = true;
+
+      // Navigate from (0, 0) around wall to (4, 2)
+      final success = agent.setDestination(const Vec2(4.5, 2.5), tileSize: 1.0);
+      expect(success, isTrue);
+      expect(agent.isMoving, isTrue);
+
+      // Step simulation
+      for (var i = 0; i < 30 && !reachedDestination; i++) {
+        engine.step(0.1);
+      }
+
+      expect(reachedDestination, isTrue);
+      expect(visited, isNotEmpty);
+      expect(agentGo.transform.position.x, closeTo(4.5, 0.2));
+      expect(agentGo.transform.position.z, closeTo(2.5, 0.2));
+    });
+
+    test('E30: FlowField2DComponent crowd vector field evaluation', () {
+      final grid = NavGrid.fromAscii([
+        '..........',
+        '..######..',
+        '..........',
+      ]);
+
+      final fieldComp = FlowField2DComponent(grid: grid, tileSize: 1.0);
+      fieldComp.setTarget(const GridPoint(5, 2));
+
+      // Test steering vector in world space: must steer around the obstacle horizontally
+      final steer = fieldComp.getSteeringVector(const Vec3(5.5, 0, 0.5));
+      expect(steer.length, closeTo(1.0, 1e-3));
+      expect(steer.x.abs(), greaterThan(0.0));
+    });
   });
 }
 

@@ -555,5 +555,23 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _APIs:_ `Camera.calculateFrustum([aspect])`, `Camera.screenPointToRay3(x, y)`, `Camera.isMeshVisible(renderer)`, `MeshRenderer.worldAabb`, `Scene.raycastMeshes(ray)`, `SceneMeshRayHit`.
   - _Verify:_ `test/subsystems_test.dart` (frustum camera culling, closest mesh renderer raycast hits, and automatic tween lifecycle cleanup on object destruction).
 
+---
+
+## E30: High-Performance Pathfinding Submodule (voxpath), Crowd Flow Fields, and Autonomous NavAgent2D
+
+- [x] **E30-1. `voxpath` Submodule: Jump Point Search (JPS), Weighted A*, Flow Fields & Path Smoothing.**
+  - _Location:_ `./vendor/voxpath` (`https://github.com/soulwax/voxpath`).
+  - _APIs:_ `GridPoint`, `NavGrid`, `AStarFinder`, `JumpPointSearch`, `FlowField`, `PathSmoother`, `Heuristics` (`manhattan`, `euclidean`, `octile`, `chebyshev`).
+  - _Verify:_ `vendor/voxpath/test/voxpath_test.dart` & `test/subsystems_test.dart` (Bresenham line-of-sight, obstacle avoidance, JPS open-field pruning, Dijkstra integration gradient vector field, and collinear waypoint reduction).
+- [x] **E30-2. `NavAgent2D` Autonomous Agent Component.**
+  - _Touches:_ `lib/src/engine/components/navigation_2d.dart`.
+  - _APIs:_ `NavAgent2D(speed, stoppingDistance, acceleration, rotateTowardsTarget, grid)`, `setDestination(target, {navGrid, smooth, tileSize})`, `setWaypoints(points)`, `stop()`, `pause()`, `resume()`, `isMoving`, `hasPath`, `remainingWaypoints`, `currentWaypoint`, `onDestinationReached`, `onWaypointReached`.
+  - _Verify:_ `test/subsystems_test.dart` (smooth steering along grid waypoints, obstacle navigation, and arrival callback triggers).
+- [x] **E30-3. `FlowField2DComponent` Crowd Steering Field Component.**
+  - _Touches:_ `lib/src/engine/components/navigation_2d.dart`.
+  - _APIs:_ `FlowField2DComponent(grid, tileSize)`, `setTarget(tile)`, `setTargets(tiles)`, `getSteeringVector(worldPos)`.
+  - _Verify:_ `test/subsystems_test.dart` (multi-agent normalized steering vectors in world coordinates around obstacles).
+
+
 
 

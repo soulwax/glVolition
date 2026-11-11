@@ -22,3 +22,6 @@
 [submodule "vendor/voxgeom"]
 	path = vendor/voxgeom
 	url = https://github.com/soulwax/voxgeom.git
+[submodule "vendor/voxpath"]
+	path = vendor/voxpath
+	url = https://github.com/soulwax/voxpath.git
