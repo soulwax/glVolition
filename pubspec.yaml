@@ -80,6 +80,10 @@ dependencies:
     path: vendor/voxcrowd
   voxsky:
     path: vendor/voxsky
+  voxwheel:
+    path: vendor/voxwheel
+  voxfracture:
+    path: vendor/voxfracture
   web: ^0.5.0
 
 dev_dependencies:

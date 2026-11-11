@@ -6458,6 +6458,175 @@ void main() {
       expect(json['weatherKind'], 'storm');
     });
   });
+
+  group('E58 — Raycast Vehicle Dynamics & Wheel Suspension (voxwheel)', () {
+    test('VehicleChassisComponent, WheelSuspensionComponent & VehicleTelemetryUI drive on scene collider', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      // Solid road box top at y = 0.0 (center y = -0.5, height 1.0).
+      scene.createGameObject(
+        'RoadDeck',
+        position: const Vec3(0.0, -0.5, -40.0),
+        components: [
+          BoxCollider(size: const Vec3(40.0, 1.0, 160.0), isTrigger: false),
+        ],
+      );
+
+      final carGo = scene.createGameObject(
+        'SportsCar',
+        position: const Vec3(0.0, 0.70, 0.0),
+      );
+      final chassis = carGo.addComponent(
+        VehicleChassisComponent(
+          driveLayout: DriveLayout.rwd,
+          useScenePhysicsRaycasts: true,
+          useFlatGroundFallback: false,
+        ),
+      );
+      final wheelNodes = <GameObject>[];
+      for (var i = 0; i < 4; i++) {
+        wheelNodes.add(
+          scene.createGameObject(
+            'Wheel_$i',
+            parent: carGo,
+            components: [WheelSuspensionComponent(wheelIndex: i)],
+          ),
+        );
+      }
+
+      chassis.setInputs(throttle: 1.0, steer: 0.0);
+      for (var i = 0; i < 190; i++) {
+        engine.step(1.0 / 60.0);
+      }
+
+      expect(chassis.groundedWheels, 4);
+      expect(chassis.forwardSpeedMps, greaterThan(12.5));
+      expect(carGo.transform.position.z, lessThan(-15.0));
+      expect(wheelNodes.first.transform.localPosition.y, lessThan(0.0));
+
+      // Turn right smoothly while cruising.
+      chassis.setInputs(throttle: 0.5, steer: 0.65);
+      for (var i = 0; i < 60; i++) {
+        engine.step(1.0 / 60.0);
+      }
+      expect(carGo.transform.position.x, greaterThan(1.5));
+
+      // Click 'Shift -' button in VehicleTelemetryUI at x=68, y=156.
+      final ui = VoxUiContext();
+      final uiState = VehicleTelemetryUiState();
+      final gearBeforeClick = chassis.currentGear;
+      expect(gearBeforeClick, greaterThanOrEqualTo(2));
+      const shiftDownX = 68.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: shiftDownX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      VehicleTelemetryUI.render(ui, chassis, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: shiftDownX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      VehicleTelemetryUI.render(ui, chassis, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      VehicleTelemetryUI.render(ui, chassis, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(chassis.currentGear, gearBeforeClick - 1);
+      expect(
+        drawList.commands.any((c) => c.text?.endsWith('G${chassis.currentGear}') ?? false),
+        isTrue,
+      );
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('VehicleChassisComponent'), isNotNull);
+      expect(reg.specByName('WheelSuspensionComponent'), isNotNull);
+      final json = reg.specFor(chassis)!.toJson(chassis);
+      expect(json['driveLayout'], 'rwd');
+    });
+  });
+
+  group('E59 — 3D Mesh Plane Slicing, Voronoi Shatter & Structural Support (voxfracture)', () {
+    test('FracturableMeshComponent, StructuralSupportComponent & DestructionInspectorUI slice, shatter & collapse', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      // Test converting a Primitives.cube() (`surfaceV2`) -> FractureMesh -> plane slice -> shards -> Reset.
+      final crateGo = scene.createGameObject(
+        'DestructibleCrate',
+        position: const Vec3(0.0, 2.0, 0.0),
+        components: [
+          MeshRenderer(meshData: Primitives.cube(size: 2.0)),
+        ],
+      );
+      final fracturable = crateGo.addComponent(
+        FracturableMeshComponent(voronoiCellCount: 6, seed: 77, debrisMass: 12.0),
+      );
+
+      final sliceRes = fracturable.sliceAlongPlane(
+        const Vec3(0.0, 2.2, 0.0),
+        const Vec3(0.2, 1.0, 0.0),
+      );
+      expect(sliceRes.hadCut, isTrue);
+      expect(sliceRes.positive, isNotNull);
+      expect(sliceRes.negative, isNotNull);
+      expect(fracturable.isFractured, isTrue);
+      expect(fracturable.shardCount, 2);
+      expect(fracturable.lastTotalVolume, closeTo(8.0, 0.05));
+      expect(crateGo.node.children.every((n) => !n.visible), isTrue);
+
+      // Click 'Voronoi' button at x=164, y=156 in DestructionInspectorUI.
+      final ui = VoxUiContext();
+      final uiState = DestructionInspectorUiState();
+      const voroX = 164.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: voroX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      DestructionInspectorUI.render(ui, fracturable, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: voroX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      DestructionInspectorUI.render(ui, fracturable, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      DestructionInspectorUI.render(ui, fracturable, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(fracturable.shardCount, greaterThanOrEqualTo(5));
+      expect(fracturable.lastTotalVolume, closeTo(8.0, 0.1));
+      expect(
+        drawList.commands.any((c) => c.text == 'SHATTERED / ${fracturable.shardCount}'),
+        isTrue,
+      );
+
+      // Structural support tower collapse drops upper unsupported blocks as dynamic RigidBodies.
+      final base = scene.createGameObject('AnchorBlock', position: const Vec3(10, 0, 0));
+      final mid = scene.createGameObject('MidBlock', position: const Vec3(10, 1, 0));
+      final roof = scene.createGameObject('RoofBlock', position: const Vec3(10, 2, 0));
+      final tower = scene.createGameObject('TowerController');
+      final support = tower.addComponent(StructuralSupportComponent());
+      support
+        ..linkPiece(base, isAnchor: true, mass: 5.0)
+        ..linkPiece(mid, mass: 2.0, maxHitPoints: 50.0)
+        ..linkPiece(roof, mass: 2.0)
+        ..connectPieces(base, mid, bondStrength: 80.0)
+        ..connectPieces(mid, roof, bondStrength: 80.0);
+
+      final collapse = support.applyBlastDamage(
+        const Vec3(10, 1, 0),
+        radius: 0.9,
+        damage: 100.0,
+      );
+      expect(collapse.detachedNodeIds.length, 2);
+      expect(roof.getComponent<RigidBody>(), isNotNull);
+      expect(roof.getComponent<RigidBody>()!.isKinematic, isFalse);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('FracturableMeshComponent'), isNotNull);
+      expect(reg.specByName('StructuralSupportComponent'), isNotNull);
+      final json = reg.specFor(fracturable)!.toJson(fracturable);
+      expect(json['voronoiCellCount'], 6);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

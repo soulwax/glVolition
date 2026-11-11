@@ -106,3 +106,9 @@
 [submodule "vendor/voxsky"]
 	path = vendor/voxsky
 	url = https://github.com/soulwax/voxsky.git
+[submodule "vendor/voxwheel"]
+	path = vendor/voxwheel
+	url = https://github.com/soulwax/voxwheel.git
+[submodule "vendor/voxfracture"]
+	path = vendor/voxfracture
+	url = https://github.com/soulwax/voxfracture.git

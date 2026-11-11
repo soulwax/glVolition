@@ -38,5 +38,7 @@ export 'package:voxextrude/voxextrude.dart';
 export 'package:voxbiome/voxbiome.dart';
 export 'package:voxcrowd/voxcrowd.dart';
 export 'package:voxsky/voxsky.dart';
+export 'package:voxwheel/voxwheel.dart';
+export 'package:voxfracture/voxfracture.dart';
 
 export 'src/engine.dart';

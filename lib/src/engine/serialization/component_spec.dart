@@ -456,5 +456,9 @@ final class ComponentRegistry {
     register<WindZoneComponent>(WindZoneComponent.spec);
     register<WeatherVolumeComponent>(WeatherVolumeComponent.spec);
     register<DayNightSkyComponent>(DayNightSkyComponent.spec);
+    register<WheelSuspensionComponent>(WheelSuspensionComponent.spec);
+    register<VehicleChassisComponent>(VehicleChassisComponent.spec);
+    register<FracturableMeshComponent>(FracturableMeshComponent.spec);
+    register<StructuralSupportComponent>(StructuralSupportComponent.spec);
   }
 }

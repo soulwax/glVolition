@@ -942,11 +942,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E58: Raycast Vehicle Dynamics, Tire Brush Slip & Drivetrain Physics (`voxwheel`)
 
-- [ ] **E58-1. `voxwheel` Submodule: Suspension Struts, Anti-Roll Bars, Tire Slip Curves & Transmission.**
+- [x] **E58-1. `voxwheel` Submodule: Suspension Struts, Anti-Roll Bars, Tire Slip Curves & Transmission.**
   - _Location:_ `./vendor/voxwheel` (`https://github.com/soulwax/voxwheel`).
   - _APIs:_ `WheelSuspension`, `TireBrushModel` (longitudinal/lateral slip curves, peak friction, drift decay), `DrivetrainSpec` (torque curve RPM table, automatic/manual gearbox ratios, FWD/RWD/AWD differential split), `VehicleDynamicsSolver` (Ackermann steer angles, anti-roll stiffness, rigid-body force/torque integration).
   - _Verify:_ `vendor/voxwheel/test/voxwheel_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E58-2. `VehicleChassisComponent`, `WheelSuspensionComponent` & `VehicleTelemetryUI` Engine Integration.**
+- [x] **E58-2. `VehicleChassisComponent`, `WheelSuspensionComponent` & `VehicleTelemetryUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/vehicle_physics.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -954,13 +954,38 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E59: 3D Mesh Plane Slicing, Voronoi Shatter & Structural Stability Graphs (`voxfracture`)
 
-- [ ] **E59-1. `voxfracture` Submodule: CSG Half-Space Mesh Clipper, Voronoi Fragmentation & Load Collapse.**
+- [x] **E59-1. `voxfracture` Submodule: CSG Half-Space Mesh Clipper, Voronoi Fragmentation & Load Collapse.**
   - _Location:_ `./vendor/voxfracture` (`https://github.com/soulwax/voxfracture`).
   - _APIs:_ `MeshPlaneSlicer` (exact watertight triangle clipping + planar cap triangulation), `VoronoiFractureBuilder` (seeded 3D Voronoi cell cutting into bounded shards), `StructuralSupportGraph` (grounded anchor flood-fill + cantilever overload detachment).
   - _Verify:_ `vendor/voxfracture/test/voxfracture_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E59-2. `FracturableMeshComponent`, `StructuralSupportComponent` & `DestructionInspectorUI` Engine Integration.**
+- [x] **E59-2. `FracturableMeshComponent`, `StructuralSupportComponent` & `DestructionInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/mesh_fracture.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E60: Projective 3D Decals, Surface Footprints & Damage Scars (`voxdecal`)
+
+- [ ] **E60-1. `voxdecal` Submodule: Oriented Decal Projectors, Tire Skid Ribbons & Ring-Buffer Decal Pools.**
+  - _Location:_ `./vendor/voxdecal` (`https://github.com/soulwax/voxdecal`).
+  - _APIs:_ `DecalBoxProjector` (OBB surface mesh clipping, normal-angle cutoff & planar UV remapping), `SkidRibbonBuilder` (continuous ground-hugged ribbon strips for tire tracks/footprints/trails), `DecalPoolManager` (FIFO LRU ring buffer, smooth fade-out lifetimes, spatial merge culling).
+  - _Verify:_ `vendor/voxdecal/test/voxdecal_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E60-2. `DecalProjectorComponent`, `SurfaceSkidTrailComponent` & `DecalPoolInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/surface_decals.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E61: Production Pipelines, Automation Conveyors & Dynamic Resource Economies (`voxcraft`)
+
+- [ ] **E61-1. `voxcraft` Submodule: Multi-Stage Production Graphs, Conveyor Belts, Tech Trees & Market Pricing.**
+  - _Location:_ `./vendor/voxcraft` (`https://github.com/soulwax/voxcraft`).
+  - _APIs:_ `FactoryRecipe` & `ProductionQueue` (parallel batch slots, power/speed efficiency scaling, byproduct yields), `ConveyorNetwork` (throughput-capped item transport lanes & splitter/merger routers), `TechTreeSolver` (DAG research prerequisites & multiplier unlocks), `DynamicMarketBook` (supply/demand elasticity, rolling price history & equilibrium mean-reversion).
+  - _Verify:_ `vendor/voxcraft/test/voxcraft_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E61-2. `FactoryProducerComponent`, `DynamicMarketComponent` & `EconomyFactoryUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/factory_economy.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
 
 
 

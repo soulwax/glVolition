@@ -43,6 +43,8 @@ import 'package:voxextrude/voxextrude.dart' as ext;
 import 'package:voxbiome/voxbiome.dart' as biome;
 import 'package:voxcrowd/voxcrowd.dart' as crowd;
 import 'package:voxsky/voxsky.dart' as sky;
+import 'package:voxwheel/voxwheel.dart' as wheel;
+import 'package:voxfracture/voxfracture.dart' as frac;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -120,3 +122,5 @@ part 'engine/components/spline_extrude.dart';
 part 'engine/components/biome_noise.dart';
 part 'engine/components/crowd_avoidance.dart';
 part 'engine/components/day_night_weather.dart';
+part 'engine/components/vehicle_physics.dart';
+part 'engine/components/mesh_fracture.dart';
