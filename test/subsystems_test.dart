@@ -4876,6 +4876,66 @@ void main() {
       expect(dl.commands.any((c) => c.type == DrawCmdType.circleFilled), isTrue);
       expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'A'), isTrue);
     });
+
+    test('E41: InventoryComponent & StatsComponent handle spatial equip swaps, stat buffs & storage persistence', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final greatsword = ItemDefinition(
+        id: 'greatsword',
+        name: 'Titanium Greatsword',
+        gridWidth: 2,
+        gridHeight: 3,
+        rarity: ItemRarity.legendary,
+        equipSlot: 'MainHand',
+        equipModifiers: [
+          StatModifier(statName: 'attack', value: 30.0),
+          StatModifier(statName: 'attack', value: 0.2, type: StatModifierType.percentAdd),
+        ],
+      );
+      const healingCell = ItemDefinition(
+        id: 'medkit',
+        name: 'Nano Medkit',
+        maxStack: 5,
+        rarity: ItemRarity.rare,
+      );
+
+      final reg = ItemRegistry()..registerAll([greatsword, healingCell]);
+
+      final statsComp = StatsComponent({'attack': 10.0});
+      final invComp = InventoryComponent(gridWidth: 5, gridHeight: 4);
+      engine.scene.createGameObject('Player', components: [invComp, statsComp]);
+
+      final swordStack = ItemStack(greatsword);
+      final medStack = ItemStack(healingCell, quantity: 3);
+      expect(invComp.addItem(swordStack), equals(0));
+      expect(invComp.addItem(medStack), equals(0));
+
+      // Equip greatsword from grid -> base 10 + 30 = 40, * 1.2 = 48.0 attack
+      expect(invComp.equipFromInventory('MainHand', swordStack), isTrue);
+      expect(statsComp.getValue('attack'), closeTo(48.0, 1e-4));
+      expect(invComp.grid.countById('greatsword'), equals(0));
+
+      // Unequip back to inventory -> returns to base 10.0
+      expect(invComp.unequipToInventory('MainHand'), isTrue);
+      expect(statsComp.getValue('attack'), closeTo(10.0, 1e-4));
+      expect(invComp.grid.countById('greatsword'), equals(1));
+
+      // Save & restore inventory grid via host.storage
+      invComp.saveToStorage('hero_bag');
+      invComp.grid.clear();
+      expect(invComp.grid.countById('medkit'), equals(0));
+      expect(invComp.loadFromStorage(reg, 'hero_bag'), isTrue);
+      expect(invComp.grid.countById('medkit'), equals(3));
+
+      // Render InventoryUI using voxui
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      InventoryUI.render(ui, invComp);
+      final dl = ui.endFrame();
+      expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'Titanium Greatsword'), isTrue);
+      expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'x3'), isTrue);
+    });
   });
 }
 

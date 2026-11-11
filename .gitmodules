@@ -55,3 +55,6 @@
 [submodule "vendor/voxpad"]
 	path = vendor/voxpad
 	url = https://github.com/soulwax/voxpad.git
+[submodule "vendor/voxitem"]
+	path = vendor/voxitem
+	url = https://github.com/soulwax/voxitem.git

@@ -730,14 +730,14 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E41: Spatial Grid Inventory, Weighted Loot Tables, Crafting & RPG Stat Modifiers (voxitem)
 
-- [ ] **E41-1. `voxitem` Submodule: 2D Grid Inventory, Stacking, Loot Tables, Crafting & Stat Pipeline.**
+- [x] **E41-1. `voxitem` Submodule: 2D Grid Inventory, Stacking, Loot Tables, Crafting & Stat Pipeline.**
   - _Location:_ `./vendor/voxitem` (`https://github.com/soulwax/voxitem`).
-  - _APIs:_ `ItemDefinition` (id, name, gridWidth, gridHeight, maxStack, tags, rarity), `ItemStack`, `GridInventory` (2D spatial occupancy matrix, rotation, auto-fit packing, splitting/merging), `EquipmentSlots`, `StatBlock` (`StatModifier` flat / percentAdd / percentMult ordered evaluation pipeline), `LootTable` (weighted entries, conditions, pity/guaranteed rolls, seeded RNG), `CraftingStation` (recipe matching, ingredient consumption, tag-based substitutions).
+  - _APIs:_ `ItemDefinition` (id, name, gridWidth, gridHeight, maxStack, tags, rarity), `ItemStack`, `GridInventory` (2D spatial occupancy matrix, rotation, auto-fit packing, splitting/merging, weight caps, JSON round-trip), `EquipmentSlots`, `StatBlock` (`StatModifier` flat / percentAdd / percentMult ordered evaluation pipeline), `LootTable` (weighted entries, conditions, luck scaling, guaranteed rolls, seeded RNG), `CraftingSystem` (atomic transaction crafting, ingredient consumption, tag-based substitutions).
   - _Verify:_ `vendor/voxitem/test/voxitem_test.dart` & `test/subsystems_test.dart` (2D grid placement & item rotation, stat multiplier ordering, weighted loot statistical distribution, and crafting validation).
-- [ ] **E41-2. `InventoryComponent` & `StatsComponent` Engine Integration.**
+- [x] **E41-2. `InventoryComponent` & `StatsComponent` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/inventory.dart`.
-  - _APIs:_ `InventoryComponent(gridWidth, gridHeight, slots)`, `StatsComponent(baseStats)`, `InventoryUI.render(ui, inventory)` (interactive drag/inspect UI via `voxui`).
-  - _Verify:_ `test/subsystems_test.dart` (scene entity equipment stat buffs, loot drop spawning, and `voxui` inventory grid rendering).
+  - _APIs:_ `InventoryComponent(gridWidth, gridHeight, slotNames)`, `StatsComponent(baseStats)`, `InventoryUI.render(ui, inventory)` (interactive spatial grid & rarity tint rendering via `voxui`).
+  - _Verify:_ `test/subsystems_test.dart` (scene entity equipment stat buffs, equip/swap rollback safety, storage persistence, and `voxui` inventory grid rendering).
 
 ---
 
@@ -745,9 +745,12 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 - [ ] **E42-1. `voxsnap` Submodule: Ring-Buffer State Recording, Binary Delta Snapshots & Ghost Playback.**
   - _Location:_ `./vendor/voxsnap` (`https://github.com/soulwax/voxsnap`).
-  - _APIs:_ `BinarySnapshotWriter` / `BinarySnapshotReader` (compact varint, quantized vec3/quat), `RewindBuffer<T>`, `GhostTrack` / `GhostPlayer` (interpolated transform replay tracks).
+  - _APIs:_ `BinarySnapshotWriter` / `BinarySnapshotReader` (compact varint, quantized vec3 & smallest-three compressed quaternion, RLE byte diffing), `RewindBuffer<T>` (bounded O(1) ring buffer supporting scrubbing backwards/forwards across frames/seconds), `GhostTrack` / `GhostPlayer` (interpolated transform replay tracks, binary export/import).
+  - _Verify:_ `vendor/voxsnap/test/voxsnap_test.dart` & `test/subsystems_test.dart` (bit-packed quantization error bounds, XOR/delta compression ratio, circular rewind buffer wrapping, and smooth interpolated ghost playback).
 - [ ] **E42-2. `TimeRewindComponent` & `GhostReplayComponent` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/rewind.dart`.
+  - _APIs:_ `TimeRewindComponent(maxSeconds, captureCustomState)`, `GhostRecorderComponent` / `GhostPlaybackComponent`.
+  - _Verify:_ `test/subsystems_test.dart` (rewinding moving `GameObject` transforms through history and multi-frame ghost transform playback).
 
 
 
