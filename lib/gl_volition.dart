@@ -26,5 +26,6 @@ export 'package:voxsnap/voxsnap.dart';
 export 'package:voxflow/voxflow.dart';
 export 'package:voxhex/voxhex.dart';
 export 'package:voxrule/voxrule.dart';
+export 'package:voxseq/voxseq.dart';
 
 export 'src/engine.dart';

@@ -31,6 +31,7 @@ import 'package:voxsnap/voxsnap.dart' as snap;
 import 'package:voxflow/voxflow.dart' as flow;
 import 'package:voxhex/voxhex.dart' as hex;
 import 'package:voxrule/voxrule.dart' as rule;
+import 'package:voxseq/voxseq.dart' as seq;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -96,3 +97,4 @@ part 'engine/components/rewind.dart';
 part 'engine/components/flow_graph.dart';
 part 'engine/components/hex_grid.dart';
 part 'engine/components/combat_rules.dart';
+part 'engine/components/cutscene_sequencer.dart';

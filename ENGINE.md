@@ -794,11 +794,39 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E46: Multi-Track Cutscene Timeline Sequencer & Keyframe Director (`voxseq`)
 
-- [ ] **E46-1. `voxseq` Submodule: Keyframe Property Tracks, Event Cues, Camera Cuts & Transport Scrubbing.**
+- [x] **E46-1. `voxseq` Submodule: Keyframe Property Tracks, Event Cues, Camera Cuts & Transport Scrubbing.**
   - _Location:_ `./vendor/voxseq` (`https://github.com/soulwax/voxseq`).
-  - _APIs:_ `Keyframe<T>` (`step`, `linear`, `cubic`), `ValueTrack<T>`, `EventTrack`, `AudioCueTrack`, `SubtitleTrack`, `CameraCutTrack`, `TimelineSequence` (`evaluateAt`, `play`, `pause`, `scrubTo`, `speed`, `loopMode`).
-- [ ] **E46-2. `CutsceneDirectorComponent` & `TimelineSequencerUI` Engine Integration.**
+  - _APIs:_ `SeqKeyframe<T>` (`step`, `linear`, `smoothstep`, `cubic`), `ValueTrack<T>`, `EventTrack`, `AudioCueTrack`, `SubtitleTrack`, `CameraCutTrack`, `TimelineSequence` (`evaluateAt`, `play`, `pause`, `stop`, `scrubTo`, `speed`, `wrapMode`).
+  - _Verify:_ `vendor/voxseq/test/voxseq_test.dart` & `test/subsystems_test.dart`.
+- [x] **E46-2. `CutsceneDirectorComponent` & `TimelineSequencerUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/cutscene_sequencer.dart`.
+  - _APIs:_ `CutsceneDirectorComponent` (`bindPosition`, `bindRotation`, `bindScale`, `bindActive`, `bindColor`, `bindCameras`, `bindSubtitles`, `bindAudioCues`), `TimelineSequencerUI.render`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E47: Achievements, Telemetry Event Bus, Combo Multiplier & Leaderboards (`voxstat`)
+
+- [ ] **E47-1. `voxstat` Submodule: Typed Gameplay Telemetry, Achievement Conditions, Combos & Leaderboards.**
+  - _Location:_ `./vendor/voxstat` (`https://github.com/soulwax/voxstat`).
+  - _APIs:_ `TelemetryBus` (buffered typed event dispatch, frame counters, rolling rates & histograms), `MetricRegistry` (integer/float counters, min/max gauges, session vs lifetime rollups, JSON snapshot/restore), `AchievementDef` & `AchievementTracker` (threshold, compound `allOf`/`anyOf` rules, progressive unlock tiers, secret flags, unlock timestamps), `ComboTracker` (decay timer, multiplier curve, rank grades S/A/B/C/D), `Leaderboard` (ranked score entries with metadata, deterministic tie-breakers & JSON serialization).
+  - _Verify:_ `vendor/voxstat/test/voxstat_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E47-2. `ProgressionStatsComponent` & `AchievementsHudUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/progression_stats.dart`.
+  - _APIs:_ `ProgressionStatsComponent` (wires metrics, achievements, combos & leaderboards to `engine.host.storage` persistence), `AchievementsHudUI.render` (toast notifications, progress bars, combo badge, and leaderboard view via `voxui`).
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E48: Virtual File System, Binary Asset Bundles & Versioned Save Migrations (`voxpack`)
+
+- [ ] **E48-1. `voxpack` Submodule: Mounted VFS Layers, Chunked Binary Pak Reader/Writer, CRC32 & Migrations.**
+  - _Location:_ `./vendor/voxpack` (`https://github.com/soulwax/voxpack`).
+  - _APIs:_ `VfsMount` (`MemoryMount`, `PakMount`, priority overlay / DLC patch ordering), `VirtualFileSystem` (path normalization, glob search, readBytes/readText), `PakBuilder` & `PakArchive` (binary header, magic bytes, TOC offsets, CRC32 verification, RLE/XOR obfuscation & optional chunk compression), `SaveMigrator` (ordered schema version steps `v1 -> v2 -> ...`, atomic validation & rollback).
+  - _Verify:_ `vendor/voxpack/test/voxpack_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E48-2. `PakAssetLoader`, `MigratedSaveStore` & `AssetBrowserUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/assets/pak_vfs.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
 
 
 

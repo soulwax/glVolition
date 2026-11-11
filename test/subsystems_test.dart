@@ -5297,6 +5297,108 @@ void main() {
       expect(drawList.commands.where((c) => c.text != null && c.text!.contains('Next Turns')), isNotEmpty);
       expect(drawList.commands.where((c) => c.text != null && c.text!.contains('HP 85/120')), isNotEmpty);
     });
+
+    test('E46: CutsceneDirectorComponent animates transforms, toggles active camera shots, subtitles & cues', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final hero = engine.scene.createGameObject('Hero');
+      final wideCam = Camera();
+      final closeCam = Camera();
+      engine.scene.createGameObject('WideCam', components: [wideCam]);
+      engine.scene.createGameObject('CloseCam', components: [closeCam]);
+
+      final eventsFired = <String>[];
+      final audioCuesFired = <String>[];
+      var completed = false;
+
+      final director = CutsceneDirectorComponent(
+        duration: 2.0,
+        onEvent: (m) => eventsFired.add(m.name),
+        onCompleted: () => completed = true,
+      );
+      director.bindPosition('hero_pos', hero)
+        ..addKey(0.0, const SeqVec3(0, 0, 0))
+        ..addKey(2.0, const SeqVec3(10, 0, 0));
+      director.bindCameras('cams', {'Wide': wideCam, 'Close': closeCam})
+        ..addShot(0.0, 1.0, 'Wide')
+        ..addShot(1.0, 2.0, 'Close');
+      director.bindSubtitles('subs').addClip(0.5, 1.8, 'Captain', 'All units advance!');
+      director.bindAudioCues('sfx', onTriggerCue: (cue) => audioCuesFired.add(cue.clipKey))
+          .addCue(0.25, 'sfx/horn.wav', duration: 0.5);
+      director.sequence.addTrack(EventTrack(id: 'cues')..addEvent(1.5, 'spawnWave'));
+
+      engine.scene.createGameObject('CutsceneDirector', components: [director]);
+      director.play(fromStart: true);
+
+      // Step to t = 0.3
+      for (int i = 0; i < 3; i++) {
+        engine.step(0.1);
+      }
+      expect(hero.transform.position.x, closeTo(1.5, 1e-3));
+      expect(wideCam.isActiveAndEnabled, isTrue);
+      expect(closeCam.isActiveAndEnabled, isFalse);
+      expect(audioCuesFired, ['sfx/horn.wav']);
+      expect(director.activeSubtitle, isNull);
+
+      // Step to t = 1.2
+      for (int i = 0; i < 9; i++) {
+        engine.step(0.1);
+      }
+      expect(hero.transform.position.x, closeTo(6.0, 1e-3));
+      expect(wideCam.isActiveAndEnabled, isFalse);
+      expect(closeCam.isActiveAndEnabled, isTrue);
+      expect(director.activeSubtitle?.speaker, 'Captain');
+
+      // Step to completion at t = 2.0+
+      for (int i = 0; i < 9; i++) {
+        engine.step(0.1);
+      }
+      expect(eventsFired, ['spawnWave']);
+      expect(completed, isTrue);
+      expect(director.isPlaying, isFalse);
+      expect(hero.transform.position.x, closeTo(10.0, 1e-3));
+    });
+
+    test('E46: TimelineSequencerUI renders tracks, toggles transport Play & scrubs playhead via voxui', () {
+      final posTrack = ValueTrack.vec3(id: 'pos')
+        ..addKey(0.0, const SeqVec3(0, 0, 0))
+        ..addKey(4.0, const SeqVec3(8, 0, 0));
+      final camTrack = CameraCutTrack(id: 'cams')..addShot(0.0, 4.0, 'MainCam');
+
+      final sequence = TimelineSequence(duration: 4.0)
+        ..addTrack(posTrack)
+        ..addTrack(camTrack);
+
+      final ui = VoxUiContext();
+      final state = TimelineSequencerUiState();
+
+      // Compute exact button/ruler coordinates matching TimelineSequencerUI.render(x: 20, y: 20, width: 560)
+      final playBtnX = 20.0 + ui.style.windowPadding + 20.0;
+      final playBtnY = 20.0 + ui.style.titleBarHeight + ui.style.windowPadding + 10.0;
+
+      // Press & release Play button
+      ui.beginFrame(VoxInput(mouseX: playBtnX, mouseY: playBtnY, isMouseDown: true, wasMouseClicked: true));
+      TimelineSequencerUI.render(ui, sequence, state: state, subtitlePreview: 'Ready!', x: 20, y: 20, width: 560, height: 280);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: playBtnX, mouseY: playBtnY, wasMouseReleased: true));
+      TimelineSequencerUI.render(ui, sequence, state: state, subtitlePreview: 'Ready!', x: 20, y: 20, width: 560, height: 280);
+      ui.endFrame();
+      expect(sequence.isPlaying, isTrue);
+
+      // Scrub to 50% of ruler (rulerX = 20 + 10 + 132 = 162, rulerW = 560 - 20 - 132 = 408)
+      final rulerMidX = 162.0 + 408.0 * 0.5;
+      final rulerMidY = 20.0 + ui.style.titleBarHeight + ui.style.windowPadding + 30.0 + 10.0;
+      ui.beginFrame(VoxInput(mouseX: rulerMidX, mouseY: rulerMidY, isMouseDown: true, wasMouseClicked: true));
+      TimelineSequencerUI.render(ui, sequence, state: state, subtitlePreview: 'Ready!', x: 20, y: 20, width: 560, height: 280);
+      final dl = ui.endFrame();
+
+      expect(sequence.currentTime, closeTo(2.0, 1e-3));
+      expect(posTrack.evaluate(sequence.currentTime), const SeqVec3(4, 0, 0));
+      expect(dl.commands.any((c) => c.type == DrawCmdType.circleFilled), isTrue);
+      expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'Ready!'), isTrue);
+    });
   });
 }
 
