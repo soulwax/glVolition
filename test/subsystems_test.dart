@@ -4691,6 +4691,50 @@ void main() {
         expect(p.velocity.length, greaterThan(0.0));
       }
     });
+
+    test('E39: VoxelTerrainComponent builds terrain, performs 3D DDA raycasts, and carves cavities', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final terrain = VoxelTerrainComponent();
+      final go = engine.scene.createGameObject('VoxelWorld', components: [terrain]);
+      go.transform.position = const Vec3(0, 0, 0);
+
+      // Fill a solid 4x4x4 block of stone
+      terrain.fillBox(
+        const VoxelCoord(0, 0, 0),
+        const VoxelCoord(3, 3, 3),
+        1, // Stone
+      );
+
+      // Verify voxel data
+      expect(terrain.getVoxel(1, 1, 1), equals(1));
+      expect(terrain.getVoxel(5, 5, 5), equals(0));
+
+      // Raycast from (1.5, 10.0, 1.5) downward (0, -1, 0)
+      final hit = terrain.raycastVoxel(
+        const Vec3(1.5, 10.0, 1.5),
+        const Vec3(0.0, -1.0, 0.0),
+        maxDistance: 20.0,
+      );
+
+      expect(hit, isNotNull);
+      expect(hit!.hitVoxel, equals(const VoxelCoord(1, 3, 1)));
+      expect(hit.normal.y, closeTo(1.0, 1e-4)); // hit top face pointing +Y
+      expect(hit.adjacentEmptyVoxel, equals(const VoxelCoord(1, 4, 1))); // block above
+
+      // Rebuild greedy meshes
+      final meshes = terrain.rebuildAllMeshes();
+      expect(meshes, isNotEmpty);
+      final mesh = meshes.values.first;
+      // 4x4x4 cube faces merged into 6 quads
+      expect(mesh.quadCount, equals(6));
+
+      // Carve sphere at (1, 1, 1)
+      final carved = terrain.carveSphere(const VoxelCoord(1, 1, 1), 1.5);
+      expect(carved, greaterThan(0));
+      expect(terrain.getVoxel(1, 1, 1), equals(0));
+    });
   });
 }
 

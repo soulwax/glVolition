@@ -49,3 +49,6 @@
 [submodule "vendor/voxvfx"]
 	path = vendor/voxvfx
 	url = https://github.com/soulwax/voxvfx.git
+[submodule "vendor/voxvox"]
+	path = vendor/voxvox
+	url = https://github.com/soulwax/voxvox.git

@@ -704,14 +704,28 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E39: Voxel Volume Chunks, Greedy Meshing, 3D DDA Raycasting & Destructible Terrain (voxvox)
 
-- [ ] **E39-1. `voxvox` Submodule: Voxel Volumes, Greedy Meshing & Fast 3D DDA Traversal.**
+- [x] **E39-1. `voxvox` Submodule: Voxel Volumes, Greedy Meshing & Fast 3D DDA Traversal.**
   - _Location:_ `./vendor/voxvox` (`https://github.com/soulwax/voxvox`).
   - _APIs:_ `VoxelChunk` (16x16x16 / 32x32x32 cubic voxel array, block palette, bit-packed storage), `VoxelWorld` (infinite/multi-chunk spatial hashing, coordinate translation), `GreedyMesher` (optimized quad merging reducing triangle count by 90%+, vertex ambient occlusion 0..3), `VoxelRaycaster` (fast 3D Amanatides-Woo DDA raymarching returning hit voxel, normal, adjacent empty block), `VoxelBrush` (box, sphere carve, cylinder carving and painting).
   - _Verify:_ `vendor/voxvox/test/voxvox_test.dart` & `test/subsystems_test.dart` (chunk coordinate lookups, greedy mesh optimization quad count reduction, 3D DDA ray intersection precision, and sphere carving).
-- [ ] **E39-2. `VoxelTerrainComponent` & `VoxelCollider` Engine Integration.**
+- [x] **E39-2. `VoxelTerrainComponent` & `VoxelCollider` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/voxel.dart`.
   - _APIs:_ `VoxelTerrainComponent` (chunk management, mesh generation, dynamic carving/building), `raycastVoxel(ray, maxDistance)`.
   - _Verify:_ `test/subsystems_test.dart` (scene integration, raycast hit verification, and terrain deformation).
+
+---
+
+## E40: Input Action Maps, Deadzones, Chord Combos, Rebinding & Virtual Gamepad (voxpad)
+
+- [ ] **E40-1. `voxpad` Submodule: Action Contexts, Deadzone Processors, Input Chords & Rebinding.**
+  - _Location:_ `./vendor/voxpad` (`https://github.com/soulwax/voxpad`).
+  - _APIs:_ `InputAction` (name, type: button/value1D/value2D, state: pressed, released, held duration, axis values), `ActionMap` (contextual bindings: "Gameplay", "Menu", "Vehicle", active enable/disable), `InputBinding` (keyboard keys, mouse buttons, gamepad buttons, axes), `ChordBinding` (simultaneous multi-key chords e.g. Ctrl+Shift+P), `DeadzoneProcessor` (axial, radial, normalized thresholds with smooth step curves), `InputRebinder` (interactive listen for next press, conflicts resolution, JSON profile serialization).
+  - _Verify:_ `vendor/voxpad/test/voxpad_test.dart` & `test/subsystems_test.dart` (action context priority, radial deadzone normalization, chord trigger logic, and profile serialization).
+- [ ] **E40-2. `InputManagerComponent` & Virtual Gamepad Overlay Integration.**
+  - _Touches:_ `lib/src/engine/components/input_manager.dart`.
+  - _APIs:_ `InputManagerComponent(activeMap, onRebound)`, `VirtualGamepad` (dual on-screen analog sticks, action buttons A/B/X/Y, mobile touch pointer routing).
+  - _Verify:_ `test/subsystems_test.dart` (engine input event ingestion, action map switching, and virtual joystick vector calculations).
+
 
 
 
