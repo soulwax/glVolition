@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:voxlog/voxlog.dart';
+
+final log = voxlog.stdoutColor('volition', level: LogLevel.info);
+
 String get _dartExecutable {
   // If running inside a compiled standalone exe (e.g. volition.exe),
   // Platform.resolvedExecutable points to volition.exe itself, NOT the Dart SDK.
@@ -73,7 +77,7 @@ Future<void> main(List<String> args) async {
     case 'build':
       await _runBuild(rest);
     default:
-      stderr.writeln('Unknown command "$cmd".');
+      log.error('Unknown command "$cmd".');
       _printUsage();
       exit(64);
   }
@@ -109,7 +113,7 @@ Future<void> _runServe(List<String> args) async {
   entryPath ??= 'example/pixel_rocket/main.dart';
   final entryFile = File(entryPath);
   if (!entryFile.existsSync()) {
-    stderr.writeln('Entry file not found: $entryPath');
+    log.error('Entry file not found: $entryPath');
     exit(66);
   }
 
@@ -134,12 +138,12 @@ Future<void> _runServe(List<String> args) async {
     sw.stop();
     if (res.exitCode == 0) {
       lastError = null;
-      stdout.writeln('[volition] Compiled ${entryFile.path} in ${sw.elapsedMilliseconds}ms');
+      log.info('Compiled ${entryFile.path} in ${sw.elapsedMilliseconds}ms');
       _broadcastSse(sseClients, 'reload', 'ok');
       return true;
     } else {
       lastError = '${res.stdout}\n${res.stderr}'.trim();
-      stderr.writeln('[volition] Compile error:\n$lastError');
+      log.error('Compile error:\n$lastError');
       _broadcastSse(sseClients, 'compile_error', jsonEncode(lastError));
       return false;
     }
@@ -182,7 +186,7 @@ Future<void> _runServe(List<String> args) async {
   }
 
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
-  stdout.writeln('[volition] Serving ${serveRoot.path} at http://localhost:$port/');
+  log.info('Serving ${serveRoot.path} at http://localhost:$port/');
 
   await for (final req in server) {
     final path = req.uri.path;
@@ -190,7 +194,7 @@ Future<void> _runServe(List<String> args) async {
       final body = await utf8.decoder.bind(req).join();
       final saveFile = File('${serveRoot.path}/scene.json');
       await saveFile.writeAsString(body);
-      stdout.writeln('[volition] Saved scene JSON -> ${saveFile.path}');
+      log.info('Saved scene JSON -> ${saveFile.path}');
       req.response
         ..statusCode = HttpStatus.ok
         ..write('ok');
@@ -303,7 +307,7 @@ Future<void> _runBuild(List<String> args) async {
   entryPath ??= 'example/pixel_rocket/main.dart';
   final entryFile = File(entryPath);
   if (!entryFile.existsSync()) {
-    stderr.writeln('Entry file not found: $entryPath');
+    log.error('Entry file not found: $entryPath');
     exit(66);
   }
 
@@ -313,7 +317,7 @@ Future<void> _runBuild(List<String> args) async {
   switch (target) {
     case 'js':
       final outJs = '${destDir.path}/main.dart.js';
-      stdout.writeln('[volition] Building JS bundle -> $outJs');
+      log.info('Building JS bundle -> $outJs');
       final res = await Process.run(_dartExecutable, [
         'compile',
         'js',
@@ -329,10 +333,10 @@ Future<void> _runBuild(List<String> args) async {
         exit(res.exitCode);
       }
       final sizeKb = (File(outJs).lengthSync() / 1024).toStringAsFixed(1);
-      stdout.writeln('[volition] Built $outJs ($sizeKb KB)');
+      log.info('Built $outJs ($sizeKb KB)');
     case 'wasm':
       final outWasm = '${destDir.path}/main.wasm';
-      stdout.writeln('[volition] Building WebAssembly bundle -> $outWasm');
+      log.info('Building WebAssembly bundle -> $outWasm');
       final res = await Process.run(_dartExecutable, [
         'compile',
         'wasm',
@@ -346,14 +350,14 @@ Future<void> _runBuild(List<String> args) async {
         stderr.writeln(res.stderr);
         exit(res.exitCode);
       }
-      stdout.writeln('[volition] Built $outWasm');
+      log.info('Built $outWasm');
     case 'windows':
       await _buildWindowsExecutable(entryFile, destDir);
     case 'exe':
     case 'native':
       final ext = Platform.isWindows ? '.exe' : '';
       final outExe = '${destDir.path}/game$ext';
-      stdout.writeln('[volition] Building native AOT executable -> $outExe');
+      log.info('Building native AOT executable -> $outExe');
       final res = await Process.run(_dartExecutable, [
         'compile',
         'exe',
@@ -367,9 +371,9 @@ Future<void> _runBuild(List<String> args) async {
         exit(res.exitCode);
       }
       final sizeKb = (File(outExe).lengthSync() / 1024).toStringAsFixed(1);
-      stdout.writeln('[volition] Built $outExe ($sizeKb KB)');
+      log.info('Built $outExe ($sizeKb KB)');
     default:
-      stderr.writeln(
+      log.error(
         'Unsupported --target "$target" (expected js, wasm, windows, or exe).',
       );
       exit(64);
@@ -400,7 +404,7 @@ Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
   final buildSubdir = Directory('${destDir.path}/build')..createSync(recursive: true);
   final outJs = '${destDir.path}/main.dart.js';
   final outBuildJs = '${buildSubdir.path}/main.dart.js';
-  stdout.writeln('[volition] Compiling JS bundle for Windows desktop host...');
+  log.info('Compiling JS bundle for Windows desktop host...');
   final res = await Process.run(_dartExecutable, [
     'compile',
     'js',
@@ -423,7 +427,7 @@ Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
 
   final hostCs = File('vendor/pixeldart/examples/desktop_host/Program.cs');
   if (!hostCs.existsSync()) {
-    stdout.writeln('[volition] Packaged Windows web bundle in ${destDir.path}');
+    log.info('Packaged Windows web bundle in ${destDir.path}');
     return;
   }
 
@@ -472,13 +476,13 @@ Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
       final finalExe = File('${destDir.path}/GlVolitionGame.exe');
       if (builtExe.existsSync()) {
         builtExe.copySync(finalExe.path);
-        stdout.writeln('[volition] Built single-file Windows executable -> ${finalExe.path}');
+        log.info('Built single-file Windows executable -> ${finalExe.path}');
         return;
       }
     }
   } catch (_) {}
 
-  stdout.writeln('[volition] Packaged Windows desktop project in ${destDir.path}');
+  log.info('Packaged Windows desktop project in ${destDir.path}');
 }
 
 void _copyDirectory(Directory src, Directory dst) {

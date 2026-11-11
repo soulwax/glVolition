@@ -1,3 +1,6 @@
 [submodule "vendor/pixeldart"]
 	path = vendor/pixeldart
 	url = https://github.com/soulwax/pixeldart.git
+[submodule "vendor/voxlog"]
+	path = vendor/voxlog
+	url = https://github.com/soulwax/voxlog.git
