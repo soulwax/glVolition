@@ -25,6 +25,7 @@ import 'package:voxdsp/voxdsp.dart' as dsp;
 import 'package:voxtalk/voxtalk.dart' as talk;
 import 'package:voxvfx/voxvfx.dart' as vfx;
 import 'package:voxvox/voxvox.dart' as vworld;
+import 'package:voxpad/voxpad.dart' as pad;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -84,3 +85,4 @@ part 'engine/components/audio_dsp.dart';
 part 'engine/components/dialogue.dart';
 part 'engine/components/vfx.dart';
 part 'engine/components/voxel.dart';
+part 'engine/components/input_manager.dart';

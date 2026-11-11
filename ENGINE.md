@@ -717,14 +717,38 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E40: Input Action Maps, Deadzones, Chord Combos, Rebinding & Virtual Gamepad (voxpad)
 
-- [ ] **E40-1. `voxpad` Submodule: Action Contexts, Deadzone Processors, Input Chords & Rebinding.**
+- [x] **E40-1. `voxpad` Submodule: Action Contexts, Deadzone Processors, Input Chords & Rebinding.**
   - _Location:_ `./vendor/voxpad` (`https://github.com/soulwax/voxpad`).
-  - _APIs:_ `InputAction` (name, type: button/value1D/value2D, state: pressed, released, held duration, axis values), `ActionMap` (contextual bindings: "Gameplay", "Menu", "Vehicle", active enable/disable), `InputBinding` (keyboard keys, mouse buttons, gamepad buttons, axes), `ChordBinding` (simultaneous multi-key chords e.g. Ctrl+Shift+P), `DeadzoneProcessor` (axial, radial, normalized thresholds with smooth step curves), `InputRebinder` (interactive listen for next press, conflicts resolution, JSON profile serialization).
+  - _APIs:_ `InputAction` (name, type: button/value1D/value2D, state: pressed, released, held duration, axis values, `consumeBufferedPress`), `ActionMap` (contextual bindings: "Gameplay", "Menu", "Vehicle", active enable/disable, priority control consumption), `InputBinding` (`KeyBinding`, `ChordBinding`, `Axis1DBinding`, `Vector2Binding`), `DeadzoneProcessor` (axial, radial, radialScaled thresholds with response curves), `InputRebinder` (interactive listen for next press, conflict policies, `InputProfileSerializer` JSON save/load).
   - _Verify:_ `vendor/voxpad/test/voxpad_test.dart` & `test/subsystems_test.dart` (action context priority, radial deadzone normalization, chord trigger logic, and profile serialization).
-- [ ] **E40-2. `InputManagerComponent` & Virtual Gamepad Overlay Integration.**
+- [x] **E40-2. `InputManagerComponent` & Virtual Gamepad Overlay Integration.**
   - _Touches:_ `lib/src/engine/components/input_manager.dart`.
-  - _APIs:_ `InputManagerComponent(activeMap, onRebound)`, `VirtualGamepad` (dual on-screen analog sticks, action buttons A/B/X/Y, mobile touch pointer routing).
-  - _Verify:_ `test/subsystems_test.dart` (engine input event ingestion, action map switching, and virtual joystick vector calculations).
+  - _APIs:_ `InputManagerComponent(actions, virtualGamepad)`, `VirtualGamepad` / `VirtualGamepadUI.render` (dual on-screen analog sticks, action buttons A/B, multi-touch pointer routing, storage profile save/load).
+  - _Verify:_ `test/subsystems_test.dart` (engine input event ingestion, action map switching, interactive rebinding + storage profile, and virtual joystick vector calculations).
+
+---
+
+## E41: Spatial Grid Inventory, Weighted Loot Tables, Crafting & RPG Stat Modifiers (voxitem)
+
+- [ ] **E41-1. `voxitem` Submodule: 2D Grid Inventory, Stacking, Loot Tables, Crafting & Stat Pipeline.**
+  - _Location:_ `./vendor/voxitem` (`https://github.com/soulwax/voxitem`).
+  - _APIs:_ `ItemDefinition` (id, name, gridWidth, gridHeight, maxStack, tags, rarity), `ItemStack`, `GridInventory` (2D spatial occupancy matrix, rotation, auto-fit packing, splitting/merging), `EquipmentSlots`, `StatBlock` (`StatModifier` flat / percentAdd / percentMult ordered evaluation pipeline), `LootTable` (weighted entries, conditions, pity/guaranteed rolls, seeded RNG), `CraftingStation` (recipe matching, ingredient consumption, tag-based substitutions).
+  - _Verify:_ `vendor/voxitem/test/voxitem_test.dart` & `test/subsystems_test.dart` (2D grid placement & item rotation, stat multiplier ordering, weighted loot statistical distribution, and crafting validation).
+- [ ] **E41-2. `InventoryComponent` & `StatsComponent` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/inventory.dart`.
+  - _APIs:_ `InventoryComponent(gridWidth, gridHeight, slots)`, `StatsComponent(baseStats)`, `InventoryUI.render(ui, inventory)` (interactive drag/inspect UI via `voxui`).
+  - _Verify:_ `test/subsystems_test.dart` (scene entity equipment stat buffs, loot drop spawning, and `voxui` inventory grid rendering).
+
+---
+
+## E42: Deterministic State Snapshots, Time Rewind & Ghost Replays (voxsnap)
+
+- [ ] **E42-1. `voxsnap` Submodule: Ring-Buffer State Recording, Binary Delta Snapshots & Ghost Playback.**
+  - _Location:_ `./vendor/voxsnap` (`https://github.com/soulwax/voxsnap`).
+  - _APIs:_ `BinarySnapshotWriter` / `BinarySnapshotReader` (compact varint, quantized vec3/quat), `RewindBuffer<T>`, `GhostTrack` / `GhostPlayer` (interpolated transform replay tracks).
+- [ ] **E42-2. `TimeRewindComponent` & `GhostReplayComponent` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/rewind.dart`.
+
 
 
 

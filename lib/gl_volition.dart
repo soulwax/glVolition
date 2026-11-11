@@ -20,5 +20,6 @@ export 'package:voxdsp/voxdsp.dart';
 export 'package:voxtalk/voxtalk.dart';
 export 'package:voxvfx/voxvfx.dart';
 export 'package:voxvox/voxvox.dart';
+export 'package:voxpad/voxpad.dart';
 
 export 'src/engine.dart';

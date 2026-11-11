@@ -4735,6 +4735,147 @@ void main() {
       expect(carved, greaterThan(0));
       expect(terrain.getVoxel(1, 1, 1), equals(0));
     });
+
+    test('E40: InputManagerComponent processes WASD Vector2, chord combos, and ActionMap priorities', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final im = InputManagerComponent();
+      final gameplay = im.actions.addMap('Gameplay', priority: 0);
+      gameplay.addVector2('Move', [Vector2Binding.wasd]);
+      gameplay.addButton('Jump', [const KeyBinding('Space')]);
+      gameplay.addButton('QuickSave', [const ChordBinding(['ControlLeft', 'KeyS'])]);
+
+      final pauseMenu = im.actions.addMap('Menu', priority: 10, enabled: false, blocksLowerMaps: true);
+      pauseMenu.addButton('Confirm', [const KeyBinding('Space')]);
+
+      engine.scene.createGameObject('InputSystem', components: [im]);
+
+      // Press W + D for diagonal normalized movement
+      host.input.press('KeyW');
+      host.input.press('KeyD');
+      engine.step(0.016);
+      host.input.endFrame();
+
+      final move = im.getVector2('Move');
+      expect(move.length, closeTo(1.0, 1e-3));
+      expect(move.x, closeTo(0.7071, 1e-3));
+      expect(move.y, closeTo(0.7071, 1e-3));
+
+      // QuickSave chord Ctrl+S
+      host.input.press('ControlLeft');
+      engine.step(0.016);
+      expect(im.isPressed('QuickSave'), isFalse);
+
+      host.input.press('KeyS');
+      engine.step(0.016);
+      expect(im.wasPressed('QuickSave'), isTrue);
+
+      // Pause Menu active -> Space is consumed by Menu and blocked from Gameplay Jump
+      pauseMenu.enabled = true;
+      host.input.press('Space');
+      engine.step(0.016);
+      expect(im.isPressed('Menu/Confirm'), isTrue);
+      expect(im.isPressed('Gameplay/Jump'), isFalse);
+    });
+
+    test('E40: InputManagerComponent interactive rebinding + storage profile persistence', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final im = InputManagerComponent();
+      final gameplay = im.actions.addMap('Gameplay');
+      final jump = gameplay.addButton('Jump', [const KeyBinding('Space')]);
+      engine.scene.createGameObject('InputSystem', components: [im]);
+
+      // Start rebinding Jump
+      String? boundControl;
+      im.rebinder.startListening(
+        map: gameplay,
+        action: jump,
+        onCompleted: (ctrl) => boundControl = ctrl,
+      );
+
+      // Step frame where player presses KeyF
+      host.input.press('KeyF');
+      engine.step(0.016);
+      host.input.endFrame();
+
+      expect(boundControl, equals('KeyF'));
+      expect(im.isPressed('Jump'), isTrue);
+
+      // Save profile to host.storage
+      im.saveProfile('player_controls');
+
+      // Reload into a fresh engine & InputManagerComponent sharing host storage
+      final engine2 = Engine(host);
+      final im2 = InputManagerComponent();
+      final gameplay2 = im2.actions.addMap('Gameplay');
+      gameplay2.addButton('Jump', [const KeyBinding('Space')]);
+      engine2.scene.createGameObject('InputSystem2', components: [im2]);
+
+      expect(im2.loadProfile('player_controls'), isTrue);
+      final loadedBinding = im2.action('Jump')!.bindings.first as KeyBinding;
+      expect(loadedBinding.control, equals('KeyF'));
+    });
+
+    test('E40: VirtualGamepad drives InputManagerComponent actions and renders via VirtualGamepadUI', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final vpad = VirtualGamepad(
+        sticks: [
+          VirtualStick(
+            centerX: 80,
+            centerY: 280,
+            radius: 40,
+            axisXName: 'VirtualLeftX',
+            axisYName: 'VirtualLeftY',
+          ),
+        ],
+        buttons: [
+          VirtualButton(
+            centerX: 520,
+            centerY: 280,
+            radius: 30,
+            controlName: 'GamepadA',
+            label: 'A',
+          ),
+        ],
+      );
+
+      final im = InputManagerComponent(virtualGamepad: vpad);
+      final mobile = im.actions.addMap('Mobile');
+      mobile.addVector2('Move', [
+        const Vector2Binding(analogX: 'VirtualLeftX', analogY: 'VirtualLeftY'),
+      ]);
+      mobile.addButton('Fire', [const KeyBinding('GamepadA')]);
+      engine.scene.createGameObject('MobileInput', components: [im]);
+
+      // Multi-touch: finger 1 pulls stick left-up, finger 2 holds Fire button
+      im.feedVirtualPointers([
+        const VirtualTouchPointer(id: 1, x: 80, y: 280, isDown: true),
+        const VirtualTouchPointer(id: 2, x: 520, y: 280, isDown: true),
+      ]);
+      engine.step(0.016);
+      expect(im.isPressed('Fire'), isTrue);
+
+      // Move finger 1 right to edge (+40px -> +1.0 X)
+      im.feedVirtualPointers([
+        const VirtualTouchPointer(id: 1, x: 120, y: 280, isDown: true),
+      ]);
+      engine.step(0.016);
+      expect(im.getVector2('Move').x, closeTo(1.0, 1e-4));
+      expect(im.isPressed('Fire'), isFalse);
+
+      // Verify VirtualGamepadUI renders circles and button label
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      VirtualGamepadUI.render(ui, vpad);
+      final dl = ui.endFrame();
+      expect(dl.commands.any((c) => c.type == DrawCmdType.circleFilled), isTrue);
+      expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'A'), isTrue);
+    });
   });
 }
 

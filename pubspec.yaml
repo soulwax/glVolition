@@ -44,6 +44,8 @@ dependencies:
     path: vendor/voxvfx
   voxvox:
     path: vendor/voxvox
+  voxpad:
+    path: vendor/voxpad
   web: ^0.5.0
 
 dev_dependencies:
