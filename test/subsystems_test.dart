@@ -5088,6 +5088,108 @@ void main() {
       expect(g.links.first.toNodeId, dst.id);
       expect(DataflowEvaluator(g).evaluateOutput(dst.id, 'result'), closeTo(7.0, 1e-6));
     });
+
+    test('E44: HexGridComponent projects world coords, runs WFC biomes, paths, reachability & FOV', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final grid = HexGridComponent.radial(radius: 3, hexSize: 2.0);
+      engine.scene.createGameObject(
+        'TacticalBoard',
+        position: const Vec3(10, 0, -5),
+        components: [grid],
+      );
+
+      const targetHex = HexCoord(1, -1);
+      final worldPos = grid.hexToWorld(targetHex);
+      expect(grid.worldToHex(worldPos), targetHex);
+
+      final rules = WfcRuleSet<String>.hex()
+        ..addTile('grass', weight: 4.0)
+        ..addTile('hills', weight: 2.0)
+        ..addTile('mountain', weight: 1.0);
+      for (int d = 0; d < 6; d++) {
+        rules.allow('grass', d, 'grass');
+        rules.allow('grass', d, 'hills');
+        rules.allow('hills', d, 'hills');
+        rules.allow('hills', d, 'mountain');
+        rules.allow('mountain', d, 'mountain');
+      }
+
+      final ok = grid.generateWfcBiomes(
+        rules: rules,
+        seed: 42,
+        preplaced: {
+          HexCoord.zero: 'hills',
+          const HexCoord(1, 0): 'mountain',
+        },
+        terrainCatalog: const {
+          'grass': (moveCost: 1.0, passable: true, blocksSight: false),
+          'hills': (moveCost: 2.0, passable: true, blocksSight: false),
+          'mountain': (moveCost: 99.0, passable: false, blocksSight: true),
+        },
+      );
+      expect(ok, isTrue);
+      expect(grid.map[HexCoord.zero]!.terrain, 'hills');
+      expect(grid.map[const HexCoord(1, 0)]!.passable, isFalse);
+
+      // Visibility blocked directly behind mountain at (1, 0)
+      final visible = grid.computeVisible(HexCoord.zero, radius: 3);
+      expect(visible.contains(const HexCoord(1, 0)), isTrue);
+      expect(visible.contains(const HexCoord(2, 0)), isFalse);
+
+      // Reachability respects movement budget and avoids mountain
+      final reach = grid.reachableFrom(HexCoord.zero, 2.0);
+      expect(reach.canReach(const HexCoord(1, 0)), isFalse);
+      expect(reach.canReach(HexCoord.zero), isTrue);
+    });
+
+    test('E44: WfcTilemapGenerator populates TileLayer and HexGridUI renders & picks hovered hex', () {
+      final layer = TileLayer(
+        columns: 6,
+        rows: 5,
+        tileWidth: 16,
+        tileHeight: 16,
+        tileset: [SpriteRegion.white, SpriteRegion.white, SpriteRegion.white],
+      );
+      final rules = WfcRuleSet<int>.grid2d()
+        ..addSocketTile(0, ['g', 'g', 'g', 'g'], weight: 3.0)
+        ..addSocketTile(1, ['g', 'r', 'g', 'r'], weight: 1.0)
+        ..addSocketTile(2, ['r', 'g', 'r', 'g'], weight: 1.0);
+
+      final filled = WfcTilemapGenerator.populate(
+        layer: layer,
+        rules: rules,
+        seed: 9,
+        preplaced: {(2, 2): 1},
+      );
+      expect(filled, isTrue);
+      expect(layer.tileAt(2, 2), 1);
+
+      final grid = HexGridComponent.radial(radius: 2, hexSize: 1.0);
+      grid.map[const HexCoord(1, 0)]!.passable = false;
+
+      final ui = VoxUiContext();
+      // Window at (20, 20, 360, 340) places center at (200, 20 + 26 + 314*0.5 = 203)
+      final centerX = 20.0 + 360.0 * 0.5;
+      final centerY = 20.0 + ui.style.titleBarHeight + (340.0 - ui.style.titleBarHeight) * 0.5;
+      ui.beginFrame(VoxInput(mouseX: centerX, mouseY: centerY));
+      final hovered = HexGridUI.render(
+        ui,
+        grid,
+        x: 20,
+        y: 20,
+        width: 360,
+        height: 340,
+        selectedHex: HexCoord.zero,
+        reachable: {const HexCoord(-1, 0), const HexCoord(0, -1)},
+        path: const [HexCoord.zero, HexCoord(-1, 0)],
+      );
+      final cmds = ui.endFrame();
+
+      expect(hovered, HexCoord.zero);
+      expect(cmds.commands.where((c) => c.type == DrawCmdType.line).length, greaterThan(100));
+    });
   });
 }
 

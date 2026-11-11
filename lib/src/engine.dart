@@ -29,6 +29,7 @@ import 'package:voxpad/voxpad.dart' as pad;
 import 'package:voxitem/voxitem.dart' as items;
 import 'package:voxsnap/voxsnap.dart' as snap;
 import 'package:voxflow/voxflow.dart' as flow;
+import 'package:voxhex/voxhex.dart' as hex;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -92,3 +93,4 @@ part 'engine/components/input_manager.dart';
 part 'engine/components/inventory.dart';
 part 'engine/components/rewind.dart';
 part 'engine/components/flow_graph.dart';
+part 'engine/components/hex_grid.dart';

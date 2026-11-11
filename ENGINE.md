@@ -769,14 +769,24 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E44: Hexagonal Grids, Wave-Function Collapse & Tactical Pathfinding (voxhex)
 
-- [ ] **E44-1. `voxhex` Submodule: Cube/Axial Hex Math, Hex FOV, Reachability & Wave-Function Collapse.**
+- [x] **E44-1. `voxhex` Submodule: Cube/Axial Hex Math, Hex FOV, Reachability & Wave-Function Collapse.**
   - _Location:_ `./vendor/voxhex` (`https://github.com/soulwax/voxhex`).
   - _APIs:_ `HexCoord` (cube/axial math, rounding, rings, spirals, line draw, pixel projection), `HexMap<T>`, `HexPathfinder` (`findPath`, `reachableTiles`), `HexFov` (shadowcast line-of-sight), `WfcSolver` (entropy-minimization constraint propagation with backtracking).
   - _Verify:_ `vendor/voxhex/test/voxhex_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E44-2. `HexGridComponent`, `WfcTilemapGenerator` & `HexGridUI` Integration.**
+- [x] **E44-2. `HexGridComponent`, `WfcTilemapGenerator` & `HexGridUI` Integration.**
   - _Touches:_ `lib/src/engine/components/hex_grid.dart`.
   - _APIs:_ `HexGridComponent`, `WfcTilemapGenerator`, `HexGridUI.render`.
   - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E45: Status Effects, Cooldowns, Initiative Turn Scheduler & Combat Resolver (`voxrule`)
+
+- [ ] **E45-1. `voxrule` Submodule: Buff/DoT Stacks, Cooldowns, Initiative Timeline & Damage Pipeline.**
+  - _Location:_ `./vendor/voxrule` (`https://github.com/soulwax/voxrule`).
+  - _APIs:_ `StatusEffectDef`, `StatusStackPolicy`, `StatusContainer` (tag dispel/immunity, periodic DoT/HoT ticks, stack decay), `CooldownTracker`, `TurnScheduler` (initiative & CT speed gauge), `DamagePacket` & `CombatResolver` (armor, resistances, crit rolls, shields).
+- [ ] **E45-2. `StatusEffectComponent`, `TurnSchedulerSubsystem` & `CombatHudUI` Integration.**
+  - _Touches:_ `lib/src/engine/components/combat_rules.dart`.
 
 
 
