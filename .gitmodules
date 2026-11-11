@@ -40,3 +40,6 @@
 [submodule "vendor/voxlight"]
 	path = vendor/voxlight
 	url = https://github.com/soulwax/voxlight.git
+[submodule "vendor/voxdsp"]
+	path = vendor/voxdsp
+	url = https://github.com/soulwax/voxdsp.git

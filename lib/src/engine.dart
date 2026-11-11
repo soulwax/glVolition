@@ -21,6 +21,7 @@ import 'package:voxphys/voxphys.dart' as phys;
 import 'package:voxnet/voxnet.dart' as net;
 import 'package:voxanim/voxanim.dart' as anim;
 import 'package:voxlight/voxlight.dart' as vlight;
+import 'package:voxdsp/voxdsp.dart' as dsp;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -76,3 +77,4 @@ part 'engine/ui/canvas_ui.dart';
 part 'engine/network/network_system.dart';
 part 'engine/components/ik_animation.dart';
 part 'engine/components/lighting_2d.dart';
+part 'engine/components/audio_dsp.dart';

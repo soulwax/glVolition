@@ -661,18 +661,32 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E36: Audio DSP Effects, Spatial Audio 3D & Audio Mixer Graph (voxdsp)
 
-- [ ] **E36-1. `voxdsp` Submodule: Biquad Filters, Schroeder Reverb, Feedback Delay & Spatial 3D Audio.**
+- [x] **E36-1. `voxdsp` Submodule: Biquad Filters, Schroeder Reverb, Feedback Delay & Spatial 3D Audio.**
   - _Location:_ `./vendor/voxdsp` (`https://github.com/soulwax/voxdsp`).
   - _APIs:_ `BiquadFilter` (`lowpass`, `highpass`, `bandpass`, `notch`, `peakingEq`), `SchroederReverb` (comb/allpass filters, room size, dampening, wet/dry mix), `FeedbackDelay` (delay time, feedback gain, wet mix), `SpatialAudio3D` (inverse/linear/exponential distance attenuation, stereo equal-power panning, Doppler pitch factor), `AudioMixerGroup` (hierarchical bus routing, dB volume fader, mute/solo, DSP effect chain).
   - _Verify:_ `vendor/voxdsp/test/voxdsp_test.dart` & `test/subsystems_test.dart` (frequency response attenuation, algorithmic reverberation tail, stereo pan balance, and bus hierarchy volume propagation).
-- [ ] **E36-2. `AudioListener` & 3D Spatial Audio Integration in `AudioSource`.**
-  - _Touches:_ `lib/src/engine/components/audio_source.dart`.
-  - _APIs:_ `AudioListener(attenuationModel, dopplerFactor)`, `AudioSource.spatialize3D`, `AudioSource.spatialVolume`, `AudioSource.spatialPan`, `AudioSource.outputGroup`.
-  - _Verify:_ `test/subsystems_test.dart` (distance falloff curves, left/right stereo panning relative to listener head, and mixer bus attenuation).
-- [ ] **E36-3. `AudioReverbZone` & Environmental Filter Triggers.**
-  - _Touches:_ `lib/src/engine/components/audio_dsp_components.dart`, `lib/src/engine/components/audio_source.dart`.
-  - _APIs:_ `AudioReverbZone(minDistance, maxDistance, preset, wetMix)`, `AudioLowPassFilterComponent(cutoffFrequency, resonance)`.
-  - _Verify:_ `test/subsystems_test.dart` (distance-blended reverb wet mix inside spatial zones, and lowpass cutoff muffled occlusion).
+- [x] **E36-2. `AudioListener` & 3D Spatial Audio Integration in `AudioSource`.**
+  - _Touches:_ `lib/src/engine/components/audio_source.dart`, `lib/src/engine/components/audio_dsp.dart`.
+  - _APIs:_ `SpatialAudioDspExt.calculateSpatialDsp(listener, distanceModel, sourceVelocity, listenerVelocity)`, `SpatialAudioResult`.
+  - _Verify:_ `test/subsystems_test.dart` (distance falloff curves, left/right stereo panning relative to listener head, and Doppler pitch shift).
+- [x] **E36-3. `AudioReverbZone` & `AudioLowPassFilterComponent`.**
+  - _Touches:_ `lib/src/engine/components/audio_dsp.dart`.
+  - _APIs:_ `AudioReverbZone(minDistance, maxDistance, roomSize, damp, wet)`, `AudioLowPassFilterComponent(cutoffFrequency, q)`.
+  - _Verify:_ `test/subsystems_test.dart` (distance-attenuated reverb wet mix and high-frequency buffer filtering).
+
+---
+
+## E37: Narrative Dialogue Graphs, Localization & Quest System (voxtalk)
+
+- [ ] **E37-1. `voxtalk` Submodule: Node-Based Dialogue Graphs, Branching Narratives & Quest State Tracking.**
+  - _Location:_ `./vendor/voxtalk` (`https://github.com/soulwax/voxtalk`).
+  - _APIs:_ `DialogueNode` (speaker, text, audioCue, choices, conditions, actions, nextNodeId), `DialogueChoice` (text, targetNodeId, condition), `DialogueGraph` (node lookup, entry point, validation), `DialogueRunner` (line advancement, typewriter pacing, choice selection, variable interpolation `{variable}`), `VariableStore` (blackboard flags, integers, strings), `LocalizationTable` (multi-language string dictionary, pluralization, formatting), `QuestTracker` (quest definitions, stages, objectives, completion callbacks).
+  - _Verify:_ `vendor/voxtalk/test/voxtalk_test.dart` & `test/subsystems_test.dart` (branching choice pathing, conditional response filtering, variable string interpolation, and quest stage completions).
+- [ ] **E37-2. `DialogueComponent` & `DialogueUI` Integration.**
+  - _Touches:_ `lib/src/engine/components/dialogue.dart`.
+  - _APIs:_ `DialogueComponent(graph, autoStart, runner)`, `DialogueUI` (renders conversational speech bubble, choices, and portrait using `voxui`), `QuestManagerComponent`.
+  - _Verify:_ `test/subsystems_test.dart` (gameplay conversation flow, choice dispatching, and immediate-mode dialogue rendering).
+
 
 
 

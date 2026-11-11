@@ -4482,6 +4482,66 @@ void main() {
       // Area behind wall is blocked by occluder
       expect(fogComp.isVisible(const Vec2(0.0, 5.0)), isFalse);
     });
+
+    test('E36: AudioLowPassFilterComponent processes audio buffer', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final audioGo = engine.scene.createGameObject('AudioEmitter');
+      final lpf = audioGo.addComponent(AudioLowPassFilterComponent(cutoffFrequency: 400.0));
+
+      final buffer = List<double>.generate(100, (i) => i.isEven ? 1.0 : -1.0); // High frequency alternations
+      lpf.processBuffer(buffer);
+
+      // Filtered high-frequency buffer should have significantly attenuated amplitude
+      expect(buffer.last.abs(), lessThan(0.5));
+    });
+
+    test('E36: AudioReverbZone calculates proximity wet mix', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final zoneGo = engine.scene.createGameObject('CaveReverb', position: const Vec3(0.0, 0.0, 0.0));
+      final zone = zoneGo.addComponent(AudioReverbZone(
+        minDistance: 5.0,
+        maxDistance: 15.0,
+        wet: 0.8,
+      ));
+
+      // Close to center -> 100% wet (0.8)
+      expect(zone.calculateReverbMix(const Vec3(2.0, 0.0, 0.0)), closeTo(0.8, 1e-4));
+
+      // Midpoint between min and max (dist = 10.0) -> 50% of wet (0.4)
+      expect(zone.calculateReverbMix(const Vec3(10.0, 0.0, 0.0)), closeTo(0.4, 0.05));
+
+      // Far outside zone -> 0.0
+      expect(zone.calculateReverbMix(const Vec3(20.0, 0.0, 0.0)), equals(0.0));
+    });
+
+    test('E36: AudioSource.calculateSpatialDsp evaluates 3D pan and doppler pitch', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final listenerGo = engine.scene.createGameObject('Listener', position: const Vec3(0.0, 0.0, 0.0));
+      final listener = listenerGo.addComponent(AudioListener());
+
+      final sourceGo = engine.scene.createGameObject('Siren', position: const Vec3(10.0, 0.0, 0.0));
+      final source = sourceGo.addComponent(AudioSource(minDistance: 1.0, maxDistance: 50.0));
+
+      engine.step(0.05);
+
+      final res = source.calculateSpatialDsp(
+        listener: listener,
+        sourceVelocity: const Vec3(-20.0, 0.0, 0.0), // Moving towards listener
+      );
+
+      // Stereo pan right
+      expect(res.pan, closeTo(1.0, 1e-4));
+      expect(res.rightGain, greaterThan(res.leftGain));
+
+      // Doppler pitch shift > 1.0
+      expect(res.dopplerFactor, greaterThan(1.02));
+    });
   });
 }
 
