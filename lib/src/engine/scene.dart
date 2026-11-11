@@ -290,6 +290,29 @@ final class Scene {
     return go == null ? null : (go, hit);
   }
 
+  /// Performs a 3D raycast against active MeshRenderers using voxgeom bounding volumes (E29-2).
+  SceneMeshRayHit? raycastMeshes(Ray3 ray, {double maxDistance = double.infinity}) {
+    SceneMeshRayHit? best;
+    for (final go in _allObjects(includeInactive: false)) {
+      final renderer = go.getComponent<MeshRenderer>();
+      if (renderer == null || !renderer.isActiveAndEnabled) continue;
+
+      final aabb = renderer.worldAabb;
+      final dist = ray.intersectAabb(aabb);
+      if (dist != null && dist <= maxDistance) {
+        if (best == null || dist < best.distance) {
+          best = SceneMeshRayHit(
+            gameObject: go,
+            renderer: renderer,
+            distance: dist,
+            point: ray.pointAt(dist),
+          );
+        }
+      }
+    }
+    return best;
+  }
+
   /// Shakes all active cameras in the scene with distance-attenuated trauma
   /// radiating from [epicenter] (E17-3).
   void shakeCamerasAt(
@@ -361,6 +384,34 @@ final class Scene {
         bus: bus,
         duration: duration,
       );
+
+  /// Spawns a transient spatial one-shot GameObject playing a procedural
+  /// synthesized sound effect from `package:voxsynth` (E28-1).
+  GameObject? playSynthAt(
+    SynthSound synth,
+    Vec3 position, {
+    double volume = 1.0,
+    double pitch = 1.0,
+    double spatialBlend = 1.0,
+    double minDistance = 1.0,
+    double maxDistance = 50.0,
+    String bus = 'sfx',
+    double duration = 3.0,
+    String? name,
+  }) {
+    final clip = ProceduralAudioClip.fromSynth(synth, name: name);
+    return playClipAt(
+      clip,
+      position,
+      volume: volume,
+      pitch: pitch,
+      spatialBlend: spatialBlend,
+      minDistance: minDistance,
+      maxDistance: maxDistance,
+      bus: bus,
+      duration: duration,
+    );
+  }
 
   GameObject? _ownerOf(SceneNode target) {
     final byNode = <SceneNode, GameObject>{};
@@ -672,6 +723,8 @@ final class Scene {
 
   void _destroyObjectImmediate(GameObject go) {
     if (go._destroyed) return;
+    TweenManager.instance.killTarget(go);
+    TweenManager.instance.killTarget(go.transform);
     for (final child in List.of(go._children)) {
       _destroyObjectImmediate(child);
     }
@@ -688,6 +741,7 @@ final class Scene {
 
   void _destroyComponentImmediate(Component c) {
     if (c._destroyed) return;
+    TweenManager.instance.killTarget(c);
     if (c._active) {
       c._active = false;
       _guard(c.onDisable);
@@ -714,4 +768,19 @@ final class Scene {
       _engine?.host.reportError(e, s);
     }
   }
+}
+
+/// Raycast hit result returned by [Scene.raycastMeshes] (E29-2).
+final class SceneMeshRayHit {
+  final GameObject gameObject;
+  final MeshRenderer renderer;
+  final double distance;
+  final GeomVec3 point;
+
+  const SceneMeshRayHit({
+    required this.gameObject,
+    required this.renderer,
+    required this.distance,
+    required this.point,
+  });
 }

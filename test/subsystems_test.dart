@@ -3106,6 +3106,203 @@ void main() {
       expect(recycled.version, e3.version + 1);
     });
   });
+
+  group('E28 — Procedural Audio, AI Components, and Debug Console (voxsynth, voxai)', () {
+    test('AudioSource.playSynth and Scene.playSynthAt spawn procedural sound one-shots', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final go = engine.scene.createGameObject('Player');
+      final src = go.addComponent(AudioSource());
+
+      // Play procedural laser synth via AudioSource
+      final laser = voxsynth.laser();
+      src.playSynth(laser);
+
+      // Play spatial procedural explosion synth via Scene
+      final explosion = voxsynth.explosion();
+      final oneShotGo = engine.scene.playSynthAt(explosion, const Vec3(10, 0, 5));
+
+      expect(oneShotGo, isNotNull);
+      expect(oneShotGo!.name, contains('SpatialAudioOneShot_procedural://'));
+      expect(oneShotGo.transform.position.x, closeTo(10.0, 1e-4));
+
+      final oneShotSrc = oneShotGo.getComponent<AudioSource>();
+      expect(oneShotSrc, isNotNull);
+      expect(oneShotSrc!.clip, isA<ProceduralAudioClip>());
+      expect((oneShotSrc.clip as ProceduralAudioClip).wavBytes.length, greaterThan(44));
+    });
+
+    test('BehaviorTreeComponent and AiFsmComponent advance AI states in engine loop', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      var attackTicked = false;
+      final tree = BehaviorTree(
+        root: SequenceNode([
+          ConditionNode((bb) => bb.get<int>('targetDistance') <= 5),
+          ActionNode((bb) {
+            attackTicked = true;
+            return NodeStatus.success;
+          }),
+        ]),
+      );
+      tree.blackboard.set('targetDistance', 10);
+
+      final go = engine.scene.createGameObject('Enemy');
+      final btComp = go.addComponent(BehaviorTreeComponent(tree: tree));
+
+      // Step 1: Distance = 10 -> condition fails, attackTicked is false
+      engine.step(0.016);
+      expect(attackTicked, isFalse);
+      expect(btComp.lastStatus, equals(NodeStatus.failure));
+
+      // Step 2: Distance = 3 -> condition passes, attackTicked is true
+      btComp.blackboard.set('targetDistance', 3);
+      engine.step(0.016);
+      expect(attackTicked, isTrue);
+      expect(btComp.lastStatus, equals(NodeStatus.success));
+
+      // FSM Component test
+      var patrolEntered = false;
+      var alertEntered = false;
+
+      final fsmComp = go.addComponent(AiFsmComponent<String>(initialState: 'patrol'));
+      fsmComp.addState('patrol', LambdaState(onEnter: (_) => patrolEntered = true));
+      fsmComp.addState('alert', LambdaState(onEnter: (_) => alertEntered = true));
+      fsmComp.addTransition('patrol', 'alert', (targetGo) => targetGo.transform.position.x > 10.0);
+
+      engine.step(0.016);
+      expect(fsmComp.currentStateId, equals('patrol'));
+      expect(patrolEntered, isTrue);
+      expect(alertEntered, isFalse);
+
+      // Move enemy beyond x = 10 -> triggers transition to alert
+      go.transform.position = const Vec3(15, 0, 0);
+      engine.step(0.016);
+      expect(fsmComp.currentStateId, equals('alert'));
+      expect(alertEntered, isTrue);
+    });
+
+    test('DebugController renders immediate-mode UI with metrics and rolling voxlog logs', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final ring = RingBufferSink(capacity: 10);
+      final testLog = Logger(name: 'Engine', sinks: [ring], level: LogLevel.info);
+      testLog.info('Boot sequence ready');
+      testLog.warn('GPU pipeline initialized');
+
+      final debugGo = engine.scene.createGameObject('Debug');
+      final dbg = debugGo.addComponent(DebugController(isOpen: true));
+
+      engine.step(0.016);
+
+      final ui = VoxUiContext();
+      final input = VoxInput();
+      ui.beginFrame(input);
+
+      dbg.renderDebugUi(ui, ring);
+
+      final dl = ui.endFrame();
+      expect(dl.commands, isNotEmpty);
+      expect(dl.commands.any((c) => c.text == 'Engine Diagnostics'), isTrue);
+      expect(dl.commands.any((c) => c.text != null && c.text!.contains('Boot sequence ready')), isTrue);
+    });
+
+    test('E29 — Tweening & Geometric Spatial Queries (voxtween, voxgeom): Transform and GameObject tweening', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.time.maximumDeltaTime = 10.0;
+
+      final go = engine.scene.createGameObject('Hero');
+      go.transform.position = Vec3.zero;
+      go.transform.localScale = 1.0;
+
+      var posCompleted = false;
+      var scaleCompleted = false;
+
+      go.transform.tweenPosition(const Vec3(10, 0, 0), 1.0, ease: Ease.linear)
+        .onComplete(() => posCompleted = true);
+
+      go.tweenScale(2.0, 1.0, ease: Ease.linear)
+        .onComplete(() => scaleCompleted = true);
+
+      // Step half second (0.5s)
+      engine.step(0.5);
+      expect(go.transform.position.x, closeTo(5.0, 1e-3));
+      expect(go.transform.localScale, closeTo(1.5, 1e-3));
+      expect(posCompleted, isFalse);
+      expect(scaleCompleted, isFalse);
+
+      // Step remaining half second
+      engine.step(0.5);
+      expect(go.transform.position.x, closeTo(10.0, 1e-3));
+      expect(go.transform.localScale, closeTo(2.0, 1e-3));
+      expect(posCompleted, isTrue);
+      expect(scaleCompleted, isTrue);
+
+      // Destroying GameObject kills active tweens
+      go.transform.tweenPosition(const Vec3(100, 0, 0), 1.0);
+      go.destroy();
+      engine.step(0.016); // flushes destroyed
+      expect(TweenManager.instance.activeCount, equals(0));
+    });
+
+    test('E29 — Tweening & Geometric Spatial Queries (voxtween, voxgeom): Camera frustum extraction and visibility culling', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final camGo = engine.scene.createGameObject('MainCamera');
+      camGo.transform.position = const Vec3(0, 0, 10);
+      camGo.transform.lookAt(Vec3.zero);
+      final cam = camGo.addComponent(Camera(fovYRadians: 1.0, near: 0.1, far: 50.0));
+
+      final visibleGo = engine.scene.createGameObject('VisibleCube');
+      visibleGo.transform.position = const Vec3(0, 0, 0);
+      final visibleMesh = visibleGo.addComponent(MeshRenderer());
+
+      final behindGo = engine.scene.createGameObject('BehindCube');
+      behindGo.transform.position = const Vec3(0, 0, 20); // Behind camera
+      final behindMesh = behindGo.addComponent(MeshRenderer());
+
+      final farAwayGo = engine.scene.createGameObject('FarAwayCube');
+      farAwayGo.transform.position = const Vec3(100, 0, 0); // Far off to right
+      final farMesh = farAwayGo.addComponent(MeshRenderer());
+
+      engine.step(0.016);
+
+      final frustum = cam.calculateFrustum();
+      expect(frustum.planes, hasLength(6));
+
+      expect(cam.isMeshVisible(visibleMesh), isTrue);
+      expect(cam.isMeshVisible(behindMesh), isFalse);
+      expect(cam.isMeshVisible(farMesh), isFalse);
+    });
+
+    test('E29 — Tweening & Geometric Spatial Queries (voxtween, voxgeom): Scene.raycastMeshes hits closest active MeshRenderer bounding box', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final cubeA = engine.scene.createGameObject('CubeNear');
+      cubeA.transform.position = const Vec3(0, 0, 5);
+      final meshA = cubeA.addComponent(MeshRenderer());
+
+      final cubeB = engine.scene.createGameObject('CubeFar');
+      cubeB.transform.position = const Vec3(0, 0, 15);
+      cubeB.addComponent(MeshRenderer());
+
+      engine.step(0.016);
+
+      final ray = Ray3(const GeomVec3(0, 0, 0), const GeomVec3(0, 0, 1));
+      final hit = engine.scene.raycastMeshes(ray);
+
+      expect(hit, isNotNull);
+      expect(hit!.gameObject, equals(cubeA));
+      expect(hit.renderer, equals(meshA));
+      expect(hit.distance, closeTo(4.5, 1e-3));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

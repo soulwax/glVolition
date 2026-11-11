@@ -521,3 +521,39 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _APIs:_ `Entity` (generational recycling), `SparseSet<T>` (contiguous dense arrays, $O(1)$ swap-and-pop), `Registry` (`create`, `destroy`, `assign`, `remove`, `has`, `get`, `tryGet`), `view<T>`, `view2<T1, T2>` ($O(\min(N_1, N_2))$ optimal joins), `view3<T1, T2, T3>`.
   - _Verify:_ `vendor/voxecs/test/voxecs_test.dart` & `test/subsystems_test.dart`.
 
+---
+
+## E28: Procedural Audio, AI Components, and Immediate-Mode Diagnostics Console
+
+- [x] **E28-1. `voxsynth` Submodule & Procedural Audio One-Shots.**
+  - _Location:_ `./vendor/voxsynth` (`https://github.com/soulwax/voxsynth`).
+  - _APIs:_ `SynthParams`, `Waveform`, `AudioGenerator`, `PcmAudio`, `ProceduralAudioClip`, `AudioSource.playSynth(params)`, `Scene.playSynthAt(params, position)`.
+  - _Verify:_ `vendor/voxsynth/test/voxsynth_test.dart` & `test/subsystems_test.dart` (chiptune synthesis, preset factories, PCM export, and audio source playback).
+- [x] **E28-2. `voxai` Submodule & Engine AI Components (`BehaviorTreeComponent`, `AiFsmComponent`).**
+  - _Location:_ `./vendor/voxai` (`https://github.com/soulwax/voxai`).
+  - _APIs:_ `BehaviorTree`, `BtNode`, `BtSequence`, `BtSelector`, `BtAction`, `AiStateMachine`, `State`, `BehaviorTreeComponent`, `AiFsmComponent`.
+  - _Verify:_ `vendor/voxai/test/voxai_test.dart` & `test/subsystems_test.dart` (AI state cycles, behavior tree ticks within engine game loop, and deferred start transitions).
+- [x] **E28-3. `voxui` & `voxlog` Immediate-Mode Debug Console & Performance Metrics.**
+  - _Touches:_ `lib/src/engine/debug_controller.dart`.
+  - _APIs:_ `DebugController.renderDebugUi(ctx)`, displaying live FPS, delta time, total frames, active GameObjects, camera transforms, time scale sliders, and rolling `voxlog` logs.
+  - _Verify:_ `test/subsystems_test.dart` (immediate-mode diagnostics window generation and rolling log sink verification).
+
+---
+
+## E29: Fluent Tweening Framework (voxtween), 3D Spatial Geometry & Frustum Culling (voxgeom)
+
+- [x] **E29-1. `voxtween` Submodule: Fluent Interpolation, Sequences & Easing Curves.**
+  - _Location:_ `./vendor/voxtween` (`https://github.com/soulwax/voxtween`).
+  - _APIs:_ `Tween<T>`, `Sequence`, `Ease`, `EaseFunc`, `TweenManager`, `Interpolators`, `TransformComponent.tweenPosition`, `tweenLocalPosition`, `tweenScale`, `tweenRotation`, `GameObject.tweenScale`.
+  - _Verify:_ `vendor/voxtween/test/voxtween_test.dart` & `test/subsystems_test.dart` (30+ easing equations, ping-pong, delay, target-based cancellation, and per-frame engine advancement).
+- [x] **E29-2. `voxgeom` Submodule: 3D Geometric Testing, Raycasting & Dynamic AABB Tree.**
+  - _Location:_ `./vendor/voxgeom` (`https://github.com/soulwax/voxgeom`).
+  - _APIs:_ `GeomVec3`, `Plane3`, `Aabb3`, `Sphere3`, `Ray3` (Kay-Kajiya slab test, Möller-Trumbore ray-triangle, ray-sphere), `Frustum3` (Gribb-Hartmann extraction from 4x4 view-projection matrix), `FrustumIntersection`, `AabbTree<T>` (dynamic BVH with Surface Area Heuristic).
+  - _Verify:_ `vendor/voxgeom/test/voxgeom_test.dart` & `test/subsystems_test.dart` (primitives arithmetic, ray-geometry hits, frustum plane containment, and dynamic tree queries).
+- [x] **E29-3. Engine Integration: Camera Frustum Culling, Screen-to-World Raycasting & Scene Mesh Raycasts.**
+  - _Touches:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/components/renderers.dart`, `lib/src/engine/scene.dart`, `lib/src/engine/engine.dart`.
+  - _APIs:_ `Camera.calculateFrustum([aspect])`, `Camera.screenPointToRay3(x, y)`, `Camera.isMeshVisible(renderer)`, `MeshRenderer.worldAabb`, `Scene.raycastMeshes(ray)`, `SceneMeshRayHit`.
+  - _Verify:_ `test/subsystems_test.dart` (frustum camera culling, closest mesh renderer raycast hits, and automatic tween lifecycle cleanup on object destruction).
+
+
+

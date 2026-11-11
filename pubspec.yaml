@@ -16,6 +16,14 @@ dependencies:
     path: vendor/voxui
   voxecs:
     path: vendor/voxecs
+  voxai:
+    path: vendor/voxai
+  voxsynth:
+    path: vendor/voxsynth
+  voxtween:
+    path: vendor/voxtween
+  voxgeom:
+    path: vendor/voxgeom
   web: ^0.5.0
 
 dev_dependencies:

@@ -156,6 +156,29 @@ final class Camera extends Component {
     return ray.origin + ray.direction * viewportPoint.z;
   }
 
+  /// Extracts the 6-plane viewing frustum for this camera (E29-2).
+  Frustum3 calculateFrustum([double? aspect]) {
+    final view = toCameraView(aspect);
+    return Frustum3.fromMatrix(view.viewProjection.m);
+  }
+
+  /// Converts screen pixel coordinates into a normalized [Ray3] in world space (E29-2).
+  Ray3? screenPointToRay3(double x, double y) {
+    final r = screenPointToRay(x, y);
+    if (r == null) return null;
+    return Ray3(
+      GeomVec3(r.origin.x, r.origin.y, r.origin.z),
+      GeomVec3(r.direction.x, r.direction.y, r.direction.z),
+    );
+  }
+
+  /// Tests whether [renderer]'s bounding volume is visible in this camera's frustum (E29-2).
+  bool isMeshVisible(MeshRenderer renderer, [double? aspect]) {
+    if (!renderer.isActiveAndEnabled) return false;
+    final frustum = calculateFrustum(aspect);
+    return frustum.intersectsAabb(renderer.worldAabb) != FrustumIntersection.outside;
+  }
+
   CameraView toCameraView([double? aspect]) {
     _sync();
     final base = controller.toCameraView(aspect ?? engine.graphics.aspect);

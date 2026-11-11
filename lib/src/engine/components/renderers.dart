@@ -117,6 +117,20 @@ final class MeshRenderer extends Component {
     _leaf?.blendMode = value;
   }
 
+  /// Computes the approximate world-space bounding box for this renderer (E29-2).
+  Aabb3 get worldAabb {
+    final pos = transform.position;
+    final s = transform.lossyScale;
+    final stretch = transform.localStretch;
+    final halfExtents = GeomVec3(
+      (s * stretch.x).abs() * 0.5,
+      (s * stretch.y).abs() * 0.5,
+      (s * stretch.z).abs() * 0.5,
+    );
+    final center = GeomVec3(pos.x, pos.y, pos.z);
+    return Aabb3.fromCenterExtents(center, halfExtents);
+  }
+
   static final spec = ComponentSpec<MeshRenderer>(
     'MeshRenderer',
     MeshRenderer.new,

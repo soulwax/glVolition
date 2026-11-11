@@ -187,6 +187,10 @@ final class GameObject {
         active: active,
       );
 
+  /// Smoothly interpolates uniform scale over [duration] seconds (E29-1).
+  Tween<double> tweenScale(double target, double duration, {EaseFunc? ease}) =>
+      transform.tweenScale(target, duration, ease: ease);
+
   /// Destroys this object, its children and their components at the end of
   /// the frame.
   void destroy() => scene.destroy(this);

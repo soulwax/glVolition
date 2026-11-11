@@ -90,6 +90,34 @@ final class _AudioCrossFade {
   });
 }
 
+/// In-memory procedural audio clip synthesized via `package:voxsynth` (E28-1).
+final class ProceduralAudioClip implements AudioClip {
+  @override
+  final String path;
+  final Uint8List wavBytes;
+  final SynthSound? synthSound;
+
+  ProceduralAudioClip({
+    required this.path,
+    required this.wavBytes,
+    this.synthSound,
+  });
+
+  factory ProceduralAudioClip.fromSynth(
+    SynthSound synth, {
+    String? name,
+    int sampleRate = 44100,
+  }) {
+    final bytes = synth.toWavBytes(sampleRate: sampleRate);
+    final clipPath = 'procedural://${name ?? "synth_${bytes.length}"}';
+    return ProceduralAudioClip(
+      path: clipPath,
+      wavBytes: bytes,
+      synthSound: synth,
+    );
+  }
+}
+
 /// Plays [AudioClip]s through the host's [AudioDevice]: either overlapping
 /// one-shots via [playOneShot] or a single controllable voice via [play]
 /// (for engine hums, music, ambience).
@@ -336,6 +364,17 @@ final class AudioSource extends Component {
       volume: eval.volume * volumeScale,
       pitch: _pitch * pitch,
     );
+  }
+
+  /// Plays a procedurally synthesized sound effect via `package:voxsynth` (E28-1).
+  void playSynth(
+    SynthSound synth, {
+    double volumeScale = 1.0,
+    double pitch = 1.0,
+    String? name,
+  }) {
+    final clip = ProceduralAudioClip.fromSynth(synth, name: name);
+    playOneShot(clip, volumeScale: volumeScale, pitch: pitch);
   }
 
   @override

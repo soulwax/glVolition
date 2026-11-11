@@ -168,4 +168,49 @@ final class DebugController extends Behaviour {
       paused: _paused,
     );
   }
+
+  /// Renders diagnostics into an immediate-mode [voxui] window (E28-3).
+  void renderDebugUi(VoxUiContext ui, [RingBufferSink? logSink]) {
+    if (!isOpen) return;
+    final m = metrics();
+    if (ui.beginWindow('Engine Diagnostics', x: 20, y: 20, width: 280, height: 260)) {
+      ui.labelValue('FPS', m.fps.toStringAsFixed(0));
+      ui.labelValue('Frame p50', '${m.p50FrameMs.toStringAsFixed(1)} ms');
+      ui.labelValue('Frame p95', '${m.p95FrameMs.toStringAsFixed(1)} ms');
+      ui.separator();
+      ui.labelValue('GameObjects', m.gameObjectCount.toString());
+      ui.labelValue('Behaviours', m.activeBehaviourCount.toString());
+      ui.labelValue('Colliders', m.colliderCount.toString());
+      ui.labelValue('Particles', m.particleSystemCount.toString());
+      ui.labelValue('Lights', m.activeLightCount.toString());
+      ui.separator();
+
+      if (ui.button(_paused ? 'Resume' : 'Pause')) {
+        togglePause();
+      }
+      ui.sameLine();
+      if (ui.button('Step Frame')) {
+        stepSingleFrame();
+      }
+
+      final newScale = ui.sliderDouble('Time Scale', time.timeScale, min: 0.1, max: 2.0);
+      if ((newScale - time.timeScale).abs() > 0.01) {
+        setTimeScale(newScale);
+      }
+
+      if (logSink != null && ui.collapsingHeader('Logs (${logSink.length})', defaultOpen: true)) {
+        for (final rec in logSink.records.toList().reversed.take(6)) {
+          final prefix = '[${rec.level.label}]';
+          ui.text(
+            '$prefix ${rec.message}',
+            color: rec.level >= LogLevel.error
+                ? VoxColor.red
+                : (rec.level >= LogLevel.warn ? VoxColor.yellow : VoxColor.white),
+          );
+        }
+      }
+
+      ui.endWindow();
+    }
+  }
 }

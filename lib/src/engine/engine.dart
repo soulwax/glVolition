@@ -126,6 +126,7 @@ final class Engine {
       time._beginFrame(rawDeltaSeconds);
       scenes._stepTransition(time.unscaledDeltaTime);
       _runInvocations();
+      TweenManager.instance.update(time.deltaTime);
 
       time._inFixedStep = true;
       var steps = 0;

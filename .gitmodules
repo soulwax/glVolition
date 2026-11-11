@@ -10,3 +10,15 @@
 [submodule "vendor/voxecs"]
 	path = vendor/voxecs
 	url = https://github.com/soulwax/voxecs.git
+[submodule "vendor/voxai"]
+	path = vendor/voxai
+	url = https://github.com/soulwax/voxai.git
+[submodule "vendor/voxsynth"]
+	path = vendor/voxsynth
+	url = https://github.com/soulwax/voxsynth.git
+[submodule "vendor/voxtween"]
+	path = vendor/voxtween
+	url = https://github.com/soulwax/voxtween.git
+[submodule "vendor/voxgeom"]
+	path = vendor/voxgeom
+	url = https://github.com/soulwax/voxgeom.git

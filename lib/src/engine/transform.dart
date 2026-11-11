@@ -113,4 +113,55 @@ final class TransformComponent extends Component {
 
   Vec3 transformDirection(Vec3 direction) => rotation.rotate(direction);
   Vec3 inverseTransformDirection(Vec3 direction) => rotation.inverse.rotate(direction);
+
+  /// Smoothly interpolates world position to [target] over [duration] seconds (E29-1).
+  Tween<Vec3> tweenPosition(Vec3 target, double duration, {EaseFunc? ease}) {
+    return TweenManager.instance.custom<Vec3>(
+      getter: () => position,
+      setter: (v) => position = v,
+      endValue: target,
+      duration: duration,
+      interpolator: (a, b, t) => a + (b - a) * t,
+      target: this,
+      ease: ease,
+    );
+  }
+
+  /// Smoothly interpolates local position to [target] over [duration] seconds (E29-1).
+  Tween<Vec3> tweenLocalPosition(Vec3 target, double duration, {EaseFunc? ease}) {
+    return TweenManager.instance.custom<Vec3>(
+      getter: () => localPosition,
+      setter: (v) => localPosition = v,
+      endValue: target,
+      duration: duration,
+      interpolator: (a, b, t) => a + (b - a) * t,
+      target: this,
+      ease: ease,
+    );
+  }
+
+  /// Smoothly interpolates uniform scale to [target] over [duration] seconds (E29-1).
+  Tween<double> tweenScale(double target, double duration, {EaseFunc? ease}) {
+    return TweenManager.instance.to(
+      (v) => localScale = v,
+      target,
+      duration,
+      getter: () => localScale,
+      target: this,
+      ease: ease,
+    );
+  }
+
+  /// Smoothly spherical-linearly interpolates rotation to [target] over [duration] seconds (E29-1).
+  Tween<Quat> tweenRotation(Quat target, double duration, {EaseFunc? ease}) {
+    return TweenManager.instance.custom<Quat>(
+      getter: () => rotation,
+      setter: (v) => rotation = v,
+      endValue: target,
+      duration: duration,
+      interpolator: (a, b, t) => Mathfx.slerp(a, b, t),
+      target: this,
+      ease: ease,
+    );
+  }
 }
