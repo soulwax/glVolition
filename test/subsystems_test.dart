@@ -4090,6 +4090,109 @@ void main() {
       expect(spawned, hasLength(positions.length));
       expect(scatterGo.children, hasLength(positions.length));
     });
+
+    test('E32: RigidBody2D and BoxCollider2D fall under gravity and rest on ground', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.scene.physics2D.gravity = const Vec2(0.0, -10.0);
+
+      // Static ground at (0, 0), size (10, 1) -> top is at y = 0.5
+      final groundGo = engine.scene.createGameObject('Ground', position: Vec3.zero);
+      groundGo.addComponent(BoxCollider2D(
+        size: const Vec2(10.0, 1.0),
+        friction: 0.5,
+        restitution: 0.0,
+      ));
+
+      // Dynamic crate at (0, 3), size (1, 1) -> halfHeight = 0.5
+      final crateGo = engine.scene.createGameObject('Crate', position: const Vec3(0.0, 3.0, 0.0));
+      final rb = crateGo.addComponent(RigidBody2D(bodyType: BodyType.dynamicBody));
+      crateGo.addComponent(BoxCollider2D(
+        size: const Vec2(1.0, 1.0),
+        friction: 0.5,
+        restitution: 0.0,
+      ));
+
+      // Step engine 60 frames (1.0s)
+      for (var i = 0; i < 60; i++) {
+        engine.step(1.0 / 60.0);
+      }
+
+      // Crate should come to rest on ground: y = 0.5 + 0.5 = 1.0
+      expect(crateGo.transform.position.y, closeTo(1.0, 0.05));
+      expect(rb.linearVelocity.y.abs(), lessThan(0.05));
+    });
+
+    test('E32: 2D Collision and Trigger Behaviour callbacks', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.scene.physics2D.gravity = const Vec2(0.0, -10.0);
+
+      final colSpy = _CollisionSpy2D();
+      final trigSpy = _TriggerSpy2D();
+
+      final groundGo = engine.scene.createGameObject('Ground', position: Vec3.zero);
+      groundGo.addComponent(BoxCollider2D(size: const Vec2(10.0, 1.0)));
+      groundGo.addComponent(colSpy);
+
+      // Sensor zone at (0, 1.5)
+      final sensorGo = engine.scene.createGameObject('Sensor', position: const Vec3(0.0, 1.5, 0.0));
+      sensorGo.addComponent(BoxCollider2D(size: const Vec2(4.0, 2.0), isTrigger: true));
+      sensorGo.addComponent(trigSpy);
+
+      // Dynamic crate at (0, 3)
+      final crateGo = engine.scene.createGameObject('Crate', position: const Vec3(0.0, 3.0, 0.0));
+      crateGo.addComponent(RigidBody2D(bodyType: BodyType.dynamicBody));
+      crateGo.addComponent(CircleCollider2D(radius: 0.5));
+
+      for (var i = 0; i < 60; i++) {
+        engine.step(1.0 / 60.0);
+      }
+
+      expect(trigSpy.entered, isTrue);
+      expect(colSpy.entered, isTrue);
+      expect(colSpy.lastCollision, isNotNull);
+      expect(colSpy.lastCollision!.otherGameObject, equals(crateGo));
+    });
+
+    test('E32: DistanceJoint2D maintains distance constraint in engine scene', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.scene.physics2D.gravity = const Vec2(0.0, -10.0);
+
+      final anchorGo = engine.scene.createGameObject('Anchor', position: const Vec3(0.0, 5.0, 0.0));
+      final anchorRb = anchorGo.addComponent(RigidBody2D(bodyType: BodyType.staticBody));
+
+      final bobGo = engine.scene.createGameObject('Bob', position: const Vec3(3.0, 5.0, 0.0));
+      bobGo.addComponent(RigidBody2D(bodyType: BodyType.dynamicBody));
+      bobGo.addComponent(CircleCollider2D(radius: 0.3));
+
+      bobGo.addComponent(DistanceJoint2D(
+        connectedBody: anchorRb,
+        length: 3.0,
+      ));
+
+      for (var i = 0; i < 60; i++) {
+        engine.step(1.0 / 60.0);
+      }
+
+      final dist = (bobGo.transform.position - anchorGo.transform.position).length;
+      expect(dist, closeTo(3.0, 0.05));
+    });
+
+    test('E32: Scene.raycast2D queries 2D colliders', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final targetGo = engine.scene.createGameObject('Target', position: const Vec3(0.0, 4.0, 0.0));
+      targetGo.addComponent(CircleCollider2D(radius: 1.0));
+
+      final hit = engine.scene.raycast2D(const Vec2(0.0, 10.0), const Vec2(0.0, -1.0));
+      expect(hit, isNotNull);
+      expect(hit!.gameObject, equals(targetGo));
+      expect(hit.point.y, closeTo(5.0, 1e-3));
+      expect(hit.normal.y, closeTo(1.0, 1e-3));
+    });
   });
 }
 
@@ -4153,4 +4256,26 @@ final class _CollisionSpy extends Behaviour {
 
   @override
   void onCollisionEnter(Collision collision) => onHit(collision);
+}
+
+final class _CollisionSpy2D extends Behaviour {
+  bool entered = false;
+  Collision2D? lastCollision;
+
+  @override
+  void onCollisionEnter2D(Collision2D collision) {
+    entered = true;
+    lastCollision = collision;
+  }
+}
+
+final class _TriggerSpy2D extends Behaviour {
+  bool entered = false;
+  Collider2D? lastTrigger;
+
+  @override
+  void onTriggerEnter2D(Collider2D other) {
+    entered = true;
+    lastTrigger = other;
+  }
 }

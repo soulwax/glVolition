@@ -95,6 +95,24 @@ abstract class Behaviour extends Component {
   /// collides with another solid collider (E9-3).
   void onCollisionEnter(Collision collision) {}
 
+  /// Called when a 2D solid collider on this object first collides with another 2D collider (E32).
+  void onCollisionEnter2D(Collision2D collision) {}
+
+  /// Called each fixed frame a 2D solid collision persists (E32).
+  void onCollisionStay2D(Collision2D collision) {}
+
+  /// Called when a 2D solid collision ceases (E32).
+  void onCollisionExit2D(Collision2D collision) {}
+
+  /// Called when a 2D trigger collider is entered (E32).
+  void onTriggerEnter2D(Collider2D other) {}
+
+  /// Called each fixed frame a 2D trigger overlap persists (E32).
+  void onTriggerStay2D(Collider2D other) {}
+
+  /// Called when a 2D trigger collider is exited (E32).
+  void onTriggerExit2D(Collider2D other) {}
+
   /// Called when the pointer enters a collider attached to this GameObject (E16-1).
   void onPointerEnter(PointerRaycastHit hit) {}
 

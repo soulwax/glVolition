@@ -589,6 +589,24 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _APIs:_ `PoissonScatterComponent(areaWidth, areaHeight, minDistance, seed)`, `sampleWorldPositions({y, customSeed})`, `spawnPrefabs(prefab, {parent, y, customSeed})`.
   - _Verify:_ `test/subsystems_test.dart` (minimum distance clearance adherence and prefab hierarchy instantiation).
 
+---
+
+## E32: Rigid Body Dynamics, Sequential Impulse Solver & SAT Manifolds (voxphys)
+
+- [x] **E32-1. `voxphys` Submodule: 2D Rigid Body Physics Engine.**
+  - _Location:_ `./vendor/voxphys` (`https://github.com/soulwax/voxphys`).
+  - _APIs:_ `PhysVec2`, `PhysMat2`, `PhysTransform`, `PhysAabb2`, `PhysShape`, `CircleShape` (`PhysCircle`), `PolygonShape` (`PhysPolygon`), `SegmentShape` (`PhysSegment`), `RigidBody` (`PhysBody`), `Fixture` (`PhysFixture`), `ContactManifold`, `CollisionDetector` (SAT edge-clipping convex polygon/box vs polygon, polygon vs circle, and circle vs circle), `ContactSolver` (sequential impulse velocity solver with warm-starting, Coulomb friction cone, restitution velocity bias, and Baumgarte position correction), `PhysJoint`, `DistanceJoint`, `RevoluteJoint` (pin/hinge with motor and angle limits), `PrismaticJoint` (slider with motor and translation limits), `SpringJoint`, `PhysWorld2D`, `PhysRaycastHit2D`.
+  - _Verify:_ `vendor/voxphys/test/voxphys_test.dart` & `test/subsystems_test.dart` (15/15 unit tests: SAT manifolds, gravity fall, stacking rest, distance constraints, revolute pin anchors, prismatic rail slider, and raycasting).
+- [x] **E32-2. `RigidBody2D` & `Collider2D` Engine Components.**
+  - _Touches:_ `lib/src/engine/components/physics_2d.dart`.
+  - _APIs:_ `RigidBody2D` (`bodyType`, `linearVelocity`, `angularVelocity`, `linearDamping`, `angularDamping`, `gravityScale`, `fixedRotation`, `bullet`, `applyForce`, `applyImpulse`, `applyTorque`, `getVelocityAtPoint`), `Collider2D`, `BoxCollider2D`, `CircleCollider2D`, `PolygonCollider2D`, `DistanceJoint2D`, `RevoluteJoint2D`, `PrismaticJoint2D`.
+  - _Verify:_ `test/subsystems_test.dart` (gravity integration, resting on static ground, distance joint anchor maintenance, and pin hinge rotation).
+- [x] **E32-3. `Physics2DWorld` Subsystem, Scene Raycasting & Collision Callbacks.**
+  - _Touches:_ `lib/src/engine/components/physics_2d.dart`, `lib/src/engine/scene.dart`, `lib/src/engine/component.dart`.
+  - _APIs:_ `scene.physics2D`, `scene.raycast2D(origin, direction, [maxDistance, mask])`, `RaycastHit2D`, `Collision2D`, `Behaviour.onCollisionEnter2D`, `onCollisionStay2D`, `onCollisionExit2D`, `onTriggerEnter2D`, `onTriggerStay2D`, `onTriggerExit2D`.
+  - _Verify:_ `test/subsystems_test.dart` (automatic fixed-step synchronization with GameObject TransformComponent, continuous contact dispatch, trigger zones, and 2D scene raycasting).
+
+
 
 
 

@@ -30,6 +30,7 @@ final class Scene {
   final SceneEvents events = SceneEvents();
   final AudioMixer audioMixer = AudioMixer();
   late final PhysicsWorld physics = PhysicsWorld._(this);
+  late final Physics2DWorld physics2D = Physics2DWorld._(this);
   late final Gizmos gizmos = Gizmos._(this);
 
   Engine? _engine;
@@ -320,6 +321,15 @@ final class Scene {
     return best;
   }
 
+  /// Performs a 2D raycast in physics2D world space (E32).
+  RaycastHit2D? raycast2D(
+    Vec2 origin,
+    Vec2 direction, {
+    double maxDistance = 1000.0,
+    int mask = 0xFFFF,
+  }) =>
+      physics2D.raycast(origin, direction, maxDistance: maxDistance, mask: mask);
+
   /// Shakes all active cameras in the scene with distance-attenuated trauma
   /// radiating from [epicenter] (E17-3).
   void shakeCamerasAt(
@@ -511,6 +521,7 @@ final class Scene {
       if (b._active && !b._destroyRequested) _guard(b.fixedUpdate);
     }
     physics._step();
+    physics2D._step(_engine?.time.fixedDeltaTime ?? 0.02);
   }
 
   void _updateStep() {

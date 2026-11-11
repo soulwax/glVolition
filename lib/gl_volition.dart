@@ -12,5 +12,6 @@ export 'package:voxtween/voxtween.dart';
 export 'package:voxgeom/voxgeom.dart';
 export 'package:voxpath/voxpath.dart';
 export 'package:voxproc/voxproc.dart';
+export 'package:voxphys/voxphys.dart' hide CircleShape, RigidBody;
 
 export 'src/engine.dart';

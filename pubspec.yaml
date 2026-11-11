@@ -28,6 +28,8 @@ dependencies:
     path: vendor/voxpath
   voxproc:
     path: vendor/voxproc
+  voxphys:
+    path: vendor/voxphys
   web: ^0.5.0
 
 dev_dependencies:

@@ -28,3 +28,6 @@
 [submodule "vendor/voxproc"]
 	path = vendor/voxproc
 	url = https://github.com/soulwax/voxproc.git
+[submodule "vendor/voxphys"]
+	path = vendor/voxphys
+	url = https://github.com/soulwax/voxphys.git
