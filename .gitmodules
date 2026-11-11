@@ -61,3 +61,6 @@
 [submodule "vendor/voxsnap"]
 	path = vendor/voxsnap
 	url = https://github.com/soulwax/voxsnap.git
+[submodule "vendor/voxflow"]
+	path = vendor/voxflow
+	url = https://github.com/soulwax/voxflow.git

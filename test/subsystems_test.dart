@@ -5001,6 +5001,93 @@ void main() {
       }
       expect(ghost.transform.position.x, closeTo(5.0, 1.0));
     });
+
+    test('E43: FlowGraphComponent drives GameObject transforms, delays & signals in scene loop', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final g = FlowGraph(name: 'MoverGraph', registry: EngineFlowNodes.createRegistry());
+      final onUpdate = g.addNode('event.update');
+      final mulSpeed = g.addNode('math.mul', inputs: {'b': 10.0});
+      final makeDelta = g.addNode('vec.make3');
+      final translate = g.addNode('engine.translate');
+
+      g.connect(onUpdate.id, 'out', translate.id, 'in');
+      g.connect(onUpdate.id, 'dt', mulSpeed.id, 'a');
+      g.connect(mulSpeed.id, 'result', makeDelta.id, 'x');
+      g.connect(makeDelta.id, 'vec', translate.id, 'delta');
+
+      // Also test latent delay -> signal -> deactivate
+      final onEvt = g.addNode('event.custom', properties: {'event': 'DeactivateSoon'});
+      final delay = g.addNode('flow.delay', inputs: {'seconds': 0.2});
+      final emit = g.addNode('signal.emit', inputs: {'payload': 42}, properties: {'signal': 'done'});
+      final deactivate = g.addNode('engine.setActive', inputs: {'active': false});
+
+      g.connect(onEvt.id, 'out', delay.id, 'in');
+      g.connect(delay.id, 'completed', emit.id, 'in');
+      g.connect(emit.id, 'out', deactivate.id, 'in');
+
+      final signals = <(String, Object?)>[];
+      final flowComp = FlowGraphComponent(
+        g,
+        onSignal: (sig, payload) => signals.add((sig, payload)),
+      );
+      final go = engine.scene.createGameObject('Bot', components: [flowComp]);
+
+      // 4 frames * 0.05s * 10.0 speed = 2.0m along X
+      for (int i = 0; i < 4; i++) {
+        engine.step(0.05);
+      }
+      expect(go.transform.position.x, closeTo(2.0, 1e-4));
+
+      // Trigger custom latent event
+      flowComp.triggerEvent('DeactivateSoon');
+      expect(go.activeSelf, isTrue);
+      engine.step(0.1);
+      expect(signals, isEmpty);
+      engine.step(0.12);
+      expect(signals, [('done', 42)]);
+      expect(go.activeSelf, isFalse);
+    });
+
+    test('E43: FlowGraphUI renders node canvas, wire preview and interactive pin linking via voxui', () {
+      final g = FlowGraph();
+      final src = g.addNode('math.constFloat', x: 40.0, y: 40.0, properties: {'value': 7.0});
+      final dst = g.addNode('math.add', x: 260.0, y: 40.0);
+
+      final ui = VoxUiContext();
+      final state = FlowGraphUiState();
+
+      // Compute exact canvas offset matching FlowGraphUI.render(x: 20, y: 20)
+      final canvasX = 20.0 + 6.0;
+      final canvasY = 20.0 + ui.style.titleBarHeight + 4.0;
+      final outPinX = canvasX + src.x + 170.0 - 10.0;
+      final outPinY = canvasY + src.y + 22.0 + 12.0;
+      final inPinX = canvasX + dst.x + 10.0;
+      final inPinY = canvasY + dst.y + 22.0 + 12.0;
+
+      // Frame 1: click output pin on src node
+      ui.beginFrame(VoxInput(mouseX: outPinX, mouseY: outPinY, isMouseDown: true, wasMouseClicked: true));
+      FlowGraphUI.render(ui, g, state: state, x: 20, y: 20, width: 620, height: 400);
+      final cmds1 = ui.endFrame();
+      expect(state.linkingFromNodeId, src.id);
+      expect(cmds1.commands.where((c) => c.type == DrawCmdType.line), isNotEmpty);
+
+      // Frame 2: drag across canvas
+      ui.beginFrame(VoxInput(mouseX: (outPinX + inPinX) * 0.5, mouseY: outPinY, isMouseDown: true));
+      FlowGraphUI.render(ui, g, state: state, x: 20, y: 20, width: 620, height: 400);
+      ui.endFrame();
+
+      // Frame 3: release over input pin on dst node -> connects link cleanly
+      ui.beginFrame(VoxInput(mouseX: inPinX, mouseY: inPinY, wasMouseReleased: true));
+      FlowGraphUI.render(ui, g, state: state, x: 20, y: 20, width: 620, height: 400);
+      ui.endFrame();
+
+      expect(g.links.length, 1);
+      expect(g.links.first.fromNodeId, src.id);
+      expect(g.links.first.toNodeId, dst.id);
+      expect(DataflowEvaluator(g).evaluateOutput(dst.id, 'result'), closeTo(7.0, 1e-6));
+    });
   });
 }
 

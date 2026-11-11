@@ -50,6 +50,8 @@ dependencies:
     path: vendor/voxitem
   voxsnap:
     path: vendor/voxsnap
+  voxflow:
+    path: vendor/voxflow
   web: ^0.5.0
 
 dev_dependencies:

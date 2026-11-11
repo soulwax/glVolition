@@ -23,5 +23,6 @@ export 'package:voxvox/voxvox.dart';
 export 'package:voxpad/voxpad.dart';
 export 'package:voxitem/voxitem.dart';
 export 'package:voxsnap/voxsnap.dart';
+export 'package:voxflow/voxflow.dart';
 
 export 'src/engine.dart';

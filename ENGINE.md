@@ -756,11 +756,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E43: Visual Node Graphs, Reactive Dataflow & Logic Blueprints (voxflow)
 
-- [ ] **E43-1. `voxflow` Submodule: Typed Node Graphs, Dataflow Evaluation & Blueprint Exec Runtime.**
+- [x] **E43-1. `voxflow` Submodule: Typed Node Graphs, Dataflow Evaluation & Blueprint Exec Runtime.**
   - _Location:_ `./vendor/voxflow` (`https://github.com/soulwax/voxflow`).
   - _APIs:_ `PinType` (`exec`, `boolVal`, `intVal`, `floatVal`, `vec2Val`, `vec3Val`, `stringVal`, `colorVal`, `any`), `FlowNodeDef`, `FlowNodeRegistry`, `StandardNodes`, `FlowNodeInstance`, `FlowLink`, `FlowGraph` (topological sort, Kahn cycle detection, JSON round-trip), `DataflowEvaluator` (memoized pull execution), `FlowRunner` (`triggerEvent`, `step(dt)`, latent `Delay`, `Branch`, `Sequence`, `ForLoop`, `FlowBlackboard`).
   - _Verify:_ `vendor/voxflow/test/voxflow_test.dart` & `test/subsystems_test.dart` (cycle detection, implicit pin coercion, dirty pull evaluation, latent `Delay` coroutines, branching/looping blueprint execution, and JSON save/load).
-- [ ] **E43-2. `FlowGraphComponent` & Interactive ImGui Node Canvas (`FlowGraphUI`).**
+- [x] **E43-2. `FlowGraphComponent` & Interactive ImGui Node Canvas (`FlowGraphUI`).**
   - _Touches:_ `lib/src/engine/components/flow_graph.dart`.
   - _APIs:_ `FlowGraphComponent(graph, autoRunOnUpdate)`, `triggerEvent(name, args)`, `setVariable(name, val)`, built-in scene/transform bindings, `FlowGraphUI.render(ui, graph, state)` rendering draggable node cards, colored sockets, Bezier wire links, and live pin values via `voxui`.
   - _Verify:_ `test/subsystems_test.dart` (blueprint graph mutating `GameObject` transforms over engine frames, custom trigger events, and `voxui` node canvas interactive dragging/wiring).
