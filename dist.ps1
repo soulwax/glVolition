@@ -46,7 +46,12 @@ if (-not (Test-Path $resolvedDist)) {
     New-Item -ItemType Directory -Path $resolvedDist -Force | Out-Null
 }
 
-$binDist = Join-Path $resolvedDist "bin"
+$versionDist = Join-Path $resolvedDist $Version
+if (-not (Test-Path $versionDist)) {
+    New-Item -ItemType Directory -Path $versionDist -Force | Out-Null
+}
+
+$binDist = Join-Path $versionDist "bin"
 if (-not (Test-Path $binDist)) {
     New-Item -ItemType Directory -Path $binDist -Force | Out-Null
 }
@@ -75,28 +80,24 @@ $metadata = @"
 }
 "@
 
-$metaFilePath = Join-Path $resolvedDist "metadata.json"
+$metaFilePath = Join-Path $versionDist "metadata.json"
 $metadata | Set-Content -Path $metaFilePath -Encoding UTF8
 
-# Compile volition CLI binary into dist/bin
+# Compile volition CLI binary into dist/<version>/bin/volition.exe
 Write-Host "Compiling volition executable to $binDist\volition.exe..." -ForegroundColor Yellow
 dart compile exe bin/volition.dart -o (Join-Path $binDist "volition.exe")
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "Could not compile native volition CLI executable (non-fatal for web-only setups)."
 } else {
-    Write-Host "Compiled volition CLI executable successfully." -ForegroundColor Green
+    Write-Host "Compiled volition CLI executable successfully: $binDist\volition.exe" -ForegroundColor Green
 }
 
-# Build Standalone Windows Desktop Game Host
-Write-Host "`nBuilding standalone Windows desktop game into $resolvedDist\game..." -ForegroundColor Yellow
-$gameDist = Join-Path $resolvedDist "game"
-dart run bin/volition.dart build example/pixel_rocket/main.dart --target windows --out $gameDist
+# Build Standalone Windows Desktop Game Host into dist/<version>/pixel_rocket/windows
+Write-Host "`nBuilding standalone Windows desktop game into $versionDist\pixel_rocket\windows..." -ForegroundColor Yellow
+dart run bin/volition.dart build example/pixel_rocket/main.dart --target windows --version $Version --dist $resolvedDist
 if ($LASTEXITCODE -eq 0) {
+    $gameDist = Join-Path $versionDist "pixel_rocket\windows"
     $gameExe = Join-Path $gameDist "GlVolitionGame.exe"
-    if (Test-Path $gameExe) {
-        Copy-Item -Path $gameExe -Destination (Join-Path $resolvedDist "GlVolitionGame.exe") -Force
-        Write-Host "Packaged GlVolitionGame.exe in $resolvedDist" -ForegroundColor Green
-    }
     
     # Create double-clickable launcher script in dist
     $launcherPath = Join-Path $resolvedDist "Launch_Pixel_Rocket.cmd"
@@ -104,19 +105,19 @@ if ($LASTEXITCODE -eq 0) {
 @echo off
 setlocal
 cd /d "%~dp0"
-if exist "GlVolitionGame.exe" (
-    start "" "%~dp0GlVolitionGame.exe"
+if exist "$Version\pixel_rocket\windows\pixel_rocket.exe" (
+    start "" "%~dp0$Version\pixel_rocket\windows\pixel_rocket.exe"
     exit /b 0
 )
-if exist "game\GlVolitionGame.exe" (
-    start "" "%~dp0game\GlVolitionGame.exe"
+if exist "$Version\pixel_rocket\windows\GlVolitionGame.exe" (
+    start "" "%~dp0$Version\pixel_rocket\windows\GlVolitionGame.exe"
     exit /b 0
 )
-if exist "game\index.html" (
-    start "" msedge --app="%~dp0game\index.html"
+if exist "$Version\pixel_rocket\windows\index.html" (
+    start "" msedge --app="%~dp0$Version\pixel_rocket\windows\index.html"
     exit /b 0
 )
-echo [ERROR] No runnable game binary found.
+echo [ERROR] No runnable game binary found under $Version\pixel_rocket\windows.
 pause
 "@ | Set-Content -Path $launcherPath -Encoding ASCII
     Write-Host "Created game launcher: $launcherPath" -ForegroundColor Green

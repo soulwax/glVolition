@@ -41,10 +41,15 @@ dart run gl_volition:volition build example/pixel_rocket/main.dart --target wind
 # Serve an example with live reload, hot state, & live inspector (F12 / Alt+I)
 dart run gl_volition:volition serve example/\<target\>/main.dart --port 8080
 
-# Production builds (js | wasm | windows | exe)
+# Production builds (js | wasm | windows | native)
+# Outputs land in versioned, named organized folders under ./dist:
+# ./dist/<version>/<name>/<target>/
 dart run gl_volition:volition build example/pixel_rocket/main.dart --target js
 dart run gl_volition:volition build example/pixel_rocket/main.dart --target wasm
 dart run gl_volition:volition build example/pixel_rocket/main.dart --target windows
+
+# Package full distribution (CLI binary + all targets)
+dart run gl_volition:volition dist example/pixel_rocket/main.dart --version 0.1.0
 ```
 
 ## Validation Games & Examples

@@ -24,8 +24,9 @@ Future<void> main(List<String> args) async {
       stdout.writeln('--------------------------------------------------');
       stdout.writeln('Interactive Launcher (Console):');
       stdout.writeln('  [1] serve  - Start live dev server with hot reload (pixel_rocket)');
-      stdout.writeln('  [2] build  - Build game (JS bundle + Windows desktop host)');
-      stdout.writeln('  [3] test   - Run engine test suite');
+      stdout.writeln('  [2] build  - Build game into ./dist/<version>/<name>/<target>/');
+      stdout.writeln('  [3] dist   - Package complete distribution (CLI + Game targets)');
+      stdout.writeln('  [4] test   - Run engine test suite');
       stdout.writeln('  [q] exit');
       stdout.writeln('--------------------------------------------------');
       stdout.write('Select an option [1]: ');
@@ -40,6 +41,10 @@ Future<void> main(List<String> args) async {
         stdout.writeln('\nBuild completed. Press Enter to exit.');
         stdin.readLineSync();
       } else if (input == '3') {
+        await _runDist(['example/pixel_rocket/main.dart']);
+        stdout.writeln('\nDistribution packaging completed. Press Enter to exit.');
+        stdin.readLineSync();
+      } else if (input == '4') {
         final proc = await Process.start(
           _dartExecutable,
           ['test'],
@@ -76,6 +81,8 @@ Future<void> main(List<String> args) async {
       await _runServe(rest);
     case 'build':
       await _runBuild(rest);
+    case 'dist':
+      await _runDist(rest);
     default:
       log.error('Unknown command "$cmd".');
       _printUsage();
@@ -90,7 +97,11 @@ glVolition CLI (volition)
 Usage:
   dart run gl_volition:volition test [test-args...]
   dart run gl_volition:volition serve <entry.dart> [--port 8080] [--root <dir>]
-  dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows] [--out <dir>]
+  dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows|native] [--version <ver>] [--name <name>] [--out <dir>]
+  dart run gl_volition:volition dist [entry.dart] [--target all|windows|js|wasm] [--version <ver>] [--name <name>] [--dist <dir>]
+
+Outputs default to a versioned, named folder structure under ./dist:
+  ./dist/<version>/<name>/<target>/
 ''');
 }
 
@@ -288,10 +299,122 @@ String _injectLiveReload(String html) {
   return '$html\n$snippet';
 }
 
+String _resolveVersion({String? explicit}) {
+  if (explicit != null && explicit.trim().isNotEmpty) {
+    return explicit.trim();
+  }
+  final distVerFile = File('dist/version');
+  if (distVerFile.existsSync()) {
+    final v = distVerFile.readAsStringSync().trim();
+    if (v.isNotEmpty) return v;
+  }
+  final pubspecFile = File('pubspec.yaml');
+  if (pubspecFile.existsSync()) {
+    for (final line in pubspecFile.readAsLinesSync()) {
+      final trimmed = line.trim();
+      if (trimmed.startsWith('version:')) {
+        final v = trimmed.substring('version:'.length).trim();
+        if (v.isNotEmpty) return v;
+      }
+    }
+  }
+  return 'UNRELEASED';
+}
+
+void _writeDistVersion(String version, {String distRoot = 'dist'}) {
+  try {
+    final dir = Directory(distRoot);
+    if (!dir.existsSync()) {
+      dir.createSync(recursive: true);
+    }
+    File('$distRoot/version').writeAsStringSync(version.trim());
+  } catch (_) {}
+}
+
+String _resolveName(File entryFile, {String? explicit}) {
+  if (explicit != null && explicit.trim().isNotEmpty) {
+    return explicit.trim();
+  }
+  final normalized = entryFile.path.replaceAll('\\', '/');
+  final parts = normalized.split('/').where((p) => p.isNotEmpty).toList();
+  final exampleIdx = parts.indexOf('example');
+  if (exampleIdx != -1 && exampleIdx + 1 < parts.length) {
+    final seg = parts[exampleIdx + 1];
+    if (seg != 'main.dart' && !seg.endsWith('.dart')) {
+      return seg;
+    }
+  }
+  final parent = entryFile.parent.path.replaceAll('\\', '/').split('/').last;
+  if (parent.isNotEmpty && parent != '.' && parent != 'lib' && parent != 'bin') {
+    return parent;
+  }
+  final fileName = parts.isEmpty ? 'game' : parts.last;
+  return fileName.endsWith('.dart') ? fileName.substring(0, fileName.length - 5) : fileName;
+}
+
+String _resolveGitCommit() {
+  try {
+    final res = Process.runSync('git', ['rev-parse', '--short', 'HEAD']);
+    if (res.exitCode == 0) {
+      final out = (res.stdout as String).trim();
+      if (out.isNotEmpty) return out;
+    }
+  } catch (_) {}
+  return 'unknown';
+}
+
+void _writeWebLauncher(Directory destDir) {
+  final launcher = File('${destDir.path}/launch_web.cmd');
+  launcher.writeAsStringSync(
+    '@echo off\r\nstart "" msedge --app="%~dp0index.html"\r\n',
+  );
+}
+
+void _writeNativeLauncher(Directory destDir, {required String name}) {
+  final launcher = File('${destDir.path}/Launch_$name.cmd');
+  launcher.writeAsStringSync('''@echo off
+setlocal
+cd /d "%~dp0"
+if exist "$name.exe" (
+    start "" "%~dp0$name.exe"
+    exit /b 0
+)
+if exist "game.exe" (
+    start "" "%~dp0game.exe"
+    exit /b 0
+)
+echo [ERROR] No runnable binary found.
+pause
+''');
+}
+
+void _writeBuildMetadata(
+  Directory destDir, {
+  required String name,
+  required String version,
+  required String target,
+  required File entryFile,
+}) {
+  final meta = {
+    'name': name,
+    'version': version,
+    'target': target,
+    'entry': entryFile.path.replaceAll('\\', '/'),
+    'builtAt': DateTime.now().toUtc().toIso8601String(),
+    'commit': _resolveGitCommit(),
+  };
+  File('${destDir.path}/metadata.json').writeAsStringSync(
+    const JsonEncoder.withIndent('  ').convert(meta),
+  );
+}
+
 Future<void> _runBuild(List<String> args) async {
   String? entryPath;
   var target = 'js';
   String? outPath;
+  String? explicitVersion;
+  String? explicitName;
+  String distRoot = 'dist';
 
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
@@ -299,6 +422,12 @@ Future<void> _runBuild(List<String> args) async {
       target = args[++i];
     } else if (a == '--out' && i + 1 < args.length) {
       outPath = args[++i];
+    } else if (a == '--version' && i + 1 < args.length) {
+      explicitVersion = args[++i];
+    } else if (a == '--name' && i + 1 < args.length) {
+      explicitName = args[++i];
+    } else if (a == '--dist' && i + 1 < args.length) {
+      distRoot = args[++i];
     } else if (!a.startsWith('-')) {
       entryPath ??= a;
     }
@@ -311,7 +440,18 @@ Future<void> _runBuild(List<String> args) async {
     exit(66);
   }
 
-  final destDir = Directory(outPath ?? 'build/$target')..createSync(recursive: true);
+  final version = _resolveVersion(explicit: explicitVersion);
+  final name = _resolveName(entryFile, explicit: explicitName);
+
+  // Default output directory lands in a versioned, named organized folder structure under ./dist
+  final targetSubdir = (target == 'native' || target == 'exe') ? 'native' : target;
+  final defaultOutDir = '$distRoot/$version/$name/$targetSubdir';
+  final destDir = Directory(outPath ?? defaultOutDir)..createSync(recursive: true);
+
+  // Keep dist/version synchronized with active build version
+  _writeDistVersion(version, distRoot: distRoot);
+
+  log.info('Building "$name" [$target] into: ${destDir.path}');
   _copyStaticAssets(entryFile.parent, destDir);
 
   switch (target) {
@@ -334,6 +474,8 @@ Future<void> _runBuild(List<String> args) async {
       }
       final sizeKb = (File(outJs).lengthSync() / 1024).toStringAsFixed(1);
       log.info('Built $outJs ($sizeKb KB)');
+      _writeWebLauncher(destDir);
+
     case 'wasm':
       final outWasm = '${destDir.path}/main.wasm';
       log.info('Building WebAssembly bundle -> $outWasm');
@@ -351,12 +493,15 @@ Future<void> _runBuild(List<String> args) async {
         exit(res.exitCode);
       }
       log.info('Built $outWasm');
+      _writeWebLauncher(destDir);
+
     case 'windows':
-      await _buildWindowsExecutable(entryFile, destDir);
+      await _buildWindowsExecutable(entryFile, destDir, name: name);
+
     case 'exe':
     case 'native':
       final ext = Platform.isWindows ? '.exe' : '';
-      final outExe = '${destDir.path}/game$ext';
+      final outExe = '${destDir.path}/$name$ext';
       log.info('Building native AOT executable -> $outExe');
       final res = await Process.run(_dartExecutable, [
         'compile',
@@ -372,12 +517,112 @@ Future<void> _runBuild(List<String> args) async {
       }
       final sizeKb = (File(outExe).lengthSync() / 1024).toStringAsFixed(1);
       log.info('Built $outExe ($sizeKb KB)');
+      _writeNativeLauncher(destDir, name: name);
+
     default:
       log.error(
         'Unsupported --target "$target" (expected js, wasm, windows, or exe).',
       );
       exit(64);
   }
+
+  _writeBuildMetadata(
+    destDir,
+    name: name,
+    version: version,
+    target: target,
+    entryFile: entryFile,
+  );
+}
+
+Future<void> _runDist(List<String> args) async {
+  String? entryPath;
+  var target = 'all';
+  String? explicitVersion;
+  String? explicitName;
+  String distRoot = 'dist';
+
+  for (var i = 0; i < args.length; i++) {
+    final a = args[i];
+    if (a == '--target' && i + 1 < args.length) {
+      target = args[++i];
+    } else if (a == '--version' && i + 1 < args.length) {
+      explicitVersion = args[++i];
+    } else if (a == '--name' && i + 1 < args.length) {
+      explicitName = args[++i];
+    } else if (a == '--dist' && i + 1 < args.length) {
+      distRoot = args[++i];
+    } else if (!a.startsWith('-')) {
+      entryPath ??= a;
+    }
+  }
+
+  entryPath ??= 'example/pixel_rocket/main.dart';
+  final entryFile = File(entryPath);
+  if (!entryFile.existsSync()) {
+    log.error('Entry file not found: $entryPath');
+    exit(66);
+  }
+
+  final version = _resolveVersion(explicit: explicitVersion);
+  _writeDistVersion(version, distRoot: distRoot);
+  final name = _resolveName(entryFile, explicit: explicitName);
+
+  log.info('Packaging distribution for "$name" (version: $version, target: $target)...');
+
+  final versionDir = Directory('$distRoot/$version')..createSync(recursive: true);
+  final binDir = Directory('${versionDir.path}/bin')..createSync(recursive: true);
+
+  // 1. Build CLI native executable
+  final ext = Platform.isWindows ? '.exe' : '';
+  final volitionExe = '${binDir.path}/volition$ext';
+  log.info('Compiling CLI executable -> $volitionExe');
+  final compileCli = await Process.run(_dartExecutable, [
+    'compile',
+    'exe',
+    '-o',
+    volitionExe,
+    'bin/volition.dart',
+  ]);
+  if (compileCli.exitCode == 0) {
+    log.info('Compiled CLI executable ($volitionExe)');
+  } else {
+    log.warn('Could not compile native CLI executable');
+  }
+
+  // 2. Build game targets
+  final targetsToBuild = target == 'all'
+      ? ['windows', 'js', 'wasm']
+      : [target];
+
+  for (final t in targetsToBuild) {
+    log.info('Building target [$t] for "$name"...');
+    await _runBuild([
+      entryFile.path,
+      '--target',
+      t,
+      '--version',
+      version,
+      '--name',
+      name,
+      '--dist',
+      distRoot,
+    ]);
+  }
+
+  // 3. Write top-level metadata.json in dist/<version>/metadata.json
+  final meta = {
+    'name': name,
+    'version': version,
+    'targets': targetsToBuild,
+    'entry': entryFile.path.replaceAll('\\', '/'),
+    'builtAt': DateTime.now().toUtc().toIso8601String(),
+    'commit': _resolveGitCommit(),
+  };
+  File('${versionDir.path}/metadata.json')
+      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(meta));
+
+  log.info('Distribution packaging complete: ${versionDir.path}/');
 }
 
 void _copyStaticAssets(Directory sourceDir, Directory destDir) {
@@ -400,7 +645,11 @@ void _copyStaticAssets(Directory sourceDir, Directory destDir) {
   }
 }
 
-Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
+Future<void> _buildWindowsExecutable(
+  File entryFile,
+  Directory destDir, {
+  String name = 'game',
+}) async {
   final buildSubdir = Directory('${destDir.path}/build')..createSync(recursive: true);
   final outJs = '${destDir.path}/main.dart.js';
   final outBuildJs = '${buildSubdir.path}/main.dart.js';
@@ -421,9 +670,27 @@ Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
   }
   File(outJs).copySync(outBuildJs);
 
-  File('${destDir.path}/launch_desktop.cmd').writeAsStringSync(
-    '@echo off\r\nstart "" msedge --app="%~dp0index.html"\r\n',
-  );
+  final launcherScript = '''@echo off
+setlocal
+cd /d "%~dp0"
+if exist "$name.exe" (
+    start "" "%~dp0$name.exe"
+    exit /b 0
+)
+if exist "GlVolitionGame.exe" (
+    start "" "%~dp0GlVolitionGame.exe"
+    exit /b 0
+)
+if exist "index.html" (
+    start "" msedge --app="%~dp0index.html"
+    exit /b 0
+)
+echo [ERROR] No runnable game binary found.
+pause
+''';
+
+  File('${destDir.path}/Launch_$name.cmd').writeAsStringSync(launcherScript);
+  File('${destDir.path}/launch_desktop.cmd').writeAsStringSync(launcherScript);
 
   final hostCs = File('vendor/pixeldart/examples/desktop_host/Program.cs');
   if (!hostCs.existsSync()) {
@@ -444,7 +711,7 @@ Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>GlVolitionGame</AssemblyName>
-    <AssemblyTitle>glVolition Game</AssemblyTitle>
+    <AssemblyTitle>$name</AssemblyTitle>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
@@ -474,8 +741,12 @@ Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
     if (pubRes.exitCode == 0) {
       final builtExe = File('$pubDir/GlVolitionGame.exe');
       final finalExe = File('${destDir.path}/GlVolitionGame.exe');
+      final namedExe = File('${destDir.path}/$name.exe');
       if (builtExe.existsSync()) {
         builtExe.copySync(finalExe.path);
+        if (name != 'GlVolitionGame') {
+          builtExe.copySync(namedExe.path);
+        }
         log.info('Built single-file Windows executable -> ${finalExe.path}');
         return;
       }
