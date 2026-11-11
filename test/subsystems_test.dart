@@ -4262,42 +4262,56 @@ void main() {
       expect(hit.normal.y, closeTo(1.0, 1e-3));
     });
 
-    test('E33: NetworkManager and NetworkTransform replicate state across loopback transport', () {
-      final net = LoopbackNetwork();
-      final serverTransport = net.createEndpoint(0);
-      final clientTransport = net.createEndpoint(1);
+    test(
+      'E33: NetworkManager and NetworkTransform replicate state across loopback transport',
+      () {
+        final net = LoopbackNetwork();
+        final serverTransport = net.createEndpoint(0);
+        final clientTransport = net.createEndpoint(1);
 
-      final serverHost = HeadlessHost();
-      final serverEngine = Engine(serverHost);
-      serverEngine.scene.network.startServer(serverTransport: serverTransport);
+        final serverHost = HeadlessHost();
+        final serverEngine = Engine(serverHost);
+        serverEngine.scene.network.startServer(
+          serverTransport: serverTransport,
+        );
 
-      final clientHost = HeadlessHost();
-      final clientEngine = Engine(clientHost);
-      clientEngine.scene.network.startClient(1, clientTransport: clientTransport);
+        final clientHost = HeadlessHost();
+        final clientEngine = Engine(clientHost);
+        clientEngine.scene.network.startClient(
+          1,
+          clientTransport: clientTransport,
+        );
 
-      // Server entity
-      final serverGo = serverEngine.scene.createGameObject('Player', position: const Vec3(0.0, 0.0, 0.0));
-      serverGo.addComponent(NetworkIdentity(netId: 10, ownerPeerId: 0));
-      serverGo.addComponent(NetworkTransform(interpolationDelaySeconds: 0.0));
+        // Server entity
+        final serverGo = serverEngine.scene.createGameObject(
+          'Player',
+          position: const Vec3(0.0, 0.0, 0.0),
+        );
+        serverGo.addComponent(NetworkIdentity(netId: 10, ownerPeerId: 0));
+        serverGo.addComponent(NetworkTransform(interpolationDelaySeconds: 0.0));
 
-      // Client proxy entity
-      final clientGo = clientEngine.scene.createGameObject('PlayerProxy', position: const Vec3(0.0, 0.0, 0.0));
-      clientGo.addComponent(NetworkIdentity(netId: 10, ownerPeerId: 0));
-      clientGo.addComponent(NetworkTransform(interpolationDelaySeconds: 0.0));
+        // Client proxy entity
+        final clientGo = clientEngine.scene.createGameObject(
+          'PlayerProxy',
+          position: const Vec3(0.0, 0.0, 0.0),
+        );
+        clientGo.addComponent(NetworkIdentity(netId: 10, ownerPeerId: 0));
+        clientGo.addComponent(NetworkTransform(interpolationDelaySeconds: 0.0));
 
-      // Move server entity
-      serverGo.transform.position = const Vec3(15.0, 2.0, -5.0);
+        // Move server entity
+        serverGo.transform.position = const Vec3(15.0, 2.0, -5.0);
 
-      // Step server (broadcasts snapshot)
-      serverEngine.step(0.05);
+        // Step server (broadcasts snapshot)
+        serverEngine.step(0.05);
 
-      // Step client (receives snapshot and applies interpolation)
-      clientEngine.step(0.05);
+        // Step client (receives snapshot and applies interpolation)
+        clientEngine.step(0.05);
 
-      expect(clientGo.transform.position.x, closeTo(15.0, 0.01));
-      expect(clientGo.transform.position.y, closeTo(2.0, 0.01));
-      expect(clientGo.transform.position.z, closeTo(-5.0, 0.01));
-    });
+        expect(clientGo.transform.position.x, closeTo(15.0, 0.01));
+        expect(clientGo.transform.position.y, closeTo(2.0, 0.01));
+        expect(clientGo.transform.position.z, closeTo(-5.0, 0.01));
+      },
+    );
 
     test('E33: NetworkManager sends and dispatches RPCs', () {
       final net = LoopbackNetwork();
@@ -4308,18 +4322,29 @@ void main() {
       serverEngine.scene.network.startServer(serverTransport: serverTransport);
 
       final clientEngine = Engine(HeadlessHost());
-      clientEngine.scene.network.startClient(1, clientTransport: clientTransport);
+      clientEngine.scene.network.startClient(
+        1,
+        clientTransport: clientTransport,
+      );
 
       var rpcReceived = false;
       var receivedDamage = 0;
 
-      clientEngine.scene.network.rpc.register('applyDamage', (senderId, payload) {
+      clientEngine.scene.network.rpc.register('applyDamage', (
+        senderId,
+        payload,
+      ) {
         rpcReceived = true;
         receivedDamage = ByteReader(payload).readInt32();
       });
 
       final payload = ByteWriter()..writeInt32(85);
-      serverEngine.scene.network.sendRpc(1, 'applyDamage', payload.toBytes(), recipientId: 1);
+      serverEngine.scene.network.sendRpc(
+        1,
+        'applyDamage',
+        payload.toBytes(),
+        recipientId: 1,
+      );
 
       // Step client to process network messages
       clientEngine.step(0.05);
@@ -4328,44 +4353,64 @@ void main() {
       expect(receivedDamage, equals(85));
     });
 
-    test('E34: TwoBoneIkComponent solves limb kinematics towards target position', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E34: TwoBoneIkComponent solves limb kinematics towards target position',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final upperLeg = engine.scene.createGameObject('UpperLeg', position: const Vec3(0.0, 2.0, 0.0));
-      final lowerLeg = engine.scene.createGameObject('LowerLeg', position: const Vec3(0.0, -1.0, 0.0), parent: upperLeg);
-      final foot = engine.scene.createGameObject('Foot', position: const Vec3(0.0, -1.0, 0.0), parent: lowerLeg);
+        final upperLeg = engine.scene.createGameObject(
+          'UpperLeg',
+          position: const Vec3(0.0, 2.0, 0.0),
+        );
+        final lowerLeg = engine.scene.createGameObject(
+          'LowerLeg',
+          position: const Vec3(0.0, -1.0, 0.0),
+          parent: upperLeg,
+        );
+        final foot = engine.scene.createGameObject(
+          'Foot',
+          position: const Vec3(0.0, -1.0, 0.0),
+          parent: lowerLeg,
+        );
 
-      const targetPos = Vec3(0.4, 0.2, 0.0);
-      const polePos = Vec3(0.0, 1.0, 1.0);
+        const targetPos = Vec3(0.4, 0.2, 0.0);
+        const polePos = Vec3(0.0, 1.0, 1.0);
 
-      upperLeg.addComponent(TwoBoneIkComponent(
-        rootBone: upperLeg,
-        midBone: lowerLeg,
-        endEffector: foot,
-        targetPosition: targetPos,
-        polePosition: polePos,
-      ));
+        upperLeg.addComponent(
+          TwoBoneIkComponent(
+            rootBone: upperLeg,
+            midBone: lowerLeg,
+            endEffector: foot,
+            targetPosition: targetPos,
+            polePosition: polePos,
+          ),
+        );
 
-      engine.step(0.05);
+        engine.step(0.05);
 
-      // Foot world position should reach target
-      expect((foot.transform.position - targetPos).length, lessThan(0.05));
-      // Knee bent forward towards pole (+Z)
-      expect(lowerLeg.transform.position.z, greaterThan(0.0));
-    });
+        // Foot world position should reach target
+        expect((foot.transform.position - targetPos).length, lessThan(0.05));
+        // Knee bent forward towards pole (+Z)
+        expect(lowerLeg.transform.position.z, greaterThan(0.0));
+      },
+    );
 
     test('E34: AimIkComponent directs forward vector towards 3D target', () {
       final host = HeadlessHost();
       final engine = Engine(host);
 
-      final head = engine.scene.createGameObject('Head', position: const Vec3(0.0, 1.5, 0.0));
-      const targetPos = Vec3(10.0, 1.5, -10.0); // 45 deg right/forward in -Z space
+      final head = engine.scene.createGameObject(
+        'Head',
+        position: const Vec3(0.0, 1.5, 0.0),
+      );
+      const targetPos = Vec3(
+        10.0,
+        1.5,
+        -10.0,
+      ); // 45 deg right/forward in -Z space
 
-      head.addComponent(AimIkComponent(
-        bone: head,
-        targetPosition: targetPos,
-      ));
+      head.addComponent(AimIkComponent(bone: head, targetPosition: targetPos));
 
       engine.step(0.05);
 
@@ -4374,73 +4419,113 @@ void main() {
       expect(aimDot, closeTo(1.0, 0.05));
     });
 
-    test('E34: BlendTreeComponent evaluates 1D blend tree and updates bone transforms', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E34: BlendTreeComponent evaluates 1D blend tree and updates bone transforms',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final character = engine.scene.createGameObject('Character');
-      final arm = engine.scene.createGameObject('Arm', parent: character);
+        final character = engine.scene.createGameObject('Character');
+        final arm = engine.scene.createGameObject('Arm', parent: character);
 
-      final idlePose = Pose({'Arm': BoneTransform(position: const AnimVec3(0.0, 1.0, 0.0))});
-      final runPose = Pose({'Arm': BoneTransform(position: const AnimVec3(0.0, 1.0, 4.0))});
+        final idlePose = Pose({
+          'Arm': BoneTransform(position: const AnimVec3(0.0, 1.0, 0.0)),
+        });
+        final runPose = Pose({
+          'Arm': BoneTransform(position: const AnimVec3(0.0, 1.0, 4.0)),
+        });
 
-      final blendTree = Blend1DNode(
-        parameterName: 'speed',
-        entries: [
-          Blend1DEntry(threshold: 0.0, node: ClipNode(name: 'Idle', duration: 1.0, sampler: (_) => idlePose)),
-          Blend1DEntry(threshold: 10.0, node: ClipNode(name: 'Run', duration: 1.0, sampler: (_) => runPose)),
-        ],
-      );
+        final blendTree = Blend1DNode(
+          parameterName: 'speed',
+          entries: [
+            Blend1DEntry(
+              threshold: 0.0,
+              node: ClipNode(
+                name: 'Idle',
+                duration: 1.0,
+                sampler: (_) => idlePose,
+              ),
+            ),
+            Blend1DEntry(
+              threshold: 10.0,
+              node: ClipNode(
+                name: 'Run',
+                duration: 1.0,
+                sampler: (_) => runPose,
+              ),
+            ),
+          ],
+        );
 
-      character.addComponent(BlendTreeComponent(
-        rootNode: blendTree,
-        initialParameters: {'speed': 5.0}, // 50% blend
-      ));
+        character.addComponent(
+          BlendTreeComponent(
+            rootNode: blendTree,
+            initialParameters: {'speed': 5.0}, // 50% blend
+          ),
+        );
 
-      engine.step(0.05);
+        engine.step(0.05);
 
-      // Arm Z position should be halfway between 0.0 and 4.0 -> 2.0
-      expect(arm.transform.localPosition.z, closeTo(2.0, 1e-4));
-      expect(arm.transform.localPosition.y, closeTo(1.0, 1e-4));
-    });
+        // Arm Z position should be halfway between 0.0 and 4.0 -> 2.0
+        expect(arm.transform.localPosition.z, closeTo(2.0, 1e-4));
+        expect(arm.transform.localPosition.y, closeTo(1.0, 1e-4));
+      },
+    );
 
-    test('E35: Light2DComponent and ShadowCaster2DComponent evaluate 2D lighting with shadow occlusion', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E35: Light2DComponent and ShadowCaster2DComponent evaluate 2D lighting with shadow occlusion',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final lightGo = engine.scene.createGameObject('Torch', position: const Vec3(0.0, 0.0, 0.0));
-      lightGo.addComponent(Light2DComponent(
-        type: Light2DType.point,
-        radius: 10.0,
-        intensity: 2.0,
-        color: const LinearColor(1.0, 0.5, 0.0),
-      ));
+        final lightGo = engine.scene.createGameObject(
+          'Torch',
+          position: const Vec3(0.0, 0.0, 0.0),
+        );
+        lightGo.addComponent(
+          Light2DComponent(
+            type: Light2DType.point,
+            radius: 10.0,
+            intensity: 2.0,
+            color: const LinearColor(1.0, 0.5, 0.0),
+          ),
+        );
 
-      // Wall at y = 4 with shadow caster
-      final wallGo = engine.scene.createGameObject('Wall', position: const Vec3(0.0, 4.0, 0.0));
-      wallGo.addComponent(ShadowCaster2DComponent.box(const Vec2(2.0, 0.5)));
+        // Wall at y = 4 with shadow caster
+        final wallGo = engine.scene.createGameObject(
+          'Wall',
+          position: const Vec3(0.0, 4.0, 0.0),
+        );
+        wallGo.addComponent(ShadowCaster2DComponent.box(const Vec2(2.0, 0.5)));
 
-      engine.step(0.05);
+        engine.step(0.05);
 
-      // Point before wall is brightly illuminated
-      final beforeWall = engine.scene.evaluateLight2D(const Vec2(0.0, 2.0));
-      expect(beforeWall.intensity, greaterThan(1.0));
-      expect(beforeWall.r, greaterThan(beforeWall.g));
+        // Point before wall is brightly illuminated
+        final beforeWall = engine.scene.evaluateLight2D(const Vec2(0.0, 2.0));
+        expect(beforeWall.intensity, greaterThan(1.0));
+        expect(beforeWall.r, greaterThan(beforeWall.g));
 
-      // Point behind wall is occluded in shadow
-      final behindWall = engine.scene.evaluateLight2D(const Vec2(0.0, 7.0));
-      expect(behindWall.intensity, equals(0.0));
-    });
+        // Point behind wall is occluded in shadow
+        final behindWall = engine.scene.evaluateLight2D(const Vec2(0.0, 7.0));
+        expect(behindWall.intensity, equals(0.0));
+      },
+    );
 
     test('E35: Light2DComponent calculates 2D VisibilityPolygon', () {
       final host = HeadlessHost();
       final engine = Engine(host);
 
-      final lightGo = engine.scene.createGameObject('PlayerLight', position: const Vec3(0.0, 0.0, 0.0));
+      final lightGo = engine.scene.createGameObject(
+        'PlayerLight',
+        position: const Vec3(0.0, 0.0, 0.0),
+      );
       final lightComp = lightGo.addComponent(Light2DComponent(radius: 15.0));
 
       // Wall occluder
-      final wall = engine.scene.createGameObject('Pillar', position: const Vec3(0.0, 5.0, 0.0));
+      final wall = engine.scene.createGameObject(
+        'Pillar',
+        position: const Vec3(0.0, 5.0, 0.0),
+      );
       wall.addComponent(ShadowCaster2DComponent.box(const Vec2(1.5, 0.5)));
 
       engine.step(0.05);
@@ -4454,43 +4539,56 @@ void main() {
       expect(poly.contains(const LightVec2(0.0, 8.0)), isFalse);
     });
 
-    test('E35: FogOfWar2DComponent reveals area and blocks exploration behind shadows', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E35: FogOfWar2DComponent reveals area and blocks exploration behind shadows',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final fogGo = engine.scene.createGameObject('FogManager');
-      final fogComp = fogGo.addComponent(FogOfWar2DComponent(
-        width: 30,
-        height: 30,
-        cellSize: 1.0,
-        origin: const Vec2(-15.0, -15.0),
-      ));
+        final fogGo = engine.scene.createGameObject('FogManager');
+        final fogComp = fogGo.addComponent(
+          FogOfWar2DComponent(
+            width: 30,
+            height: 30,
+            cellSize: 1.0,
+            origin: const Vec2(-15.0, -15.0),
+          ),
+        );
 
-      // Wall occluder at y = 3
-      final wall = engine.scene.createGameObject('WallOccluder', position: const Vec3(0.0, 3.0, 0.0));
-      wall.addComponent(ShadowCaster2DComponent.box(const Vec2(3.0, 0.5)));
+        // Wall occluder at y = 3
+        final wall = engine.scene.createGameObject(
+          'WallOccluder',
+          position: const Vec3(0.0, 3.0, 0.0),
+        );
+        wall.addComponent(ShadowCaster2DComponent.box(const Vec2(3.0, 0.5)));
 
-      engine.step(0.05);
+        engine.step(0.05);
 
-      // Reveal from origin with radius 8
-      fogComp.reveal(Vec2.zero, 8.0);
+        // Reveal from origin with radius 8
+        fogComp.reveal(Vec2.zero, 8.0);
 
-      // Area in front of wall is visible and explored
-      expect(fogComp.isVisible(const Vec2(0.0, 1.5)), isTrue);
-      expect(fogComp.isExplored(const Vec2(0.0, 1.5)), isTrue);
+        // Area in front of wall is visible and explored
+        expect(fogComp.isVisible(const Vec2(0.0, 1.5)), isTrue);
+        expect(fogComp.isExplored(const Vec2(0.0, 1.5)), isTrue);
 
-      // Area behind wall is blocked by occluder
-      expect(fogComp.isVisible(const Vec2(0.0, 5.0)), isFalse);
-    });
+        // Area behind wall is blocked by occluder
+        expect(fogComp.isVisible(const Vec2(0.0, 5.0)), isFalse);
+      },
+    );
 
     test('E36: AudioLowPassFilterComponent processes audio buffer', () {
       final host = HeadlessHost();
       final engine = Engine(host);
 
       final audioGo = engine.scene.createGameObject('AudioEmitter');
-      final lpf = audioGo.addComponent(AudioLowPassFilterComponent(cutoffFrequency: 400.0));
+      final lpf = audioGo.addComponent(
+        AudioLowPassFilterComponent(cutoffFrequency: 400.0),
+      );
 
-      final buffer = List<double>.generate(100, (i) => i.isEven ? 1.0 : -1.0); // High frequency alternations
+      final buffer = List<double>.generate(
+        100,
+        (i) => i.isEven ? 1.0 : -1.0,
+      ); // High frequency alternations
       lpf.processBuffer(buffer);
 
       // Filtered high-frequency buffer should have significantly attenuated amplitude
@@ -4501,183 +4599,246 @@ void main() {
       final host = HeadlessHost();
       final engine = Engine(host);
 
-      final zoneGo = engine.scene.createGameObject('CaveReverb', position: const Vec3(0.0, 0.0, 0.0));
-      final zone = zoneGo.addComponent(AudioReverbZone(
-        minDistance: 5.0,
-        maxDistance: 15.0,
-        wet: 0.8,
-      ));
+      final zoneGo = engine.scene.createGameObject(
+        'CaveReverb',
+        position: const Vec3(0.0, 0.0, 0.0),
+      );
+      final zone = zoneGo.addComponent(
+        AudioReverbZone(minDistance: 5.0, maxDistance: 15.0, wet: 0.8),
+      );
 
       // Close to center -> 100% wet (0.8)
-      expect(zone.calculateReverbMix(const Vec3(2.0, 0.0, 0.0)), closeTo(0.8, 1e-4));
+      expect(
+        zone.calculateReverbMix(const Vec3(2.0, 0.0, 0.0)),
+        closeTo(0.8, 1e-4),
+      );
 
       // Midpoint between min and max (dist = 10.0) -> 50% of wet (0.4)
-      expect(zone.calculateReverbMix(const Vec3(10.0, 0.0, 0.0)), closeTo(0.4, 0.05));
+      expect(
+        zone.calculateReverbMix(const Vec3(10.0, 0.0, 0.0)),
+        closeTo(0.4, 0.05),
+      );
 
       // Far outside zone -> 0.0
       expect(zone.calculateReverbMix(const Vec3(20.0, 0.0, 0.0)), equals(0.0));
     });
 
-    test('E36: AudioSource.calculateSpatialDsp evaluates 3D pan and doppler pitch', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E36: AudioSource.calculateSpatialDsp evaluates 3D pan and doppler pitch',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final listenerGo = engine.scene.createGameObject('Listener', position: const Vec3(0.0, 0.0, 0.0));
-      final listener = listenerGo.addComponent(AudioListener());
+        final listenerGo = engine.scene.createGameObject(
+          'Listener',
+          position: const Vec3(0.0, 0.0, 0.0),
+        );
+        final listener = listenerGo.addComponent(AudioListener());
 
-      final sourceGo = engine.scene.createGameObject('Siren', position: const Vec3(10.0, 0.0, 0.0));
-      final source = sourceGo.addComponent(AudioSource(minDistance: 1.0, maxDistance: 50.0));
+        final sourceGo = engine.scene.createGameObject(
+          'Siren',
+          position: const Vec3(10.0, 0.0, 0.0),
+        );
+        final source = sourceGo.addComponent(
+          AudioSource(minDistance: 1.0, maxDistance: 50.0),
+        );
 
-      engine.step(0.05);
+        engine.step(0.05);
 
-      final res = source.calculateSpatialDsp(
-        listener: listener,
-        sourceVelocity: const Vec3(-20.0, 0.0, 0.0), // Moving towards listener
-      );
+        final res = source.calculateSpatialDsp(
+          listener: listener,
+          sourceVelocity: const Vec3(
+            -20.0,
+            0.0,
+            0.0,
+          ), // Moving towards listener
+        );
 
-      // Stereo pan right
-      expect(res.pan, closeTo(1.0, 1e-4));
-      expect(res.rightGain, greaterThan(res.leftGain));
+        // Stereo pan right
+        expect(res.pan, closeTo(1.0, 1e-4));
+        expect(res.rightGain, greaterThan(res.leftGain));
 
-      // Doppler pitch shift > 1.0
-      expect(res.dopplerFactor, greaterThan(1.02));
-    });
+        // Doppler pitch shift > 1.0
+        expect(res.dopplerFactor, greaterThan(1.02));
+      },
+    );
 
-    test('E37: DialogueComponent advances conversation and handles player choices', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E37: DialogueComponent advances conversation and handles player choices',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final graph = DialogueGraph(
-        entryNodeId: 'intro',
-        initialNodes: [
-          const DialogueNode(
-            id: 'intro',
-            speaker: 'Captain',
-            text: 'Ready for departure, Commander?',
-            choices: [
-              DialogueChoice(text: 'Launch now', targetNodeId: 'launch'),
-              DialogueChoice(text: 'Hold on', targetNodeId: 'hold'),
-            ],
-          ),
-          const DialogueNode(id: 'launch', speaker: 'Captain', text: 'Engines engaged!'),
-          const DialogueNode(id: 'hold', speaker: 'Captain', text: 'Standing by.'),
-        ],
-      );
+        final graph = DialogueGraph(
+          entryNodeId: 'intro',
+          initialNodes: [
+            const DialogueNode(
+              id: 'intro',
+              speaker: 'Captain',
+              text: 'Ready for departure, Commander?',
+              choices: [
+                DialogueChoice(text: 'Launch now', targetNodeId: 'launch'),
+                DialogueChoice(text: 'Hold on', targetNodeId: 'hold'),
+              ],
+            ),
+            const DialogueNode(
+              id: 'launch',
+              speaker: 'Captain',
+              text: 'Engines engaged!',
+            ),
+            const DialogueNode(
+              id: 'hold',
+              speaker: 'Captain',
+              text: 'Standing by.',
+            ),
+          ],
+        );
 
-      final npc = engine.scene.createGameObject('CaptainGo');
-      final dialogue = npc.addComponent(DialogueComponent(graph: graph, autoStart: true));
+        final npc = engine.scene.createGameObject('CaptainGo');
+        final dialogue = npc.addComponent(
+          DialogueComponent(graph: graph, autoStart: true),
+        );
 
-      engine.step(0.05);
+        engine.step(0.05);
 
-      expect(dialogue.isRunning, isTrue);
-      expect(dialogue.speaker, equals('Captain'));
-      expect(dialogue.choices.length, equals(2));
+        expect(dialogue.isRunning, isTrue);
+        expect(dialogue.speaker, equals('Captain'));
+        expect(dialogue.choices.length, equals(2));
 
-      // Choose 'Launch now' (index 0)
-      dialogue.selectChoice(0);
-      expect(dialogue.runner.currentNode?.id, equals('launch'));
+        // Choose 'Launch now' (index 0)
+        dialogue.selectChoice(0);
+        expect(dialogue.runner.currentNode?.id, equals('launch'));
 
-      // Advance to end
-      dialogue.advance(); // finish typewriter
-      dialogue.advance(); // completes dialogue
-      expect(dialogue.isComplete, isTrue);
-    });
+        // Advance to end
+        dialogue.advance(); // finish typewriter
+        dialogue.advance(); // completes dialogue
+        expect(dialogue.isComplete, isTrue);
+      },
+    );
 
-    test('E37: QuestManagerComponent registers and advances quest objectives', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E37: QuestManagerComponent registers and advances quest objectives',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final questGo = engine.scene.createGameObject('QuestManagerGo');
-      final questMgr = questGo.addComponent(QuestManagerComponent());
+        final questGo = engine.scene.createGameObject('QuestManagerGo');
+        final questMgr = questGo.addComponent(QuestManagerComponent());
 
-      final quest = Quest(
-        id: 'repair_thrusters',
-        title: 'Fix Thruster Assembly',
-        description: 'Collect 2 titanium plates to patch the thruster.',
-        objectives: [
-          QuestObjective(id: 'plates', description: 'Titanium Plates', targetCount: 2),
-        ],
-      );
+        final quest = Quest(
+          id: 'repair_thrusters',
+          title: 'Fix Thruster Assembly',
+          description: 'Collect 2 titanium plates to patch the thruster.',
+          objectives: [
+            QuestObjective(
+              id: 'plates',
+              description: 'Titanium Plates',
+              targetCount: 2,
+            ),
+          ],
+        );
 
-      questMgr.registerQuest(quest);
-      questMgr.startQuest('repair_thrusters');
+        questMgr.registerQuest(quest);
+        questMgr.startQuest('repair_thrusters');
 
-      expect(questMgr.activeQuests.length, equals(1));
-      expect(questMgr.variables.getString('quest_repair_thrusters_status'), equals('active'));
+        expect(questMgr.activeQuests.length, equals(1));
+        expect(
+          questMgr.variables.getString('quest_repair_thrusters_status'),
+          equals('active'),
+        );
 
-      // Complete objective
-      questMgr.advanceObjective('repair_thrusters', 'plates', 2);
-      expect(quest.isCompleted, isTrue);
-      expect(questMgr.completedQuests.length, equals(1));
-      expect(questMgr.variables.getString('quest_repair_thrusters_status'), equals('completed'));
-    });
+        // Complete objective
+        questMgr.advanceObjective('repair_thrusters', 'plates', 2);
+        expect(quest.isCompleted, isTrue);
+        expect(questMgr.completedQuests.length, equals(1));
+        expect(
+          questMgr.variables.getString('quest_repair_thrusters_status'),
+          equals('completed'),
+        );
+      },
+    );
 
-    test('E37: DialogueUI renders immediate-mode dialogue box with choices', () {
-      final graph = DialogueGraph(
-        entryNodeId: 'talk',
-        initialNodes: [
-          const DialogueNode(
-            id: 'talk',
-            speaker: 'Navigator',
-            text: 'Jump coordinates locked.',
-            choices: [
-              DialogueChoice(text: 'Engage hyperdrive', targetNodeId: 'jump'),
-            ],
-          ),
-          const DialogueNode(id: 'jump', speaker: 'Navigator', text: 'Jumping now!'),
-        ],
-      );
+    test(
+      'E37: DialogueUI renders immediate-mode dialogue box with choices',
+      () {
+        final graph = DialogueGraph(
+          entryNodeId: 'talk',
+          initialNodes: [
+            const DialogueNode(
+              id: 'talk',
+              speaker: 'Navigator',
+              text: 'Jump coordinates locked.',
+              choices: [
+                DialogueChoice(text: 'Engage hyperdrive', targetNodeId: 'jump'),
+              ],
+            ),
+            const DialogueNode(
+              id: 'jump',
+              speaker: 'Navigator',
+              text: 'Jumping now!',
+            ),
+          ],
+        );
 
-      final runner = DialogueRunner(graph: graph, typewriterSpeed: 0.0);
-      runner.start();
+        final runner = DialogueRunner(graph: graph, typewriterSpeed: 0.0);
+        runner.start();
 
-      final ui = VoxUiContext();
-      final input = VoxInput();
-      ui.beginFrame(input);
+        final ui = VoxUiContext();
+        final input = VoxInput();
+        ui.beginFrame(input);
 
-      DialogueUI.render(ui, runner);
+        DialogueUI.render(ui, runner);
 
-      final dl = ui.endFrame();
+        final dl = ui.endFrame();
 
-      // Should have recorded dialogue window commands
-      expect(dl.commands, isNotEmpty);
-      final hasNavigator = dl.commands.any(
-        (cmd) => cmd.type == DrawCmdType.text && cmd.text == 'Navigator',
-      );
-      expect(hasNavigator, isTrue);
+        // Should have recorded dialogue window commands
+        expect(dl.commands, isNotEmpty);
+        final hasNavigator = dl.commands.any(
+          (cmd) => cmd.type == DrawCmdType.text && cmd.text == 'Navigator',
+        );
+        expect(hasNavigator, isTrue);
 
-      final hasChoiceText = dl.commands.any(
-        (cmd) => cmd.type == DrawCmdType.text && cmd.text?.contains('Engage hyperdrive') == true,
-      );
-      expect(hasChoiceText, isTrue);
-    });
+        final hasChoiceText = dl.commands.any(
+          (cmd) =>
+              cmd.type == DrawCmdType.text &&
+              cmd.text?.contains('Engage hyperdrive') == true,
+        );
+        expect(hasChoiceText, isTrue);
+      },
+    );
 
-    test('E38: VisualEffectComponent integrates voxvfx simulation with GameObject transform', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E38: VisualEffectComponent integrates voxvfx simulation with GameObject transform',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final fireVfx = VisualEffectComponent.fire(maxParticles: 100);
-      final go = engine.scene.createGameObject('Torch', components: [fireVfx]);
-      go.transform.position = const Vec3(10.0, 5.0, -2.0);
+        final fireVfx = VisualEffectComponent.fire(maxParticles: 100);
+        final go = engine.scene.createGameObject(
+          'Torch',
+          components: [fireVfx],
+        );
+        go.transform.position = const Vec3(10.0, 5.0, -2.0);
 
-      expect(fireVfx.simulation.activeParticleCount, 0);
+        expect(fireVfx.simulation.activeParticleCount, 0);
 
-      // Step engine -> should update emitter position and spawn particles
-      engine.step(0.1);
+        // Step engine -> should update emitter position and spawn particles
+        engine.step(0.1);
 
-      expect(fireVfx.simulation.emitterPosition.x, closeTo(10.0, 1e-4));
-      expect(fireVfx.simulation.emitterPosition.y, closeTo(5.0, 1e-4));
-      expect(fireVfx.simulation.emitterPosition.z, closeTo(-2.0, 1e-4));
-      expect(fireVfx.simulation.activeParticleCount, greaterThan(0));
+        expect(fireVfx.simulation.emitterPosition.x, closeTo(10.0, 1e-4));
+        expect(fireVfx.simulation.emitterPosition.y, closeTo(5.0, 1e-4));
+        expect(fireVfx.simulation.emitterPosition.z, closeTo(-2.0, 1e-4));
+        expect(fireVfx.simulation.activeParticleCount, greaterThan(0));
 
-      // Test manual burst and clear
-      fireVfx.burst(15);
-      final countAfterBurst = fireVfx.simulation.activeParticleCount;
-      expect(countAfterBurst, greaterThanOrEqualTo(15));
+        // Test manual burst and clear
+        fireVfx.burst(15);
+        final countAfterBurst = fireVfx.simulation.activeParticleCount;
+        expect(countAfterBurst, greaterThanOrEqualTo(15));
 
-      fireVfx.clear();
-      expect(fireVfx.simulation.activeParticleCount, 0);
-    });
+        fireVfx.clear();
+        expect(fireVfx.simulation.activeParticleCount, 0);
+      },
+    );
 
     test('E38: VisualEffectComponent.explosion triggers burst forces', () {
       final explosion = VisualEffectComponent.explosion(particleCount: 50);
@@ -4692,504 +4853,650 @@ void main() {
       }
     });
 
-    test('E39: VoxelTerrainComponent builds terrain, performs 3D DDA raycasts, and carves cavities', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E39: VoxelTerrainComponent builds terrain, performs 3D DDA raycasts, and carves cavities',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final terrain = VoxelTerrainComponent();
-      final go = engine.scene.createGameObject('VoxelWorld', components: [terrain]);
-      go.transform.position = const Vec3(0, 0, 0);
+        final terrain = VoxelTerrainComponent();
+        final go = engine.scene.createGameObject(
+          'VoxelWorld',
+          components: [terrain],
+        );
+        go.transform.position = const Vec3(0, 0, 0);
 
-      // Fill a solid 4x4x4 block of stone
-      terrain.fillBox(
-        const VoxelCoord(0, 0, 0),
-        const VoxelCoord(3, 3, 3),
-        1, // Stone
-      );
+        // Fill a solid 4x4x4 block of stone
+        terrain.fillBox(
+          const VoxelCoord(0, 0, 0),
+          const VoxelCoord(3, 3, 3),
+          1, // Stone
+        );
 
-      // Verify voxel data
-      expect(terrain.getVoxel(1, 1, 1), equals(1));
-      expect(terrain.getVoxel(5, 5, 5), equals(0));
+        // Verify voxel data
+        expect(terrain.getVoxel(1, 1, 1), equals(1));
+        expect(terrain.getVoxel(5, 5, 5), equals(0));
 
-      // Raycast from (1.5, 10.0, 1.5) downward (0, -1, 0)
-      final hit = terrain.raycastVoxel(
-        const Vec3(1.5, 10.0, 1.5),
-        const Vec3(0.0, -1.0, 0.0),
-        maxDistance: 20.0,
-      );
+        // Raycast from (1.5, 10.0, 1.5) downward (0, -1, 0)
+        final hit = terrain.raycastVoxel(
+          const Vec3(1.5, 10.0, 1.5),
+          const Vec3(0.0, -1.0, 0.0),
+          maxDistance: 20.0,
+        );
 
-      expect(hit, isNotNull);
-      expect(hit!.hitVoxel, equals(const VoxelCoord(1, 3, 1)));
-      expect(hit.normal.y, closeTo(1.0, 1e-4)); // hit top face pointing +Y
-      expect(hit.adjacentEmptyVoxel, equals(const VoxelCoord(1, 4, 1))); // block above
+        expect(hit, isNotNull);
+        expect(hit!.hitVoxel, equals(const VoxelCoord(1, 3, 1)));
+        expect(hit.normal.y, closeTo(1.0, 1e-4)); // hit top face pointing +Y
+        expect(
+          hit.adjacentEmptyVoxel,
+          equals(const VoxelCoord(1, 4, 1)),
+        ); // block above
 
-      // Rebuild greedy meshes
-      final meshes = terrain.rebuildAllMeshes();
-      expect(meshes, isNotEmpty);
-      final mesh = meshes.values.first;
-      // 4x4x4 cube faces merged into 6 quads
-      expect(mesh.quadCount, equals(6));
+        // Rebuild greedy meshes
+        final meshes = terrain.rebuildAllMeshes();
+        expect(meshes, isNotEmpty);
+        final mesh = meshes.values.first;
+        // 4x4x4 cube faces merged into 6 quads
+        expect(mesh.quadCount, equals(6));
 
-      // Carve sphere at (1, 1, 1)
-      final carved = terrain.carveSphere(const VoxelCoord(1, 1, 1), 1.5);
-      expect(carved, greaterThan(0));
-      expect(terrain.getVoxel(1, 1, 1), equals(0));
-    });
+        // Carve sphere at (1, 1, 1)
+        final carved = terrain.carveSphere(const VoxelCoord(1, 1, 1), 1.5);
+        expect(carved, greaterThan(0));
+        expect(terrain.getVoxel(1, 1, 1), equals(0));
+      },
+    );
 
-    test('E40: InputManagerComponent processes WASD Vector2, chord combos, and ActionMap priorities', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E40: InputManagerComponent processes WASD Vector2, chord combos, and ActionMap priorities',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final im = InputManagerComponent();
-      final gameplay = im.actions.addMap('Gameplay', priority: 0);
-      gameplay.addVector2('Move', [Vector2Binding.wasd]);
-      gameplay.addButton('Jump', [const KeyBinding('Space')]);
-      gameplay.addButton('QuickSave', [const ChordBinding(['ControlLeft', 'KeyS'])]);
+        final im = InputManagerComponent();
+        final gameplay = im.actions.addMap('Gameplay', priority: 0);
+        gameplay.addVector2('Move', [Vector2Binding.wasd]);
+        gameplay.addButton('Jump', [const KeyBinding('Space')]);
+        gameplay.addButton('QuickSave', [
+          const ChordBinding(['ControlLeft', 'KeyS']),
+        ]);
 
-      final pauseMenu = im.actions.addMap('Menu', priority: 10, enabled: false, blocksLowerMaps: true);
-      pauseMenu.addButton('Confirm', [const KeyBinding('Space')]);
+        final pauseMenu = im.actions.addMap(
+          'Menu',
+          priority: 10,
+          enabled: false,
+          blocksLowerMaps: true,
+        );
+        pauseMenu.addButton('Confirm', [const KeyBinding('Space')]);
 
-      engine.scene.createGameObject('InputSystem', components: [im]);
+        engine.scene.createGameObject('InputSystem', components: [im]);
 
-      // Press W + D for diagonal normalized movement
-      host.input.press('KeyW');
-      host.input.press('KeyD');
-      engine.step(0.016);
-      host.input.endFrame();
+        // Press W + D for diagonal normalized movement
+        host.input.press('KeyW');
+        host.input.press('KeyD');
+        engine.step(0.016);
+        host.input.endFrame();
 
-      final move = im.getVector2('Move');
-      expect(move.length, closeTo(1.0, 1e-3));
-      expect(move.x, closeTo(0.7071, 1e-3));
-      expect(move.y, closeTo(0.7071, 1e-3));
+        final move = im.getVector2('Move');
+        expect(move.length, closeTo(1.0, 1e-3));
+        expect(move.x, closeTo(0.7071, 1e-3));
+        expect(move.y, closeTo(0.7071, 1e-3));
 
-      // QuickSave chord Ctrl+S
-      host.input.press('ControlLeft');
-      engine.step(0.016);
-      expect(im.isPressed('QuickSave'), isFalse);
+        // QuickSave chord Ctrl+S
+        host.input.press('ControlLeft');
+        engine.step(0.016);
+        expect(im.isPressed('QuickSave'), isFalse);
 
-      host.input.press('KeyS');
-      engine.step(0.016);
-      expect(im.wasPressed('QuickSave'), isTrue);
+        host.input.press('KeyS');
+        engine.step(0.016);
+        expect(im.wasPressed('QuickSave'), isTrue);
 
-      // Pause Menu active -> Space is consumed by Menu and blocked from Gameplay Jump
-      pauseMenu.enabled = true;
-      host.input.press('Space');
-      engine.step(0.016);
-      expect(im.isPressed('Menu/Confirm'), isTrue);
-      expect(im.isPressed('Gameplay/Jump'), isFalse);
-    });
+        // Pause Menu active -> Space is consumed by Menu and blocked from Gameplay Jump
+        pauseMenu.enabled = true;
+        host.input.press('Space');
+        engine.step(0.016);
+        expect(im.isPressed('Menu/Confirm'), isTrue);
+        expect(im.isPressed('Gameplay/Jump'), isFalse);
+      },
+    );
 
-    test('E40: InputManagerComponent interactive rebinding + storage profile persistence', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E40: InputManagerComponent interactive rebinding + storage profile persistence',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final im = InputManagerComponent();
-      final gameplay = im.actions.addMap('Gameplay');
-      final jump = gameplay.addButton('Jump', [const KeyBinding('Space')]);
-      engine.scene.createGameObject('InputSystem', components: [im]);
+        final im = InputManagerComponent();
+        final gameplay = im.actions.addMap('Gameplay');
+        final jump = gameplay.addButton('Jump', [const KeyBinding('Space')]);
+        engine.scene.createGameObject('InputSystem', components: [im]);
 
-      // Start rebinding Jump
-      String? boundControl;
-      im.rebinder.startListening(
-        map: gameplay,
-        action: jump,
-        onCompleted: (ctrl) => boundControl = ctrl,
-      );
+        // Start rebinding Jump
+        String? boundControl;
+        im.rebinder.startListening(
+          map: gameplay,
+          action: jump,
+          onCompleted: (ctrl) => boundControl = ctrl,
+        );
 
-      // Step frame where player presses KeyF
-      host.input.press('KeyF');
-      engine.step(0.016);
-      host.input.endFrame();
+        // Step frame where player presses KeyF
+        host.input.press('KeyF');
+        engine.step(0.016);
+        host.input.endFrame();
 
-      expect(boundControl, equals('KeyF'));
-      expect(im.isPressed('Jump'), isTrue);
+        expect(boundControl, equals('KeyF'));
+        expect(im.isPressed('Jump'), isTrue);
 
-      // Save profile to host.storage
-      im.saveProfile('player_controls');
+        // Save profile to host.storage
+        im.saveProfile('player_controls');
 
-      // Reload into a fresh engine & InputManagerComponent sharing host storage
-      final engine2 = Engine(host);
-      final im2 = InputManagerComponent();
-      final gameplay2 = im2.actions.addMap('Gameplay');
-      gameplay2.addButton('Jump', [const KeyBinding('Space')]);
-      engine2.scene.createGameObject('InputSystem2', components: [im2]);
+        // Reload into a fresh engine & InputManagerComponent sharing host storage
+        final engine2 = Engine(host);
+        final im2 = InputManagerComponent();
+        final gameplay2 = im2.actions.addMap('Gameplay');
+        gameplay2.addButton('Jump', [const KeyBinding('Space')]);
+        engine2.scene.createGameObject('InputSystem2', components: [im2]);
 
-      expect(im2.loadProfile('player_controls'), isTrue);
-      final loadedBinding = im2.action('Jump')!.bindings.first as KeyBinding;
-      expect(loadedBinding.control, equals('KeyF'));
-    });
+        expect(im2.loadProfile('player_controls'), isTrue);
+        final loadedBinding = im2.action('Jump')!.bindings.first as KeyBinding;
+        expect(loadedBinding.control, equals('KeyF'));
+      },
+    );
 
-    test('E40: VirtualGamepad drives InputManagerComponent actions and renders via VirtualGamepadUI', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E40: VirtualGamepad drives InputManagerComponent actions and renders via VirtualGamepadUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final vpad = VirtualGamepad(
-        sticks: [
-          VirtualStick(
-            centerX: 80,
-            centerY: 280,
-            radius: 40,
-            axisXName: 'VirtualLeftX',
-            axisYName: 'VirtualLeftY',
+        final vpad = VirtualGamepad(
+          sticks: [
+            VirtualStick(
+              centerX: 80,
+              centerY: 280,
+              radius: 40,
+              axisXName: 'VirtualLeftX',
+              axisYName: 'VirtualLeftY',
+            ),
+          ],
+          buttons: [
+            VirtualButton(
+              centerX: 520,
+              centerY: 280,
+              radius: 30,
+              controlName: 'GamepadA',
+              label: 'A',
+            ),
+          ],
+        );
+
+        final im = InputManagerComponent(virtualGamepad: vpad);
+        final mobile = im.actions.addMap('Mobile');
+        mobile.addVector2('Move', [
+          const Vector2Binding(
+            analogX: 'VirtualLeftX',
+            analogY: 'VirtualLeftY',
           ),
-        ],
-        buttons: [
-          VirtualButton(
-            centerX: 520,
-            centerY: 280,
-            radius: 30,
-            controlName: 'GamepadA',
-            label: 'A',
+        ]);
+        mobile.addButton('Fire', [const KeyBinding('GamepadA')]);
+        engine.scene.createGameObject('MobileInput', components: [im]);
+
+        // Multi-touch: finger 1 pulls stick left-up, finger 2 holds Fire button
+        im.feedVirtualPointers([
+          const VirtualTouchPointer(id: 1, x: 80, y: 280, isDown: true),
+          const VirtualTouchPointer(id: 2, x: 520, y: 280, isDown: true),
+        ]);
+        engine.step(0.016);
+        expect(im.isPressed('Fire'), isTrue);
+
+        // Move finger 1 right to edge (+40px -> +1.0 X)
+        im.feedVirtualPointers([
+          const VirtualTouchPointer(id: 1, x: 120, y: 280, isDown: true),
+        ]);
+        engine.step(0.016);
+        expect(im.getVector2('Move').x, closeTo(1.0, 1e-4));
+        expect(im.isPressed('Fire'), isFalse);
+
+        // Verify VirtualGamepadUI renders circles and button label
+        final ui = VoxUiContext();
+        ui.beginFrame(VoxInput());
+        VirtualGamepadUI.render(ui, vpad);
+        final dl = ui.endFrame();
+        expect(
+          dl.commands.any((c) => c.type == DrawCmdType.circleFilled),
+          isTrue,
+        );
+        expect(
+          dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'A'),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'E41: InventoryComponent & StatsComponent handle spatial equip swaps, stat buffs & storage persistence',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final greatsword = ItemDefinition(
+          id: 'greatsword',
+          name: 'Titanium Greatsword',
+          gridWidth: 2,
+          gridHeight: 3,
+          rarity: ItemRarity.legendary,
+          equipSlot: 'MainHand',
+          equipModifiers: [
+            StatModifier(statName: 'attack', value: 30.0),
+            StatModifier(
+              statName: 'attack',
+              value: 0.2,
+              type: StatModifierType.percentAdd,
+            ),
+          ],
+        );
+        const healingCell = ItemDefinition(
+          id: 'medkit',
+          name: 'Nano Medkit',
+          maxStack: 5,
+          rarity: ItemRarity.rare,
+        );
+
+        final reg = ItemRegistry()..registerAll([greatsword, healingCell]);
+
+        final statsComp = StatsComponent({'attack': 10.0});
+        final invComp = InventoryComponent(gridWidth: 5, gridHeight: 4);
+        engine.scene.createGameObject(
+          'Player',
+          components: [invComp, statsComp],
+        );
+
+        final swordStack = ItemStack(greatsword);
+        final medStack = ItemStack(healingCell, quantity: 3);
+        expect(invComp.addItem(swordStack), equals(0));
+        expect(invComp.addItem(medStack), equals(0));
+
+        // Equip greatsword from grid -> base 10 + 30 = 40, * 1.2 = 48.0 attack
+        expect(invComp.equipFromInventory('MainHand', swordStack), isTrue);
+        expect(statsComp.getValue('attack'), closeTo(48.0, 1e-4));
+        expect(invComp.grid.countById('greatsword'), equals(0));
+
+        // Unequip back to inventory -> returns to base 10.0
+        expect(invComp.unequipToInventory('MainHand'), isTrue);
+        expect(statsComp.getValue('attack'), closeTo(10.0, 1e-4));
+        expect(invComp.grid.countById('greatsword'), equals(1));
+
+        // Save & restore inventory grid via host.storage
+        invComp.saveToStorage('hero_bag');
+        invComp.grid.clear();
+        expect(invComp.grid.countById('medkit'), equals(0));
+        expect(invComp.loadFromStorage(reg, 'hero_bag'), isTrue);
+        expect(invComp.grid.countById('medkit'), equals(3));
+
+        // Render InventoryUI using voxui
+        final ui = VoxUiContext();
+        ui.beginFrame(VoxInput());
+        InventoryUI.render(ui, invComp);
+        final dl = ui.endFrame();
+        expect(
+          dl.commands.any(
+            (c) =>
+                c.type == DrawCmdType.text && c.text == 'Titanium Greatsword',
           ),
-        ],
-      );
+          isTrue,
+        );
+        expect(
+          dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'x3'),
+          isTrue,
+        );
+      },
+    );
 
-      final im = InputManagerComponent(virtualGamepad: vpad);
-      final mobile = im.actions.addMap('Mobile');
-      mobile.addVector2('Move', [
-        const Vector2Binding(analogX: 'VirtualLeftX', analogY: 'VirtualLeftY'),
-      ]);
-      mobile.addButton('Fire', [const KeyBinding('GamepadA')]);
-      engine.scene.createGameObject('MobileInput', components: [im]);
+    test(
+      'E42: TimeRewindComponent records Transform & custom binary state and rewinds back cleanly',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        engine.time.fixedDeltaTime = 0.1;
 
-      // Multi-touch: finger 1 pulls stick left-up, finger 2 holds Fire button
-      im.feedVirtualPointers([
-        const VirtualTouchPointer(id: 1, x: 80, y: 280, isDown: true),
-        const VirtualTouchPointer(id: 2, x: 520, y: 280, isDown: true),
-      ]);
-      engine.step(0.016);
-      expect(im.isPressed('Fire'), isTrue);
+        var health = 100;
+        final rewind = TimeRewindComponent(
+          maxFrames: 100,
+          onCaptureState: (w) => w.writeVarInt(health),
+          onRestoreState: (r) => health = r.readVarInt(),
+        );
 
-      // Move finger 1 right to edge (+40px -> +1.0 X)
-      im.feedVirtualPointers([
-        const VirtualTouchPointer(id: 1, x: 120, y: 280, isDown: true),
-      ]);
-      engine.step(0.016);
-      expect(im.getVector2('Move').x, closeTo(1.0, 1e-4));
-      expect(im.isPressed('Fire'), isFalse);
+        final player = engine.scene.createGameObject(
+          'ChronoHero',
+          components: [rewind],
+        );
 
-      // Verify VirtualGamepadUI renders circles and button label
-      final ui = VoxUiContext();
-      ui.beginFrame(VoxInput());
-      VirtualGamepadUI.render(ui, vpad);
-      final dl = ui.endFrame();
-      expect(dl.commands.any((c) => c.type == DrawCmdType.circleFilled), isTrue);
-      expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'A'), isTrue);
-    });
+        // Advance 5 fixed steps moving +2m per step while losing health
+        for (int i = 1; i <= 5; i++) {
+          player.transform.position = Vec3(i * 2.0, 0.0, 0.0);
+          health = 100 - i * 10;
+          engine.step(0.1);
+        }
 
-    test('E41: InventoryComponent & StatsComponent handle spatial equip swaps, stat buffs & storage persistence', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+        expect(player.transform.position.x, closeTo(10.0, 1e-3));
+        expect(health, equals(50));
+        expect(rewind.recordedFrames, equals(5));
 
-      final greatsword = ItemDefinition(
-        id: 'greatsword',
-        name: 'Titanium Greatsword',
-        gridWidth: 2,
-        gridHeight: 3,
-        rarity: ItemRarity.legendary,
-        equipSlot: 'MainHand',
-        equipModifiers: [
-          StatModifier(statName: 'attack', value: 30.0),
-          StatModifier(statName: 'attack', value: 0.2, type: StatModifierType.percentAdd),
-        ],
-      );
-      const healingCell = ItemDefinition(
-        id: 'medkit',
-        name: 'Nano Medkit',
-        maxStack: 5,
-        rarity: ItemRarity.rare,
-      );
+        // Rewind continuously for 0.3s back in time (3 steps backward from 0.5s -> 0.2s)
+        rewind.beginRewind();
+        for (int i = 0; i < 3; i++) {
+          engine.step(0.1);
+        }
 
-      final reg = ItemRegistry()..registerAll([greatsword, healingCell]);
+        expect(player.transform.position.x, closeTo(4.0, 1e-2));
+        expect(health, equals(80));
 
-      final statsComp = StatsComponent({'attack': 10.0});
-      final invComp = InventoryComponent(gridWidth: 5, gridHeight: 4);
-      engine.scene.createGameObject('Player', components: [invComp, statsComp]);
+        // Resume live gameplay from rewound time and verify future timeline branched cleanly
+        rewind.stopRewind();
+        expect(rewind.recordedFrames, equals(2));
+      },
+    );
 
-      final swordStack = ItemStack(greatsword);
-      final medStack = ItemStack(healingCell, quantity: 3);
-      expect(invComp.addItem(swordStack), equals(0));
-      expect(invComp.addItem(medStack), equals(0));
+    test(
+      'E42: GhostRecorderComponent exports binary GhostTrack and GhostPlaybackComponent replays smoothly',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      // Equip greatsword from grid -> base 10 + 30 = 40, * 1.2 = 48.0 attack
-      expect(invComp.equipFromInventory('MainHand', swordStack), isTrue);
-      expect(statsComp.getValue('attack'), closeTo(48.0, 1e-4));
-      expect(invComp.grid.countById('greatsword'), equals(0));
+        final recorder = GhostRecorderComponent(sampleInterval: 0.1);
+        final racer = engine.scene.createGameObject(
+          'Racer',
+          components: [recorder],
+        );
 
-      // Unequip back to inventory -> returns to base 10.0
-      expect(invComp.unequipToInventory('MainHand'), isTrue);
-      expect(statsComp.getValue('attack'), closeTo(10.0, 1e-4));
-      expect(invComp.grid.countById('greatsword'), equals(1));
+        for (int i = 0; i <= 10; i++) {
+          racer.transform.position = Vec3(i * 1.0, 0.0, 0.0);
+          engine.step(0.1);
+        }
 
-      // Save & restore inventory grid via host.storage
-      invComp.saveToStorage('hero_bag');
-      invComp.grid.clear();
-      expect(invComp.grid.countById('medkit'), equals(0));
-      expect(invComp.loadFromStorage(reg, 'hero_bag'), isTrue);
-      expect(invComp.grid.countById('medkit'), equals(3));
+        final bytes = recorder.exportBinary();
+        expect(bytes, isNotEmpty);
 
-      // Render InventoryUI using voxui
-      final ui = VoxUiContext();
-      ui.beginFrame(VoxInput());
-      InventoryUI.render(ui, invComp);
-      final dl = ui.endFrame();
-      expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'Titanium Greatsword'), isTrue);
-      expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'x3'), isTrue);
-    });
+        // Replay in a fresh ghost object using binary decode
+        final playback = GhostPlaybackComponent.fromBinary(bytes, loop: false);
+        final ghost = engine.scene.createGameObject(
+          'GhostRacer',
+          components: [playback],
+        );
 
-    test('E42: TimeRewindComponent records Transform & custom binary state and rewinds back cleanly', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
-      engine.time.fixedDeltaTime = 0.1;
+        // Advance 5 frames of 0.1s (= 0.5s elapsed, respecting Time.maximumDeltaTime clamp)
+        for (int i = 0; i < 5; i++) {
+          engine.step(0.1);
+        }
+        expect(ghost.transform.position.x, closeTo(5.0, 1.0));
+      },
+    );
 
-      var health = 100;
-      final rewind = TimeRewindComponent(
-        maxFrames: 100,
-        onCaptureState: (w) => w.writeVarInt(health),
-        onRestoreState: (r) => health = r.readVarInt(),
-      );
+    test(
+      'E43: FlowGraphComponent drives GameObject transforms, delays & signals in scene loop',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final player = engine.scene.createGameObject('ChronoHero', components: [rewind]);
+        final g = FlowGraph(
+          name: 'MoverGraph',
+          registry: EngineFlowNodes.createRegistry(),
+        );
+        final onUpdate = g.addNode('event.update');
+        final mulSpeed = g.addNode('math.mul', inputs: {'b': 10.0});
+        final makeDelta = g.addNode('vec.make3');
+        final translate = g.addNode('engine.translate');
 
-      // Advance 5 fixed steps moving +2m per step while losing health
-      for (int i = 1; i <= 5; i++) {
-        player.transform.position = Vec3(i * 2.0, 0.0, 0.0);
-        health = 100 - i * 10;
+        g.connect(onUpdate.id, 'out', translate.id, 'in');
+        g.connect(onUpdate.id, 'dt', mulSpeed.id, 'a');
+        g.connect(mulSpeed.id, 'result', makeDelta.id, 'x');
+        g.connect(makeDelta.id, 'vec', translate.id, 'delta');
+
+        // Also test latent delay -> signal -> deactivate
+        final onEvt = g.addNode(
+          'event.custom',
+          properties: {'event': 'DeactivateSoon'},
+        );
+        final delay = g.addNode('flow.delay', inputs: {'seconds': 0.2});
+        final emit = g.addNode(
+          'signal.emit',
+          inputs: {'payload': 42},
+          properties: {'signal': 'done'},
+        );
+        final deactivate = g.addNode(
+          'engine.setActive',
+          inputs: {'active': false},
+        );
+
+        g.connect(onEvt.id, 'out', delay.id, 'in');
+        g.connect(delay.id, 'completed', emit.id, 'in');
+        g.connect(emit.id, 'out', deactivate.id, 'in');
+
+        final signals = <(String, Object?)>[];
+        final flowComp = FlowGraphComponent(
+          g,
+          onSignal: (sig, payload) => signals.add((sig, payload)),
+        );
+        final go = engine.scene.createGameObject('Bot', components: [flowComp]);
+
+        // 4 frames * 0.05s * 10.0 speed = 2.0m along X
+        for (int i = 0; i < 4; i++) {
+          engine.step(0.05);
+        }
+        expect(go.transform.position.x, closeTo(2.0, 1e-4));
+
+        // Trigger custom latent event
+        flowComp.triggerEvent('DeactivateSoon');
+        expect(go.activeSelf, isTrue);
         engine.step(0.1);
-      }
+        expect(signals, isEmpty);
+        engine.step(0.12);
+        expect(signals, [('done', 42)]);
+        expect(go.activeSelf, isFalse);
+      },
+    );
 
-      expect(player.transform.position.x, closeTo(10.0, 1e-3));
-      expect(health, equals(50));
-      expect(rewind.recordedFrames, equals(5));
+    test(
+      'E43: FlowGraphUI renders node canvas, wire preview and interactive pin linking via voxui',
+      () {
+        final g = FlowGraph();
+        final src = g.addNode(
+          'math.constFloat',
+          x: 40.0,
+          y: 40.0,
+          properties: {'value': 7.0},
+        );
+        final dst = g.addNode('math.add', x: 260.0, y: 40.0);
 
-      // Rewind continuously for 0.3s back in time (3 steps backward from 0.5s -> 0.2s)
-      rewind.beginRewind();
-      for (int i = 0; i < 3; i++) {
-        engine.step(0.1);
-      }
+        final ui = VoxUiContext();
+        final state = FlowGraphUiState();
 
-      expect(player.transform.position.x, closeTo(4.0, 1e-2));
-      expect(health, equals(80));
+        // Compute exact canvas offset matching FlowGraphUI.render(x: 20, y: 20)
+        final canvasX = 20.0 + 6.0;
+        final canvasY = 20.0 + ui.style.titleBarHeight + 4.0;
+        final outPinX = canvasX + src.x + 170.0 - 10.0;
+        final outPinY = canvasY + src.y + 22.0 + 12.0;
+        final inPinX = canvasX + dst.x + 10.0;
+        final inPinY = canvasY + dst.y + 22.0 + 12.0;
 
-      // Resume live gameplay from rewound time and verify future timeline branched cleanly
-      rewind.stopRewind();
-      expect(rewind.recordedFrames, equals(2));
-    });
+        // Frame 1: click output pin on src node
+        ui.beginFrame(
+          VoxInput(
+            mouseX: outPinX,
+            mouseY: outPinY,
+            isMouseDown: true,
+            wasMouseClicked: true,
+          ),
+        );
+        FlowGraphUI.render(
+          ui,
+          g,
+          state: state,
+          x: 20,
+          y: 20,
+          width: 620,
+          height: 400,
+        );
+        final cmds1 = ui.endFrame();
+        expect(state.linkingFromNodeId, src.id);
+        expect(
+          cmds1.commands.where((c) => c.type == DrawCmdType.line),
+          isNotEmpty,
+        );
 
-    test('E42: GhostRecorderComponent exports binary GhostTrack and GhostPlaybackComponent replays smoothly', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+        // Frame 2: drag across canvas
+        ui.beginFrame(
+          VoxInput(
+            mouseX: (outPinX + inPinX) * 0.5,
+            mouseY: outPinY,
+            isMouseDown: true,
+          ),
+        );
+        FlowGraphUI.render(
+          ui,
+          g,
+          state: state,
+          x: 20,
+          y: 20,
+          width: 620,
+          height: 400,
+        );
+        ui.endFrame();
 
-      final recorder = GhostRecorderComponent(sampleInterval: 0.1);
-      final racer = engine.scene.createGameObject('Racer', components: [recorder]);
+        // Frame 3: release over input pin on dst node -> connects link cleanly
+        ui.beginFrame(
+          VoxInput(mouseX: inPinX, mouseY: inPinY, wasMouseReleased: true),
+        );
+        FlowGraphUI.render(
+          ui,
+          g,
+          state: state,
+          x: 20,
+          y: 20,
+          width: 620,
+          height: 400,
+        );
+        ui.endFrame();
 
-      for (int i = 0; i <= 10; i++) {
-        racer.transform.position = Vec3(i * 1.0, 0.0, 0.0);
-        engine.step(0.1);
-      }
+        expect(g.links.length, 1);
+        expect(g.links.first.fromNodeId, src.id);
+        expect(g.links.first.toNodeId, dst.id);
+        expect(
+          DataflowEvaluator(g).evaluateOutput(dst.id, 'result'),
+          closeTo(7.0, 1e-6),
+        );
+      },
+    );
 
-      final bytes = recorder.exportBinary();
-      expect(bytes, isNotEmpty);
+    test(
+      'E44: HexGridComponent projects world coords, runs WFC biomes, paths, reachability & FOV',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      // Replay in a fresh ghost object using binary decode
-      final playback = GhostPlaybackComponent.fromBinary(bytes, loop: false);
-      final ghost = engine.scene.createGameObject('GhostRacer', components: [playback]);
+        final grid = HexGridComponent.radial(radius: 3, hexSize: 2.0);
+        engine.scene.createGameObject(
+          'TacticalBoard',
+          position: const Vec3(10, 0, -5),
+          components: [grid],
+        );
 
-      // Advance 5 frames of 0.1s (= 0.5s elapsed, respecting Time.maximumDeltaTime clamp)
-      for (int i = 0; i < 5; i++) {
-        engine.step(0.1);
-      }
-      expect(ghost.transform.position.x, closeTo(5.0, 1.0));
-    });
+        const targetHex = HexCoord(1, -1);
+        final worldPos = grid.hexToWorld(targetHex);
+        expect(grid.worldToHex(worldPos), targetHex);
 
-    test('E43: FlowGraphComponent drives GameObject transforms, delays & signals in scene loop', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+        final rules = WfcRuleSet<String>.hex()
+          ..addTile('grass', weight: 4.0)
+          ..addTile('hills', weight: 2.0)
+          ..addTile('mountain', weight: 1.0);
+        for (int d = 0; d < 6; d++) {
+          rules.allow('grass', d, 'grass');
+          rules.allow('grass', d, 'hills');
+          rules.allow('hills', d, 'hills');
+          rules.allow('hills', d, 'mountain');
+          rules.allow('mountain', d, 'mountain');
+        }
 
-      final g = FlowGraph(name: 'MoverGraph', registry: EngineFlowNodes.createRegistry());
-      final onUpdate = g.addNode('event.update');
-      final mulSpeed = g.addNode('math.mul', inputs: {'b': 10.0});
-      final makeDelta = g.addNode('vec.make3');
-      final translate = g.addNode('engine.translate');
+        final ok = grid.generateWfcBiomes(
+          rules: rules,
+          seed: 42,
+          preplaced: {HexCoord.zero: 'hills', const HexCoord(1, 0): 'mountain'},
+          terrainCatalog: const {
+            'grass': (moveCost: 1.0, passable: true, blocksSight: false),
+            'hills': (moveCost: 2.0, passable: true, blocksSight: false),
+            'mountain': (moveCost: 99.0, passable: false, blocksSight: true),
+          },
+        );
+        expect(ok, isTrue);
+        expect(grid.map[HexCoord.zero]!.terrain, 'hills');
+        expect(grid.map[const HexCoord(1, 0)]!.passable, isFalse);
 
-      g.connect(onUpdate.id, 'out', translate.id, 'in');
-      g.connect(onUpdate.id, 'dt', mulSpeed.id, 'a');
-      g.connect(mulSpeed.id, 'result', makeDelta.id, 'x');
-      g.connect(makeDelta.id, 'vec', translate.id, 'delta');
+        // Visibility blocked directly behind mountain at (1, 0)
+        final visible = grid.computeVisible(HexCoord.zero, radius: 3);
+        expect(visible.contains(const HexCoord(1, 0)), isTrue);
+        expect(visible.contains(const HexCoord(2, 0)), isFalse);
 
-      // Also test latent delay -> signal -> deactivate
-      final onEvt = g.addNode('event.custom', properties: {'event': 'DeactivateSoon'});
-      final delay = g.addNode('flow.delay', inputs: {'seconds': 0.2});
-      final emit = g.addNode('signal.emit', inputs: {'payload': 42}, properties: {'signal': 'done'});
-      final deactivate = g.addNode('engine.setActive', inputs: {'active': false});
+        // Reachability respects movement budget and avoids mountain
+        final reach = grid.reachableFrom(HexCoord.zero, 2.0);
+        expect(reach.canReach(const HexCoord(1, 0)), isFalse);
+        expect(reach.canReach(HexCoord.zero), isTrue);
+      },
+    );
 
-      g.connect(onEvt.id, 'out', delay.id, 'in');
-      g.connect(delay.id, 'completed', emit.id, 'in');
-      g.connect(emit.id, 'out', deactivate.id, 'in');
+    test(
+      'E44: WfcTilemapGenerator populates TileLayer and HexGridUI renders & picks hovered hex',
+      () {
+        final layer = TileLayer(
+          columns: 6,
+          rows: 5,
+          tileWidth: 16,
+          tileHeight: 16,
+          tileset: [SpriteRegion.white, SpriteRegion.white, SpriteRegion.white],
+        );
+        final rules = WfcRuleSet<int>.grid2d()
+          ..addSocketTile(0, ['g', 'g', 'g', 'g'], weight: 3.0)
+          ..addSocketTile(1, ['g', 'r', 'g', 'r'], weight: 1.0)
+          ..addSocketTile(2, ['r', 'g', 'r', 'g'], weight: 1.0);
 
-      final signals = <(String, Object?)>[];
-      final flowComp = FlowGraphComponent(
-        g,
-        onSignal: (sig, payload) => signals.add((sig, payload)),
-      );
-      final go = engine.scene.createGameObject('Bot', components: [flowComp]);
+        final filled = WfcTilemapGenerator.populate(
+          layer: layer,
+          rules: rules,
+          seed: 9,
+          preplaced: {(2, 2): 1},
+        );
+        expect(filled, isTrue);
+        expect(layer.tileAt(2, 2), 1);
 
-      // 4 frames * 0.05s * 10.0 speed = 2.0m along X
-      for (int i = 0; i < 4; i++) {
-        engine.step(0.05);
-      }
-      expect(go.transform.position.x, closeTo(2.0, 1e-4));
+        final grid = HexGridComponent.radial(radius: 2, hexSize: 1.0);
+        grid.map[const HexCoord(1, 0)]!.passable = false;
 
-      // Trigger custom latent event
-      flowComp.triggerEvent('DeactivateSoon');
-      expect(go.activeSelf, isTrue);
-      engine.step(0.1);
-      expect(signals, isEmpty);
-      engine.step(0.12);
-      expect(signals, [('done', 42)]);
-      expect(go.activeSelf, isFalse);
-    });
+        final ui = VoxUiContext();
+        // Window at (20, 20, 360, 340) places center at (200, 20 + 26 + 314*0.5 = 203)
+        final centerX = 20.0 + 360.0 * 0.5;
+        final centerY =
+            20.0 +
+            ui.style.titleBarHeight +
+            (340.0 - ui.style.titleBarHeight) * 0.5;
+        ui.beginFrame(VoxInput(mouseX: centerX, mouseY: centerY));
+        final hovered = HexGridUI.render(
+          ui,
+          grid,
+          x: 20,
+          y: 20,
+          width: 360,
+          height: 340,
+          selectedHex: HexCoord.zero,
+          reachable: {const HexCoord(-1, 0), const HexCoord(0, -1)},
+          path: const [HexCoord.zero, HexCoord(-1, 0)],
+        );
+        final cmds = ui.endFrame();
 
-    test('E43: FlowGraphUI renders node canvas, wire preview and interactive pin linking via voxui', () {
-      final g = FlowGraph();
-      final src = g.addNode('math.constFloat', x: 40.0, y: 40.0, properties: {'value': 7.0});
-      final dst = g.addNode('math.add', x: 260.0, y: 40.0);
-
-      final ui = VoxUiContext();
-      final state = FlowGraphUiState();
-
-      // Compute exact canvas offset matching FlowGraphUI.render(x: 20, y: 20)
-      final canvasX = 20.0 + 6.0;
-      final canvasY = 20.0 + ui.style.titleBarHeight + 4.0;
-      final outPinX = canvasX + src.x + 170.0 - 10.0;
-      final outPinY = canvasY + src.y + 22.0 + 12.0;
-      final inPinX = canvasX + dst.x + 10.0;
-      final inPinY = canvasY + dst.y + 22.0 + 12.0;
-
-      // Frame 1: click output pin on src node
-      ui.beginFrame(VoxInput(mouseX: outPinX, mouseY: outPinY, isMouseDown: true, wasMouseClicked: true));
-      FlowGraphUI.render(ui, g, state: state, x: 20, y: 20, width: 620, height: 400);
-      final cmds1 = ui.endFrame();
-      expect(state.linkingFromNodeId, src.id);
-      expect(cmds1.commands.where((c) => c.type == DrawCmdType.line), isNotEmpty);
-
-      // Frame 2: drag across canvas
-      ui.beginFrame(VoxInput(mouseX: (outPinX + inPinX) * 0.5, mouseY: outPinY, isMouseDown: true));
-      FlowGraphUI.render(ui, g, state: state, x: 20, y: 20, width: 620, height: 400);
-      ui.endFrame();
-
-      // Frame 3: release over input pin on dst node -> connects link cleanly
-      ui.beginFrame(VoxInput(mouseX: inPinX, mouseY: inPinY, wasMouseReleased: true));
-      FlowGraphUI.render(ui, g, state: state, x: 20, y: 20, width: 620, height: 400);
-      ui.endFrame();
-
-      expect(g.links.length, 1);
-      expect(g.links.first.fromNodeId, src.id);
-      expect(g.links.first.toNodeId, dst.id);
-      expect(DataflowEvaluator(g).evaluateOutput(dst.id, 'result'), closeTo(7.0, 1e-6));
-    });
-
-    test('E44: HexGridComponent projects world coords, runs WFC biomes, paths, reachability & FOV', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
-
-      final grid = HexGridComponent.radial(radius: 3, hexSize: 2.0);
-      engine.scene.createGameObject(
-        'TacticalBoard',
-        position: const Vec3(10, 0, -5),
-        components: [grid],
-      );
-
-      const targetHex = HexCoord(1, -1);
-      final worldPos = grid.hexToWorld(targetHex);
-      expect(grid.worldToHex(worldPos), targetHex);
-
-      final rules = WfcRuleSet<String>.hex()
-        ..addTile('grass', weight: 4.0)
-        ..addTile('hills', weight: 2.0)
-        ..addTile('mountain', weight: 1.0);
-      for (int d = 0; d < 6; d++) {
-        rules.allow('grass', d, 'grass');
-        rules.allow('grass', d, 'hills');
-        rules.allow('hills', d, 'hills');
-        rules.allow('hills', d, 'mountain');
-        rules.allow('mountain', d, 'mountain');
-      }
-
-      final ok = grid.generateWfcBiomes(
-        rules: rules,
-        seed: 42,
-        preplaced: {
-          HexCoord.zero: 'hills',
-          const HexCoord(1, 0): 'mountain',
-        },
-        terrainCatalog: const {
-          'grass': (moveCost: 1.0, passable: true, blocksSight: false),
-          'hills': (moveCost: 2.0, passable: true, blocksSight: false),
-          'mountain': (moveCost: 99.0, passable: false, blocksSight: true),
-        },
-      );
-      expect(ok, isTrue);
-      expect(grid.map[HexCoord.zero]!.terrain, 'hills');
-      expect(grid.map[const HexCoord(1, 0)]!.passable, isFalse);
-
-      // Visibility blocked directly behind mountain at (1, 0)
-      final visible = grid.computeVisible(HexCoord.zero, radius: 3);
-      expect(visible.contains(const HexCoord(1, 0)), isTrue);
-      expect(visible.contains(const HexCoord(2, 0)), isFalse);
-
-      // Reachability respects movement budget and avoids mountain
-      final reach = grid.reachableFrom(HexCoord.zero, 2.0);
-      expect(reach.canReach(const HexCoord(1, 0)), isFalse);
-      expect(reach.canReach(HexCoord.zero), isTrue);
-    });
-
-    test('E44: WfcTilemapGenerator populates TileLayer and HexGridUI renders & picks hovered hex', () {
-      final layer = TileLayer(
-        columns: 6,
-        rows: 5,
-        tileWidth: 16,
-        tileHeight: 16,
-        tileset: [SpriteRegion.white, SpriteRegion.white, SpriteRegion.white],
-      );
-      final rules = WfcRuleSet<int>.grid2d()
-        ..addSocketTile(0, ['g', 'g', 'g', 'g'], weight: 3.0)
-        ..addSocketTile(1, ['g', 'r', 'g', 'r'], weight: 1.0)
-        ..addSocketTile(2, ['r', 'g', 'r', 'g'], weight: 1.0);
-
-      final filled = WfcTilemapGenerator.populate(
-        layer: layer,
-        rules: rules,
-        seed: 9,
-        preplaced: {(2, 2): 1},
-      );
-      expect(filled, isTrue);
-      expect(layer.tileAt(2, 2), 1);
-
-      final grid = HexGridComponent.radial(radius: 2, hexSize: 1.0);
-      grid.map[const HexCoord(1, 0)]!.passable = false;
-
-      final ui = VoxUiContext();
-      // Window at (20, 20, 360, 340) places center at (200, 20 + 26 + 314*0.5 = 203)
-      final centerX = 20.0 + 360.0 * 0.5;
-      final centerY = 20.0 + ui.style.titleBarHeight + (340.0 - ui.style.titleBarHeight) * 0.5;
-      ui.beginFrame(VoxInput(mouseX: centerX, mouseY: centerY));
-      final hovered = HexGridUI.render(
-        ui,
-        grid,
-        x: 20,
-        y: 20,
-        width: 360,
-        height: 340,
-        selectedHex: HexCoord.zero,
-        reachable: {const HexCoord(-1, 0), const HexCoord(0, -1)},
-        path: const [HexCoord.zero, HexCoord(-1, 0)],
-      );
-      final cmds = ui.endFrame();
-
-      expect(hovered, HexCoord.zero);
-      expect(cmds.commands.where((c) => c.type == DrawCmdType.line).length, greaterThan(100));
-    });
+        expect(hovered, HexCoord.zero);
+        expect(
+          cmds.commands.where((c) => c.type == DrawCmdType.line).length,
+          greaterThan(100),
+        );
+      },
+    );
 
     test('E45: StatusEffectComponent syncs buffs with StatsComponent, ticks DoTs, absorbs damage & cooldowns', () {
       final host = HeadlessHost();
@@ -5517,6 +5824,43 @@ void main() {
       final drawList = ui.endFrame();
       expect(drawList.commands.any((c) => c.text == 'levels/arena.lvl'), isTrue);
       expect(engine.scene.isLoaded, isTrue);
+    });
+
+    test('E49: LocalizationComponent loads VFS CSV/JSON tables, persists locale & renders LocalizationDebuggerUI', () async {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final pak = PakBuilder()
+        ..addText('i18n/strings.csv', 'key,en,de,ja\nmenu.start,Start Game,Spiel starten,ゲーム開始\nhp.low[one],{count} HP left,{count} TP übrig,{count} HP残り\nhp.low[other],{count} HP left,{count} TP übrig,{count} HP残り');
+      final vfsLoader = VfsAssetLoader()
+        ..mountPakBytes('loc.pak', pak.build());
+
+      final events = <String>[];
+      final l10n = LocalizationComponent(onLocaleChanged: events.add);
+      engine.scene.createGameObject('Localization', components: [l10n]);
+
+      await l10n.loadCsvAsset('i18n/strings.csv', loader: vfsLoader);
+      expect(l10n.tr('menu.start'), 'Start Game');
+
+      l10n.setLocale('de');
+      expect(l10n.tr('menu.start'), 'Spiel starten');
+      expect(l10n.trPlural('hp.low', 1), '1 TP übrig');
+      l10n.saveLocalePreference('user_lang');
+
+      // Reload into a new Engine sharing host storage
+      final engine2 = Engine(host);
+      final l10n2 = LocalizationComponent()..loadCsv('key,en,de\nmenu.start,Start Game,Spiel starten');
+      engine2.scene.createGameObject('Localization2', components: [l10n2]);
+      expect(l10n2.loadLocalePreference('user_lang'), isTrue);
+      expect(l10n2.activeLocale, 'de');
+      expect(events, ['de']);
+
+      // Render LocalizationDebuggerUI via voxui
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      LocalizationDebuggerUI.render(ui, l10n.manager, previewKeys: const ['menu.start']);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == 'Spiel starten'), isTrue);
     });
   });
 }

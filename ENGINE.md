@@ -830,10 +830,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ---
 
-## E49: Spatial Partitioning (`voxgrid`), Camera Director State Blending (`voxcam`) & Localization (`voxloc`)
+## E49: Multi-Locale Localization Tables, CLDR Plurals & Glyph Extraction (`voxloc`)
 
-- [ ] **E49-1. Next-Wave Pure-Dart Engine Utilities (`voxloc` / `voxgrid`).**
-  - _Planned:_ Localization string tables with pluralization rules, CSV/JSON import, dynamic token interpolation, fallback locale resolution, and font-glyph prewarm sets.
+- [x] **E49-1. `voxloc` Submodule: CLDR Plurals, Fallback Chains, Interpolation, CSV/JSON & Glyph Prewarm.**
+  - _Location:_ `./vendor/voxloc` (`https://github.com/soulwax/voxloc`).
+  - _APIs:_ `LocaleCode` (fallback chains), `PluralRules` (`zero`/`one`/`two`/`few`/`many`/`other`, Slavic/Arabic/Romance/CJK rules + custom overrides), `LocalizationTable` (RFC-4180 CSV & nested JSON importers, `{nested.param:0.0}` formatter, Unicode glyph extraction), `LocalizationManager` (reactive listeners, missing key logging).
+  - _Verify:_ `vendor/voxloc/test/voxloc_test.dart` & `test/subsystems_test.dart`.
+- [x] **E49-2. `LocalizationComponent` & `LocalizationDebuggerUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/localization/localization_system.dart`.
+  - _APIs:_ `LocalizationComponent` (VFS/host asset loading + `engine.host.storage` preference persistence), `LocalizationDebuggerUI.render` (live locale switcher, fallback chain, glyph count & preview via `voxui`).
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E50: Cinemachine-Style Virtual Camera Brain, Priority Blending & Dead-Zone Framing (`voxcam`)
+
+- [ ] **E50-1. `voxcam` Submodule: Virtual Camera Rig, Blend Curves, Dead-Zone Framing & Impulse Noise.**
+  - _Location:_ `./vendor/voxcam` (`https://github.com/soulwax/voxcam`).
+  - _APIs:_ `VirtualCameraRig`, `CameraBlendCurve` (cut, smoothstep, cubic ease-in-out), `CameraFramingComposer` (screen dead-zone, soft-zone clamping, look-ahead offset), `CameraOrbitRig` (yaw/pitch bounds, terrain raycast pull-in), `CameraImpulseSource` (2D/3D procedural trauma decay), `CameraDirectorBrain` (priority stack, smooth cross-blend across active virtual cameras, FOV & Dutch roll blending).
+  - _Verify:_ `vendor/voxcam/test/voxcam_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E50-2. `CameraBrainComponent`, `VirtualCameraComponent` & `CameraDirectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/camera_director.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E51: Hierarchical Spatial Partitioning, Loose Octree & BVH Broadphase (`voxgrid`)
+
+- [ ] **E51-1. `voxgrid` Submodule: Generic Dynamic BVH, Loose Quadtree/Octree & Closest-Hit Ray Queries.**
+  - _Location:_ `./vendor/voxgrid` (`https://github.com/soulwax/voxgrid`).
+  - _APIs:_ `GridAabb`, `GridRay`, `DynamicBvh<T>` (SAH surface-area heuristic insertion, fattened proxy AABBs, incremental tree updates, frustum/ray/sphere overlap queries), `LooseOctree<T>`.
 
 
 

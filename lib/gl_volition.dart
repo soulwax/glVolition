@@ -17,7 +17,7 @@ export 'package:voxnet/voxnet.dart';
 export 'package:voxanim/voxanim.dart';
 export 'package:voxlight/voxlight.dart';
 export 'package:voxdsp/voxdsp.dart';
-export 'package:voxtalk/voxtalk.dart';
+export 'package:voxtalk/voxtalk.dart' hide LocalizationTable;
 export 'package:voxvfx/voxvfx.dart';
 export 'package:voxvox/voxvox.dart';
 export 'package:voxpad/voxpad.dart';
@@ -29,5 +29,6 @@ export 'package:voxrule/voxrule.dart';
 export 'package:voxseq/voxseq.dart';
 export 'package:voxstat/voxstat.dart';
 export 'package:voxpack/voxpack.dart';
+export 'package:voxloc/voxloc.dart';
 
 export 'src/engine.dart';

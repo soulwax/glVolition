@@ -79,3 +79,6 @@
 [submodule "vendor/voxpack"]
 	path = vendor/voxpack
 	url = https://github.com/soulwax/voxpack.git
+[submodule "vendor/voxloc"]
+	path = vendor/voxloc
+	url = https://github.com/soulwax/voxloc.git

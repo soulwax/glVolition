@@ -62,6 +62,8 @@ dependencies:
     path: vendor/voxstat
   voxpack:
     path: vendor/voxpack
+  voxloc:
+    path: vendor/voxloc
   web: ^0.5.0
 
 dev_dependencies:
