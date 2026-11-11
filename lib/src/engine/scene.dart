@@ -61,7 +61,8 @@ final class Scene {
 
   Scene([this.name = 'Scene']) : root = SceneNode.group(name: name);
 
-  Engine get engine => _engine ?? (throw StateError('Scene $name is not loaded in an Engine'));
+  Engine get engine =>
+      _engine ?? (throw StateError('Scene $name is not loaded in an Engine'));
   bool get isLoaded => _engine != null;
 
   List<GameObject> get rootGameObjects => List.unmodifiable(_roots);
@@ -84,7 +85,8 @@ final class Scene {
       go.node.visible = false;
     }
     if (parent != null) {
-      if (parent.scene != this) throw ArgumentError('Parent belongs to another scene');
+      if (parent.scene != this)
+        throw ArgumentError('Parent belongs to another scene');
       go._parent = parent;
       parent._children.add(go);
       parent.node.addChild(go.node);
@@ -112,16 +114,15 @@ final class Scene {
     double? scale,
     String? name,
     bool active = true,
-  }) =>
-      prefab.instantiate(
-        this,
-        parent: parent,
-        position: position,
-        rotation: rotation,
-        scale: scale,
-        name: name,
-        active: active,
-      );
+  }) => prefab.instantiate(
+    this,
+    parent: parent,
+    position: position,
+    rotation: rotation,
+    scale: scale,
+    name: name,
+    active: active,
+  );
 
   /// Clones [original] (including all components, child GameObjects, and property
   /// values) into this [Scene] (E25-3).
@@ -202,7 +203,10 @@ final class Scene {
         col = BoxCollider(size: const Vec3(1, 1, 0.01), isTrigger: isTrigger);
     }
 
-    final MeshHandle? handle = eng?.graphics.createMesh(data, debugLabel: defaultName);
+    final MeshHandle? handle = eng?.graphics.createMesh(
+      data,
+      debugLabel: defaultName,
+    );
     final renderer = MeshRenderer(
       mesh: handle,
       meshData: data,
@@ -232,7 +236,8 @@ final class Scene {
     return null;
   }
 
-  GameObject? findWithTag(String tag) => findGameObjectsWithTag(tag).firstOrNull;
+  GameObject? findWithTag(String tag) =>
+      findGameObjectsWithTag(tag).firstOrNull;
 
   Iterable<GameObject> findGameObjectsWithTag(String tag) sync* {
     for (final go in _allObjects(includeInactive: false)) {
@@ -279,7 +284,8 @@ final class Scene {
     root.traverse((node) {
       if (node is InstancedMeshNode) {
         final instHit = node.raycast(ray, precise: precise);
-        if (instHit != null && (best == null || instHit.distance < best!.distance)) {
+        if (instHit != null &&
+            (best == null || instHit.distance < best!.distance)) {
           best = instHit;
         }
       }
@@ -371,19 +377,18 @@ final class Scene {
     double maxDistance = 50.0,
     String bus = 'sfx',
     double duration = 5.0,
-  }) =>
-      AudioSource.playClipAtPoint(
-        this,
-        clip,
-        position,
-        volume: volume,
-        pitch: pitch,
-        spatialBlend: spatialBlend,
-        minDistance: minDistance,
-        maxDistance: maxDistance,
-        bus: bus,
-        duration: duration,
-      );
+  }) => AudioSource.playClipAtPoint(
+    this,
+    clip,
+    position,
+    volume: volume,
+    pitch: pitch,
+    spatialBlend: spatialBlend,
+    minDistance: minDistance,
+    maxDistance: maxDistance,
+    bus: bus,
+    duration: duration,
+  );
 
   /// Spawns a transient spatial one-shot GameObject playing a procedural
   /// synthesized sound effect from `package:voxsynth` (E28-1).
@@ -465,7 +470,10 @@ final class Scene {
         c._awoken = true;
         _guard(c.awake);
       }
-      if (!c._active && !c._destroyRequested && c.gameObject.activeInHierarchy && c._enabledSelf) {
+      if (!c._active &&
+          !c._destroyRequested &&
+          c.gameObject.activeInHierarchy &&
+          c._enabledSelf) {
         c._active = true;
         c._onEnableInternal();
         _guard(c.onEnable);
@@ -564,28 +572,34 @@ final class Scene {
           );
         case LightType.point:
           if (points.length < RuntimeLightBudget.pointLights) {
-            points.add(PointLight(
-              id: points.length,
-              position: l.transform.position,
-              color: l.color,
-              intensity: l.intensity,
-              radius: l.range,
-              castsShadow: l.castsShadow,
-            ));
+            points.add(
+              PointLight(
+                id: points.length,
+                position: l.transform.position,
+                color: l.color,
+                intensity: l.intensity,
+                radius: l.range,
+                castsShadow: l.castsShadow,
+              ),
+            );
           }
         case LightType.spot:
-          if (spots.length < RuntimeLightBudget.unshadowedSpotLights + RuntimeLightBudget.shadowedSpotLights) {
-            spots.add(SpotLight(
-              id: spots.length,
-              position: l.transform.position,
-              direction: l.transform.forward,
-              color: l.color,
-              intensity: l.intensity,
-              range: l.range,
-              innerConeRadians: l.innerSpotAngle,
-              outerConeRadians: l.spotAngle,
-              castsShadow: l.castsShadow,
-            ));
+          if (spots.length <
+              RuntimeLightBudget.unshadowedSpotLights +
+                  RuntimeLightBudget.shadowedSpotLights) {
+            spots.add(
+              SpotLight(
+                id: spots.length,
+                position: l.transform.position,
+                direction: l.transform.forward,
+                color: l.color,
+                intensity: l.intensity,
+                range: l.range,
+                innerConeRadians: l.innerSpotAngle,
+                outerConeRadians: l.spotAngle,
+                castsShadow: l.castsShadow,
+              ),
+            );
           }
       }
     }
@@ -633,15 +647,14 @@ final class Scene {
   double sampleThermalDissolution(
     Vec3 worldPosition, {
     double lingeringMemory01 = 0.0,
-  }) =>
-      ThermalFieldEngine.dissolutionAt(
-        position: worldPosition,
-        sources: [
-          for (final ts in _thermalSources)
-            if (ts._active) ts.toThermalSource(),
-        ],
-        lingeringMemory01: lingeringMemory01,
-      );
+  }) => ThermalFieldEngine.dissolutionAt(
+    position: worldPosition,
+    sources: [
+      for (final ts in _thermalSources)
+        if (ts._active) ts.toThermalSource(),
+    ],
+    lingeringMemory01: lingeringMemory01,
+  );
 
   void _encode(RenderEncoder encoder, FrameInput? frame) {
     if (frame != null) {
@@ -651,7 +664,10 @@ final class Scene {
     }
     final cam2d = _cameras2d.lastOrNull;
     if (cam2d != null && cam2d._active && _engine != null) {
-      cam2d._sync(_engine!.graphics.viewportWidth, _engine!.graphics.viewportHeight);
+      cam2d._sync(
+        _engine!.graphics.viewportWidth,
+        _engine!.graphics.viewportHeight,
+      );
       for (final tm in _tilemaps) {
         if (tm._active) tm.layer.drawTo(encoder, cam2d.raw);
       }
@@ -682,7 +698,8 @@ final class Scene {
   /// Schedules [object] (and its subtree) for destruction at the end of the
   /// current frame.
   void destroy(GameObject object) {
-    if (object.scene != this) throw ArgumentError('Object belongs to another scene');
+    if (object.scene != this)
+      throw ArgumentError('Object belongs to another scene');
     if (object._destroyRequested || object._destroyed) return;
     void mark(GameObject g) {
       g._destroyRequested = true;
@@ -700,7 +717,9 @@ final class Scene {
 
   void _requestDestroyComponent(Component c) {
     if (c is TransformComponent) {
-      throw StateError('TransformComponent cannot be destroyed; destroy its GameObject');
+      throw StateError(
+        'TransformComponent cannot be destroyed; destroy its GameObject',
+      );
     }
     if (c._destroyRequested || c._destroyed) return;
     c._destroyRequested = true;
@@ -709,7 +728,9 @@ final class Scene {
 
   void _flushDestroyed() {
     for (final c in List.of(_destroyComponents)) {
-      if (!c._destroyed && c._gameObject != null && !c._gameObject!._destroyRequested) {
+      if (!c._destroyed &&
+          c._gameObject != null &&
+          !c._gameObject!._destroyRequested) {
         _destroyComponentImmediate(c);
       }
     }
