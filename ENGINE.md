@@ -410,3 +410,17 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E20-3. `NavGrid2D` Straight-Line Line-of-Sight & Raycasting (`hasLineOfSight`, `raycast`).**
   - _Touches:_ `lib/src/engine/navigation.dart`.
   - _Verify:_ `test/subsystems_test.dart` (obstacle line-of-sight raycasts across navigation grids).
+
+---
+
+## E21: SpriteSheet Grid Slicing, UIDropdown, and Time.smoothDamp
+
+- [x] **E21-1. `SpriteSheet` Grid Slicing & `SpriteRenderer.fromRegion`.**
+  - _Touches:_ `lib/src/engine/assets/asset_catalog.dart`, `lib/src/engine/components/sprites_2d.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (grid UV cell slicing, sublist slice animation frames, and SpriteRenderer factory).
+- [x] **E21-2. `UIDropdown` Multi-Option Menu Widget in Canvas UI.**
+  - _Touches:_ `lib/src/engine/ui/canvas_ui.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (pointer toggle, popup item selection, and callback dispatch).
+- [x] **E21-3. `Time.smoothDamp` and `smoothDampVec3` Critical Damping.**
+  - _Touches:_ `lib/src/engine/time.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (smooth damping convergence without oscillation for double and Vec3).

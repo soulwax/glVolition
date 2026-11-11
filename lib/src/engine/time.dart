@@ -55,6 +55,62 @@ final class Time {
   /// Use it to interpolate rendered positions of fixed-step bodies.
   double get fixedInterpolation => (_accumulator / _fixedDeltaTime).clamp(0.0, 1.0);
 
+  /// Computes a smoothly damped value from [current] to [target] over [smoothTime] seconds (E21-3).
+  ///
+  /// Matches Unity's `Mathf.SmoothDamp`, returning `(current: double, velocity: double)`.
+  ({double current, double velocity}) smoothDamp(
+    double current,
+    double target,
+    double currentVelocity, {
+    required double smoothTime,
+    double maxSpeed = double.infinity,
+    double? dt,
+  }) {
+    final actualDt = dt ?? deltaTime;
+    final st = math.max(0.0001, smoothTime);
+    final omega = 2.0 / st;
+
+    final x = omega * actualDt;
+    final exp = 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x);
+    var change = current - target;
+    final originalTo = target;
+
+    // Clamp maximum speed
+    final maxChange = maxSpeed * st;
+    change = change.clamp(-maxChange, maxChange);
+    final targetClamped = current - change;
+
+    final temp = (currentVelocity + omega * change) * actualDt;
+    var newVelocity = (currentVelocity - omega * temp) * exp;
+    var output = targetClamped + (change + temp) * exp;
+
+    // Prevent overshooting
+    if ((originalTo - current > 0.0) == (output > originalTo)) {
+      output = originalTo;
+      newVelocity = (output - originalTo) / actualDt;
+    }
+
+    return (current: output, velocity: newVelocity);
+  }
+
+  /// Computes a smoothly damped 3D vector from [current] to [target] over [smoothTime] seconds (E21-3).
+  ({Vec3 current, Vec3 velocity}) smoothDampVec3(
+    Vec3 current,
+    Vec3 target,
+    Vec3 currentVelocity, {
+    required double smoothTime,
+    double maxSpeed = double.infinity,
+    double? dt,
+  }) {
+    final resX = smoothDamp(current.x, target.x, currentVelocity.x, smoothTime: smoothTime, maxSpeed: maxSpeed, dt: dt);
+    final resY = smoothDamp(current.y, target.y, currentVelocity.y, smoothTime: smoothTime, maxSpeed: maxSpeed, dt: dt);
+    final resZ = smoothDamp(current.z, target.z, currentVelocity.z, smoothTime: smoothTime, maxSpeed: maxSpeed, dt: dt);
+    return (
+      current: Vec3(resX.current, resY.current, resZ.current),
+      velocity: Vec3(resX.velocity, resY.velocity, resZ.velocity),
+    );
+  }
+
   void _beginFrame(double rawDelta) {
     final raw = rawDelta.isFinite && rawDelta > 0 ? rawDelta : 0.0;
     _unscaledDeltaTime = math.min(raw, maximumDeltaTime);

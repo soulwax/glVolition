@@ -47,6 +47,71 @@ final class BytesEntry extends AssetEntry {
   const BytesEntry(this.path);
 }
 
+/// Slices a texture or atlas into uniform grid-aligned [SpriteRegion] cells (E21-1).
+final class SpriteSheet {
+  final TextureHandle? texture;
+  final int cellWidth;
+  final int cellHeight;
+  final int columns;
+  final int rows;
+  final double textureWidth;
+  final double textureHeight;
+
+  final List<SpriteRegion> _regions;
+
+  SpriteSheet({
+    required this.texture,
+    required this.cellWidth,
+    required this.cellHeight,
+    required this.columns,
+    required this.rows,
+    double? textureWidth,
+    double? textureHeight,
+  })  : textureWidth = textureWidth ?? (columns * cellWidth).toDouble(),
+        textureHeight = textureHeight ?? (rows * cellHeight).toDouble(),
+        _regions = [] {
+    final tw = this.textureWidth;
+    final th = this.textureHeight;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < columns; c++) {
+        final u0 = (c * cellWidth) / tw;
+        final v0 = (r * cellHeight) / th;
+        final u1 = ((c + 1) * cellWidth) / tw;
+        final v1 = ((r + 1) * cellHeight) / th;
+        _regions.add(
+          SpriteRegion(
+            texture: texture,
+            width: cellWidth.toDouble(),
+            height: cellHeight.toDouble(),
+            u0: u0,
+            v0: v0,
+            u1: u1,
+            v1: v1,
+          ),
+        );
+      }
+    }
+  }
+
+  int get count => _regions.length;
+
+  /// Returns the [SpriteRegion] at linear [index].
+  SpriteRegion get(int index) => _regions[index.clamp(0, _regions.length - 1)];
+
+  /// Returns the [SpriteRegion] at grid coordinate `(column, row)`.
+  SpriteRegion cell(int column, int row) {
+    final idx = row * columns + column;
+    return get(idx);
+  }
+
+  /// Returns an immutable sublist of regions representing an animation clip.
+  List<SpriteRegion> slice(int start, int end) =>
+      List.unmodifiable(_regions.sublist(start.clamp(0, _regions.length), end.clamp(0, _regions.length)));
+
+  /// All generated [SpriteRegion]s.
+  List<SpriteRegion> get all => List.unmodifiable(_regions);
+}
+
 /// Preloads models, audio clips, procedural textures, meshes, and materials by
 /// logical string key so `awake()` / `start()` / `Prefab.builder` can look them
 /// up synchronously without `async`/`await` (E3-4).
@@ -62,6 +127,7 @@ final class AssetCatalog {
   final Map<String, String> _texts = {};
   final Map<String, Uint8List> _bytes = {};
   final Map<String, Prefab> _prefabs = {};
+  final Map<String, SpriteSheet> _sheets = {};
 
   AssetCatalog._(this._engine);
 
@@ -157,6 +223,34 @@ final class AssetCatalog {
 
   bool hasPrefab(String key) => _prefabs.containsKey(key) || _models.containsKey(key);
 
+  void putSpriteSheet(String key, SpriteSheet sheet) => _sheets[key] = sheet;
+
+  SpriteSheet spriteSheet(String key) =>
+      _sheets[key] ?? (throw ArgumentError.value(key, 'key', 'SpriteSheet not found in catalog'));
+
+  SpriteSheet registerSpriteSheet(
+    String key, {
+    required TextureHandle texture,
+    required int cellWidth,
+    required int cellHeight,
+    required int columns,
+    required int rows,
+    double? textureWidth,
+    double? textureHeight,
+  }) {
+    final sheet = SpriteSheet(
+      texture: texture,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+      columns: columns,
+      rows: rows,
+      textureWidth: textureWidth,
+      textureHeight: textureHeight,
+    );
+    _sheets[key] = sheet;
+    return sheet;
+  }
+
   /// Returns the [Prefab] registered under [key], or lazily builds (and
   /// caches) one from the [ModelAsset] loaded under the same key so a loaded
   /// GLB spawns in one line: `scene.instantiate(catalog.prefab('ship'))`
@@ -204,6 +298,7 @@ final class AssetCatalog {
     }
     _models.clear();
     _prefabs.clear();
+    _sheets.clear();
     _clips.clear();
     _textures.clear();
     _meshes.clear();

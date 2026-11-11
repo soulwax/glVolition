@@ -2203,6 +2203,7 @@ void main() {
 
       final obj = engine.scene.createGameObject('TintedBox', components: [renderer]);
       engine.step(0.016);
+      expect(obj.activeInHierarchy, isTrue);
 
       expect(renderer.tintColor, isNotNull);
       expect(renderer.material, isNotNull);
@@ -2245,6 +2246,175 @@ void main() {
       final clearEnd = Vec2(8.5, 2.5);
       expect(nav.hasLineOfSight(clearStart, clearEnd), isTrue);
       expect(nav.raycast(clearStart, clearEnd), isNull);
+    });
+  });
+
+  group('E21 — SpriteSheet Grid Slicing, UIDropdown, and Time.smoothDamp', () {
+    test('SpriteSheet slices uniform grid cells and slices sub-ranges for animation clips', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      // 4 columns x 2 rows of 16x16 tiles (total 64x32)
+      final dummyTex = host.graphics.createTexture(
+        width: 64,
+        height: 32,
+        pixels: Uint8List(64 * 32 * 4),
+      );
+
+      final sheet = engine.catalog.registerSpriteSheet(
+        'hero_sheet',
+        texture: dummyTex,
+        cellWidth: 16,
+        cellHeight: 16,
+        columns: 4,
+        rows: 2,
+      );
+
+      expect(sheet.count, 8);
+      expect(sheet.all.length, 8);
+
+      final first = sheet.cell(0, 0);
+      expect(first.width, 16.0);
+      expect(first.height, 16.0);
+
+      final bottomCorner = sheet.cell(3, 1);
+      expect(bottomCorner, isNotNull);
+
+      // Slicing animation clip [0..4]
+      final walkClip = sheet.slice(0, 4);
+      expect(walkClip.length, 4);
+
+      // Create SpriteRenderer from region
+      final renderer = SpriteRenderer.fromRegion(first, color: 0xFF5566FF, layer: 2);
+      expect(renderer.layer, 2);
+      expect(renderer.color, 0xFF5566FF);
+      expect(renderer.region, first);
+
+      // Look up from catalog
+      expect(engine.catalog.spriteSheet('hero_sheet'), same(sheet));
+    });
+
+    test('UIDropdown toggles popup menu and selects items on click', () {
+      final host = HeadlessHost();
+      host.graphics
+        ..viewportWidth = 640
+        ..viewportHeight = 360;
+      final engine = Engine(host);
+
+      final canvas = UICanvas(designWidth: 640, designHeight: 360);
+      engine.scene.createGameObject('UI', components: [canvas]);
+
+      int selectedIdx = -1;
+      String selectedVal = '';
+      final dropdown = canvas.add(UIDropdown(
+        options: ['Quality: Low', 'Quality: Medium', 'Quality: Ultra'],
+        selectedIndex: 0,
+        x: 10,
+        y: 10,
+        width: 140,
+        height: 24,
+        onSelected: (idx, val) {
+          selectedIdx = idx;
+          selectedVal = val;
+        },
+      ));
+
+      expect(dropdown.isOpen, isFalse);
+      expect(dropdown.selectedOption, 'Quality: Low');
+
+      // Click dropdown header (10, 10) to open
+      final input = host.input;
+      input
+        ..pointerX = 20
+        ..pointerY = 20
+        ..pointerDown = true
+        ..pointerPressed = true;
+      engine.step(0.016);
+      expect(dropdown.isOpen, isTrue);
+
+      // Release pointer
+      input
+        ..pointerDown = false
+        ..pointerPressed = false
+        ..pointerReleased = true;
+      engine.step(0.016);
+
+      // Click on item 2 (Quality: Ultra):
+      // header is [10..34]
+      // item 0 is [34..58]
+      // item 1 is [58..82]
+      // item 2 is [82..106] -> y = 90
+      input
+        ..pointerX = 20
+        ..pointerY = 90
+        ..pointerDown = true
+        ..pointerPressed = true
+        ..pointerReleased = false;
+      engine.step(0.016);
+
+      expect(selectedIdx, 2);
+      expect(selectedVal, 'Quality: Ultra');
+      expect(dropdown.selectedOption, 'Quality: Ultra');
+      expect(dropdown.isOpen, isFalse);
+    });
+
+    test('Time.smoothDamp and smoothDampVec3 converge critically to target without oscillation', () {
+      final time = Time();
+
+      // Smooth damp scalar from 0 to 100 with smoothTime = 0.2s
+      var current = 0.0;
+      var velocity = 0.0;
+      const target = 100.0;
+
+      for (var i = 0; i < 30; i++) {
+        final res = time.smoothDamp(
+          current,
+          target,
+          velocity,
+          smoothTime: 0.2,
+          dt: 0.016,
+        );
+        current = res.current;
+        velocity = res.velocity;
+      }
+
+      expect(current, greaterThan(80.0));
+      expect(current, lessThanOrEqualTo(100.0));
+
+      // After 60 more steps (total ~1.44s), converges to target
+      for (var i = 0; i < 60; i++) {
+        final res = time.smoothDamp(
+          current,
+          target,
+          velocity,
+          smoothTime: 0.2,
+          dt: 0.016,
+        );
+        current = res.current;
+        velocity = res.velocity;
+      }
+      expect(current, closeTo(100.0, 1e-2));
+      expect(velocity, closeTo(0.0, 1e-2));
+
+      // Smooth damp Vec3
+      var vCurrent = Vec3.zero;
+      var vVelocity = Vec3.zero;
+      const vTarget = Vec3(10, 20, 30);
+
+      for (var i = 0; i < 90; i++) {
+        final res = time.smoothDampVec3(
+          vCurrent,
+          vTarget,
+          vVelocity,
+          smoothTime: 0.2,
+          dt: 0.016,
+        );
+        vCurrent = res.current;
+        vVelocity = res.velocity;
+      }
+      expect(vCurrent.x, closeTo(10.0, 1e-3));
+      expect(vCurrent.y, closeTo(20.0, 1e-3));
+      expect(vCurrent.z, closeTo(30.0, 1e-3));
     });
   });
 }

@@ -115,6 +115,30 @@ final class SpriteRenderer extends Component {
     this.blend = SpriteBlend.alpha,
   });
 
+  /// Factory constructing a [SpriteRenderer] directly from a single [SpriteRegion] (E21-1).
+  factory SpriteRenderer.fromRegion(
+    SpriteRegion region, {
+    double? width,
+    double? height,
+    double originX = 0.5,
+    double originY = 0.5,
+    int color = 0xFFFFFFFF,
+    int layer = 0,
+    bool flipX = false,
+    bool flipY = false,
+  }) =>
+      SpriteRenderer(
+        region: region,
+        width: width,
+        height: height,
+        originX: originX,
+        originY: originY,
+        color: color,
+        layer: layer,
+        flipX: flipX,
+        flipY: flipY,
+      );
+
   void _drawInto(SpriteBatch batch) {
     final pos = transform.position;
     final s = transform.lossyScale;

@@ -445,6 +445,48 @@ final class UITextField extends UIElement {
   }
 }
 
+/// Interactive multi-option dropdown menu widget rendered on a [UICanvas] (E21-2).
+final class UIDropdown extends UIElement {
+  final List<String> options;
+  int selectedIndex;
+  void Function(int index, String option)? onSelected;
+  bool isOpen;
+
+  int backgroundColor;
+  int borderColor;
+  int hoverColor;
+  int textColor;
+  double textScale;
+
+  UIDropdown({
+    required this.options,
+    this.selectedIndex = 0,
+    this.onSelected,
+    this.isOpen = false,
+    super.anchor,
+    super.x,
+    super.y,
+    super.width = 140,
+    super.height = 24,
+    this.backgroundColor = 0x1B192EF2,
+    this.borderColor = 0x5C5488FF,
+    this.hoverColor = 0x36305CFF,
+    this.textColor = 0xFFFFFFFF,
+    this.textScale = 1.0,
+    super.visible,
+  });
+
+  String get selectedOption =>
+      options.isNotEmpty ? options[selectedIndex.clamp(0, options.length - 1)] : '';
+
+  void select(int index) {
+    if (options.isEmpty) return;
+    final clamped = index.clamp(0, options.length - 1);
+    selectedIndex = clamped;
+    onSelected?.call(clamped, options[clamped]);
+  }
+}
+
 /// DOM-free in-canvas UI overlay rendered on `SpriteStage.overlay` (E4-4).
 final class UICanvas extends Behaviour {
   double designWidth;
@@ -557,6 +599,28 @@ final class UICanvas extends Behaviour {
           field.isFocused = hit;
         }
         field._handleInput(raw);
+      case UIDropdown dropdown:
+        final (rx, ry) = dropdown.resolveTopLeft(designWidth, designHeight);
+        final headerHit = pt.x >= rx && pt.x <= rx + dropdown.width && pt.y >= ry && pt.y <= ry + dropdown.height;
+        if (dropdown.isOpen) {
+          final totalH = dropdown.height * (dropdown.options.length + 1);
+          final menuHit = pt.x >= rx && pt.x <= rx + dropdown.width && pt.y >= ry && pt.y <= ry + totalH;
+          if (raw.pointerPressed) {
+            if (headerHit) {
+              dropdown.isOpen = false;
+            } else if (menuHit) {
+              final optIdx = ((pt.y - (ry + dropdown.height)) / dropdown.height).floor();
+              if (optIdx >= 0 && optIdx < dropdown.options.length) {
+                dropdown.select(optIdx);
+              }
+              dropdown.isOpen = false;
+            } else {
+              dropdown.isOpen = false;
+            }
+          }
+        } else if (headerHit && raw.pointerPressed) {
+          dropdown.isOpen = true;
+        }
       case UIPanel() || UILabel() || UIProgressBar() || UIImage():
         break;
     }
@@ -711,6 +775,37 @@ final class UICanvas extends Behaviour {
             scale: field.textScale,
             color: field.text.isNotEmpty ? field.textColor : field.placeholderColor,
           );
+        }
+      case UIDropdown dropdown:
+        _batch.drawRect(rx, ry, dropdown.width, dropdown.height, color: dropdown.backgroundColor);
+        _drawBorder(rx, ry, dropdown.width, dropdown.height, 1, dropdown.borderColor);
+        final f = font;
+        if (f != null && dropdown.selectedOption.isNotEmpty) {
+          f.draw(
+            _batch,
+            dropdown.selectedOption,
+            rx + 6,
+            ry + (dropdown.height - f.lineHeight * dropdown.textScale) * 0.5,
+            scale: dropdown.textScale,
+            color: dropdown.textColor,
+          );
+        }
+        if (dropdown.isOpen) {
+          for (var i = 0; i < dropdown.options.length; i++) {
+            final itemY = ry + (i + 1) * dropdown.height;
+            _batch.drawRect(rx, itemY, dropdown.width, dropdown.height, color: dropdown.backgroundColor);
+            _drawBorder(rx, itemY, dropdown.width, dropdown.height, 1, dropdown.borderColor);
+            if (f != null) {
+              f.draw(
+                _batch,
+                dropdown.options[i],
+                rx + 6,
+                itemY + (dropdown.height - f.lineHeight * dropdown.textScale) * 0.5,
+                scale: dropdown.textScale,
+                color: i == dropdown.selectedIndex ? 0x5CE1E6FF : dropdown.textColor,
+              );
+            }
+          }
         }
     }
   }
