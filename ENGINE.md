@@ -894,11 +894,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E54: Procedural Spline Extrusion, Road/River Ribbons & Architectural Sweeps (`voxextrude`)
 
-- [ ] **E54-1. `voxextrude` Submodule: Cross-Section Framing, UV Tiling & Road/Bridge Junctions.**
+- [x] **E54-1. `voxextrude` Submodule: Cross-Section Framing, UV Tiling & Road/Bridge Junctions.**
   - _Location:_ `./vendor/voxextrude` (`https://github.com/soulwax/voxextrude`).
-  - _APIs:_ `SplineSample`, `CrossSectionProfile`, `RotationMinimizingFrame` (Bishop frame sweep without gimbal flip), `SplineSweepBuilder`, `RoadIntersectionMeshBuilder`.
+  - _APIs:_ `SplineSample`, `ExtrusionResampler`, `CrossSectionProfile` (`road`, `riverRibbon`, `circle`, `boxBeam`), `RotationMinimizingFrame` (double-reflection Bishop frame sweep + horizon `upLocked` mode), `SplineSweepBuilder`, `RoadIntersectionMeshBuilder`.
   - _Verify:_ `vendor/voxextrude/test/voxextrude_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E54-2. `SplineExtrudeComponent` & `ExtrusionInspectorUI` Engine Integration.**
+- [x] **E54-2. `SplineExtrudeComponent` & `ExtrusionInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/spline_extrude.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -906,13 +906,38 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E55: Deterministic Terrain Noise Graph & Hydraulic Droplet Erosion (`voxbiome`)
 
-- [ ] **E55-1. `voxbiome` Submodule: Seeded Simplex/Worley/FBM Graphs, Thermal & Hydraulic Erosion.**
+- [x] **E55-1. `voxbiome` Submodule: Seeded Simplex/Worley/FBM Graphs, Thermal & Hydraulic Erosion.**
   - _Location:_ `./vendor/voxbiome` (`https://github.com/soulwax/voxbiome`).
-  - _APIs:_ `SimplexNoise2D`, `WorleyNoise2D`, `FbmLayer`, `DomainWarpField`, `HydraulicDropletErosion`, `ThermalTalusSolver`, `BiomeSplatClassifier`.
+  - _APIs:_ `NoiseNode`, `SimplexNoise2D`, `WorleyNoise2D`, `FbmLayer`, `DomainWarpField`, `BlendNoiseNode`, `TerrainHeightGrid`, `HydraulicDropletErosion`, `ThermalTalusSolver`, `BiomeSplatClassifier`.
   - _Verify:_ `vendor/voxbiome/test/voxbiome_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E55-2. `BiomeTerrainGeneratorComponent` & `NoiseErosionUI` Engine Integration.**
+- [x] **E55-2. `BiomeTerrainGeneratorComponent` & `NoiseErosionUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/biome_noise.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E56: Reciprocal Crowd Collision Avoidance, Flocking & Tactical Formations (`voxcrowd`)
+
+- [ ] **E56-1. `voxcrowd` Submodule: ORCA/RVO2 Local Avoidance, Steering Flocks & Formation Slots.**
+  - _Location:_ `./vendor/voxcrowd` (`https://github.com/soulwax/voxcrowd`).
+  - _APIs:_ `CrowdAgent`, `OrcaSolver` (linear-program half-plane reciprocal velocity obstacle avoidance), `BoidFlockRule` (separation/alignment/cohesion), `SteeringBehaviours` (seek/arrive/pursue/evade/wander), `FormationPattern` (`wedge`, `line`, `box`, `ring` slot solver).
+  - _Verify:_ `vendor/voxcrowd/test/voxcrowd_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E56-2. `CrowdManagerComponent`, `CrowdAgentComponent`, `FormationLeaderComponent` & `CrowdInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/crowd_avoidance.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E57: Astronomical Time-of-Day Cycle, Weather Blending & Wind Field Zones (`voxsky`)
+
+- [ ] **E57-1. `voxsky` Submodule: Solar/Lunar Ephemeris, Atmospheric Color Ramps, Weather States & Wind Turbulence.**
+  - _Location:_ `./vendor/voxsky` (`https://github.com/soulwax/voxsky`).
+  - _APIs:_ `TimeOfDayClock`, `SolarEphemeris`, `AtmosphericSkyRamp` (zenith/horizon/fog/sun/ambient color curves), `WeatherController` (`clear`, `overcast`, `rain`, `storm`, `snow` wet/puddle/fog blending), `WindFieldSampler` (directional gusts + spatial wind zones).
+  - _Verify:_ `vendor/voxsky/test/voxsky_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E57-2. `DayNightSkyComponent`, `WeatherVolumeComponent`, `WindZoneComponent` & `WeatherInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/day_night_weather.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
 
 
 

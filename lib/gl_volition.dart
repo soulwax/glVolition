@@ -34,5 +34,7 @@ export 'package:voxcam/voxcam.dart';
 export 'package:voxgrid/voxgrid.dart';
 export 'package:voxnav3d/voxnav3d.dart';
 export 'package:voxcloth/voxcloth.dart';
+export 'package:voxextrude/voxextrude.dart';
+export 'package:voxbiome/voxbiome.dart';
 
 export 'src/engine.dart';

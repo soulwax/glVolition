@@ -6164,6 +6164,148 @@ void main() {
       expect(clothComp.world.wind.z, closeTo(7.0, 1e-4));
     });
   });
+
+  group('E54 — Procedural Spline Extrusion & Intersections (voxextrude)', () {
+    test('SplineExtrudeComponent builds swept road mesh, updates MeshRenderer, and rebuilds via ExtrusionInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final roadGo = scene.createGameObject(
+        'HighwaySpline',
+        components: [
+          SplinePath.fromPoints(const [
+            Vec3(0.0, 0.0, 0.0),
+            Vec3(0.0, 0.5, -6.0),
+            Vec3(4.0, 1.0, -12.0),
+            Vec3(8.0, 1.2, -18.0),
+          ]),
+        ],
+      );
+
+      final extrude = roadGo.addComponent(
+        SplineExtrudeComponent(
+          profilePreset: ExtrudeProfilePreset.road,
+          subdivisionsPerSegment: 6,
+          width: 6.0,
+          upLocked: true,
+        ),
+      );
+      engine.step(0.016);
+
+      final mr = roadGo.getComponent<MeshRenderer>();
+      expect(mr, isNotNull);
+      expect(mr!.mesh, isNotNull);
+      expect(extrude.vertexCount, greaterThan(90));
+      expect(extrude.triangleCount, greaterThan(100));
+      expect(extrude.totalArcLength, greaterThan(18.0));
+      expect(extrude.currentMeshData, isNotNull);
+      extrude.currentMeshData!.validate();
+
+      // Switch to pipe preset, toggle UpLock via UI click, and verify mesh rebuilds cleanly.
+      extrude.profilePreset = ExtrudeProfilePreset.circle;
+      extrude.radius = 0.75;
+
+      final ui = VoxUiContext();
+      final uiState = ExtrusionInspectorUiState();
+      const btnX = 60.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      ExtrusionInspectorUI.render(ui, extrude, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      ExtrusionInspectorUI.render(ui, extrude, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      ExtrusionInspectorUI.render(ui, extrude, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(extrude.upLocked, isFalse);
+      expect(extrude.vertexCount, greaterThan(200));
+      expect(drawList.commands.any((c) => c.text == 'circle / OFF'), isTrue);
+
+      // Verify intersection hub + ComponentRegistry round-trip.
+      final junction = RoadIntersectionMeshBuilder.build(
+        hubRadius: 5.0,
+        arms: [
+          RoadArm(id: 'n', direction: const ExtVec3(0, 0, -1), width: 6.0),
+          RoadArm(id: 'e', direction: const ExtVec3(1, 0, 0), width: 6.0),
+          RoadArm(id: 's', direction: const ExtVec3(0, 0, 1), width: 6.0),
+        ],
+      );
+      expect(junction.portals.length, 3);
+      expect(junction.mesh.triangleCount, greaterThanOrEqualTo(6));
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('SplineExtrudeComponent'), isNotNull);
+      final json = reg.specFor(extrude)!.toJson(extrude);
+      expect(json['profilePreset'], 'circle');
+      expect(json['upLocked'], false);
+    });
+  });
+
+  group('E55 — Terrain Noise Graph, Hydraulic Erosion & Biomes (voxbiome)', () {
+    test('BiomeTerrainGeneratorComponent synthesizes eroded heightfield, RGBA splat texture, and responds to NoiseErosionUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final terrainGo = scene.createGameObject('IslandBiomeTerrain');
+      final terrain = terrainGo.addComponent(
+        BiomeTerrainGeneratorComponent(
+          seed: 404,
+          gridWidth: 24,
+          gridHeight: 24,
+          worldWidth: 24.0,
+          worldDepth: 24.0,
+          amplitude: 6.5,
+          initialErosionDroplets: 300,
+          initialThermalIterations: 4,
+        ),
+      );
+      engine.step(0.016);
+
+      final mr = terrainGo.getComponent<MeshRenderer>();
+      expect(mr, isNotNull);
+      expect(mr!.mesh, isNotNull);
+      expect(terrain.currentMaterial, isNotNull);
+      expect(terrain.vertexCount, 24 * 24);
+      expect(terrain.triangleCount, 23 * 23 * 2);
+      expect(terrain.albedoPixels!.length, 24 * 24 * 4);
+      expect(terrain.splatMaskPixels!.length, 24 * 24 * 4);
+      expect(terrain.lastErosionStats!.dropletsSimulated, 300);
+      expect(terrain.lastErosionStats!.totalErodedVolume, greaterThan(0.0));
+      terrain.currentMeshData!.validate();
+
+      final sampledH = terrain.sampleHeight(0.0, 0.0);
+      final sampledN = terrain.sampleNormal(0.0, 0.0);
+      expect(sampledH.isFinite, isTrue);
+      expect(sampledN.y, greaterThan(0.2));
+      expect(terrain.classifyAt(0.0, 0.0).r, inInclusiveRange(0, 255));
+
+      // Click 'Erode +250' button in NoiseErosionUI at (60, 156).
+      final ui = VoxUiContext();
+      final uiState = NoiseErosionUiState();
+      const btnX = 60.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      NoiseErosionUI.render(ui, terrain, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      NoiseErosionUI.render(ui, terrain, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(terrain.lastErosionStats!.dropletsSimulated, 550);
+      expect(drawList.commands.any((c) => c.text == '404 / 24x24'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('BiomeTerrainGeneratorComponent'), isNotNull);
+      final json = reg.specFor(terrain)!.toJson(terrain);
+      expect(json['seed'], 404);
+      expect(json['gridWidth'], 24);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

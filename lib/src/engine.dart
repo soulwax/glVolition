@@ -39,6 +39,8 @@ import 'package:voxcam/voxcam.dart' as vcam;
 import 'package:voxgrid/voxgrid.dart' as vgrid;
 import 'package:voxnav3d/voxnav3d.dart' as nav3;
 import 'package:voxcloth/voxcloth.dart' as cloth;
+import 'package:voxextrude/voxextrude.dart' as ext;
+import 'package:voxbiome/voxbiome.dart' as biome;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -112,3 +114,5 @@ part 'engine/components/camera_director.dart';
 part 'engine/components/spatial_bvh.dart';
 part 'engine/components/navmesh_3d.dart';
 part 'engine/components/cloth_rope.dart';
+part 'engine/components/spline_extrude.dart';
+part 'engine/components/biome_noise.dart';

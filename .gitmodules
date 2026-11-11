@@ -94,3 +94,9 @@
 [submodule "vendor/voxcloth"]
 	path = vendor/voxcloth
 	url = https://github.com/soulwax/voxcloth.git
+[submodule "vendor/voxextrude"]
+	path = vendor/voxextrude
+	url = https://github.com/soulwax/voxextrude.git
+[submodule "vendor/voxbiome"]
+	path = vendor/voxbiome
+	url = https://github.com/soulwax/voxbiome.git

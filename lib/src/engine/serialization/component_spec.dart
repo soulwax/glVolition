@@ -448,5 +448,7 @@ final class ComponentRegistry {
     register<NavMeshAgent3DComponent>(NavMeshAgent3DComponent.spec);
     register<ClothSimulationComponent>(ClothSimulationComponent.spec);
     register<RopeSimulationComponent>(RopeSimulationComponent.spec);
+    register<SplineExtrudeComponent>(SplineExtrudeComponent.spec);
+    register<BiomeTerrainGeneratorComponent>(BiomeTerrainGeneratorComponent.spec);
   }
 }
