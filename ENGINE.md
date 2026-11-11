@@ -623,6 +623,41 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _APIs:_ `scene.network`, `NetworkManager.startServer()`, `startClient()`, `sendRpc()`, `rpc.register()`, `currentTick`, `currentNetworkTimeMs`.
   - _Verify:_ `test/subsystems_test.dart` (RPC packet broadcasting, payload deserialization, and multi-peer network manager execution).
 
+---
+
+## E34: Skeletal Animation Blend Trees & Inverse Kinematics (voxanim)
+
+- [x] **E34-1. `voxanim` Submodule: Skeletal Animation, Blend Trees, FABRIK & Two-Bone IK.**
+  - _Location:_ `./vendor/voxanim` (`https://github.com/soulwax/voxanim`).
+  - _APIs:_ `AnimVec3`, `AnimQuat` (`lookRotation`, `fromToRotation`, `slerp`), `BoneTransform`, `Pose` (`lerp`, `blendAdditive`), `Skeleton` (forward kinematics hierarchy, global transforms), `BlendNode`, `ClipNode`, `Blend1DNode` (1D parameter interpolation), `Blend2DNode` (2D directional polar blending), `AdditiveBlendNode` (breathing, recoil, aim offsets), `TwoBoneIkSolver` (analytical law-of-cosines limb IK with pole target), `FabrikSolver` (Forwards and Backwards Reaching Inverse Kinematics multi-bone chains), `AimIkSolver` (cone-clamped look-at IK).
+  - _Verify:_ `vendor/voxanim/test/voxanim_test.dart` & `test/subsystems_test.dart` (10/10 unit tests: pose blending, additive layering, FK propagation, FABRIK chain reaching, TwoBoneIk limb bending, and aim cone limits).
+- [x] **E34-2. `TwoBoneIkComponent` & `AimIkComponent` Engine Components.**
+  - _Touches:_ `lib/src/engine/components/ik_animation.dart`.
+  - _APIs:_ `TwoBoneIkComponent(rootBone, midBone, endEffector, target, targetPosition, pole, polePosition, weight)`, `AimIkComponent(bone, target, targetPosition, localAimAxis, maxAngleRadians, weight)`.
+  - _Verify:_ `test/subsystems_test.dart` (limb IK foot planting reaching targets within < 0.05 margin, pole knee direction, and aim look-at orientation alignment).
+- [x] **E34-3. `BlendTreeComponent` Animation Graph Evaluator.**
+  - _Touches:_ `lib/src/engine/components/ik_animation.dart`.
+  - _APIs:_ `BlendTreeComponent(rootNode, initialParameters)`, `setFloat(name, value)`, `getFloat(name)`, `animationTime`.
+  - _Verify:_ `test/subsystems_test.dart` (1D blend tree interpolation driving child bone GameObject local transforms during engine update loop).
+
+---
+
+## E35: 2D Dynamic Visibility, Shadows & Fog of War (voxlight)
+
+- [ ] **E35-1. `voxlight` Submodule: 2D Visibility Polygon, Shadow Casting & Fog of War.**
+  - _Location:_ `./vendor/voxlight` (`https://github.com/soulwax/voxlight`).
+  - _APIs:_ `LightVec2`, `Segment2D`, `VisibilityPolygon` (angular ray sweep, edge-intersection, sorted boundary polygon generation), `Light2D` (point light, spot/cone light, radius, attenuation falloff, illumination sampling), `ShadowCaster2D` (occlusion edge extraction, shadow volume extrusion), `FogOfWar` (grid exploration, visibility masking, sight radius revelation, smooth fade).
+  - _Verify:_ `vendor/voxlight/test/voxlight_test.dart` & `test/subsystems_test.dart` (angular ray sweeps, occluded shadow cones, spot light directionality, and fog of war tile exploration).
+- [ ] **E35-2. `Light2DComponent` & `ShadowCaster2DComponent` Engine Components.**
+  - _Touches:_ `lib/src/engine/components/lighting_2d.dart`.
+  - _APIs:_ `Light2DComponent(type, color, intensity, radius, spotAngle, castsShadows)`, `ShadowCaster2DComponent(segments, shapeType, boxSize, radius)`.
+  - _Verify:_ `test/subsystems_test.dart` (automatic collider occluder extraction, light boundary containment, and shadow casting).
+- [ ] **E35-3. `FogOfWar2DComponent` & Scene 2D Light Sampling.**
+  - _Touches:_ `lib/src/engine/components/lighting_2d.dart`, `lib/src/engine/scene.dart`.
+  - _APIs:_ `FogOfWar2DComponent(width, height, cellSize)`, `reveal(pos, radius)`, `isExplored(pos)`, `isVisible(pos)`, `scene.evaluateLight2D(pos)`.
+  - _Verify:_ `test/subsystems_test.dart` (spatial 2D light evaluation with shadow obstruction, and player-centered fog of war revelation).
+
+
 
 
 

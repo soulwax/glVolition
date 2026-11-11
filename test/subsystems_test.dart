@@ -4327,6 +4327,82 @@ void main() {
       expect(rpcReceived, isTrue);
       expect(receivedDamage, equals(85));
     });
+
+    test('E34: TwoBoneIkComponent solves limb kinematics towards target position', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final upperLeg = engine.scene.createGameObject('UpperLeg', position: const Vec3(0.0, 2.0, 0.0));
+      final lowerLeg = engine.scene.createGameObject('LowerLeg', position: const Vec3(0.0, -1.0, 0.0), parent: upperLeg);
+      final foot = engine.scene.createGameObject('Foot', position: const Vec3(0.0, -1.0, 0.0), parent: lowerLeg);
+
+      const targetPos = Vec3(0.4, 0.2, 0.0);
+      const polePos = Vec3(0.0, 1.0, 1.0);
+
+      upperLeg.addComponent(TwoBoneIkComponent(
+        rootBone: upperLeg,
+        midBone: lowerLeg,
+        endEffector: foot,
+        targetPosition: targetPos,
+        polePosition: polePos,
+      ));
+
+      engine.step(0.05);
+
+      // Foot world position should reach target
+      expect((foot.transform.position - targetPos).length, lessThan(0.05));
+      // Knee bent forward towards pole (+Z)
+      expect(lowerLeg.transform.position.z, greaterThan(0.0));
+    });
+
+    test('E34: AimIkComponent directs forward vector towards 3D target', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final head = engine.scene.createGameObject('Head', position: const Vec3(0.0, 1.5, 0.0));
+      const targetPos = Vec3(10.0, 1.5, -10.0); // 45 deg right/forward in -Z space
+
+      head.addComponent(AimIkComponent(
+        bone: head,
+        targetPosition: targetPos,
+      ));
+
+      engine.step(0.05);
+
+      final toTarget = (targetPos - head.transform.position).normalized;
+      final aimDot = head.transform.forward.dot(toTarget);
+      expect(aimDot, closeTo(1.0, 0.05));
+    });
+
+    test('E34: BlendTreeComponent evaluates 1D blend tree and updates bone transforms', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final character = engine.scene.createGameObject('Character');
+      final arm = engine.scene.createGameObject('Arm', parent: character);
+
+      final idlePose = Pose({'Arm': BoneTransform(position: const AnimVec3(0.0, 1.0, 0.0))});
+      final runPose = Pose({'Arm': BoneTransform(position: const AnimVec3(0.0, 1.0, 4.0))});
+
+      final blendTree = Blend1DNode(
+        parameterName: 'speed',
+        entries: [
+          Blend1DEntry(threshold: 0.0, node: ClipNode(name: 'Idle', duration: 1.0, sampler: (_) => idlePose)),
+          Blend1DEntry(threshold: 10.0, node: ClipNode(name: 'Run', duration: 1.0, sampler: (_) => runPose)),
+        ],
+      );
+
+      character.addComponent(BlendTreeComponent(
+        rootNode: blendTree,
+        initialParameters: {'speed': 5.0}, // 50% blend
+      ));
+
+      engine.step(0.05);
+
+      // Arm Z position should be halfway between 0.0 and 4.0 -> 2.0
+      expect(arm.transform.localPosition.z, closeTo(2.0, 1e-4));
+      expect(arm.transform.localPosition.y, closeTo(1.0, 1e-4));
+    });
   });
 }
 

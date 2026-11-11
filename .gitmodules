@@ -34,3 +34,6 @@
 [submodule "vendor/voxnet"]
 	path = vendor/voxnet
 	url = https://github.com/soulwax/voxnet.git
+[submodule "vendor/voxanim"]
+	path = vendor/voxanim
+	url = https://github.com/soulwax/voxanim.git
