@@ -450,5 +450,11 @@ final class ComponentRegistry {
     register<RopeSimulationComponent>(RopeSimulationComponent.spec);
     register<SplineExtrudeComponent>(SplineExtrudeComponent.spec);
     register<BiomeTerrainGeneratorComponent>(BiomeTerrainGeneratorComponent.spec);
+    register<CrowdAgentComponent>(CrowdAgentComponent.spec);
+    register<CrowdManagerComponent>(CrowdManagerComponent.spec);
+    register<FormationLeaderComponent>(FormationLeaderComponent.spec);
+    register<WindZoneComponent>(WindZoneComponent.spec);
+    register<WeatherVolumeComponent>(WeatherVolumeComponent.spec);
+    register<DayNightSkyComponent>(DayNightSkyComponent.spec);
   }
 }

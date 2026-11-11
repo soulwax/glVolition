@@ -76,6 +76,10 @@ dependencies:
     path: vendor/voxextrude
   voxbiome:
     path: vendor/voxbiome
+  voxcrowd:
+    path: vendor/voxcrowd
+  voxsky:
+    path: vendor/voxsky
   web: ^0.5.0
 
 dev_dependencies:

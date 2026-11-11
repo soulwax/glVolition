@@ -918,11 +918,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E56: Reciprocal Crowd Collision Avoidance, Flocking & Tactical Formations (`voxcrowd`)
 
-- [ ] **E56-1. `voxcrowd` Submodule: ORCA/RVO2 Local Avoidance, Steering Flocks & Formation Slots.**
+- [x] **E56-1. `voxcrowd` Submodule: ORCA/RVO2 Local Avoidance, Steering Flocks & Formation Slots.**
   - _Location:_ `./vendor/voxcrowd` (`https://github.com/soulwax/voxcrowd`).
-  - _APIs:_ `CrowdAgent`, `OrcaSolver` (linear-program half-plane reciprocal velocity obstacle avoidance), `BoidFlockRule` (separation/alignment/cohesion), `SteeringBehaviours` (seek/arrive/pursue/evade/wander), `FormationPattern` (`wedge`, `line`, `box`, `ring` slot solver).
+  - _APIs:_ `CrowdAgent`, `OrcaSolver` (linear-program half-plane reciprocal velocity obstacle avoidance), `BoidFlockRule` (separation/alignment/cohesion), `SteeringBehaviours` (seek/arrive/pursue/evade/wander/steerAroundCircle), `FormationPattern` (`wedge`, `line`, `box`, `ring` slot solver).
   - _Verify:_ `vendor/voxcrowd/test/voxcrowd_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E56-2. `CrowdManagerComponent`, `CrowdAgentComponent`, `FormationLeaderComponent` & `CrowdInspectorUI` Engine Integration.**
+- [x] **E56-2. `CrowdManagerComponent`, `CrowdAgentComponent`, `FormationLeaderComponent` & `CrowdInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/crowd_avoidance.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -930,12 +930,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E57: Astronomical Time-of-Day Cycle, Weather Blending & Wind Field Zones (`voxsky`)
 
-- [ ] **E57-1. `voxsky` Submodule: Solar/Lunar Ephemeris, Atmospheric Color Ramps, Weather States & Wind Turbulence.**
+- [x] **E57-1. `voxsky` Submodule: Solar/Lunar Ephemeris, Atmospheric Color Ramps, Weather States & Wind Turbulence.**
   - _Location:_ `./vendor/voxsky` (`https://github.com/soulwax/voxsky`).
-  - _APIs:_ `TimeOfDayClock`, `SolarEphemeris`, `AtmosphericSkyRamp` (zenith/horizon/fog/sun/ambient color curves), `WeatherController` (`clear`, `overcast`, `rain`, `storm`, `snow` wet/puddle/fog blending), `WindFieldSampler` (directional gusts + spatial wind zones).
+  - _APIs:_ `TimeOfDayClock`, `SolarEphemeris`, `AtmosphericSkyRamp` (zenith/horizon/fog/sun/ambient color curves), `WeatherController` (`clear`, `overcast`, `rain`, `storm`, `snow` wet/snow/fog blending), `WindFieldSampler` (directional gusts + spatial wind zones).
   - _Verify:_ `vendor/voxsky/test/voxsky_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E57-2. `DayNightSkyComponent`, `WeatherVolumeComponent`, `WindZoneComponent` & `WeatherInspectorUI` Engine Integration.**
+- [x] **E57-2. `DayNightSkyComponent`, `WeatherVolumeComponent`, `WindZoneComponent` & `WeatherInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/day_night_weather.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E58: Raycast Vehicle Dynamics, Tire Brush Slip & Drivetrain Physics (`voxwheel`)
+
+- [ ] **E58-1. `voxwheel` Submodule: Suspension Struts, Anti-Roll Bars, Tire Slip Curves & Transmission.**
+  - _Location:_ `./vendor/voxwheel` (`https://github.com/soulwax/voxwheel`).
+  - _APIs:_ `WheelSuspension`, `TireBrushModel` (longitudinal/lateral slip curves, peak friction, drift decay), `DrivetrainSpec` (torque curve RPM table, automatic/manual gearbox ratios, FWD/RWD/AWD differential split), `VehicleDynamicsSolver` (Ackermann steer angles, anti-roll stiffness, rigid-body force/torque integration).
+  - _Verify:_ `vendor/voxwheel/test/voxwheel_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E58-2. `VehicleChassisComponent`, `WheelSuspensionComponent` & `VehicleTelemetryUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/vehicle_physics.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E59: 3D Mesh Plane Slicing, Voronoi Shatter & Structural Stability Graphs (`voxfracture`)
+
+- [ ] **E59-1. `voxfracture` Submodule: CSG Half-Space Mesh Clipper, Voronoi Fragmentation & Load Collapse.**
+  - _Location:_ `./vendor/voxfracture` (`https://github.com/soulwax/voxfracture`).
+  - _APIs:_ `MeshPlaneSlicer` (exact watertight triangle clipping + planar cap triangulation), `VoronoiFractureBuilder` (seeded 3D Voronoi cell cutting into bounded shards), `StructuralSupportGraph` (grounded anchor flood-fill + cantilever overload detachment).
+  - _Verify:_ `vendor/voxfracture/test/voxfracture_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E59-2. `FracturableMeshComponent`, `StructuralSupportComponent` & `DestructionInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/mesh_fracture.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
 

@@ -6306,6 +6306,158 @@ void main() {
       expect(json['gridWidth'], 24);
     });
   });
+
+  group('E56 — Reciprocal Crowd Avoidance & Formations (voxcrowd)', () {
+    test('CrowdManagerComponent, CrowdAgentComponent, FormationLeaderComponent & CrowdInspectorUI drive collision-free squads', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final manager = CrowdManagerComponent(autoDiscoverAgents: true)
+        ..addCircleObstacle(const Vec3(0.0, 0.0, -3.0), 0.9);
+      scene.createGameObject('CrowdCoordinator', components: [manager]);
+
+      final leaderGo = scene.createGameObject('SquadLeader', position: const Vec3(0.0, 0.0, -6.0));
+      final agents = <CrowdAgentComponent>[];
+      for (var i = 0; i < 4; i++) {
+        final go = scene.createGameObject(
+          'Trooper_$i',
+          position: Vec3(-3.0 + i * 2.0, 0.0, 4.0),
+        );
+        final comp = go.addComponent(CrowdAgentComponent(radius: 0.45, maxSpeed: 4.5));
+        agents.add(comp);
+      }
+
+      final formation = leaderGo.addComponent(
+        FormationLeaderComponent(
+          pattern: FormationKind.wedge,
+          spacing: 2.0,
+          offsetBehind: 1.5,
+          followers: agents,
+        ),
+      );
+
+      for (var i = 0; i < 65; i++) {
+        engine.step(0.05);
+      }
+
+      expect(manager.agents.length, 4);
+      expect(formation.lastSlots.length, 4);
+      expect(manager.lastStats.minPairwiseClearance, greaterThan(-0.08));
+      for (var i = 0; i < agents.length; i++) {
+        final pos = agents[i].transform.position;
+        final goal = formation.lastSlots[i];
+        // Note assignNearestSlots may permute indices, so check distance to any slot or agent goal.
+        expect(agents[i].goal, isNotNull);
+        final distToOwnGoal = (Vec3(pos.x, 0.0, pos.z) -
+                Vec3(agents[i].goal!.x, 0.0, agents[i].goal!.z))
+            .length;
+        expect(distToOwnGoal, lessThan(1.0));
+        expect(goal.y, closeTo(0.0, 1e-6));
+      }
+
+      // Click 'Cycle Form' button in CrowdInspectorUI at x=260, y=156.
+      final ui = VoxUiContext();
+      final uiState = CrowdInspectorUiState();
+      const btnX = 260.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      CrowdInspectorUI.render(ui, manager, formation: formation, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      CrowdInspectorUI.render(ui, manager, formation: formation, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      CrowdInspectorUI.render(ui, manager, formation: formation, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(formation.pattern, FormationKind.line);
+      expect(drawList.commands.any((c) => c.text == 'ORCA / line'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('CrowdAgentComponent'), isNotNull);
+      expect(reg.specByName('FormationLeaderComponent'), isNotNull);
+      final json = reg.specFor(formation)!.toJson(formation);
+      expect(json['pattern'], 'line');
+    });
+  });
+
+  group('E57 — Astronomical Day/Night Cycle, Weather & Wind Zones (voxsky)', () {
+    test('DayNightSkyComponent, WeatherVolumeComponent, WindZoneComponent & WeatherInspectorUI drive lighting, fog & wind', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final sun = Light.directional(intensity: 1.0);
+      final weather = WeatherVolumeComponent(
+        initialWeather: WeatherKind.clear,
+        transitionDurationSeconds: 1.0,
+      );
+      final skyComp = DayNightSkyComponent(
+        initialHours: 12.0,
+        dayLengthSeconds: 24.0,
+        sunLight: sun,
+        weatherVolume: weather,
+      );
+      scene.createGameObject('AtmosphereController', components: [sun, weather, skyComp]);
+
+      final windZoneGo = scene.createGameObject(
+        'WindTurbine',
+        position: const Vec3(10.0, 0.0, 0.0),
+        components: [
+          WindZoneComponent(
+            shape: WindZoneShape.sphericalRadial,
+            radius: 6.0,
+            strength: 12.0,
+          ),
+        ],
+      );
+      expect(windZoneGo.activeInHierarchy, isTrue);
+
+      engine.step(0.05);
+      final noonIntensity = sun.intensity;
+      expect(noonIntensity, greaterThan(2.0));
+      expect(scene.renderSettings.skybox, isNotNull);
+      expect(scene.renderSettings.fogEnabled, isTrue);
+
+      final zoneWind = weather.sampleWindAt(const Vec3(11.5, 0.0, 0.0));
+      final farWind = weather.sampleWindAt(const Vec3(40.0, 0.0, 0.0));
+      expect(zoneWind.length, greaterThan(farWind.length + 4.0));
+
+      // Click 'Storm' button in WeatherInspectorUI at x=198, y=156.
+      final ui = VoxUiContext();
+      final uiState = WeatherInspectorUiState();
+      const stormX = 198.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: stormX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      WeatherInspectorUI.render(ui, skyComp, weather: weather, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: stormX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      WeatherInspectorUI.render(ui, skyComp, weather: weather, state: uiState);
+      ui.endFrame();
+
+      for (var i = 0; i < 30; i++) {
+        engine.step(0.05);
+      }
+
+      expect(weather.weatherKind, WeatherKind.storm);
+      expect(weather.wetness01, greaterThan(0.15));
+      expect(weather.currentSnapshot.cloudCoverage01, greaterThan(0.9));
+
+      ui.beginFrame(VoxInput());
+      WeatherInspectorUI.render(ui, skyComp, weather: weather, state: uiState);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == 'storm / 100%'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('DayNightSkyComponent'), isNotNull);
+      expect(reg.specByName('WeatherVolumeComponent'), isNotNull);
+      expect(reg.specByName('WindZoneComponent'), isNotNull);
+      final json = reg.specFor(weather)!.toJson(weather);
+      expect(json['weatherKind'], 'storm');
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

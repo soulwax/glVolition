@@ -41,6 +41,8 @@ import 'package:voxnav3d/voxnav3d.dart' as nav3;
 import 'package:voxcloth/voxcloth.dart' as cloth;
 import 'package:voxextrude/voxextrude.dart' as ext;
 import 'package:voxbiome/voxbiome.dart' as biome;
+import 'package:voxcrowd/voxcrowd.dart' as crowd;
+import 'package:voxsky/voxsky.dart' as sky;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -116,3 +118,5 @@ part 'engine/components/navmesh_3d.dart';
 part 'engine/components/cloth_rope.dart';
 part 'engine/components/spline_extrude.dart';
 part 'engine/components/biome_noise.dart';
+part 'engine/components/crowd_avoidance.dart';
+part 'engine/components/day_night_weather.dart';
