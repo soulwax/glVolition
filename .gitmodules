@@ -43,3 +43,6 @@
 [submodule "vendor/voxdsp"]
 	path = vendor/voxdsp
 	url = https://github.com/soulwax/voxdsp.git
+[submodule "vendor/voxtalk"]
+	path = vendor/voxtalk
+	url = https://github.com/soulwax/voxtalk.git

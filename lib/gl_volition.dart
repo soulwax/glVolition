@@ -17,5 +17,6 @@ export 'package:voxnet/voxnet.dart';
 export 'package:voxanim/voxanim.dart';
 export 'package:voxlight/voxlight.dart';
 export 'package:voxdsp/voxdsp.dart';
+export 'package:voxtalk/voxtalk.dart';
 
 export 'src/engine.dart';

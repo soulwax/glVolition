@@ -678,14 +678,28 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E37: Narrative Dialogue Graphs, Localization & Quest System (voxtalk)
 
-- [ ] **E37-1. `voxtalk` Submodule: Node-Based Dialogue Graphs, Branching Narratives & Quest State Tracking.**
+- [x] **E37-1. `voxtalk` Submodule: Node-Based Dialogue Graphs, Branching Narratives & Quest State Tracking.**
   - _Location:_ `./vendor/voxtalk` (`https://github.com/soulwax/voxtalk`).
   - _APIs:_ `DialogueNode` (speaker, text, audioCue, choices, conditions, actions, nextNodeId), `DialogueChoice` (text, targetNodeId, condition), `DialogueGraph` (node lookup, entry point, validation), `DialogueRunner` (line advancement, typewriter pacing, choice selection, variable interpolation `{variable}`), `VariableStore` (blackboard flags, integers, strings), `LocalizationTable` (multi-language string dictionary, pluralization, formatting), `QuestTracker` (quest definitions, stages, objectives, completion callbacks).
   - _Verify:_ `vendor/voxtalk/test/voxtalk_test.dart` & `test/subsystems_test.dart` (branching choice pathing, conditional response filtering, variable string interpolation, and quest stage completions).
-- [ ] **E37-2. `DialogueComponent` & `DialogueUI` Integration.**
+- [x] **E37-2. `DialogueComponent` & `DialogueUI` Integration.**
   - _Touches:_ `lib/src/engine/components/dialogue.dart`.
-  - _APIs:_ `DialogueComponent(graph, autoStart, runner)`, `DialogueUI` (renders conversational speech bubble, choices, and portrait using `voxui`), `QuestManagerComponent`.
+  - _APIs:_ `DialogueComponent(graph, autoStart, runner)`, `DialogueUI.render(ctx, runner)` (renders conversational speech bubble, choices, and skip/advance controls using `voxui`), `QuestManagerComponent`.
   - _Verify:_ `test/subsystems_test.dart` (gameplay conversation flow, choice dispatching, and immediate-mode dialogue rendering).
+
+---
+
+## E38: Particle Simulation, Force Fields & Visual Effects (voxvfx)
+
+- [ ] **E38-1. `voxvfx` Submodule: Particle Dynamics, Force Fields & Color/Size Gradients.**
+  - _Location:_ `./vendor/voxvfx` (`https://github.com/soulwax/voxvfx`).
+  - _APIs:_ `VfxParticle` (position, velocity, life, maxLife, size, color, rotation), `VfxEmitter` (burst, rate over time, shapes: sphere, cone, box, circle), `VfxColorGradient` (keyframe color/alpha lerp), `VfxCurve` (size/velocity multipliers over lifetime), `VfxForce` (`GravityForce`, `VortexForce`, `AttractorForce`, `TurbulenceForce`), `VfxSimulation`.
+  - _Verify:_ `vendor/voxvfx/test/voxvfx_test.dart` & `test/subsystems_test.dart` (emitter lifetimes, force field acceleration, and color/size lifetime transitions).
+- [ ] **E38-2. `VisualEffectComponent` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/vfx.dart`.
+  - _APIs:_ `VisualEffectComponent(emitter, playOnAwake, looping)`, `play()`, `stop()`, `burst(count)`.
+  - _Verify:_ `test/subsystems_test.dart` (scene lifecycle step, particle spawn, and world transform orientation sync).
+
 
 
 

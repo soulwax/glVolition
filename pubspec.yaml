@@ -38,6 +38,8 @@ dependencies:
     path: vendor/voxlight
   voxdsp:
     path: vendor/voxdsp
+  voxtalk:
+    path: vendor/voxtalk
   web: ^0.5.0
 
 dev_dependencies:

@@ -4542,6 +4542,115 @@ void main() {
       // Doppler pitch shift > 1.0
       expect(res.dopplerFactor, greaterThan(1.02));
     });
+
+    test('E37: DialogueComponent advances conversation and handles player choices', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final graph = DialogueGraph(
+        entryNodeId: 'intro',
+        initialNodes: [
+          const DialogueNode(
+            id: 'intro',
+            speaker: 'Captain',
+            text: 'Ready for departure, Commander?',
+            choices: [
+              DialogueChoice(text: 'Launch now', targetNodeId: 'launch'),
+              DialogueChoice(text: 'Hold on', targetNodeId: 'hold'),
+            ],
+          ),
+          const DialogueNode(id: 'launch', speaker: 'Captain', text: 'Engines engaged!'),
+          const DialogueNode(id: 'hold', speaker: 'Captain', text: 'Standing by.'),
+        ],
+      );
+
+      final npc = engine.scene.createGameObject('CaptainGo');
+      final dialogue = npc.addComponent(DialogueComponent(graph: graph, autoStart: true));
+
+      engine.step(0.05);
+
+      expect(dialogue.isRunning, isTrue);
+      expect(dialogue.speaker, equals('Captain'));
+      expect(dialogue.choices.length, equals(2));
+
+      // Choose 'Launch now' (index 0)
+      dialogue.selectChoice(0);
+      expect(dialogue.runner.currentNode?.id, equals('launch'));
+
+      // Advance to end
+      dialogue.advance(); // finish typewriter
+      dialogue.advance(); // completes dialogue
+      expect(dialogue.isComplete, isTrue);
+    });
+
+    test('E37: QuestManagerComponent registers and advances quest objectives', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final questGo = engine.scene.createGameObject('QuestManagerGo');
+      final questMgr = questGo.addComponent(QuestManagerComponent());
+
+      final quest = Quest(
+        id: 'repair_thrusters',
+        title: 'Fix Thruster Assembly',
+        description: 'Collect 2 titanium plates to patch the thruster.',
+        objectives: [
+          QuestObjective(id: 'plates', description: 'Titanium Plates', targetCount: 2),
+        ],
+      );
+
+      questMgr.registerQuest(quest);
+      questMgr.startQuest('repair_thrusters');
+
+      expect(questMgr.activeQuests.length, equals(1));
+      expect(questMgr.variables.getString('quest_repair_thrusters_status'), equals('active'));
+
+      // Complete objective
+      questMgr.advanceObjective('repair_thrusters', 'plates', 2);
+      expect(quest.isCompleted, isTrue);
+      expect(questMgr.completedQuests.length, equals(1));
+      expect(questMgr.variables.getString('quest_repair_thrusters_status'), equals('completed'));
+    });
+
+    test('E37: DialogueUI renders immediate-mode dialogue box with choices', () {
+      final graph = DialogueGraph(
+        entryNodeId: 'talk',
+        initialNodes: [
+          const DialogueNode(
+            id: 'talk',
+            speaker: 'Navigator',
+            text: 'Jump coordinates locked.',
+            choices: [
+              DialogueChoice(text: 'Engage hyperdrive', targetNodeId: 'jump'),
+            ],
+          ),
+          const DialogueNode(id: 'jump', speaker: 'Navigator', text: 'Jumping now!'),
+        ],
+      );
+
+      final runner = DialogueRunner(graph: graph, typewriterSpeed: 0.0);
+      runner.start();
+
+      final ui = VoxUiContext();
+      final input = VoxInput();
+      ui.beginFrame(input);
+
+      DialogueUI.render(ui, runner);
+
+      final dl = ui.endFrame();
+
+      // Should have recorded dialogue window commands
+      expect(dl.commands, isNotEmpty);
+      final hasNavigator = dl.commands.any(
+        (cmd) => cmd.type == DrawCmdType.text && cmd.text == 'Navigator',
+      );
+      expect(hasNavigator, isTrue);
+
+      final hasChoiceText = dl.commands.any(
+        (cmd) => cmd.type == DrawCmdType.text && cmd.text?.contains('Engage hyperdrive') == true,
+      );
+      expect(hasChoiceText, isTrue);
+    });
   });
 }
 
