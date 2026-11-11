@@ -572,6 +572,24 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _APIs:_ `FlowField2DComponent(grid, tileSize)`, `setTarget(tile)`, `setTargets(tiles)`, `getSteeringVector(worldPos)`.
   - _Verify:_ `test/subsystems_test.dart` (multi-agent normalized steering vectors in world coordinates around obstacles).
 
+---
+
+## E31: Procedural Generation Framework (voxproc), BSP Dungeons, Cellular Caves, Autotiling & Poisson Distribution
+
+- [x] **E31-1. `voxproc` Submodule: Procedural Generation & Autotiling Toolkit.**
+  - _Location:_ `./vendor/voxproc` (`https://github.com/soulwax/voxproc`).
+  - _APIs:_ `ProcRect`, `BspDungeonGenerator`, `DungeonResult`, `CellularAutomata`, `PoissonDiskSampler2D`, `AutoTiler` (`cardinalMask`, `blob8Mask`, `autotileCardinal`).
+  - _Verify:_ `vendor/voxproc/test/voxproc_test.dart` & `test/subsystems_test.dart` (BSP room and corridor carving, 4-5 cellular automata cave boundaries, Bridson blue-noise non-overlapping sampling, and adjacent tile bitmask lookups).
+- [x] **E31-2. `ProceduralDungeonComponent` Engine Component.**
+  - _Touches:_ `lib/src/engine/components/procedural_dungeon.dart`.
+  - _APIs:_ `ProceduralDungeonComponent(width, height, minRoomSize, maxRoomSize, tileSize, seed)`, `generate({customSeed, targetTilemap})`, `dungeonResult`, `navGrid`, `rooms`, `roomCenters`, `playerSpawn`.
+  - _Verify:_ `test/subsystems_test.dart` (procedural room generation, tilemap population, and matching `NavGrid` synchronization).
+- [x] **E31-3. `PoissonScatterComponent` Blue-Noise Spatial Scatter Component.**
+  - _Touches:_ `lib/src/engine/components/procedural_dungeon.dart`.
+  - _APIs:_ `PoissonScatterComponent(areaWidth, areaHeight, minDistance, seed)`, `sampleWorldPositions({y, customSeed})`, `spawnPrefabs(prefab, {parent, y, customSeed})`.
+  - _Verify:_ `test/subsystems_test.dart` (minimum distance clearance adherence and prefab hierarchy instantiation).
+
+
 
 
 

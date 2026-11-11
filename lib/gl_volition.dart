@@ -11,5 +11,6 @@ export 'package:voxsynth/voxsynth.dart';
 export 'package:voxtween/voxtween.dart';
 export 'package:voxgeom/voxgeom.dart';
 export 'package:voxpath/voxpath.dart';
+export 'package:voxproc/voxproc.dart';
 
 export 'src/engine.dart';

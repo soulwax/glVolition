@@ -85,8 +85,9 @@ final class Scene {
       go.node.visible = false;
     }
     if (parent != null) {
-      if (parent.scene != this)
+      if (parent.scene != this) {
         throw ArgumentError('Parent belongs to another scene');
+      }
       go._parent = parent;
       parent._children.add(go);
       parent.node.addChild(go.node);
@@ -698,8 +699,9 @@ final class Scene {
   /// Schedules [object] (and its subtree) for destruction at the end of the
   /// current frame.
   void destroy(GameObject object) {
-    if (object.scene != this)
+    if (object.scene != this) {
       throw ArgumentError('Object belongs to another scene');
+    }
     if (object._destroyRequested || object._destroyed) return;
     void mark(GameObject g) {
       g._destroyRequested = true;

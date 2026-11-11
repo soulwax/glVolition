@@ -4016,6 +4016,80 @@ void main() {
       expect(steer.length, closeTo(1.0, 1e-3));
       expect(steer.x.abs(), greaterThan(0.0));
     });
+
+    test('E31: ProceduralDungeonComponent generates BSP rooms, corridors, and NavGrid', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final dungeonGo = engine.scene.createGameObject('Dungeon');
+      final layer = TileLayer(
+        columns: 40,
+        rows: 40,
+        tileWidth: 16,
+        tileHeight: 16,
+        tileset: [SpriteRegion.white, SpriteRegion.white],
+      );
+      final tilemap = dungeonGo.addComponent(TilemapComponent(layer, solidTiles: [1]));
+      final dungeon = dungeonGo.addComponent(ProceduralDungeonComponent(
+        width: 40,
+        height: 40,
+        minRoomSize: 4,
+        maxRoomSize: 10,
+        tileSize: 2.0,
+      ));
+
+      final result = dungeon.generate(customSeed: 42, targetTilemap: tilemap);
+
+      expect(result.rooms, isNotEmpty);
+      expect(dungeon.rooms, equals(result.rooms));
+      expect(dungeon.roomCenters, hasLength(dungeon.rooms.length));
+      expect(dungeon.navGrid, isNotNull);
+
+      // Verify player spawn is within bounds and on a walkable floor
+      final spawn = dungeon.playerSpawn;
+      expect(spawn.x, greaterThan(0.0));
+      expect(spawn.z, greaterThan(0.0));
+
+      final spawnTileX = (spawn.x / 2.0).floor();
+      final spawnTileZ = (spawn.z / 2.0).floor();
+      expect(dungeon.navGrid!.isWalkable(spawnTileX, spawnTileZ), isTrue);
+      expect(tilemap.layer.tileAt(spawnTileX, spawnTileZ), equals(1));
+    });
+
+    test('E31: PoissonScatterComponent distributes non-overlapping prefabs', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final scatterGo = engine.scene.createGameObject('ScatterZone');
+      final scatter = scatterGo.addComponent(PoissonScatterComponent(
+        areaWidth: 50.0,
+        areaHeight: 50.0,
+        minDistance: 8.0,
+        seed: 999,
+      ));
+
+      final positions = scatter.sampleWorldPositions();
+      expect(positions, isNotEmpty);
+
+      // Verify minimum clearance between all sampled points
+      for (var i = 0; i < positions.length; i++) {
+        for (var j = i + 1; j < positions.length; j++) {
+          final dx = positions[i].x - positions[j].x;
+          final dz = positions[i].z - positions[j].z;
+          final distSq = dx * dx + dz * dz;
+          expect(distSq, greaterThanOrEqualTo(7.99 * 7.99));
+        }
+      }
+
+      // Instantiate prefabs into scene
+      final treePrefab = Prefab('TreePrefab', (root) {
+        root.addComponent(MeshRenderer());
+      });
+
+      final spawned = scatter.spawnPrefabs(treePrefab);
+      expect(spawned, hasLength(positions.length));
+      expect(scatterGo.children, hasLength(positions.length));
+    });
   });
 }
 
