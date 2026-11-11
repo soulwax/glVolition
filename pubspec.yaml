@@ -12,6 +12,10 @@ dependencies:
     path: vendor/pixeldart
   voxlog:
     path: vendor/voxlog
+  voxui:
+    path: vendor/voxui
+  voxecs:
+    path: vendor/voxecs
   web: ^0.5.0
 
 dev_dependencies:

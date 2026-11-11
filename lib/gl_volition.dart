@@ -4,5 +4,7 @@ library;
 
 export 'package:pixeldart/pixeldart.dart';
 export 'package:voxlog/voxlog.dart';
+export 'package:voxui/voxui.dart';
+export 'package:voxecs/voxecs.dart';
 
 export 'src/engine.dart';

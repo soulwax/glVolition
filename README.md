@@ -19,8 +19,27 @@ dart run gl_volition:volition build lib/gl_volition.dart --target js
 dart run gl_volition:volition build lib/gl_volition.dart --target wasm
 dart run gl_volition:volition build lib/gl_volition.dart --target windows
 
+# Build dungeon_2d example (2D dungeon crawler)
+dart run gl_volition:volition build example/dungeon_2d/main.dart --target js
+dart run gl_volition:volition build example/dungeon_2d/main.dart -- target wasm
+dart run gl_volition:volition build example/dungeon_2d/main.dart --target windows
+
+# Build island_3d example (3D harbour simulation)
+dart run gl_volition:volition build example/island_3d/main.dart --target js
+dart run gl_volition:volition build example/island_3d/main.dart --target wasm
+dart run gl_volition:volition build example/island_3d/main.dart --target windows
+
+# Build procession example (2D escort mission)
+dart run gl_volition:volition build example/procession/main.dart --target js
+dart run gl_volition:volition build example/procession/main.dart --target wasm
+dart run gl_volition:volition build example/procession/main.dart --target windows
+
+# Build pixel_rocket example (3D flight game)
+dart run gl_volition:volition build example/pixel_rocket/main.dart --target js
+dart run gl_volition:volition build example/pixel_rocket/main.dart --target wasm
+dart run gl_volition:volition build example/pixel_rocket/main.dart --target windows
 # Serve an example with live reload, hot state, & live inspector (F12 / Alt+I)
-dart run gl_volition:volition serve example/pixel_rocket/main.dart --port 8080
+dart run gl_volition:volition serve example/\<target\>/main.dart --port 8080
 
 # Production builds (js | wasm | windows | exe)
 dart run gl_volition:volition build example/pixel_rocket/main.dart --target js

@@ -4,3 +4,9 @@
 [submodule "vendor/voxlog"]
 	path = vendor/voxlog
 	url = https://github.com/soulwax/voxlog.git
+[submodule "vendor/voxui"]
+	path = vendor/voxui
+	url = https://github.com/soulwax/voxui.git
+[submodule "vendor/voxecs"]
+	path = vendor/voxecs
+	url = https://github.com/soulwax/voxecs.git

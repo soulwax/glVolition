@@ -3032,6 +3032,80 @@ void main() {
       expect(canvas.focusedElement, btn2);
     });
   });
+
+  group('E27 — Native Submodules Trilogy (voxlog, voxui, voxecs)', () {
+    test('voxlog ring buffer sink and pattern formatting integrate with engine logging', () {
+      final ring = RingBufferSink(capacity: 3);
+      final log = Logger(name: 'Engine', sinks: [ring], level: LogLevel.info);
+
+      log.debug('Ignored debug');
+      log.info('System initialized');
+      log.warn('Dropped frame detected');
+      log.error('Renderer context lost');
+      log.info('Fallback to headless');
+
+      expect(ring.length, 3);
+      final entries = ring.records.toList();
+      expect(entries[0].message, 'Dropped frame detected');
+      expect(entries[1].message, 'Renderer context lost');
+      expect(entries[2].message, 'Fallback to headless');
+      expect(entries[0].level, LogLevel.warn);
+      expect(entries[1].level, LogLevel.error);
+    });
+
+    test('voxui immediate-mode layout, sliders, and draw commands', () {
+      final ui = VoxUiContext();
+      // Window at (10, 10). Title(26) + pad(10) + text(17) + sep(8) => checkbox at y ~ 83..103.
+      final input = VoxInput(mouseX: 50, mouseY: 90, wasMouseClicked: true, isMouseDown: true);
+
+      ui.beginFrame(input);
+      final opened = ui.beginWindow('Performance Diagnostics', x: 10, y: 10, width: 240, height: 160);
+      expect(opened, isTrue);
+
+      ui.text('Frame Budget: 16.6ms');
+      ui.separator();
+      final wireframe = ui.checkbox('Show Colliders', false);
+      expect(wireframe, isTrue);
+
+      ui.endWindow();
+      final dl = ui.endFrame();
+      expect(dl.commands, isNotEmpty);
+      expect(dl.commands.any((cmd) => cmd.text == 'Show Colliders'), isTrue);
+    });
+
+    test('voxecs sparse-set storage, optimal multi-joins, and swap-and-pop removal', () {
+      final reg = Registry();
+
+      final e1 = reg.create();
+      final e2 = reg.create();
+      final e3 = reg.create();
+
+      reg.assign(e1, Vec3(1, 2, 3));
+      reg.assign(e2, Vec3(4, 5, 6));
+      reg.assign(e3, Vec3(7, 8, 9));
+
+      reg.assign(e1, 'Player');
+      reg.assign(e3, 'Boss');
+
+      // view2 join: only e1 and e3 have both Vec3 and String
+      final joined = reg.view2<Vec3, String>().toList();
+      expect(joined.length, 2);
+      expect(joined.map((t) => t.$3).toSet(), containsAll(['Player', 'Boss']));
+
+      // Swap-and-pop removal of e1
+      reg.remove<Vec3>(e1);
+      expect(reg.has<Vec3>(e1), isFalse);
+      expect(reg.has<Vec3>(e2), isTrue);
+      expect(reg.has<Vec3>(e3), isTrue);
+
+      // Clean destruction recycles generational handle
+      reg.destroy(e3);
+      expect(reg.valid(e3), isFalse);
+      final recycled = reg.create();
+      expect(recycled.index, e3.index);
+      expect(recycled.version, e3.version + 1);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

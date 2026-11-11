@@ -503,3 +503,21 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _Touches:_ `lib/src/engine/spatial_grid_2d.dart`.
   - _APIs:_ `SpatialGrid2D<T>(cellSize)`, `insert(item, pos, radius)`, `insertAabb`, `remove(item)`, `querySphere(center, radius)`, `queryAabb`, `clear()`.
   - _Verify:_ `test/subsystems_test.dart` (spatial entity indexing, fast radius queries, entity removals, and clear).
+
+---
+
+## E27: Native Submodules Trilogy (voxlog, voxui, voxecs) & Immediate-Mode Diagnostics
+
+- [x] **E27-1. `voxlog` Submodule: spdlog-Style Multi-Sink Logging.**
+  - _Location:_ `./vendor/voxlog` (`https://github.com/soulwax/voxlog`).
+  - _APIs:_ `Logger`, `LogLevel`, `LogRecord`, `ConsoleSink`, `FileSink`, `RingBufferSink`, `CallbackSink`, `PatternFormatter`, `voxlog.stdoutColor(...)`.
+  - _Verify:_ `vendor/voxlog/test/voxlog_test.dart` & `test/subsystems_test.dart`.
+- [x] **E27-2. `voxui` Submodule: Dear ImGui-Style Immediate Mode GUI.**
+  - _Location:_ `./vendor/voxui` (`https://github.com/soulwax/voxui`).
+  - _APIs:_ `VoxUiContext`, `VoxInput`, `DrawList`, `VoxRect`, `VoxColor`, `beginWindow`, `endWindow`, `button`, `checkbox`, `sliderDouble`, `sliderInt`, `collapsingHeader`, `progressBar`, `text`, `labelValue`.
+  - _Verify:_ `vendor/voxui/test/voxui_test.dart` & `test/subsystems_test.dart`.
+- [x] **E27-3. `voxecs` Submodule: EnTT-Style Sparse-Set Entity Component System.**
+  - _Location:_ `./vendor/voxecs` (`https://github.com/soulwax/voxecs`).
+  - _APIs:_ `Entity` (generational recycling), `SparseSet<T>` (contiguous dense arrays, $O(1)$ swap-and-pop), `Registry` (`create`, `destroy`, `assign`, `remove`, `has`, `get`, `tryGet`), `view<T>`, `view2<T1, T2>` ($O(\min(N_1, N_2))$ optimal joins), `view3<T1, T2, T3>`.
+  - _Verify:_ `vendor/voxecs/test/voxecs_test.dart` & `test/subsystems_test.dart`.
+
