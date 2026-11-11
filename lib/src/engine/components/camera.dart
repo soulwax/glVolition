@@ -17,6 +17,15 @@ final class Camera extends Component {
   /// Bitmask of object layers (0..31) this camera renders. Defaults to `-1` (all layers).
   int cullingMask;
 
+  /// Viewport normalized rectangular bounds `[x, y, width, height]` in `0..1` space (E22-3).
+  ///
+  /// Defaults to full screen `(0, 0, 1, 1)`. Multiple cameras in the same scene can
+  /// render side-by-side or picture-in-picture split-screen.
+  Vec4 normalizedViewportRect;
+
+  /// Depth ordering for multi-camera rendering. Cameras with lower depth render first (E22-3).
+  int depth;
+
   /// Deterministic trauma-based camera shake evaluator (E12-1).
   final CameraShakeEngine shakeEngine = CameraShakeEngine();
 
@@ -30,6 +39,8 @@ final class Camera extends Component {
     this.orthoHeight = 12.0,
     this.customController,
     this.cullingMask = -1,
+    this.normalizedViewportRect = const Vec4(0, 0, 1, 1),
+    this.depth = 0,
   });
 
   factory Camera.ortho({
@@ -38,6 +49,8 @@ final class Camera extends Component {
     double far = 200,
     CameraController? customController,
     int cullingMask = -1,
+    Vec4 normalizedViewportRect = const Vec4(0, 0, 1, 1),
+    int depth = 0,
   }) =>
       Camera(
         orthographic: true,
@@ -46,6 +59,8 @@ final class Camera extends Component {
         far: far,
         customController: customController,
         cullingMask: cullingMask,
+        normalizedViewportRect: normalizedViewportRect,
+        depth: depth,
       );
 
   CameraController get controller => customController ?? _transformController;

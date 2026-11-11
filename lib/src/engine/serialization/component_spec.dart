@@ -240,6 +240,7 @@ final class ComponentRegistry {
           Field.boolean('orthographic', (c) => c.orthographic, (c, v) => c.orthographic = v),
           Field.number('orthoHeight', (c) => c.orthoHeight, (c, v) => c.orthoHeight = v),
           Field.integer('cullingMask', (c) => c.cullingMask, (c, v) => c.cullingMask = v),
+          Field.integer('depth', (c) => c.depth, (c, v) => c.depth = v),
         ],
       ),
     );

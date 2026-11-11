@@ -424,3 +424,17 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E21-3. `Time.smoothDamp` and `smoothDampVec3` Critical Damping.**
   - _Touches:_ `lib/src/engine/time.dart`.
   - _Verify:_ `test/subsystems_test.dart` (smooth damping convergence without oscillation for double and Vec3).
+
+---
+
+## E22: SplineMeshRenderer, Stylized PostProcess Presets, and Multi-Camera Split-Screen Viewports
+
+- [x] **E22-1. `SplineMeshRenderer` Dynamic Ribbon Mesh Generation.**
+  - _Touches:_ `lib/src/engine/components/spline.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (spline point sampling and automated `LineRenderer` sync/rebuild).
+- [x] **E22-2. Stylized `PostProcessVolume` Presets (`retro`, `cinematic`).**
+  - _Touches:_ `lib/src/engine/components/post_process_volume.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (retro CRT/VHS dither, chromatic aberration, and cinematic contrast/bloom blending).
+- [x] **E22-3. Multi-Camera Normalized Viewports & Depth Ordering (`normalizedViewportRect`, `depth`).**
+  - _Touches:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/serialization/component_spec.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (multi-viewport split-screen and depth serialization round-trip).

@@ -20,6 +20,9 @@ final class PostProcessVolume extends Behaviour {
   double vignette;
   double grain;
   double depthOfFieldStrength;
+  double ditherStrength;
+  double colorGradeStrength;
+  double chromaticAberration;
   ToneMappingMode toneMapping;
 
   PostProcessVolume({
@@ -34,8 +37,49 @@ final class PostProcessVolume extends Behaviour {
     this.vignette = 0.0,
     this.grain = 0.0,
     this.depthOfFieldStrength = 0.0,
+    this.ditherStrength = 0.0,
+    this.colorGradeStrength = 0.0,
+    this.chromaticAberration = 0.0,
     this.toneMapping = ToneMappingMode.aces,
   });
+
+  /// Factory creating a retro CRT / VHS stylized aesthetic volume (E22-2).
+  factory PostProcessVolume.retro({
+    bool isGlobal = true,
+    double weight = 1.0,
+    double grain = 0.4,
+    double vignette = 0.35,
+    double dither = 0.5,
+    double chromaticAberration = 0.3,
+  }) =>
+      PostProcessVolume(
+        isGlobal: isGlobal,
+        weight: weight,
+        grain: grain,
+        vignette: vignette,
+        ditherStrength: dither,
+        chromaticAberration: chromaticAberration,
+        bloomStrength: 0.3,
+      );
+
+  /// Factory creating a cinematic high-contrast dramatic volume (E22-2).
+  factory PostProcessVolume.cinematic({
+    bool isGlobal = true,
+    double weight = 1.0,
+    double exposure = 1.15,
+    double bloomStrength = 0.45,
+    double ssaoStrength = 0.6,
+    double vignette = 0.2,
+  }) =>
+      PostProcessVolume(
+        isGlobal: isGlobal,
+        weight: weight,
+        exposure: exposure,
+        bloomStrength: bloomStrength,
+        ssaoStrength: ssaoStrength,
+        vignette: vignette,
+        toneMapping: ToneMappingMode.aces,
+      );
 
   static final spec = ComponentSpec<PostProcessVolume>(
     'PostProcessVolume',
@@ -52,6 +96,9 @@ final class PostProcessVolume extends Behaviour {
       Field.number('vignette', (v) => v.vignette, (v, val) => v.vignette = val),
       Field.number('grain', (v) => v.grain, (v, val) => v.grain = val),
       Field.number('depthOfFieldStrength', (v) => v.depthOfFieldStrength, (v, val) => v.depthOfFieldStrength = val),
+      Field.number('ditherStrength', (v) => v.ditherStrength, (v, val) => v.ditherStrength = val),
+      Field.number('colorGradeStrength', (v) => v.colorGradeStrength, (v, val) => v.colorGradeStrength = val),
+      Field.number('chromaticAberration', (v) => v.chromaticAberration, (v, val) => v.chromaticAberration = val),
       Field.enumValue<PostProcessVolume, ToneMappingMode>(
         'toneMapping',
         ToneMappingMode.values,
@@ -87,6 +134,9 @@ final class PostProcessVolume extends Behaviour {
       vignette: mix(current.vignette, vignette),
       grain: mix(current.grain, grain),
       depthOfFieldStrength: mix(current.depthOfFieldStrength, depthOfFieldStrength),
+      ditherStrength: mix(current.ditherStrength, ditherStrength),
+      colorGradeStrength: mix(current.colorGradeStrength, colorGradeStrength),
+      vhsChromaWeight: mix(current.vhsChromaWeight, chromaticAberration),
       toneMapping: a >= 0.5 ? toneMapping : current.toneMapping,
     );
   }

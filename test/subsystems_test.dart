@@ -2417,6 +2417,129 @@ void main() {
       expect(vCurrent.z, closeTo(30.0, 1e-3));
     });
   });
+
+  group('E22 — SplineMeshRenderer, Stylized PostProcess Presets, and Multi-Camera Split-Screen Viewports', () {
+    test('SplineMeshRenderer samples SplinePath and generates ribbon mesh via LineRenderer', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      // Create a 3D curved spline with 4 control points
+      final splineObj = engine.scene.createGameObject('SplineCable');
+      final path = splineObj.addComponent(
+        SplinePath.fromPoints([
+          const Vec3(0, 0, 0),
+          const Vec3(2, 4, 1),
+          const Vec3(6, 3, 2),
+          const Vec3(10, 0, 0),
+        ]),
+      );
+
+      final smr = splineObj.addComponent(
+        SplineMeshRenderer(
+          path: path,
+          sampleCount: 16,
+          startWidth: 0.3,
+          endWidth: 0.1,
+          color: const LinearColor(0.2, 0.9, 0.4),
+        ),
+      );
+
+      engine.step(0.016);
+
+      final line = splineObj.getComponent<LineRenderer>();
+      expect(line, isNotNull);
+      expect(line!.positionCount, 16);
+      expect(line.startWidth, closeTo(0.3, 1e-4));
+      expect(line.endWidth, closeTo(0.1, 1e-4));
+      expect(line.color.g, closeTo(0.9, 1e-4));
+
+      // Rebuild with different widths
+      smr.startWidth = 0.5;
+      smr.endWidth = 0.5;
+      smr.rebuild();
+      expect(line.startWidth, closeTo(0.5, 1e-4));
+      expect(line.endWidth, closeTo(0.5, 1e-4));
+    });
+
+    test('PostProcessVolume retro and cinematic presets configure stylized effects', () {
+      final retro = PostProcessVolume.retro(
+        weight: 0.8,
+        grain: 0.5,
+        vignette: 0.4,
+        dither: 0.6,
+        chromaticAberration: 0.35,
+      );
+
+      expect(retro.grain, 0.5);
+      expect(retro.vignette, 0.4);
+      expect(retro.ditherStrength, 0.6);
+      expect(retro.chromaticAberration, 0.35);
+
+      var state = const PostProcessState();
+      state = retro.blendOnto(state, 1.0);
+      expect(state.grain, closeTo(0.5, 1e-4));
+      expect(state.vignette, closeTo(0.4, 1e-4));
+      expect(state.ditherStrength, closeTo(0.6, 1e-4));
+      expect(state.vhsChromaWeight, closeTo(0.35, 1e-4));
+
+      final cine = PostProcessVolume.cinematic(
+        weight: 1.0,
+        exposure: 1.2,
+        bloomStrength: 0.5,
+        ssaoStrength: 0.7,
+      );
+      expect(cine.toneMapping, ToneMappingMode.aces);
+      expect(cine.bloomStrength, 0.5);
+
+      final cineState = cine.blendOnto(const PostProcessState(), 1.0);
+      expect(cineState.exposure, closeTo(1.2, 1e-4));
+      expect(cineState.bloomStrength, closeTo(0.5, 1e-4));
+      expect(cineState.ssaoStrength, closeTo(0.7, 1e-4));
+      expect(cineState.toneMapping, ToneMappingMode.aces);
+    });
+
+    test('Camera multi-viewport split-screen and depth ordering round-trip via SceneSerializer', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      // Player 1 Camera (left half: x: 0, y: 0, w: 0.5, h: 1)
+      final cam1Obj = engine.scene.createGameObject(
+        'Player1Camera',
+        position: const Vec3(0, 1.5, 5),
+        components: [
+          Camera(
+            normalizedViewportRect: const Vec4(0, 0, 0.5, 1.0),
+            depth: 0,
+          ),
+        ],
+      );
+
+      // Player 2 Camera (right half: x: 0.5, y: 0, w: 0.5, h: 1)
+      final cam2Obj = engine.scene.createGameObject(
+        'Player2Camera',
+        position: const Vec3(10, 1.5, 5),
+        components: [
+          Camera(
+            normalizedViewportRect: const Vec4(0.5, 0, 0.5, 1.0),
+            depth: 1,
+          ),
+        ],
+      );
+
+      final c1 = cam1Obj.getComponent<Camera>()!;
+      final c2 = cam2Obj.getComponent<Camera>()!;
+      expect(c1.normalizedViewportRect.z, closeTo(0.5, 1e-4));
+      expect(c2.normalizedViewportRect.x, closeTo(0.5, 1e-4));
+      expect(c2.depth, 1);
+
+      // Verify serialization round-trip of depth and properties
+      final json = SceneSerializer.toJson(engine.scene, registry: engine.registry);
+      final restored = SceneSerializer.fromJson(json, registry: engine.registry);
+      final restoredC2 = restored.find('Player2Camera')?.getComponent<Camera>();
+      expect(restoredC2, isNotNull);
+      expect(restoredC2!.depth, 1);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

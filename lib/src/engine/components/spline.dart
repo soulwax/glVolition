@@ -32,6 +32,18 @@ final class SplinePath extends Component {
     }
     return bestS;
   }
+
+  /// Samples [sampleCount] evenly spaced points along this spline path (E22-1).
+  List<Vec3> samplePoints(int sampleCount) {
+    if (sampleCount <= 1) return [spline.controlPoints.first];
+    final len = totalLength;
+    final result = <Vec3>[];
+    for (var i = 0; i < sampleCount; i++) {
+      final dist = (i / (sampleCount - 1)) * len;
+      result.add(sampleAtDistance(dist));
+    }
+    return result;
+  }
 }
 
 /// Moves its [GameObject] along a [SplinePath] at arc-length [speed] (E5-2).
@@ -114,6 +126,54 @@ final class SplineFollower extends Behaviour {
       if (tan.lengthSquared > 1e-8) {
         transform.rotation = lookRotation(tan);
       }
+    }
+  }
+}
+
+/// Automatically synchronizes a sibling [LineRenderer] with points sampled from
+/// a [SplinePath] (E22-1).
+final class SplineMeshRenderer extends Component {
+  SplinePath path;
+  int sampleCount;
+  double startWidth;
+  double endWidth;
+  LinearColor color;
+  MaterialHandle? material;
+
+  SplineMeshRenderer({
+    required this.path,
+    this.sampleCount = 32,
+    this.startWidth = 0.2,
+    this.endWidth = 0.2,
+    this.color = const LinearColor(1.0, 1.0, 1.0),
+    this.material,
+  });
+
+  @override
+  void onEnable() {
+    _syncLineRenderer();
+  }
+
+  void rebuild() => _syncLineRenderer();
+
+  void _syncLineRenderer() {
+    var line = getComponent<LineRenderer>();
+    if (line == null) {
+      line = gameObject.addComponent(
+        LineRenderer(
+          positions: path.samplePoints(sampleCount),
+          startWidth: startWidth,
+          endWidth: endWidth,
+          color: color,
+          material: material,
+        ),
+      );
+    } else {
+      line.setPositions(path.samplePoints(sampleCount));
+      line.startWidth = startWidth;
+      line.endWidth = endWidth;
+      line.color = color;
+      if (material != null) line.material = material;
     }
   }
 }
