@@ -54,6 +54,8 @@ dependencies:
     path: vendor/voxflow
   voxhex:
     path: vendor/voxhex
+  voxrule:
+    path: vendor/voxrule
   web: ^0.5.0
 
 dev_dependencies:

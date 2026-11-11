@@ -5190,6 +5190,113 @@ void main() {
       expect(hovered, HexCoord.zero);
       expect(cmds.commands.where((c) => c.type == DrawCmdType.line).length, greaterThan(100));
     });
+
+    test('E45: StatusEffectComponent syncs buffs with StatsComponent, ticks DoTs, absorbs damage & cooldowns', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final stats = StatsComponent({'attack': 20.0, 'armor': 20.0});
+      final combat = StatusEffectComponent(maxHp: 100.0);
+      engine.scene.createGameObject('Paladin', components: [stats, combat]);
+
+      const warcry = StatusEffectDef(
+        id: 'warcry',
+        name: 'Warcry',
+        duration: 2.0,
+        maxStacks: 2,
+        stackPolicy: StatusStackPolicy.stackIntensity,
+        statBonuses: {
+          'attack': StatBonusSpec(flat: 5.0),
+          'armor': StatBonusSpec(flat: 40.0),
+        },
+        absorbShieldAmount: 15.0,
+      );
+      const burn = StatusEffectDef(
+        id: 'burn',
+        name: 'Burn',
+        duration: 1.5,
+        tickInterval: 0.5,
+        damagePerTick: 10.0,
+        damageType: DamageTypes.fire,
+      );
+
+      // Apply 2 stacks -> +10 attack (total 30), +80 armor (total 100), 30 shield
+      combat.applyStatus(warcry);
+      combat.applyStatus(warcry);
+      expect(stats.getValue('attack'), closeTo(30.0, 1e-4));
+      expect(stats.getValue('armor'), closeTo(100.0, 1e-4));
+      expect(combat.statuses.totalShield, closeTo(30.0, 1e-4));
+
+      // Take 40 physical damage: 100 armor gives 50% mitigation -> 20 dmg, fully absorbed by 30 shield!
+      final hitRes = combat.takeDamage(
+        const DamagePacket(baseAmount: 40.0),
+        forceCrit: false,
+        forceDodge: false,
+        forceBlock: false,
+      );
+      expect(hitRes.absorbedByShield, closeTo(20.0, 1e-4));
+      expect(hitRes.finalDamage, closeTo(0.0, 1e-4));
+      expect(combat.statuses.totalShield, closeTo(10.0, 1e-4));
+
+      // Cooldown tracking + DoT burn over 1.0s (2 ticks * 10 fire = 20 dmg -> 10 shield + 10 HP lost)
+      combat.cooldowns.start('slash', 1.0);
+      expect(combat.cooldowns.isReady('slash'), isFalse);
+
+      combat.applyStatus(burn);
+      for (int i = 0; i < 10; i++) {
+        engine.step(0.1);
+      }
+      expect(combat.currentHp, closeTo(90.0, 1e-3));
+      expect(combat.cooldowns.isReady('slash'), isTrue);
+
+      // Advance remaining 1.1s so warcry (2.0s total) expires and cleans up StatsComponent modifiers
+      for (int i = 0; i < 11; i++) {
+        engine.step(0.1);
+      }
+      expect(combat.statuses.hasStatus('warcry'), isFalse);
+      expect(stats.getValue('attack'), closeTo(20.0, 1e-4));
+      expect(stats.getValue('armor'), closeTo(20.0, 1e-4));
+    });
+
+    test('E45: TurnEncounterComponent syncs stun state & CombatHudUI renders buffs/turn bar via voxui', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final heroStatus = StatusEffectComponent(maxHp: 120.0, currentHp: 85.0);
+      final orcStatus = StatusEffectComponent(maxHp: 80.0);
+      final encounter = TurnEncounterComponent(mode: TurnMode.speedGauge);
+
+      engine.scene.createGameObject('Hero', components: [heroStatus]);
+      engine.scene.createGameObject('Orc', components: [orcStatus]);
+      engine.scene.createGameObject('Encounter', components: [encounter]);
+
+      encounter.registerParticipant(
+        CombatantSlot(id: 'hero', name: 'Hero', speed: 25.0),
+        statusComponent: heroStatus,
+      );
+      encounter.registerParticipant(
+        CombatantSlot(id: 'orc', name: 'Orc', speed: 20.0),
+        statusComponent: orcStatus,
+      );
+
+      // Stun orc -> Hero gets back-to-back turns
+      orcStatus.applyStatus(const StatusEffectDef(
+        id: 'stun',
+        name: 'Stunned',
+        duration: 2.0,
+        stopsTurnAction: true,
+      ));
+      expect(encounter.advanceTurn()!.id, 'hero');
+      expect(encounter.advanceTurn()!.id, 'hero');
+
+      heroStatus.cooldowns.start('Fireball', 4.0);
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      CombatHudUI.render(ui, heroStatus, encounter: encounter, abilities: const ['Fireball']);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.where((c) => c.text != null && c.text!.contains('Next Turns')), isNotEmpty);
+      expect(drawList.commands.where((c) => c.text != null && c.text!.contains('HP 85/120')), isNotEmpty);
+    });
   });
 }
 

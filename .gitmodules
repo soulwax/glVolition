@@ -67,3 +67,6 @@
 [submodule "vendor/voxhex"]
 	path = vendor/voxhex
 	url = https://github.com/soulwax/voxhex.git
+[submodule "vendor/voxrule"]
+	path = vendor/voxrule
+	url = https://github.com/soulwax/voxrule.git

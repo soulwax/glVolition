@@ -782,11 +782,23 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E45: Status Effects, Cooldowns, Initiative Turn Scheduler & Combat Resolver (`voxrule`)
 
-- [ ] **E45-1. `voxrule` Submodule: Buff/DoT Stacks, Cooldowns, Initiative Timeline & Damage Pipeline.**
+- [x] **E45-1. `voxrule` Submodule: Buff/DoT Stacks, Cooldowns, Initiative Timeline & Damage Pipeline.**
   - _Location:_ `./vendor/voxrule` (`https://github.com/soulwax/voxrule`).
   - _APIs:_ `StatusEffectDef`, `StatusStackPolicy`, `StatusContainer` (tag dispel/immunity, periodic DoT/HoT ticks, stack decay), `CooldownTracker`, `TurnScheduler` (initiative & CT speed gauge), `DamagePacket` & `CombatResolver` (armor, resistances, crit rolls, shields).
-- [ ] **E45-2. `StatusEffectComponent`, `TurnSchedulerSubsystem` & `CombatHudUI` Integration.**
+  - _Verify:_ `vendor/voxrule/test/voxrule_test.dart` & `test/subsystems_test.dart`.
+- [x] **E45-2. `StatusEffectComponent`, `TurnEncounterComponent` & `CombatHudUI` Integration.**
   - _Touches:_ `lib/src/engine/components/combat_rules.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E46: Multi-Track Cutscene Timeline Sequencer & Keyframe Director (`voxseq`)
+
+- [ ] **E46-1. `voxseq` Submodule: Keyframe Property Tracks, Event Cues, Camera Cuts & Transport Scrubbing.**
+  - _Location:_ `./vendor/voxseq` (`https://github.com/soulwax/voxseq`).
+  - _APIs:_ `Keyframe<T>` (`step`, `linear`, `cubic`), `ValueTrack<T>`, `EventTrack`, `AudioCueTrack`, `SubtitleTrack`, `CameraCutTrack`, `TimelineSequence` (`evaluateAt`, `play`, `pause`, `scrubTo`, `speed`, `loopMode`).
+- [ ] **E46-2. `CutsceneDirectorComponent` & `TimelineSequencerUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/cutscene_sequencer.dart`.
 
 
 
