@@ -35,6 +35,8 @@ import 'package:voxseq/voxseq.dart' as seq;
 import 'package:voxstat/voxstat.dart' as stat;
 import 'package:voxpack/voxpack.dart' as pack;
 import 'package:voxloc/voxloc.dart' as loc;
+import 'package:voxcam/voxcam.dart' as vcam;
+import 'package:voxgrid/voxgrid.dart' as vgrid;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -104,3 +106,5 @@ part 'engine/components/hex_grid.dart';
 part 'engine/components/combat_rules.dart';
 part 'engine/components/cutscene_sequencer.dart';
 part 'engine/components/progression_stats.dart';
+part 'engine/components/camera_director.dart';
+part 'engine/components/spatial_bvh.dart';

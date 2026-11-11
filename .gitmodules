@@ -82,3 +82,9 @@
 [submodule "vendor/voxloc"]
 	path = vendor/voxloc
 	url = https://github.com/soulwax/voxloc.git
+[submodule "vendor/voxcam"]
+	path = vendor/voxcam
+	url = https://github.com/soulwax/voxcam.git
+[submodule "vendor/voxgrid"]
+	path = vendor/voxgrid
+	url = https://github.com/soulwax/voxgrid.git

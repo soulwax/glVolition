@@ -845,11 +845,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E50: Cinemachine-Style Virtual Camera Brain, Priority Blending & Dead-Zone Framing (`voxcam`)
 
-- [ ] **E50-1. `voxcam` Submodule: Virtual Camera Rig, Blend Curves, Dead-Zone Framing & Impulse Noise.**
+- [x] **E50-1. `voxcam` Submodule: Virtual Camera Rig, Blend Curves, Dead-Zone Framing & Impulse Noise.**
   - _Location:_ `./vendor/voxcam` (`https://github.com/soulwax/voxcam`).
   - _APIs:_ `VirtualCameraRig`, `CameraBlendCurve` (cut, smoothstep, cubic ease-in-out), `CameraFramingComposer` (screen dead-zone, soft-zone clamping, look-ahead offset), `CameraOrbitRig` (yaw/pitch bounds, terrain raycast pull-in), `CameraImpulseSource` (2D/3D procedural trauma decay), `CameraDirectorBrain` (priority stack, smooth cross-blend across active virtual cameras, FOV & Dutch roll blending).
   - _Verify:_ `vendor/voxcam/test/voxcam_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E50-2. `CameraBrainComponent`, `VirtualCameraComponent` & `CameraDirectorUI` Engine Integration.**
+- [x] **E50-2. `CameraBrainComponent`, `VirtualCameraComponent` & `CameraDirectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/camera_director.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -857,9 +857,39 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E51: Hierarchical Spatial Partitioning, Loose Octree & BVH Broadphase (`voxgrid`)
 
-- [ ] **E51-1. `voxgrid` Submodule: Generic Dynamic BVH, Loose Quadtree/Octree & Closest-Hit Ray Queries.**
+- [x] **E51-1. `voxgrid` Submodule: Generic Dynamic BVH, Loose Quadtree/Octree & Closest-Hit Ray Queries.**
   - _Location:_ `./vendor/voxgrid` (`https://github.com/soulwax/voxgrid`).
   - _APIs:_ `GridAabb`, `GridRay`, `DynamicBvh<T>` (SAH surface-area heuristic insertion, fattened proxy AABBs, incremental tree updates, frustum/ray/sphere overlap queries), `LooseOctree<T>`.
+  - _Verify:_ `vendor/voxgrid/test/voxgrid_test.dart` & `test/subsystems_test.dart`.
+- [x] **E51-2. `SpatialIndexComponent` & `SpatialBroadphaseUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/spatial_bvh.dart`.
+  - _APIs:_ `SpatialIndexComponent` (incremental SAH BVH synchronization over scene `Collider`s and `MeshRenderer`s, frustum culling, overlap pairs & closest-hit raycasts), `SpatialBroadphaseUI.render` (live proxy/node count, tree height, surface area & reinsertion diagnostics via `voxui`).
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E52: 3D Polygon Navigation Mesh, A* Corridor & Funnel Path Smoothing (`voxnav3d`)
+
+- [ ] **E52-1. `voxnav3d` Submodule: NavMesh Polygon Graph, Funnel String-Pulling & Off-Mesh Links.**
+  - _Location:_ `./vendor/voxnav3d` (`https://github.com/soulwax/voxnav3d`).
+  - _APIs:_ `NavPolygonMesh`, `NavMeshBuilder` (heightfield walkability regions & shared portal edges), `NavMeshQuery` (A* polygon portal corridor + Simple Stupid Funnel string-pulling + closest point on mesh), `OffMeshLink` (jump/drop/teleporter portals).
+  - _Verify:_ `vendor/voxnav3d/test/voxnav3d_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E52-2. `NavMeshSurfaceComponent`, `NavMeshAgent3DComponent` & `NavMeshDebuggerUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/navmesh_3d.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E53: XPBD Soft-Body, Cloth & Rope Constraint Solver (`voxcloth`)
+
+- [ ] **E53-1. `voxcloth` Submodule: Position-Based Particle Constraints, Bending & Collision Proxies.**
+  - _Location:_ `./vendor/voxcloth` (`https://github.com/soulwax/voxcloth`).
+  - _APIs:_ `XpbdWorld`, `XpbdParticle`, `DistanceConstraint`, `DihedralBendingConstraint`, `ClothGridBuilder`, `RopeChainBuilder`, `SphereConstraintCollider`, `CapsuleConstraintCollider`.
+  - _Verify:_ `vendor/voxcloth/test/voxcloth_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E53-2. `ClothSimulationComponent`, `RopeSimulationComponent` & `XpbdDebuggerUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/cloth_rope.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
 
 
 

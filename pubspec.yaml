@@ -64,6 +64,10 @@ dependencies:
     path: vendor/voxpack
   voxloc:
     path: vendor/voxloc
+  voxcam:
+    path: vendor/voxcam
+  voxgrid:
+    path: vendor/voxgrid
   web: ^0.5.0
 
 dev_dependencies:

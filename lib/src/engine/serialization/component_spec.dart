@@ -441,5 +441,8 @@ final class ComponentRegistry {
     register<LookAtConstraint>(LookAtConstraint.spec);
     register<FollowConstraint>(FollowConstraint.spec);
     register<MeshRenderer>(MeshRenderer.spec);
+    register<VirtualCameraComponent>(VirtualCameraComponent.spec);
+    register<CameraBrainComponent>(CameraBrainComponent.spec);
+    register<SpatialIndexComponent>(SpatialIndexComponent.spec);
   }
 }

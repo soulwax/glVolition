@@ -5862,6 +5862,181 @@ void main() {
       final drawList = ui.endFrame();
       expect(drawList.commands.any((c) => c.text == 'Spiel starten'), isTrue);
     });
+
+    test('E50: CameraBrainComponent blends VirtualCameraComponents, pulls in on obstacles & renders CameraDirectorUI', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final hero = engine.scene.createGameObject(
+        'Hero',
+        position: const Vec3(0, 0, 0),
+        components: [CapsuleCollider(radius: 0.4, height: 1.8)],
+      );
+
+      // Trigger zone in front of the wall must be ignored; solid wall at z=5 intercepts the 10m orbit arm.
+      engine.scene.createGameObject(
+        'AmbientTrigger',
+        position: const Vec3(0, 1.2, 2.5),
+        components: [BoxCollider(size: const Vec3(4.0, 4.0, 1.0), isTrigger: true)],
+      );
+      engine.scene.createGameObject(
+        'Wall',
+        position: const Vec3(0, 1.2, 5.0),
+        components: [BoxCollider(size: const Vec3(6.0, 4.0, 1.0), isTrigger: false)],
+      );
+
+      final orbitVcam = VirtualCameraComponent(
+        cameraId: 'orbit',
+        priority: 10,
+        fovYDegrees: 60.0,
+        followTarget: hero,
+        orbitRig: CameraOrbitRig(
+          yawRadians: 0.0,
+          pitchRadians: 0.0,
+          distance: 10.0,
+          targetOffset: const CamVec3(0, 1.2, 0),
+          wallPullInPadding: 0.3,
+        ),
+      );
+      engine.scene.createGameObject('OrbitCam', components: [orbitVcam]);
+
+      final cutVcam = VirtualCameraComponent(
+        cameraId: 'cutscene',
+        priority: 5,
+        fovYDegrees: 38.0,
+        lookAtTarget: hero,
+      );
+      engine.scene.createGameObject(
+        'CutsceneCam',
+        position: const Vec3(8, 4, 8),
+        components: [cutVcam],
+      );
+
+      final camComp = Camera();
+      final brainComp = CameraBrainComponent(
+        defaultTransition: const CameraTransitionSpec(
+          durationSeconds: 0.5,
+          curve: CameraBlendCurve.linear,
+        ),
+      );
+      final camGo = engine.scene.createGameObject(
+        'MainCamera',
+        components: [camComp, brainComp],
+      );
+
+      // First step initializes active camera ('orbit') and evaluates obstacle pull-in.
+      engine.step(0.05);
+      expect(brainComp.activeCamera?.id, 'orbit');
+      expect(camGo.transform.position.z, closeTo(4.2, 0.05));
+      expect(camComp.fovYRadians, closeTo(60.0 * math.pi / 180.0, 1e-4));
+
+      // Boost CutsceneCam priority -> blends FOV and position smoothly over 0.5s.
+      cutVcam.priority = 30;
+      for (int i = 0; i < 5; i++) {
+        engine.step(0.05);
+      }
+      expect(brainComp.activeCamera?.id, 'cutscene');
+      expect(brainComp.isBlending, isTrue);
+      expect(brainComp.blendProgress, closeTo(0.5, 0.05));
+      expect(camComp.fovYRadians, lessThan(60.0 * math.pi / 180.0));
+      expect(camComp.fovYRadians, greaterThan(38.0 * math.pi / 180.0));
+
+      for (int i = 0; i < 6; i++) {
+        engine.step(0.05);
+      }
+      expect(brainComp.isBlending, isFalse);
+      expect(camComp.fovYRadians, closeTo(38.0 * math.pi / 180.0, 1e-4));
+
+      // Render CameraDirectorUI and trigger shake via button press+release.
+      final ui = VoxUiContext();
+      final uiState = CameraDirectorUiState();
+      // 'Impulse!' button lies cleanly inside toolbar at x+pad+90+8 = 128, barY = 20+24+8+68 = 120.
+      const btnX = 160.0;
+      const btnY = 134.0;
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      CameraDirectorUI.render(ui, brainComp.brain, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      CameraDirectorUI.render(ui, brainComp.brain, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(drawList.commands.any((c) => c.text != null && c.text!.contains('[LIVE] cutscene')), isTrue);
+      expect(brainComp.brain.impulseSources.first.trauma, greaterThan(0.5));
+    });
+
+    test('E51: SpatialIndexComponent maintains DynamicBvh over Colliders & MeshRenderers, culls frustum & renders UI', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final cam = Camera(fovYRadians: math.pi / 3.0, near: 0.5, far: 40.0);
+      engine.scene.createGameObject('Camera', position: Vec3.zero, components: [cam]);
+
+      final nearBoxCol = BoxCollider(size: const Vec3(2, 2, 2));
+      final nearBoxRend = MeshRenderer(meshData: Primitives.cube());
+      engine.scene.createGameObject(
+        'NearBox',
+        position: const Vec3(0, 0, -6),
+        components: [nearBoxCol, nearBoxRend],
+      );
+
+      final nearSphereCol = SphereCollider(radius: 1.0);
+      final nearSphereRend = MeshRenderer(meshData: Primitives.sphere(radius: 1.0));
+      final nearSphereGo = engine.scene.createGameObject(
+        'NearSphere',
+        position: const Vec3(0.8, 0, -6),
+        components: [nearSphereCol, nearSphereRend],
+      );
+
+      final behindBoxCol = BoxCollider(size: const Vec3(2, 2, 2));
+      final behindBoxRend = MeshRenderer(meshData: Primitives.cube());
+      engine.scene.createGameObject(
+        'BehindBox',
+        position: const Vec3(0, 0, 8),
+        components: [behindBoxCol, behindBoxRend],
+      );
+
+      final spatial = SpatialIndexComponent(fatMargin: 0.4);
+      engine.scene.createGameObject('SpatialIndex', components: [spatial]);
+
+      engine.step(0.016);
+      expect(spatial.colliderBvh.count, 3);
+      expect(spatial.rendererBvh.count, 3);
+
+      // Overlap pairs identify overlapping NearBox & NearSphere cleanly.
+      final pairs = spatial.queryOverlapPairs();
+      expect(pairs.length, 1);
+      expect({pairs.single.$1, pairs.single.$2}, {nearBoxCol, nearSphereCol});
+
+      // Closest-hit raycast along -Z hits NearBox front face at z = -5 (distance 5.0).
+      final hit = spatial.raycastClosest(const Ray(origin: Vec3.zero, direction: kForward));
+      expect(hit, isNotNull);
+      expect(hit!.collider, nearBoxCol);
+      expect(hit.distance, closeTo(5.0, 1e-4));
+
+      // Frustum culling keeps forward objects and rejects BehindBox.
+      final visibleRenderers = spatial.queryVisibleRenderers(cam, aspect: 1.5);
+      expect(visibleRenderers, containsAll([nearBoxRend, nearSphereRend]));
+      expect(visibleRenderers, isNot(contains(behindBoxRend)));
+
+      // Small move stays inside fatMargin (zero reinserts!); large move reinserts and separates pair.
+      final baselineReinserts = spatial.colliderBvh.reinsertionCount;
+      nearSphereGo.transform.position = const Vec3(0.85, 0, -6);
+      engine.step(0.016);
+      expect(spatial.colliderBvh.reinsertionCount, baselineReinserts);
+
+      nearSphereGo.transform.position = const Vec3(6.0, 0, -6);
+      engine.step(0.016);
+      expect(spatial.colliderBvh.reinsertionCount, greaterThan(baselineReinserts));
+      expect(spatial.queryOverlapPairs(), isEmpty);
+
+      // Render SpatialBroadphaseUI via voxui.
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      SpatialBroadphaseUI.render(ui, spatial);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == '3 (nodes 5)'), isTrue);
+    });
   });
 }
 

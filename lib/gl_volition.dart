@@ -30,5 +30,7 @@ export 'package:voxseq/voxseq.dart';
 export 'package:voxstat/voxstat.dart';
 export 'package:voxpack/voxpack.dart';
 export 'package:voxloc/voxloc.dart';
+export 'package:voxcam/voxcam.dart';
+export 'package:voxgrid/voxgrid.dart';
 
 export 'src/engine.dart';
