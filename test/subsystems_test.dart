@@ -3733,143 +3733,144 @@ void main() {
     );
   });
 
-  group(
-    'E28 — Procedural Audio, AI Components, and Debug Console (voxsynth, voxai)',
-    () {
-      test(
-        'AudioSource.playSynth and Scene.playSynthAt spawn procedural sound one-shots',
-        () {
-          final host = HeadlessHost();
-          final engine = Engine(host);
+  group('E28 — Procedural Audio, AI Components, and Debug Console (voxsynth, voxai)', () {
+    test(
+      'AudioSource.playSynth and Scene.playSynthAt spawn procedural sound one-shots',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-          final go = engine.scene.createGameObject('Player');
-          final src = go.addComponent(AudioSource());
+        final go = engine.scene.createGameObject('Player');
+        final src = go.addComponent(AudioSource());
 
-          // Play procedural laser synth via AudioSource
-          final laser = voxsynth.laser();
-          src.playSynth(laser);
+        // Play procedural laser synth via AudioSource
+        final laser = voxsynth.laser();
+        src.playSynth(laser);
 
-          // Play spatial procedural explosion synth via Scene
-          final explosion = voxsynth.explosion();
-          final oneShotGo = engine.scene.playSynthAt(
-            explosion,
-            const Vec3(10, 0, 5),
-          );
+        // Play spatial procedural explosion synth via Scene
+        final explosion = voxsynth.explosion();
+        final oneShotGo = engine.scene.playSynthAt(
+          explosion,
+          const Vec3(10, 0, 5),
+        );
 
-          expect(oneShotGo, isNotNull);
-          expect(
-            oneShotGo!.name,
-            contains('SpatialAudioOneShot_procedural://'),
-          );
-          expect(oneShotGo.transform.position.x, closeTo(10.0, 1e-4));
+        expect(oneShotGo, isNotNull);
+        expect(oneShotGo!.name, contains('SpatialAudioOneShot_procedural://'));
+        expect(oneShotGo.transform.position.x, closeTo(10.0, 1e-4));
 
-          final oneShotSrc = oneShotGo.getComponent<AudioSource>();
-          expect(oneShotSrc, isNotNull);
-          expect(oneShotSrc!.clip, isA<ProceduralAudioClip>());
-          expect(
-            (oneShotSrc.clip as ProceduralAudioClip).wavBytes.length,
-            greaterThan(44),
-          );
-        },
-      );
+        final oneShotSrc = oneShotGo.getComponent<AudioSource>();
+        expect(oneShotSrc, isNotNull);
+        expect(oneShotSrc!.clip, isA<ProceduralAudioClip>());
+        expect(
+          (oneShotSrc.clip as ProceduralAudioClip).wavBytes.length,
+          greaterThan(44),
+        );
+      },
+    );
 
-      test(
-        'BehaviorTreeComponent and AiFsmComponent advance AI states in engine loop',
-        () {
-          final host = HeadlessHost();
-          final engine = Engine(host);
+    test(
+      'BehaviorTreeComponent and AiFsmComponent advance AI states in engine loop',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-          var attackTicked = false;
-          final tree = BehaviorTree(
-            root: SequenceNode([
-              ConditionNode((bb) => bb.get<int>('targetDistance') <= 5),
-              ActionNode((bb) {
-                attackTicked = true;
-                return NodeStatus.success;
-              }),
-            ]),
-          );
-          tree.blackboard.set('targetDistance', 10);
+        var attackTicked = false;
+        final tree = BehaviorTree(
+          root: SequenceNode([
+            ConditionNode((bb) => bb.get<int>('targetDistance') <= 5),
+            ActionNode((bb) {
+              attackTicked = true;
+              return NodeStatus.success;
+            }),
+          ]),
+        );
+        tree.blackboard.set('targetDistance', 10);
 
-          final go = engine.scene.createGameObject('Enemy');
-          final btComp = go.addComponent(BehaviorTreeComponent(tree: tree));
+        final go = engine.scene.createGameObject('Enemy');
+        final btComp = go.addComponent(BehaviorTreeComponent(tree: tree));
 
-          // Step 1: Distance = 10 -> condition fails, attackTicked is false
-          engine.step(0.016);
-          expect(attackTicked, isFalse);
-          expect(btComp.lastStatus, equals(NodeStatus.failure));
+        // Step 1: Distance = 10 -> condition fails, attackTicked is false
+        engine.step(0.016);
+        expect(attackTicked, isFalse);
+        expect(btComp.lastStatus, equals(NodeStatus.failure));
 
-          // Step 2: Distance = 3 -> condition passes, attackTicked is true
-          btComp.blackboard.set('targetDistance', 3);
-          engine.step(0.016);
-          expect(attackTicked, isTrue);
-          expect(btComp.lastStatus, equals(NodeStatus.success));
+        // Step 2: Distance = 3 -> condition passes, attackTicked is true
+        btComp.blackboard.set('targetDistance', 3);
+        engine.step(0.016);
+        expect(attackTicked, isTrue);
+        expect(btComp.lastStatus, equals(NodeStatus.success));
 
-          // FSM Component test
-          var patrolEntered = false;
-          var alertEntered = false;
+        // FSM Component test
+        var patrolEntered = false;
+        var alertEntered = false;
 
-          final fsmComp = go.addComponent(
-            AiFsmComponent<String>(initialState: 'patrol'),
-          );
-          fsmComp.addState(
-            'patrol',
-            LambdaState(onEnter: (_) => patrolEntered = true),
-          );
-          fsmComp.addState(
-            'alert',
-            LambdaState(onEnter: (_) => alertEntered = true),
-          );
-          fsmComp.addTransition(
-            'patrol',
-            'alert',
-            (targetGo) => targetGo.transform.position.x > 10.0,
-          );
+        final fsmComp = go.addComponent(
+          AiFsmComponent<String>(initialState: 'patrol'),
+        );
+        fsmComp.addState(
+          'patrol',
+          LambdaState(onEnter: (_) => patrolEntered = true),
+        );
+        fsmComp.addState(
+          'alert',
+          LambdaState(onEnter: (_) => alertEntered = true),
+        );
+        fsmComp.addTransition(
+          'patrol',
+          'alert',
+          (targetGo) => targetGo.transform.position.x > 10.0,
+        );
 
-          engine.step(0.016);
-          expect(fsmComp.currentStateId, equals('patrol'));
-          expect(patrolEntered, isTrue);
-          expect(alertEntered, isFalse);
+        engine.step(0.016);
+        expect(fsmComp.currentStateId, equals('patrol'));
+        expect(patrolEntered, isTrue);
+        expect(alertEntered, isFalse);
 
-          // Move enemy beyond x = 10 -> triggers transition to alert
-          go.transform.position = const Vec3(15, 0, 0);
-          engine.step(0.016);
-          expect(fsmComp.currentStateId, equals('alert'));
-          expect(alertEntered, isTrue);
-        },
-      );
+        // Move enemy beyond x = 10 -> triggers transition to alert
+        go.transform.position = const Vec3(15, 0, 0);
+        engine.step(0.016);
+        expect(fsmComp.currentStateId, equals('alert'));
+        expect(alertEntered, isTrue);
+      },
+    );
 
-      test(
-        'DebugController renders immediate-mode UI with metrics and rolling voxlog logs',
-        () {
-          final host = HeadlessHost();
-          final engine = Engine(host);
+    test(
+      'DebugController renders immediate-mode UI with metrics and rolling voxlog logs',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-          final ring = RingBufferSink(capacity: 10);
-          final testLog = Logger(
-            name: 'Engine',
-            sinks: [ring],
-            level: LogLevel.info,
-          );
-          testLog.info('Boot sequence ready');
-          testLog.warn('GPU pipeline initialized');
+        final ring = RingBufferSink(capacity: 10);
+        final testLog = Logger(
+          name: 'Engine',
+          sinks: [ring],
+          level: LogLevel.info,
+        );
+        testLog.info('Boot sequence ready');
+        testLog.warn('GPU pipeline initialized');
 
-          final debugGo = engine.scene.createGameObject('Debug');
-          final dbg = debugGo.addComponent(DebugController(isOpen: true));
+        final debugGo = engine.scene.createGameObject('Debug');
+        final dbg = debugGo.addComponent(DebugController(isOpen: true));
 
-          engine.step(0.016);
+        engine.step(0.016);
 
-          final ui = VoxUiContext();
-          final input = VoxInput();
-          ui.beginFrame(input);
+        final ui = VoxUiContext();
+        final input = VoxInput();
+        ui.beginFrame(input);
 
-          dbg.renderDebugUi(ui, ring);
+        dbg.renderDebugUi(ui, ring);
 
-      final dl = ui.endFrame();
-      expect(dl.commands, isNotEmpty);
-      expect(dl.commands.any((c) => c.text == 'Engine Diagnostics'), isTrue);
-      expect(dl.commands.any((c) => c.text != null && c.text!.contains('Boot sequence ready')), isTrue);
-    });
+        final dl = ui.endFrame();
+        expect(dl.commands, isNotEmpty);
+        expect(dl.commands.any((c) => c.text == 'Engine Diagnostics'), isTrue);
+        expect(
+          dl.commands.any(
+            (c) => c.text != null && c.text!.contains('Boot sequence ready'),
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('E29: Transform and GameObject tweening with voxtween', () {
       final host = HeadlessHost();
@@ -3883,11 +3884,13 @@ void main() {
       var posCompleted = false;
       var scaleCompleted = false;
 
-      go.transform.tweenPosition(const Vec3(10, 0, 0), 1.0, ease: Ease.linear)
-        .onComplete(() => posCompleted = true);
+      go.transform
+          .tweenPosition(const Vec3(10, 0, 0), 1.0, ease: Ease.linear)
+          .onComplete(() => posCompleted = true);
 
-      go.tweenScale(2.0, 1.0, ease: Ease.linear)
-        .onComplete(() => scaleCompleted = true);
+      go
+          .tweenScale(2.0, 1.0, ease: Ease.linear)
+          .onComplete(() => scaleCompleted = true);
 
       // Step half second (0.5s)
       engine.step(0.5);
@@ -3910,96 +3913,106 @@ void main() {
       expect(TweenManager.instance.activeCount, equals(0));
     });
 
-    test('E29: Camera frustum extraction and visibility culling with voxgeom', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E29: Camera frustum extraction and visibility culling with voxgeom',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final camGo = engine.scene.createGameObject('MainCamera');
-      camGo.transform.position = const Vec3(0, 0, 10);
-      camGo.transform.lookAt(Vec3.zero);
-      final cam = camGo.addComponent(Camera(fovYRadians: 1.0, near: 0.1, far: 50.0));
+        final camGo = engine.scene.createGameObject('MainCamera');
+        camGo.transform.position = const Vec3(0, 0, 10);
+        camGo.transform.lookAt(Vec3.zero);
+        final cam = camGo.addComponent(
+          Camera(fovYRadians: 1.0, near: 0.1, far: 50.0),
+        );
 
-      final visibleGo = engine.scene.createGameObject('VisibleCube');
-      visibleGo.transform.position = const Vec3(0, 0, 0);
-      final visibleMesh = visibleGo.addComponent(MeshRenderer());
+        final visibleGo = engine.scene.createGameObject('VisibleCube');
+        visibleGo.transform.position = const Vec3(0, 0, 0);
+        final visibleMesh = visibleGo.addComponent(MeshRenderer());
 
-      final behindGo = engine.scene.createGameObject('BehindCube');
-      behindGo.transform.position = const Vec3(0, 0, 20);
-      final behindMesh = behindGo.addComponent(MeshRenderer());
+        final behindGo = engine.scene.createGameObject('BehindCube');
+        behindGo.transform.position = const Vec3(0, 0, 20);
+        final behindMesh = behindGo.addComponent(MeshRenderer());
 
-      final farAwayGo = engine.scene.createGameObject('FarAwayCube');
-      farAwayGo.transform.position = const Vec3(100, 0, 0);
-      final farMesh = farAwayGo.addComponent(MeshRenderer());
+        final farAwayGo = engine.scene.createGameObject('FarAwayCube');
+        farAwayGo.transform.position = const Vec3(100, 0, 0);
+        final farMesh = farAwayGo.addComponent(MeshRenderer());
 
-      engine.step(0.016);
+        engine.step(0.016);
 
-      final frustum = cam.calculateFrustum();
-      expect(frustum.planes, hasLength(6));
+        final frustum = cam.calculateFrustum();
+        expect(frustum.planes, hasLength(6));
 
-      expect(cam.isMeshVisible(visibleMesh), isTrue);
-      expect(cam.isMeshVisible(behindMesh), isFalse);
-      expect(cam.isMeshVisible(farMesh), isFalse);
-    });
+        expect(cam.isMeshVisible(visibleMesh), isTrue);
+        expect(cam.isMeshVisible(behindMesh), isFalse);
+        expect(cam.isMeshVisible(farMesh), isFalse);
+      },
+    );
 
-    test('E29: Scene.raycastMeshes hits closest active MeshRenderer bounding box', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E29: Scene.raycastMeshes hits closest active MeshRenderer bounding box',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final cubeA = engine.scene.createGameObject('CubeNear');
-      cubeA.transform.position = const Vec3(0, 0, 5);
-      final meshA = cubeA.addComponent(MeshRenderer());
+        final cubeA = engine.scene.createGameObject('CubeNear');
+        cubeA.transform.position = const Vec3(0, 0, 5);
+        final meshA = cubeA.addComponent(MeshRenderer());
 
-      final cubeB = engine.scene.createGameObject('CubeFar');
-      cubeB.transform.position = const Vec3(0, 0, 15);
-      cubeB.addComponent(MeshRenderer());
+        final cubeB = engine.scene.createGameObject('CubeFar');
+        cubeB.transform.position = const Vec3(0, 0, 15);
+        cubeB.addComponent(MeshRenderer());
 
-      engine.step(0.016);
+        engine.step(0.016);
 
-      final ray = Ray3(const GeomVec3(0, 0, 0), const GeomVec3(0, 0, 1));
-      final hit = engine.scene.raycastMeshes(ray);
+        final ray = Ray3(const GeomVec3(0, 0, 0), const GeomVec3(0, 0, 1));
+        final hit = engine.scene.raycastMeshes(ray);
 
-      expect(hit, isNotNull);
-      expect(hit!.gameObject, equals(cubeA));
-      expect(hit.renderer, equals(meshA));
-      expect(hit.distance, closeTo(4.5, 1e-3));
-    });
+        expect(hit, isNotNull);
+        expect(hit!.gameObject, equals(cubeA));
+        expect(hit.renderer, equals(meshA));
+        expect(hit.distance, closeTo(4.5, 1e-3));
+      },
+    );
 
-    test('E30: NavAgent2D pathfinding, waypoint tracking, and arrival events with voxpath', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
-      engine.time.maximumDeltaTime = 10.0;
+    test(
+      'E30: NavAgent2D pathfinding, waypoint tracking, and arrival events with voxpath',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        engine.time.maximumDeltaTime = 10.0;
 
-      final grid = NavGrid.fromAscii([
-        '.....',
-        '.###.',
-        '.....',
-      ]);
+        final grid = NavGrid.fromAscii(['.....', '.###.', '.....']);
 
-      final agentGo = engine.scene.createGameObject('Minion');
-      agentGo.transform.position = const Vec3(0.5, 0, 0.5);
+        final agentGo = engine.scene.createGameObject('Minion');
+        agentGo.transform.position = const Vec3(0.5, 0, 0.5);
 
-      final agent = agentGo.addComponent(NavAgent2D(speed: 4.0, grid: grid));
-      var reachedDestination = false;
-      final visited = <Vec2>[];
+        final agent = agentGo.addComponent(NavAgent2D(speed: 4.0, grid: grid));
+        var reachedDestination = false;
+        final visited = <Vec2>[];
 
-      agent.onWaypointReached = (idx, pt) => visited.add(pt);
-      agent.onDestinationReached = () => reachedDestination = true;
+        agent.onWaypointReached = (idx, pt) => visited.add(pt);
+        agent.onDestinationReached = () => reachedDestination = true;
 
-      // Navigate from (0, 0) around wall to (4, 2)
-      final success = agent.setDestination(const Vec2(4.5, 2.5), tileSize: 1.0);
-      expect(success, isTrue);
-      expect(agent.isMoving, isTrue);
+        // Navigate from (0, 0) around wall to (4, 2)
+        final success = agent.setDestination(
+          const Vec2(4.5, 2.5),
+          tileSize: 1.0,
+        );
+        expect(success, isTrue);
+        expect(agent.isMoving, isTrue);
 
-      // Step simulation
-      for (var i = 0; i < 30 && !reachedDestination; i++) {
-        engine.step(0.1);
-      }
+        // Step simulation
+        for (var i = 0; i < 30 && !reachedDestination; i++) {
+          engine.step(0.1);
+        }
 
-      expect(reachedDestination, isTrue);
-      expect(visited, isNotEmpty);
-      expect(agentGo.transform.position.x, closeTo(4.5, 0.2));
-      expect(agentGo.transform.position.z, closeTo(2.5, 0.2));
-    });
+        expect(reachedDestination, isTrue);
+        expect(visited, isNotEmpty);
+        expect(agentGo.transform.position.x, closeTo(4.5, 0.2));
+        expect(agentGo.transform.position.z, closeTo(2.5, 0.2));
+      },
+    );
 
     test('E30: FlowField2DComponent crowd vector field evaluation', () {
       final grid = NavGrid.fromAscii([
@@ -4017,111 +4030,138 @@ void main() {
       expect(steer.x.abs(), greaterThan(0.0));
     });
 
-    test('E31: ProceduralDungeonComponent generates BSP rooms, corridors, and NavGrid', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E31: ProceduralDungeonComponent generates BSP rooms, corridors, and NavGrid',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final dungeonGo = engine.scene.createGameObject('Dungeon');
-      final layer = TileLayer(
-        columns: 40,
-        rows: 40,
-        tileWidth: 16,
-        tileHeight: 16,
-        tileset: [SpriteRegion.white, SpriteRegion.white],
-      );
-      final tilemap = dungeonGo.addComponent(TilemapComponent(layer, solidTiles: [1]));
-      final dungeon = dungeonGo.addComponent(ProceduralDungeonComponent(
-        width: 40,
-        height: 40,
-        minRoomSize: 4,
-        maxRoomSize: 10,
-        tileSize: 2.0,
-      ));
+        final dungeonGo = engine.scene.createGameObject('Dungeon');
+        final layer = TileLayer(
+          columns: 40,
+          rows: 40,
+          tileWidth: 16,
+          tileHeight: 16,
+          tileset: [SpriteRegion.white, SpriteRegion.white],
+        );
+        final tilemap = dungeonGo.addComponent(
+          TilemapComponent(layer, solidTiles: [1]),
+        );
+        final dungeon = dungeonGo.addComponent(
+          ProceduralDungeonComponent(
+            width: 40,
+            height: 40,
+            minRoomSize: 4,
+            maxRoomSize: 10,
+            tileSize: 2.0,
+          ),
+        );
 
-      final result = dungeon.generate(customSeed: 42, targetTilemap: tilemap);
+        final result = dungeon.generate(customSeed: 42, targetTilemap: tilemap);
 
-      expect(result.rooms, isNotEmpty);
-      expect(dungeon.rooms, equals(result.rooms));
-      expect(dungeon.roomCenters, hasLength(dungeon.rooms.length));
-      expect(dungeon.navGrid, isNotNull);
+        expect(result.rooms, isNotEmpty);
+        expect(dungeon.rooms, equals(result.rooms));
+        expect(dungeon.roomCenters, hasLength(dungeon.rooms.length));
+        expect(dungeon.navGrid, isNotNull);
 
-      // Verify player spawn is within bounds and on a walkable floor
-      final spawn = dungeon.playerSpawn;
-      expect(spawn.x, greaterThan(0.0));
-      expect(spawn.z, greaterThan(0.0));
+        // Verify player spawn is within bounds and on a walkable floor
+        final spawn = dungeon.playerSpawn;
+        expect(spawn.x, greaterThan(0.0));
+        expect(spawn.z, greaterThan(0.0));
 
-      final spawnTileX = (spawn.x / 2.0).floor();
-      final spawnTileZ = (spawn.z / 2.0).floor();
-      expect(dungeon.navGrid!.isWalkable(spawnTileX, spawnTileZ), isTrue);
-      expect(tilemap.layer.tileAt(spawnTileX, spawnTileZ), equals(1));
-    });
+        final spawnTileX = (spawn.x / 2.0).floor();
+        final spawnTileZ = (spawn.z / 2.0).floor();
+        expect(dungeon.navGrid!.isWalkable(spawnTileX, spawnTileZ), isTrue);
+        expect(tilemap.layer.tileAt(spawnTileX, spawnTileZ), equals(1));
+      },
+    );
 
-    test('E31: PoissonScatterComponent distributes non-overlapping prefabs', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
+    test(
+      'E31: PoissonScatterComponent distributes non-overlapping prefabs',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
 
-      final scatterGo = engine.scene.createGameObject('ScatterZone');
-      final scatter = scatterGo.addComponent(PoissonScatterComponent(
-        areaWidth: 50.0,
-        areaHeight: 50.0,
-        minDistance: 8.0,
-        seed: 999,
-      ));
+        final scatterGo = engine.scene.createGameObject('ScatterZone');
+        final scatter = scatterGo.addComponent(
+          PoissonScatterComponent(
+            areaWidth: 50.0,
+            areaHeight: 50.0,
+            minDistance: 8.0,
+            seed: 999,
+          ),
+        );
 
-      final positions = scatter.sampleWorldPositions();
-      expect(positions, isNotEmpty);
+        final positions = scatter.sampleWorldPositions();
+        expect(positions, isNotEmpty);
 
-      // Verify minimum clearance between all sampled points
-      for (var i = 0; i < positions.length; i++) {
-        for (var j = i + 1; j < positions.length; j++) {
-          final dx = positions[i].x - positions[j].x;
-          final dz = positions[i].z - positions[j].z;
-          final distSq = dx * dx + dz * dz;
-          expect(distSq, greaterThanOrEqualTo(7.99 * 7.99));
+        // Verify minimum clearance between all sampled points
+        for (var i = 0; i < positions.length; i++) {
+          for (var j = i + 1; j < positions.length; j++) {
+            final dx = positions[i].x - positions[j].x;
+            final dz = positions[i].z - positions[j].z;
+            final distSq = dx * dx + dz * dz;
+            expect(distSq, greaterThanOrEqualTo(7.99 * 7.99));
+          }
         }
-      }
 
-      // Instantiate prefabs into scene
-      final treePrefab = Prefab('TreePrefab', (root) {
-        root.addComponent(MeshRenderer());
-      });
+        // Instantiate prefabs into scene
+        final treePrefab = Prefab('TreePrefab', (root) {
+          root.addComponent(MeshRenderer());
+        });
 
-      final spawned = scatter.spawnPrefabs(treePrefab);
-      expect(spawned, hasLength(positions.length));
-      expect(scatterGo.children, hasLength(positions.length));
-    });
+        final spawned = scatter.spawnPrefabs(treePrefab);
+        expect(spawned, hasLength(positions.length));
+        expect(scatterGo.children, hasLength(positions.length));
+      },
+    );
 
-    test('E32: RigidBody2D and BoxCollider2D fall under gravity and rest on ground', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
-      engine.scene.physics2D.gravity = const Vec2(0.0, -10.0);
+    test(
+      'E32: RigidBody2D and BoxCollider2D fall under gravity and rest on ground',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        engine.scene.physics2D.gravity = const Vec2(0.0, -10.0);
 
-      // Static ground at (0, 0), size (10, 1) -> top is at y = 0.5
-      final groundGo = engine.scene.createGameObject('Ground', position: Vec3.zero);
-      groundGo.addComponent(BoxCollider2D(
-        size: const Vec2(10.0, 1.0),
-        friction: 0.5,
-        restitution: 0.0,
-      ));
+        // Static ground at (0, 0), size (10, 1) -> top is at y = 0.5
+        final groundGo = engine.scene.createGameObject(
+          'Ground',
+          position: Vec3.zero,
+        );
+        groundGo.addComponent(
+          BoxCollider2D(
+            size: const Vec2(10.0, 1.0),
+            friction: 0.5,
+            restitution: 0.0,
+          ),
+        );
 
-      // Dynamic crate at (0, 3), size (1, 1) -> halfHeight = 0.5
-      final crateGo = engine.scene.createGameObject('Crate', position: const Vec3(0.0, 3.0, 0.0));
-      final rb = crateGo.addComponent(RigidBody2D(bodyType: BodyType.dynamicBody));
-      crateGo.addComponent(BoxCollider2D(
-        size: const Vec2(1.0, 1.0),
-        friction: 0.5,
-        restitution: 0.0,
-      ));
+        // Dynamic crate at (0, 3), size (1, 1) -> halfHeight = 0.5
+        final crateGo = engine.scene.createGameObject(
+          'Crate',
+          position: const Vec3(0.0, 3.0, 0.0),
+        );
+        final rb = crateGo.addComponent(
+          RigidBody2D(bodyType: BodyType.dynamicBody),
+        );
+        crateGo.addComponent(
+          BoxCollider2D(
+            size: const Vec2(1.0, 1.0),
+            friction: 0.5,
+            restitution: 0.0,
+          ),
+        );
 
-      // Step engine 60 frames (1.0s)
-      for (var i = 0; i < 60; i++) {
-        engine.step(1.0 / 60.0);
-      }
+        // Step engine 60 frames (1.0s)
+        for (var i = 0; i < 60; i++) {
+          engine.step(1.0 / 60.0);
+        }
 
-      // Crate should come to rest on ground: y = 0.5 + 0.5 = 1.0
-      expect(crateGo.transform.position.y, closeTo(1.0, 0.05));
-      expect(rb.linearVelocity.y.abs(), lessThan(0.05));
-    });
+        // Crate should come to rest on ground: y = 0.5 + 0.5 = 1.0
+        expect(crateGo.transform.position.y, closeTo(1.0, 0.05));
+        expect(rb.linearVelocity.y.abs(), lessThan(0.05));
+      },
+    );
 
     test('E32: 2D Collision and Trigger Behaviour callbacks', () {
       final host = HeadlessHost();
@@ -4131,17 +4171,28 @@ void main() {
       final colSpy = _CollisionSpy2D();
       final trigSpy = _TriggerSpy2D();
 
-      final groundGo = engine.scene.createGameObject('Ground', position: Vec3.zero);
+      final groundGo = engine.scene.createGameObject(
+        'Ground',
+        position: Vec3.zero,
+      );
       groundGo.addComponent(BoxCollider2D(size: const Vec2(10.0, 1.0)));
       groundGo.addComponent(colSpy);
 
       // Sensor zone at (0, 1.5)
-      final sensorGo = engine.scene.createGameObject('Sensor', position: const Vec3(0.0, 1.5, 0.0));
-      sensorGo.addComponent(BoxCollider2D(size: const Vec2(4.0, 2.0), isTrigger: true));
+      final sensorGo = engine.scene.createGameObject(
+        'Sensor',
+        position: const Vec3(0.0, 1.5, 0.0),
+      );
+      sensorGo.addComponent(
+        BoxCollider2D(size: const Vec2(4.0, 2.0), isTrigger: true),
+      );
       sensorGo.addComponent(trigSpy);
 
       // Dynamic crate at (0, 3)
-      final crateGo = engine.scene.createGameObject('Crate', position: const Vec3(0.0, 3.0, 0.0));
+      final crateGo = engine.scene.createGameObject(
+        'Crate',
+        position: const Vec3(0.0, 3.0, 0.0),
+      );
       crateGo.addComponent(RigidBody2D(bodyType: BodyType.dynamicBody));
       crateGo.addComponent(CircleCollider2D(radius: 0.5));
 
@@ -4155,43 +4206,126 @@ void main() {
       expect(colSpy.lastCollision!.otherGameObject, equals(crateGo));
     });
 
-    test('E32: DistanceJoint2D maintains distance constraint in engine scene', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
-      engine.scene.physics2D.gravity = const Vec2(0.0, -10.0);
+    test(
+      'E32: DistanceJoint2D maintains distance constraint in engine scene',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        engine.scene.physics2D.gravity = const Vec2(0.0, -10.0);
 
-      final anchorGo = engine.scene.createGameObject('Anchor', position: const Vec3(0.0, 5.0, 0.0));
-      final anchorRb = anchorGo.addComponent(RigidBody2D(bodyType: BodyType.staticBody));
+        final anchorGo = engine.scene.createGameObject(
+          'Anchor',
+          position: const Vec3(0.0, 5.0, 0.0),
+        );
+        final anchorRb = anchorGo.addComponent(
+          RigidBody2D(bodyType: BodyType.staticBody),
+        );
 
-      final bobGo = engine.scene.createGameObject('Bob', position: const Vec3(3.0, 5.0, 0.0));
-      bobGo.addComponent(RigidBody2D(bodyType: BodyType.dynamicBody));
-      bobGo.addComponent(CircleCollider2D(radius: 0.3));
+        final bobGo = engine.scene.createGameObject(
+          'Bob',
+          position: const Vec3(3.0, 5.0, 0.0),
+        );
+        bobGo.addComponent(RigidBody2D(bodyType: BodyType.dynamicBody));
+        bobGo.addComponent(CircleCollider2D(radius: 0.3));
 
-      bobGo.addComponent(DistanceJoint2D(
-        connectedBody: anchorRb,
-        length: 3.0,
-      ));
+        bobGo.addComponent(
+          DistanceJoint2D(connectedBody: anchorRb, length: 3.0),
+        );
 
-      for (var i = 0; i < 60; i++) {
-        engine.step(1.0 / 60.0);
-      }
+        for (var i = 0; i < 60; i++) {
+          engine.step(1.0 / 60.0);
+        }
 
-      final dist = (bobGo.transform.position - anchorGo.transform.position).length;
-      expect(dist, closeTo(3.0, 0.05));
-    });
+        final dist =
+            (bobGo.transform.position - anchorGo.transform.position).length;
+        expect(dist, closeTo(3.0, 0.05));
+      },
+    );
 
     test('E32: Scene.raycast2D queries 2D colliders', () {
       final host = HeadlessHost();
       final engine = Engine(host);
 
-      final targetGo = engine.scene.createGameObject('Target', position: const Vec3(0.0, 4.0, 0.0));
+      final targetGo = engine.scene.createGameObject(
+        'Target',
+        position: const Vec3(0.0, 4.0, 0.0),
+      );
       targetGo.addComponent(CircleCollider2D(radius: 1.0));
 
-      final hit = engine.scene.raycast2D(const Vec2(0.0, 10.0), const Vec2(0.0, -1.0));
+      final hit = engine.scene.raycast2D(
+        const Vec2(0.0, 10.0),
+        const Vec2(0.0, -1.0),
+      );
       expect(hit, isNotNull);
       expect(hit!.gameObject, equals(targetGo));
       expect(hit.point.y, closeTo(5.0, 1e-3));
       expect(hit.normal.y, closeTo(1.0, 1e-3));
+    });
+
+    test('E33: NetworkManager and NetworkTransform replicate state across loopback transport', () {
+      final net = LoopbackNetwork();
+      final serverTransport = net.createEndpoint(0);
+      final clientTransport = net.createEndpoint(1);
+
+      final serverHost = HeadlessHost();
+      final serverEngine = Engine(serverHost);
+      serverEngine.scene.network.startServer(serverTransport: serverTransport);
+
+      final clientHost = HeadlessHost();
+      final clientEngine = Engine(clientHost);
+      clientEngine.scene.network.startClient(1, clientTransport: clientTransport);
+
+      // Server entity
+      final serverGo = serverEngine.scene.createGameObject('Player', position: const Vec3(0.0, 0.0, 0.0));
+      serverGo.addComponent(NetworkIdentity(netId: 10, ownerPeerId: 0));
+      serverGo.addComponent(NetworkTransform(interpolationDelaySeconds: 0.0));
+
+      // Client proxy entity
+      final clientGo = clientEngine.scene.createGameObject('PlayerProxy', position: const Vec3(0.0, 0.0, 0.0));
+      clientGo.addComponent(NetworkIdentity(netId: 10, ownerPeerId: 0));
+      clientGo.addComponent(NetworkTransform(interpolationDelaySeconds: 0.0));
+
+      // Move server entity
+      serverGo.transform.position = const Vec3(15.0, 2.0, -5.0);
+
+      // Step server (broadcasts snapshot)
+      serverEngine.step(0.05);
+
+      // Step client (receives snapshot and applies interpolation)
+      clientEngine.step(0.05);
+
+      expect(clientGo.transform.position.x, closeTo(15.0, 0.01));
+      expect(clientGo.transform.position.y, closeTo(2.0, 0.01));
+      expect(clientGo.transform.position.z, closeTo(-5.0, 0.01));
+    });
+
+    test('E33: NetworkManager sends and dispatches RPCs', () {
+      final net = LoopbackNetwork();
+      final serverTransport = net.createEndpoint(0);
+      final clientTransport = net.createEndpoint(1);
+
+      final serverEngine = Engine(HeadlessHost());
+      serverEngine.scene.network.startServer(serverTransport: serverTransport);
+
+      final clientEngine = Engine(HeadlessHost());
+      clientEngine.scene.network.startClient(1, clientTransport: clientTransport);
+
+      var rpcReceived = false;
+      var receivedDamage = 0;
+
+      clientEngine.scene.network.rpc.register('applyDamage', (senderId, payload) {
+        rpcReceived = true;
+        receivedDamage = ByteReader(payload).readInt32();
+      });
+
+      final payload = ByteWriter()..writeInt32(85);
+      serverEngine.scene.network.sendRpc(1, 'applyDamage', payload.toBytes(), recipientId: 1);
+
+      // Step client to process network messages
+      clientEngine.step(0.05);
+
+      expect(rpcReceived, isTrue);
+      expect(receivedDamage, equals(85));
     });
   });
 }

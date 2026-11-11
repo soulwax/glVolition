@@ -606,6 +606,24 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _APIs:_ `scene.physics2D`, `scene.raycast2D(origin, direction, [maxDistance, mask])`, `RaycastHit2D`, `Collision2D`, `Behaviour.onCollisionEnter2D`, `onCollisionStay2D`, `onCollisionExit2D`, `onTriggerEnter2D`, `onTriggerStay2D`, `onTriggerExit2D`.
   - _Verify:_ `test/subsystems_test.dart` (automatic fixed-step synchronization with GameObject TransformComponent, continuous contact dispatch, trigger zones, and 2D scene raycasting).
 
+---
+
+## E33: Network Synchronization, Snapshot Interpolation & Rollback Prediction (voxnet)
+
+- [x] **E33-1. `voxnet` Submodule: State Replication, Rollback & RPC Framework.**
+  - _Location:_ `./vendor/voxnet` (`https://github.com/soulwax/voxnet`).
+  - _APIs:_ `ByteWriter`, `ByteReader` (variable-length LEB128, float/int primitives), `FloatQuantizer`, `NetMessage`, `MessageRegistry`, `PingMsg`, `PongMsg`, `InputMsg`, `EntitySnapshotMsg`, `RpcMsg`, `NetTransport`, `LoopbackNetwork`, `LoopbackEndpoint` (latency, jitter, packet drop simulation), `SnapshotBuffer<T>`, `Snapshot<T>`, `PredictionHistory<TState, TInput>` (prediction frames, divergence detection, rollback, and intermediate tick re-simulation), `DeltaCompressor` (bitmask dirty field tracking), `RpcManager`.
+  - _Verify:_ `vendor/voxnet/test/voxnet_test.dart` & `test/subsystems_test.dart` (11/11 unit tests: binary round-trip, loopback network delay delivery, snapshot sampling, rollback re-simulation, and RPC invocation).
+- [x] **E33-2. `NetworkIdentity` & `NetworkTransform` Engine Components.**
+  - _Touches:_ `lib/src/engine/network/network_system.dart`.
+  - _APIs:_ `NetworkIdentity(netId, ownerPeerId)` (`isOwner`, `isServer`, `isClient`), `NetworkTransform(interpolationDelaySeconds, synchronizePosition, synchronizeRotation, enablePrediction)` (reconciles client-side prediction against authoritative server state, interpolates historical snapshot buffers for remote proxies).
+  - _Verify:_ `test/subsystems_test.dart` (server authoritative entity position replication and remote client proxy smooth interpolation).
+- [x] **E33-3. `NetworkManager` Subsystem & RPC Dispatch.**
+  - _Touches:_ `lib/src/engine/network/network_system.dart`, `lib/src/engine/scene.dart`.
+  - _APIs:_ `scene.network`, `NetworkManager.startServer()`, `startClient()`, `sendRpc()`, `rpc.register()`, `currentTick`, `currentNetworkTimeMs`.
+  - _Verify:_ `test/subsystems_test.dart` (RPC packet broadcasting, payload deserialization, and multi-peer network manager execution).
+
+
 
 
 

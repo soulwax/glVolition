@@ -31,6 +31,7 @@ final class Scene {
   final AudioMixer audioMixer = AudioMixer();
   late final PhysicsWorld physics = PhysicsWorld._(this);
   late final Physics2DWorld physics2D = Physics2DWorld._(this);
+  late final NetworkManager network = NetworkManager._(this);
   late final Gizmos gizmos = Gizmos._(this);
 
   Engine? _engine;
@@ -299,7 +300,10 @@ final class Scene {
   }
 
   /// Performs a 3D raycast against active MeshRenderers using voxgeom bounding volumes (E29-2).
-  SceneMeshRayHit? raycastMeshes(Ray3 ray, {double maxDistance = double.infinity}) {
+  SceneMeshRayHit? raycastMeshes(
+    Ray3 ray, {
+    double maxDistance = double.infinity,
+  }) {
     SceneMeshRayHit? best;
     for (final go in _allObjects(includeInactive: false)) {
       final renderer = go.getComponent<MeshRenderer>();
@@ -327,8 +331,12 @@ final class Scene {
     Vec2 direction, {
     double maxDistance = 1000.0,
     int mask = 0xFFFF,
-  }) =>
-      physics2D.raycast(origin, direction, maxDistance: maxDistance, mask: mask);
+  }) => physics2D.raycast(
+    origin,
+    direction,
+    maxDistance: maxDistance,
+    mask: mask,
+  );
 
   /// Shakes all active cameras in the scene with distance-attenuated trauma
   /// radiating from [epicenter] (E17-3).
@@ -522,6 +530,7 @@ final class Scene {
     }
     physics._step();
     physics2D._step(_engine?.time.fixedDeltaTime ?? 0.02);
+    network._step(_engine?.time.fixedDeltaTime ?? 0.02);
   }
 
   void _updateStep() {

@@ -31,3 +31,6 @@
 [submodule "vendor/voxphys"]
 	path = vendor/voxphys
 	url = https://github.com/soulwax/voxphys.git
+[submodule "vendor/voxnet"]
+	path = vendor/voxnet
+	url = https://github.com/soulwax/voxnet.git
