@@ -9,6 +9,7 @@ Two of the report's "missing API" claims were wrong when checked against the cod
 
 Ground rules:
 
+- It is encouraged to change renderer code to suit the consuming engine but it should also serve the renderer's own needs. The renderer is a library, not a game engine. It is my creative property.
 - The public API grows, but nothing existing is removed or changes meaning without a stated reason.
 - After any shader edit, `dart run tools/renderer/shaders.dart` regenerates the shaders and `--check` must pass.
 - Every item ends with `dart analyze` clean and the renderer suite passing. `test_rf11` is excluded, as are `plib00` and `plib04`, because they need the original host game repo.
@@ -55,7 +56,7 @@ Ground rules:
 - [x] **P1-2. Decoder metadata.**
   - `GlbResult` gains:
     - `nodeMaterials` (`sortTiebreaker` is no longer overloaded);
-    - `textureImages` plus `imageForTexture`. Material slots were glTF *texture* indices, which every consumer had been treating as image indices.
+    - `textureImages` plus `imageForTexture`. Material slots were glTF _texture_ indices, which every consumer had been treating as image indices.
   - `GlbImage` is index-aligned with the asset's `images` array and carries `uri` for external images. `data:` URIs are decoded.
   - Materials: `KHR_materials_unlit` decodes as a matte dielectric, and `alphaMode`, `alphaCutoff` and `doubleSided` decode.
   - `matrix` nodes decompose into translation, rotation and scale.
@@ -168,13 +169,14 @@ Ground rules:
   - A `ResizeObserver` gates canvas size reads.
 - [x] **O-3. Result.** Main-thread busy time and p95 frame interval:
 
-  | Game | Busy before → after | p95 frame interval now |
-  | --- | --- | --- |
-  | Pixel Rocket | 43% → 24% | 17.8 ms |
-  | Lantern | 17% → 10% | 17.3 ms |
-  | Tidewatch | 68% → 23% | 17.5 ms |
+  | Game         | Busy before → after | p95 frame interval now |
+  | ------------ | ------------------- | ---------------------- |
+  | Pixel Rocket | 43% → 24%           | 17.8 ms                |
+  | Lantern      | 17% → 10%           | 17.3 ms                |
+  | Tidewatch    | 68% → 23%           | 17.5 ms                |
 
   Live context-loss and resize gates still pass: 10/10 restores and 0/100 resize mismatches.
+
 - [x] **P-1. Play-throughs.** Every game reaches its end card and restarts:
   - **Pixel Rocket:** fly, boost, collect, die.
   - **Lantern:** motes, portal, room 2, death, restart.
@@ -218,17 +220,19 @@ Current implementation: named shader overrides, typed host bindings, per-draw sp
   ```
 
   Typed slots reject unknown names. Duplicate program IDs, mismatched fragment outputs, attribute locations/types, engine uniform types and vertex-to-fragment varyings are rejected before drawing. The first [browser renderer lab](pixeldart/docs/browser_renderer_lab.md) fixtures compared built-in and overridden `present` on Edge 157 / Intel Iris Xe / D3D11: center RGBA `0,14,104,255` versus `64,128,191,255` for `vec4(0.25, 0.5, 0.75, 1)`, with 0 GL errors and no JavaScript exceptions. Other slots and color-space paths still need browser fixtures; the renderer cannot infer color-space semantics from GLSL declarations. A custom shader is bound to the same pass and resource contract as its default; adding new passes is a separate API.
+
 - [ ] **R2. Finish safe shader changes.** Overrides resolve centrally; `setShader` changes them between frames, failed live compiles preserve the prior graph, startup failures use defaults with `shaderErrors`, and context restoration recompiles the override. Shader-only changes now compile affected programs in place without reallocating render targets or rebuilding passes. Typed host uniforms, including `int` and `mat4`, and texture bindings are done (`ShaderUniform`, `setShaderUniform`, `setShaderTexture`, `ShaderOverride.effect`, with no raw GL handles and engine-reserved names rejected). The float/vector/texture path was verified on D3D11; the new types have pure fixtures. Verify the slot contracts and visual output in a real browser fixture in addition to the pure tests.
-- [ ] **R3. Extend shader choice to authored draws.** *Done (2026-11-09):* per-draw sprite shaders (`createSpriteShader`, `drawSprites(shader:)`) and host post-effect stacks (`postEffects`), verified on D3D11. Per-material world shaders (`createWorldShader`, `MaterialDefinition.worldShader`) now cover both `safeWorld` and `shadowedWorld`, restore frame uniforms on program switches, and survive context restore and profile round trips in pure fixtures. The default path avoids capture and selection work. The shadowed-world material path also caches alpha cutoff, coverage and affine warp values; a minimal-profile draw fixture guards the neutral SSAO fallback against feedback loops. *Remaining:* browser visual verification and a separately declared input/output API for arbitrary host graph passes. The latter must not treat a replaced built-in pass as an arbitrary new graph node.
-- [ ] **R4. Finish anisotropic texture sampling.** The low-level request, extension negotiation and 1× fallback work. `ResourceLibrary.anisotropyOf(handle)` and `PixeldartApp.textureAnisotropy(handle)` report requested/effective sampling without GPU calls and refresh capability limits after context restoration. Texture descriptors now reject a mipmap magnification filter and minification mipmaps without storage before allocation; non-power-of-two images allocate the correct mip count. The README documents 1× nearest for pixel art and mipmapped anisotropy for oblique surfaces. *Remaining:* compare 1×, 4×, 8× and 16× on an oblique textured plane, recording image quality and GPU time before choosing a default cap.
-- [ ] **R5. Make MSAA capability-driven and cheap.** *Done (2026-11-09):*
+- [ ] **R3. Extend shader choice to authored draws.** _Done (2026-11-09):_ per-draw sprite shaders (`createSpriteShader`, `drawSprites(shader:)`) and host post-effect stacks (`postEffects`), verified on D3D11. Per-material world shaders (`createWorldShader`, `MaterialDefinition.worldShader`) now cover both `safeWorld` and `shadowedWorld`, restore frame uniforms on program switches, and survive context restore and profile round trips in pure fixtures. The default path avoids capture and selection work. The shadowed-world material path also caches alpha cutoff, coverage and affine warp values; a minimal-profile draw fixture guards the neutral SSAO fallback against feedback loops. _Remaining:_ browser visual verification and a separately declared input/output API for arbitrary host graph passes. The latter must not treat a replaced built-in pass as an arbitrary new graph node.
+- [ ] **R4. Finish anisotropic texture sampling.** The low-level request, extension negotiation and 1× fallback work. `ResourceLibrary.anisotropyOf(handle)` and `PixeldartApp.textureAnisotropy(handle)` report requested/effective sampling without GPU calls and refresh capability limits after context restoration. Texture descriptors now reject a mipmap magnification filter and minification mipmaps without storage before allocation; non-power-of-two images allocate the correct mip count. The README documents 1× nearest for pixel art and mipmapped anisotropy for oblique surfaces. _Remaining:_ compare 1×, 4×, 8× and 16× on an oblique textured plane, recording image quality and GPU time before choosing a default cap.
+- [ ] **R5. Make MSAA capability-driven and cheap.** _Done (2026-11-09):_
   - `MsaaStatus.negotiate` clamps to `maxSamples` and halves on an incomplete framebuffer, down to 1×. It runs on initialize, configure and context restore.
   - `renderer.msaa` / `app.msaa` report the result; `app.setSampleCount` changes it.
   - The resolve target is sized by its readers: color, plus glow only with bloom, and no depth. The WebGL resolve blits only attachments both sides own.
   - 1× stays free, and `mount2d` stays at 1×.
   - `test_msaa_negotiation` covers it.
 
-  A 4× D3D11 smoke run with `ps1Full` and `clean` produced correct pixels and no GL errors. *Remaining:* cover resize and context restoration live, then measure 1×/2×/4× GPU time, memory, and edge quality on representative scenes before changing the high-profile `mount` default. The pixel-art 2D profile stays at 1×.
+  A 4× D3D11 smoke run with `ps1Full` and `clean` produced correct pixels and no GL errors. _Remaining:_ cover resize and context restoration live, then measure 1×/2×/4× GPU time, memory, and edge quality on representative scenes before changing the high-profile `mount` default. The pixel-art 2D profile stays at 1×.
+
 - [ ] **R6. Add a static CI gate.** Run `dart pub get`, `dart format --output=none --set-exit-if-changed .`, `dart analyze`, `dart run tools/renderer/test_all.dart`, `dart run tools/renderer/check_boundary.dart` and `dart run tools/renderer/shaders.dart --check` from `pixeldart` in GitHub Actions. The whole-package format gate is still pending; touched-file format checks do not satisfy it. Confirm the workflow passes on a clean checkout. Keep the desktop build as a separate Windows gate if needed.
 - [ ] **R7. Build the browser renderer lab and baselines.** The first live fixtures and Node/CDP runner compare built-in versus overridden `present`, in-frame `readPixels`, JavaScript/WebGL error status, and hardware adapter identity. Add other slots, an oblique anisotropic texture, 1×/2×/4× MSAA edges and forced context loss. Add golden comparisons and the documented warm-up/measurement protocol; ratify performance budgets from real hardware evidence.
 

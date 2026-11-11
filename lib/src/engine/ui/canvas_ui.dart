@@ -21,6 +21,12 @@ sealed class UIElement {
   double width;
   double height;
   bool visible;
+  bool isFocusable = false;
+  bool isFocused = false;
+
+  void onFocusEnter() {}
+  void onFocusExit() {}
+  void onSubmit() {}
 
   UIElement({
     this.anchor = UIAnchor.topLeft,
@@ -169,6 +175,14 @@ final class UIButton extends UIElement {
     this.disabledTextColor = 0x7E789988,
     super.visible,
   });
+
+  @override
+  bool get isFocusable => enabled && visible;
+
+  @override
+  void onSubmit() {
+    if (enabled) onPressed?.call();
+  }
 }
 
 /// Interactive boolean checkbox/switch rendered by a [UICanvas] (E8-3).
@@ -200,6 +214,15 @@ final class UIToggle extends UIElement {
     this.textScale = 1,
     super.visible,
   });
+
+  @override
+  bool get isFocusable => visible;
+
+  @override
+  void onSubmit() {
+    value = !value;
+    onChanged?.call(value);
+  }
 }
 
 /// Interactive horizontal value slider rendered by a [UICanvas] (E8-3).
@@ -243,6 +266,9 @@ final class UISlider extends UIElement {
       onChanged?.call(value);
     }
   }
+
+  @override
+  bool get isFocusable => visible;
 }
 
 enum UIStackAxis { vertical, horizontal }
@@ -356,7 +382,6 @@ final class UITextField extends UIElement {
   String text;
   String placeholder;
   int maxLength;
-  bool isFocused;
   void Function(String text)? onChanged;
   void Function(String text)? onSubmitted;
 
@@ -371,7 +396,7 @@ final class UITextField extends UIElement {
     this.text = '',
     this.placeholder = '',
     this.maxLength = 64,
-    this.isFocused = false,
+    bool isFocused = false,
     this.onChanged,
     this.onSubmitted,
     super.anchor,
@@ -386,7 +411,15 @@ final class UITextField extends UIElement {
     this.placeholderColor = 0x8A84AAFF,
     this.textScale = 1.0,
     super.visible,
-  });
+  }) {
+    this.isFocused = isFocused;
+  }
+
+  @override
+  bool get isFocusable => visible;
+
+  @override
+  void onSubmit() => onSubmitted?.call(text);
 
   static const List<(String, String, String)> _keyTable = [
     ('KeyA', 'a', 'A'),
@@ -491,6 +524,12 @@ final class UIDropdown extends UIElement {
     selectedIndex = clamped;
     onSelected?.call(clamped, options[clamped]);
   }
+
+  @override
+  bool get isFocusable => visible;
+
+  @override
+  void onSubmit() => isOpen = !isOpen;
 }
 
 /// DOM-free in-canvas UI overlay rendered on `SpriteStage.overlay` (E4-4).
@@ -520,10 +559,80 @@ final class UICanvas extends Behaviour {
     debugLabel: 'canvas_ui',
   );
 
+  UIElement? _focusedElement;
+  bool enableKeyboardNavigation = true;
+
+  UIElement? get focusedElement => _focusedElement;
+
+  void focus(UIElement? element) {
+    if (identical(_focusedElement, element)) return;
+    if (_focusedElement != null) {
+      _focusedElement!.isFocused = false;
+      _focusedElement!.onFocusExit();
+    }
+    _focusedElement = element;
+    if (element != null) {
+      element.isFocused = true;
+      element.onFocusEnter();
+    }
+  }
+
+  List<UIElement> _getFocusableElements() {
+    final list = <UIElement>[];
+    void collect(UIElement el) {
+      if (!el.visible) return;
+      if (el.isFocusable) list.add(el);
+      if (el is UIStack) {
+        for (final child in el.children) {
+          collect(child);
+        }
+      }
+    }
+    for (final el in elements) {
+      collect(el);
+    }
+    return list;
+  }
+
+  void focusNext() {
+    final focusables = _getFocusableElements();
+    if (focusables.isEmpty) return;
+    if (_focusedElement == null) {
+      focus(focusables.first);
+      return;
+    }
+    final idx = focusables.indexOf(_focusedElement!);
+    if (idx == -1) {
+      focus(focusables.first);
+    } else {
+      final nextIdx = (idx + 1) % focusables.length;
+      focus(focusables[nextIdx]);
+    }
+  }
+
+  void focusPrevious() {
+    final focusables = _getFocusableElements();
+    if (focusables.isEmpty) return;
+    if (_focusedElement == null) {
+      focus(focusables.last);
+      return;
+    }
+    final idx = focusables.indexOf(_focusedElement!);
+    if (idx == -1) {
+      focus(focusables.last);
+    } else {
+      final prevIdx = (idx - 1 + focusables.length) % focusables.length;
+      focus(focusables[prevIdx]);
+    }
+  }
+
+  void submitFocused() => _focusedElement?.onSubmit();
+
   UICanvas({
     this.designWidth = 640,
     this.designHeight = 360,
     this.font,
+    this.enableKeyboardNavigation = true,
   });
 
   T add<T extends UIElement>(T element) {
@@ -547,6 +656,19 @@ final class UICanvas extends Behaviour {
   @override
   void update() {
     final raw = engine.host.input;
+    if (enableKeyboardNavigation) {
+      if (raw.wasPressed('Tab')) {
+        if (raw.isDown('ShiftLeft') || raw.isDown('ShiftRight')) {
+          focusPrevious();
+        } else {
+          focusNext();
+        }
+      }
+      if (raw.wasPressed('Enter') || raw.wasPressed('Space')) {
+        submitFocused();
+      }
+    }
+
     final pt = pointerToCanvas(raw.pointerX, raw.pointerY);
     for (final el in List.of(elements)) {
       _updateElement(el, pt, raw);
@@ -575,6 +697,7 @@ final class UICanvas extends Behaviour {
         final hit = btn.containsPoint(pt.x, pt.y, designWidth, designHeight);
         btn.isHovered = hit;
         if (hit && raw.pointerPressed) {
+          focus(btn);
           btn.isPressed = true;
         }
         if (btn.isPressed && raw.pointerReleased) {
@@ -588,12 +711,14 @@ final class UICanvas extends Behaviour {
         final hit = toggle.containsPoint(pt.x, pt.y, designWidth, designHeight);
         toggle.isHovered = hit;
         if (hit && raw.pointerPressed) {
+          focus(toggle);
           toggle.value = !toggle.value;
           toggle.onChanged?.call(toggle.value);
         }
       case UISlider slider:
         final hit = slider.containsPoint(pt.x, pt.y, designWidth, designHeight);
         if (hit && raw.pointerPressed) {
+          focus(slider);
           slider.isDragging = true;
         }
         if (!raw.pointerDown) {
@@ -607,7 +732,11 @@ final class UICanvas extends Behaviour {
       case UITextField field:
         final hit = field.containsPoint(pt.x, pt.y, designWidth, designHeight);
         if (raw.pointerPressed) {
-          field.isFocused = hit;
+          if (hit) {
+            focus(field);
+          } else if (_focusedElement == field) {
+            focus(null);
+          }
         }
         field._handleInput(raw);
       case UIDropdown dropdown:
@@ -630,6 +759,7 @@ final class UICanvas extends Behaviour {
             }
           }
         } else if (headerHit && raw.pointerPressed) {
+          focus(dropdown);
           dropdown.isOpen = true;
         }
       case UIPanel() || UILabel() || UIProgressBar() || UIImage():
@@ -656,6 +786,9 @@ final class UICanvas extends Behaviour {
   void _drawElement(UIElement el) {
     if (!el.visible) return;
     final (rx, ry) = el.resolveTopLeft(designWidth, designHeight);
+    if (el.isFocused && el is! UITextField && el is! UIStack) {
+      _drawBorder(rx - 2, ry - 2, el.width + 4, el.height + 4, 1, 0x5CE1E6FF);
+    }
     switch (el) {
       case UIStack stack:
         stack.layout(canvasW: designWidth, canvasH: designHeight);

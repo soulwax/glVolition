@@ -12,6 +12,13 @@ cd glVolition
 # Run headless VM unit & gameplay tests (<1s)
 dart test
 
+# Build the engine
+dart run gl_volition:volition build lib/gl_volition.dart --target js
+
+# Build wasm and executable targets
+dart run gl_volition:volition build lib/gl_volition.dart --target wasm
+dart run gl_volition:volition build lib/gl_volition.dart --target windows
+
 # Serve an example with live reload, hot state, & live inspector (F12 / Alt+I)
 dart run gl_volition:volition serve example/pixel_rocket/main.dart --port 8080
 
@@ -23,12 +30,12 @@ dart run gl_volition:volition build example/pixel_rocket/main.dart --target wind
 
 ## Validation Games & Examples
 
-| Example | Path | Subsystems Exercised |
-|---|---|---|
-| **Pixel Rocket** (3D Flight) | `example/pixel_rocket/` | `MeshRenderer`, `FollowCamera`, `SphereCollider`, `Prefab`, `ObjectPool`, `ParticleSystem`, `AudioSource`, `KeyValueStore` |
-| **Lantern** (2D Dungeon) | `example/dungeon_2d/` | `Camera2DComponent`, `TilemapComponent.moveAndSlideCircle`, `SpriteRenderer`, `SpriteAnimator`, `Light.point`, `UICanvas` |
-| **Procession** (2D Escort) | `example/procession/` | `LeaderBehaviour` escort chain, `VillagerBehaviour` recruitment & Sanctuary delivery, `SwarmEnemyBehaviour` torch repulsion |
-| **Tidewatch** (3D Harbour) | `example/island_3d/` | `TerrainComponent`, `WaterSurfaceComponent`, `BuoyantBody`, `SplinePath`, `SplineFollower`, `Animator`, `AtmosphereVolume`, `Camera.screenToGroundPlane` |
+| Example                      | Path                    | Subsystems Exercised                                                                                                                                     |
+| ---------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pixel Rocket** (3D Flight) | `example/pixel_rocket/` | `MeshRenderer`, `FollowCamera`, `SphereCollider`, `Prefab`, `ObjectPool`, `ParticleSystem`, `AudioSource`, `KeyValueStore`                               |
+| **Lantern** (2D Dungeon)     | `example/dungeon_2d/`   | `Camera2DComponent`, `TilemapComponent.moveAndSlideCircle`, `SpriteRenderer`, `SpriteAnimator`, `Light.point`, `UICanvas`                                |
+| **Procession** (2D Escort)   | `example/procession/`   | `LeaderBehaviour` escort chain, `VillagerBehaviour` recruitment & Sanctuary delivery, `SwarmEnemyBehaviour` torch repulsion                              |
+| **Tidewatch** (3D Harbour)   | `example/island_3d/`    | `TerrainComponent`, `WaterSurfaceComponent`, `BuoyantBody`, `SplinePath`, `SplineFollower`, `Animator`, `AtmosphereVolume`, `Camera.screenToGroundPlane` |
 
 ## Architecture
 

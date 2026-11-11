@@ -2905,6 +2905,133 @@ void main() {
       expect(original.getComponent<MeshRenderer>()!.tintColor?.r, closeTo(1.0, 1e-4));
     });
   });
+
+  group('E26 — LinearColor Extensions, SpatialGrid2D, and UICanvas Focus Navigation', () {
+    test('LinearColor extensions lerp, convert to HSV/hex, and parse hex/hsv formats', () {
+      final red = const LinearColor(1, 0, 0);
+      final blue = const LinearColor(0, 0, 1);
+
+      // lerp
+      final purple = red.lerp(blue, 0.5);
+      expect(purple.r, closeTo(0.5, 1e-4));
+      expect(purple.g, closeTo(0.0, 1e-4));
+      expect(purple.b, closeTo(0.5, 1e-4));
+
+      // withIntensity
+      final brightRed = red.withIntensity(2.0);
+      expect(brightRed.r, closeTo(2.0, 1e-4));
+
+      // toRgba & toHex
+      expect(red.toHex(), '#FF0000');
+      expect(red.toRgba(1.0), 0xFF0000FF);
+
+      // toHsv
+      final hsvRed = red.toHsv();
+      expect(hsvRed.h, closeTo(0.0, 1e-3));
+      expect(hsvRed.s, closeTo(1.0, 1e-3));
+      expect(hsvRed.v, closeTo(1.0, 1e-3));
+
+      final green = const LinearColor(0, 1, 0);
+      final hsvGreen = green.toHsv();
+      expect(hsvGreen.h, closeTo(120.0, 1e-3));
+
+      // linearColorFromHex & linearColorFromHsv
+      final parsed = linearColorFromHex('#00FF00');
+      expect(parsed.r, closeTo(0.0, 1e-3));
+      expect(parsed.g, closeTo(1.0, 1e-3));
+      expect(parsed.b, closeTo(0.0, 1e-3));
+
+      final hsvBlue = linearColorFromHsv(240.0, 1.0, 1.0);
+      expect(hsvBlue.r, closeTo(0.0, 1e-3));
+      expect(hsvBlue.g, closeTo(0.0, 1e-3));
+      expect(hsvBlue.b, closeTo(1.0, 1e-3));
+    });
+
+    test('SpatialGrid2D indexes 2D entities and accelerates radius/aabb queries', () {
+      final grid = SpatialGrid2D<String>(cellSize: 50.0);
+
+      grid.insert('Bullet1', const Vec2(10, 10), 5.0);
+      grid.insert('Bullet2', const Vec2(25, 25), 5.0);
+      grid.insert('DistantEnemy', const Vec2(500, 500), 10.0);
+
+      expect(grid.count, 3);
+
+      // Query near (0, 0) within radius 50.0 -> should retrieve Bullet1 and Bullet2, NOT DistantEnemy
+      final nearby = grid.querySphere(const Vec2(0, 0), 50.0);
+      expect(nearby, containsAll(['Bullet1', 'Bullet2']));
+      expect(nearby, isNot(contains('DistantEnemy')));
+
+      // Remove Bullet1 -> query should no longer return it
+      expect(grid.remove('Bullet1'), isTrue);
+      expect(grid.count, 2);
+      final afterRemove = grid.querySphere(const Vec2(0, 0), 50.0);
+      expect(afterRemove, isNot(contains('Bullet1')));
+      expect(afterRemove, contains('Bullet2'));
+
+      // Clear grid
+      grid.clear();
+      expect(grid.count, 0);
+      expect(grid.querySphere(const Vec2(0, 0), 1000.0), isEmpty);
+    });
+
+    test('UICanvas manages focus navigation and keyboard traversal', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      var btn1Clicks = 0;
+      var btn2Clicks = 0;
+      final btn1 = UIButton(
+        label: 'Btn1',
+        width: 100,
+        height: 30,
+        onPressed: () => btn1Clicks++,
+      );
+      final btn2 = UIButton(
+        label: 'Btn2',
+        x: 120,
+        width: 100,
+        height: 30,
+        onPressed: () => btn2Clicks++,
+      );
+
+      final canvas = UICanvas();
+      canvas.add(btn1);
+      canvas.add(btn2);
+      engine.scene.createGameObject('UI', components: [canvas]);
+
+      expect(canvas.focusedElement, isNull);
+
+      // Tab -> focus first element (btn1)
+      canvas.focusNext();
+      expect(canvas.focusedElement, btn1);
+      expect(btn1.isFocused, isTrue);
+      expect(btn2.isFocused, isFalse);
+
+      // Submit focused -> clicks btn1
+      canvas.submitFocused();
+      expect(btn1Clicks, 1);
+      expect(btn2Clicks, 0);
+
+      // Tab again -> focus btn2
+      canvas.focusNext();
+      expect(canvas.focusedElement, btn2);
+      expect(btn1.isFocused, isFalse);
+      expect(btn2.isFocused, isTrue);
+
+      // Submit focused -> clicks btn2
+      canvas.submitFocused();
+      expect(btn1Clicks, 1);
+      expect(btn2Clicks, 1);
+
+      // Tab wraps around back to btn1
+      canvas.focusNext();
+      expect(canvas.focusedElement, btn1);
+
+      // Shift+Tab navigates backwards to btn2
+      canvas.focusPrevious();
+      expect(canvas.focusedElement, btn2);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

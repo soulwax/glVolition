@@ -486,3 +486,20 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _Touches:_ `lib/src/engine/scene.dart`, `lib/src/engine/game_object.dart`, `lib/src/engine/components/renderers.dart`, `lib/src/engine/serialization/component_spec.dart`.
   - _APIs:_ `Scene.clone(original, {parent, position, rotation, scale, name, active})`, `GameObject.clone(...)`, `MeshRenderer.spec`.
   - _Verify:_ `test/subsystems_test.dart` (deep entity duplication, independent component state, and nested child hierarchy cloning).
+
+---
+
+## E26: LinearColor Extensions, SpatialGrid2D, and UICanvas Focus Navigation
+
+- [x] **E26-1. `UICanvas` Focus Navigation & Keyboard/Gamepad Tab Traversal.**
+  - _Touches:_ `lib/src/engine/ui/canvas_ui.dart`.
+  - _APIs:_ `UICanvas.focus(el)`, `UICanvas.focusNext()`, `UICanvas.focusPrevious()`, `UICanvas.submitFocused()`, `UIElement.isFocusable`, `UIElement.isFocused`, `UIElement.onSubmit()`.
+  - _Verify:_ `test/subsystems_test.dart` (sequential tab focus traversal across focusable widgets, wrap-around navigation, and enter/submit triggering).
+- [x] **E26-2. `LinearColor` Utility Extensions & HSV/Hex Parsing.**
+  - _Touches:_ `lib/src/engine/color_ext.dart`.
+  - _APIs:_ `LinearColorExt.lerp`, `withIntensity`, `toRgba`, `toArgb`, `toHex`, `toHsv`, `linearColorFromHex`, `linearColorFromHsv`.
+  - _Verify:_ `test/subsystems_test.dart` (linear color interpolations, HSV conversions, 32-bit packing, and hex round-trips).
+- [x] **E26-3. `SpatialGrid2D` Fast Broad-Phase Partitioning.**
+  - _Touches:_ `lib/src/engine/spatial_grid_2d.dart`.
+  - _APIs:_ `SpatialGrid2D<T>(cellSize)`, `insert(item, pos, radius)`, `insertAabb`, `remove(item)`, `querySphere(center, radius)`, `queryAabb`, `clear()`.
+  - _Verify:_ `test/subsystems_test.dart` (spatial entity indexing, fast radius queries, entity removals, and clear).
