@@ -444,5 +444,9 @@ final class ComponentRegistry {
     register<VirtualCameraComponent>(VirtualCameraComponent.spec);
     register<CameraBrainComponent>(CameraBrainComponent.spec);
     register<SpatialIndexComponent>(SpatialIndexComponent.spec);
+    register<NavMeshSurfaceComponent>(NavMeshSurfaceComponent.spec);
+    register<NavMeshAgent3DComponent>(NavMeshAgent3DComponent.spec);
+    register<ClothSimulationComponent>(ClothSimulationComponent.spec);
+    register<RopeSimulationComponent>(RopeSimulationComponent.spec);
   }
 }

@@ -870,11 +870,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E52: 3D Polygon Navigation Mesh, A* Corridor & Funnel Path Smoothing (`voxnav3d`)
 
-- [ ] **E52-1. `voxnav3d` Submodule: NavMesh Polygon Graph, Funnel String-Pulling & Off-Mesh Links.**
+- [x] **E52-1. `voxnav3d` Submodule: NavMesh Polygon Graph, Funnel String-Pulling & Off-Mesh Links.**
   - _Location:_ `./vendor/voxnav3d` (`https://github.com/soulwax/voxnav3d`).
   - _APIs:_ `NavPolygonMesh`, `NavMeshBuilder` (heightfield walkability regions & shared portal edges), `NavMeshQuery` (A* polygon portal corridor + Simple Stupid Funnel string-pulling + closest point on mesh), `OffMeshLink` (jump/drop/teleporter portals).
   - _Verify:_ `vendor/voxnav3d/test/voxnav3d_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E52-2. `NavMeshSurfaceComponent`, `NavMeshAgent3DComponent` & `NavMeshDebuggerUI` Engine Integration.**
+- [x] **E52-2. `NavMeshSurfaceComponent`, `NavMeshAgent3DComponent` & `NavMeshDebuggerUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/navmesh_3d.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -882,12 +882,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E53: XPBD Soft-Body, Cloth & Rope Constraint Solver (`voxcloth`)
 
-- [ ] **E53-1. `voxcloth` Submodule: Position-Based Particle Constraints, Bending & Collision Proxies.**
+- [x] **E53-1. `voxcloth` Submodule: Position-Based Particle Constraints, Bending & Collision Proxies.**
   - _Location:_ `./vendor/voxcloth` (`https://github.com/soulwax/voxcloth`).
   - _APIs:_ `XpbdWorld`, `XpbdParticle`, `DistanceConstraint`, `DihedralBendingConstraint`, `ClothGridBuilder`, `RopeChainBuilder`, `SphereConstraintCollider`, `CapsuleConstraintCollider`.
   - _Verify:_ `vendor/voxcloth/test/voxcloth_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E53-2. `ClothSimulationComponent`, `RopeSimulationComponent` & `XpbdDebuggerUI` Engine Integration.**
+- [x] **E53-2. `ClothSimulationComponent`, `RopeSimulationComponent` & `XpbdDebuggerUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/cloth_rope.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E54: Procedural Spline Extrusion, Road/River Ribbons & Architectural Sweeps (`voxextrude`)
+
+- [ ] **E54-1. `voxextrude` Submodule: Cross-Section Framing, UV Tiling & Road/Bridge Junctions.**
+  - _Location:_ `./vendor/voxextrude` (`https://github.com/soulwax/voxextrude`).
+  - _APIs:_ `SplineSample`, `CrossSectionProfile`, `RotationMinimizingFrame` (Bishop frame sweep without gimbal flip), `SplineSweepBuilder`, `RoadIntersectionMeshBuilder`.
+  - _Verify:_ `vendor/voxextrude/test/voxextrude_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E54-2. `SplineExtrudeComponent` & `ExtrusionInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/spline_extrude.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E55: Deterministic Terrain Noise Graph & Hydraulic Droplet Erosion (`voxbiome`)
+
+- [ ] **E55-1. `voxbiome` Submodule: Seeded Simplex/Worley/FBM Graphs, Thermal & Hydraulic Erosion.**
+  - _Location:_ `./vendor/voxbiome` (`https://github.com/soulwax/voxbiome`).
+  - _APIs:_ `SimplexNoise2D`, `WorleyNoise2D`, `FbmLayer`, `DomainWarpField`, `HydraulicDropletErosion`, `ThermalTalusSolver`, `BiomeSplatClassifier`.
+  - _Verify:_ `vendor/voxbiome/test/voxbiome_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E55-2. `BiomeTerrainGeneratorComponent` & `NoiseErosionUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/biome_noise.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
 

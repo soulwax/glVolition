@@ -88,3 +88,9 @@
 [submodule "vendor/voxgrid"]
 	path = vendor/voxgrid
 	url = https://github.com/soulwax/voxgrid.git
+[submodule "vendor/voxnav3d"]
+	path = vendor/voxnav3d
+	url = https://github.com/soulwax/voxnav3d.git
+[submodule "vendor/voxcloth"]
+	path = vendor/voxcloth
+	url = https://github.com/soulwax/voxcloth.git

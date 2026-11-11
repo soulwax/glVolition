@@ -6037,6 +6037,132 @@ void main() {
       final drawList = ui.endFrame();
       expect(drawList.commands.any((c) => c.text == '3 (nodes 5)'), isTrue);
     });
+
+    test('E52: NavMeshSurfaceComponent, NavMeshAgent3DComponent & NavMeshDebuggerUI navigate 3D ramps and off-mesh links', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final surface = NavMeshSurfaceComponent(maxStepHeight: 0.8);
+      surface.bakeFromPolygons(
+        [
+          const [Vec3(0, 0, 0), Vec3(4, 0, 0), Vec3(4, 0, 6), Vec3(0, 0, 6)],
+          const [Vec3(4, 0, 2), Vec3(8, 2, 2), Vec3(8, 2, 4), Vec3(4, 0, 4)],
+          const [Vec3(8, 2, 0), Vec3(12, 2, 0), Vec3(12, 2, 6), Vec3(8, 2, 6)],
+          const [Vec3(15, 3, 0), Vec3(18, 3, 0), Vec3(18, 3, 6), Vec3(15, 3, 6)],
+        ],
+        offMeshLinks: [
+          NavOffMeshLink(
+            id: 'rope_swing',
+            startPos: const NavVec3(11.8, 2.0, 3.0),
+            endPos: const NavVec3(15.2, 3.0, 3.0),
+            costMultiplier: 1.1,
+          ),
+        ],
+      );
+      engine.scene.createGameObject('NavMesh', components: [surface]);
+
+      final traversedLinks = <String>[];
+      var arrived = false;
+      final agent = NavMeshAgent3DComponent(
+        speed: 10.0,
+        onTraverseOffMeshLink: (link) => traversedLinks.add(link.id),
+        onDestinationReached: () => arrived = true,
+      );
+      final agentGo = engine.scene.createGameObject(
+        'Runner',
+        position: const Vec3(1, 0, 1),
+        components: [agent],
+      );
+
+      engine.step(0.016);
+      expect(agent.setDestination(const Vec3(17, 3, 5)), isTrue);
+      expect(agent.hasPath, isTrue);
+
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      NavMeshDebuggerUI.render(ui, surface, agent: agent);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == '4'), isTrue);
+      expect(drawList.commands.any((c) => c.text == 'Navigating'), isTrue);
+
+      for (int i = 0; i < 40; i++) {
+        engine.step(0.1);
+      }
+      expect(arrived, isTrue);
+      expect(agent.hasPath, isFalse);
+      expect(traversedLinks, ['rope_swing']);
+      expect(agentGo.transform.position.x, closeTo(17.0, 0.2));
+      expect(agentGo.transform.position.y, closeTo(3.0, 0.2));
+      expect(agentGo.transform.position.z, closeTo(5.0, 0.2));
+    });
+
+    test('E53: ClothSimulationComponent & RopeSimulationComponent solve XPBD physics, update renderers & render UI', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final anchor = engine.scene.createGameObject('RopeAnchor', position: const Vec3(-4, 3, 0));
+      final ropeLine = LineRenderer(startWidth: 0.08, endWidth: 0.08);
+      final ropeComp = RopeSimulationComponent(
+        startAnchor: anchor,
+        endOffset: const Vec3(2.5, 3, 0),
+        segments: 8,
+        pinStart: true,
+        pinEnd: false,
+      );
+      engine.scene.createGameObject('Cable', components: [ropeComp, ropeLine]);
+
+      final blockerCol = SphereCollider(radius: 0.65);
+      engine.scene.createGameObject(
+        'ShieldSphere',
+        position: const Vec3(0, 1.8, 0.15),
+        components: [blockerCol],
+      );
+
+      final clothRend = MeshRenderer();
+      final clothComp = ClothSimulationComponent(
+        columns: 5,
+        rows: 5,
+        width: 2.0,
+        height: 2.0,
+        wind: const Vec3(0, 0, 5.0),
+        pinTopCorners: true,
+      )..trackedColliders.add(blockerCol);
+      engine.scene.createGameObject(
+        'Banner',
+        position: const Vec3(0, 3.0, 0),
+        components: [clothComp, clothRend],
+      );
+
+      for (int i = 0; i < 30; i++) {
+        engine.step(0.05);
+      }
+
+      expect(ropeLine.positionCount, 9);
+      expect(ropeComp.world.averageStretchError, lessThan(0.03));
+      expect(ropeComp.nodes.last.position.y, lessThan(2.0));
+
+      expect(clothComp.currentMeshData, isNotNull);
+      expect(clothRend.mesh, isNotNull);
+      expect(clothComp.world.averageStretchError, lessThan(0.04));
+      // Wind & blocker push center-bottom banner vertex toward +Z.
+      expect(clothComp.patch!.at(2, 4).position.z, greaterThan(0.2));
+
+      // Render XpbdDebuggerUI and click '+Wind +Z' button at x=60, y=156.
+      final ui = VoxUiContext();
+      final uiState = XpbdDebuggerUiState();
+      const btnX = 60.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      XpbdDebuggerUI.render(ui, clothComp.world, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: btnX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      XpbdDebuggerUI.render(ui, clothComp.world, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(drawList.commands.any((c) => c.text == '25 / 88'), isTrue);
+      expect(clothComp.world.wind.z, closeTo(7.0, 1e-4));
+    });
   });
 }
 

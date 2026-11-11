@@ -32,5 +32,7 @@ export 'package:voxpack/voxpack.dart';
 export 'package:voxloc/voxloc.dart';
 export 'package:voxcam/voxcam.dart';
 export 'package:voxgrid/voxgrid.dart';
+export 'package:voxnav3d/voxnav3d.dart';
+export 'package:voxcloth/voxcloth.dart';
 
 export 'src/engine.dart';

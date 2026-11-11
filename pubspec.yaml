@@ -68,6 +68,10 @@ dependencies:
     path: vendor/voxcam
   voxgrid:
     path: vendor/voxgrid
+  voxnav3d:
+    path: vendor/voxnav3d
+  voxcloth:
+    path: vendor/voxcloth
   web: ^0.5.0
 
 dev_dependencies:
