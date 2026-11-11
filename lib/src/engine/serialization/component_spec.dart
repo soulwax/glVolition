@@ -437,5 +437,6 @@ final class ComponentRegistry {
     register<VolumetricLightSource>(VolumetricLightSource.spec);
     register<ThermalSourceComponent>(ThermalSourceComponent.spec);
     register<PhysicsRaycaster>(PhysicsRaycaster.spec);
+    register<ParallaxBackground2D>(ParallaxBackground2D.spec);
   }
 }

@@ -2642,6 +2642,144 @@ void main() {
       expect(unnorm.y, closeTo(1.0, 1e-4));
     });
   });
+
+  group('E24 — Mathfx Utilities, ParallaxBackground2D, and SceneManager.fadeTo', () {
+    test('Mathfx evaluates inverseLerp, pingPong, repeat, deltaAngle, moveTowards, and damp', () {
+      // inverseLerp
+      expect(Mathfx.inverseLerp(10, 20, 15), closeTo(0.5, 1e-5));
+      expect(Mathfx.inverseLerp(10, 20, 5), closeTo(0.0, 1e-5));
+      expect(Mathfx.inverseLerp(10, 20, 25), closeTo(1.0, 1e-5));
+
+      // pingPong
+      expect(Mathfx.pingPong(0.0, 5.0), closeTo(0.0, 1e-5));
+      expect(Mathfx.pingPong(3.0, 5.0), closeTo(3.0, 1e-5));
+      expect(Mathfx.pingPong(7.0, 5.0), closeTo(3.0, 1e-5));
+      expect(Mathfx.pingPong(10.0, 5.0), closeTo(0.0, 1e-5));
+
+      // repeat
+      expect(Mathfx.repeat(2.5, 5.0), closeTo(2.5, 1e-5));
+      expect(Mathfx.repeat(7.5, 5.0), closeTo(2.5, 1e-5));
+
+      // deltaAngle & deltaAngleDeg
+      expect(Mathfx.deltaAngle(0, math.pi * 0.5), closeTo(math.pi * 0.5, 1e-5));
+      expect(Mathfx.deltaAngle(math.pi * 0.9, -math.pi * 0.9), closeTo(math.pi * 0.2, 1e-4));
+      expect(Mathfx.deltaAngleDeg(10, 350), closeTo(-20.0, 1e-4));
+
+      // moveTowards
+      expect(Mathfx.moveTowards(0.0, 10.0, 2.5), closeTo(2.5, 1e-5));
+      expect(Mathfx.moveTowards(9.0, 10.0, 2.5), closeTo(10.0, 1e-5));
+
+      // moveTowardsVec3
+      final v1 = Mathfx.moveTowardsVec3(Vec3.zero, const Vec3(10, 0, 0), 3.0);
+      expect(v1.x, closeTo(3.0, 1e-4));
+      expect(v1.y, closeTo(0.0, 1e-4));
+
+      // damp & dampVec3
+      final d = Mathfx.damp(0.0, 10.0, 5.0, 0.1);
+      expect(d, greaterThan(0.0));
+      expect(d, lessThan(10.0));
+
+      final dv = Mathfx.dampVec3(Vec3.zero, const Vec3(10, 20, 0), 5.0, 0.1);
+      expect(dv.x, greaterThan(0.0));
+      expect(dv.y, greaterThan(0.0));
+    });
+
+    test('ParallaxBackground2D advances parallax layers with camera delta and autoScroll', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final camGo = engine.scene.createGameObject('Cam2D', position: Vec3.zero);
+      camGo.addComponent(Camera2DComponent(designWidth: 640, designHeight: 360));
+
+      final bg = ParallaxBackground2D(
+        layers: [
+          ParallaxLayer(
+            factor: const Vec2(0.2, 0.0),
+            autoScroll: const Vec2(10.0, 0.0),
+            width: 640.0,
+            repeatX: true,
+          ),
+          ParallaxLayer(
+            factor: const Vec2(0.8, 0.0),
+            autoScroll: Vec2.zero,
+            width: 640.0,
+            repeatX: true,
+          ),
+        ],
+      );
+      engine.scene.createGameObject('Background', components: [bg]);
+
+      // Initial frame establishes baseline position
+      engine.step(0.1);
+      expect(bg.layers[0].offset.x, closeTo(1.0, 1e-4)); // 10.0 * 0.1s autoScroll = 1.0
+
+      // Move camera 100 units right over 0.1s
+      camGo.transform.position = const Vec3(100.0, 0, 0);
+      engine.step(0.1);
+
+      // Layer 0: prev offset (1.0) + autoScroll (10 * 0.1 = 1.0) + camera delta (100 * 0.2 = 20) = 22.0
+      expect(bg.layers[0].offset.x, closeTo(22.0, 1e-3));
+
+      // Layer 1: camera delta (100 * 0.8 = 80)
+      expect(bg.layers[1].offset.x, closeTo(80.0, 1e-3));
+    });
+
+    test('SceneManager.fadeTo animates alpha curve and swaps scene at midpoint', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      var sceneACreated = 0;
+      var sceneBCreated = 0;
+
+      engine.scenes.register('SceneA', () {
+        sceneACreated++;
+        final s = Scene();
+        s.createGameObject('ObjectA');
+        return s;
+      });
+
+      engine.scenes.register('SceneB', () {
+        sceneBCreated++;
+        final s = Scene();
+        s.createGameObject('ObjectB');
+        return s;
+      });
+
+      engine.scenes.load('SceneA');
+      expect(sceneACreated, 1);
+      expect(engine.scenes.activeSceneName, 'SceneA');
+      expect(engine.scenes.isTransitioning, isFalse);
+
+      // Trigger 1.0s fade transition to SceneB
+      engine.scenes.fadeTo('SceneB', duration: 1.0);
+      expect(engine.scenes.isTransitioning, isTrue);
+      expect(engine.scenes.transitionAlpha, closeTo(0.0, 1e-4));
+
+      // Step 5 frames of 0.05s = 0.25s: quarter-way through fade-out, alpha = 0.5, scene still SceneA
+      for (var i = 0; i < 5; i++) {
+        engine.step(0.05);
+      }
+      expect(engine.scenes.isTransitioning, isTrue);
+      expect(engine.scenes.transitionAlpha, closeTo(0.5, 1e-4));
+      expect(engine.scenes.activeSceneName, 'SceneA');
+
+      // Step 6 more frames of 0.05s (total 0.55s): past midpoint -> scene swapped to SceneB, alpha fading in
+      for (var i = 0; i < 6; i++) {
+        engine.step(0.05);
+      }
+      expect(sceneBCreated, 1);
+      expect(engine.scenes.activeSceneName, 'SceneB');
+      expect(engine.scenes.isTransitioning, isTrue);
+      expect(engine.scenes.transitionAlpha, closeTo(0.9, 1e-3));
+
+      // Step 10 more frames of 0.05s (total 1.05s): transition finishes
+      for (var i = 0; i < 10; i++) {
+        engine.step(0.05);
+      }
+      expect(engine.scenes.isTransitioning, isFalse);
+      expect(engine.scenes.transitionAlpha, closeTo(0.0, 1e-4));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

@@ -452,3 +452,20 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E23-3. `InputActions.getVector2` Clamped & Normalized Directional Composition.**
   - _Touches:_ `lib/src/engine/input_actions.dart`.
   - _Verify:_ `test/subsystems_test.dart` (diagonal speed clamp / normalization of 2D directional axes).
+
+---
+
+## E24: Mathfx Utilities, ParallaxBackground2D Multi-Layer Scrolling, and SceneManager.fadeTo
+
+- [x] **E24-1. `Mathfx` Engine Math Library.**
+  - _Touches:_ `lib/src/engine/mathfx.dart`.
+  - _APIs:_ `Mathfx.inverseLerp`, `Mathfx.pingPong`, `Mathfx.repeat`, `Mathfx.deltaAngle`, `Mathfx.deltaAngleDeg`, `Mathfx.moveTowards`, `Mathfx.moveTowardsVec3`, `Mathfx.damp`, `Mathfx.dampVec3`, `Mathfx.approximately`.
+  - _Verify:_ `test/subsystems_test.dart` (interpolants, ping-pong bounces, shortest angular differences, step-towards without overshoot, exponential damping).
+- [x] **E24-2. `ParallaxBackground2D` & `ParallaxLayer` Multi-Layered Scrolling.**
+  - _Touches:_ `lib/src/engine/components/parallax_2d.dart`, `lib/src/engine/components/sprites_2d.dart`.
+  - _APIs:_ `ParallaxLayer(factor, autoScroll, width, height, offset, region, repeatX, repeatY)`, `ParallaxBackground2D(layers, target)`.
+  - _Verify:_ `test/subsystems_test.dart` (camera tracking, delta translation with relative factors, wrapping offsets, and ambient auto-scrolling).
+- [x] **E24-3. `SceneManager.fadeTo` & `SceneTransition`.**
+  - _Touches:_ `lib/src/engine/scene_manager.dart`, `lib/src/engine/engine.dart`.
+  - _APIs:_ `SceneManager.fadeTo(target, duration, fadeColor)`, `SceneManager.isTransitioning`, `SceneManager.transitionAlpha`, `SceneTransition`.
+  - _Verify:_ `test/subsystems_test.dart` (alpha opacity ramp up/down curve, seamless midpoint scene swapping, and transition completion).

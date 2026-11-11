@@ -15,6 +15,10 @@ final class Camera2DComponent extends Component {
     this.followTransform = true,
   }) : raw = Camera2D(designWidth: designWidth, designHeight: designHeight);
 
+  /// Returns the first active [Camera2DComponent] in [scene], if any.
+  static Camera2DComponent? of(Scene scene) =>
+      scene.findObjectsOfType<Camera2DComponent>().firstOrNull;
+
   double get x => raw.x;
   set x(double value) {
     raw.x = value;

@@ -124,6 +124,7 @@ final class Engine {
     _stepping = true;
     try {
       time._beginFrame(rawDeltaSeconds);
+      scenes._stepTransition(time.unscaledDeltaTime);
       _runInvocations();
 
       time._inFixedStep = true;
