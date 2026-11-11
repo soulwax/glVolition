@@ -2780,6 +2780,131 @@ void main() {
       expect(engine.scenes.transitionAlpha, closeTo(0.0, 1e-4));
     });
   });
+
+  group('E25 — AudioSource Fades, Constraints, and Scene.clone', () {
+    test('AudioSource fadeVolumeTo and crossFadeTo ramp volume and switch clips smoothly', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final clipA = host.audio.clip('music_a.ogg');
+      final clipB = host.audio.clip('music_b.ogg');
+
+      final src = AudioSource(clip: clipA, volume: 1.0);
+      engine.scene.createGameObject('MusicPlayer', components: [src]);
+      src.play();
+
+      var fadeFinished = false;
+      src.fadeVolumeTo(0.2, duration: 0.2, onComplete: () => fadeFinished = true);
+      expect(src.isFading, isTrue);
+
+      // Step 2 frames of 0.05s = 0.1s: half-way through fade
+      engine.step(0.05);
+      engine.step(0.05);
+      expect(src.volume, closeTo(0.6, 1e-4));
+      expect(fadeFinished, isFalse);
+
+      // Step 2 more frames of 0.05s = 0.2s: finished
+      engine.step(0.05);
+      engine.step(0.05);
+      expect(src.volume, closeTo(0.2, 1e-4));
+      expect(fadeFinished, isTrue);
+      expect(src.isFading, isFalse);
+
+      // Cross fade from clipA to clipB over 0.2s
+      var crossFinished = false;
+      src.crossFadeTo(clipB, duration: 0.2, targetVolume: 0.8, onComplete: () => crossFinished = true);
+      expect(src.isFading, isTrue);
+
+      // Step 2 frames of 0.05s = 0.1s: midpoint reached -> clip swapped to clipB
+      engine.step(0.05);
+      engine.step(0.05);
+      expect(src.clip, clipB);
+
+      // Step 2 more frames = 0.2s: cross-fade finishes at target volume 0.8
+      engine.step(0.05);
+      engine.step(0.05);
+      expect(src.volume, closeTo(0.8, 1e-4));
+      expect(crossFinished, isTrue);
+      expect(src.isFading, isFalse);
+    });
+
+    test('LookAtConstraint and FollowConstraint update orientation and spatial position', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final target = engine.scene.createGameObject('Target', position: const Vec3(10.0, 0, 0));
+      final turret = engine.scene.createGameObject('Turret', position: Vec3.zero);
+      turret.addComponent(LookAtConstraint(target: target.transform, weight: 1.0));
+
+      engine.step(0.016);
+      // Turret's forward (-Z) should now point towards Target (+X), so forward.x is ~ 1.0
+      expect(turret.transform.forward.x, closeTo(1.0, 1e-3));
+      expect(turret.transform.forward.y, closeTo(0.0, 1e-3));
+
+      // Follower follows target with offset (0, 2, 0) and lockY: true
+      final follower = engine.scene.createGameObject('Follower', position: Vec3.zero);
+      follower.addComponent(FollowConstraint(
+        target: target.transform,
+        offset: const Vec3(0, 2, 0),
+        smoothing: 0.0,
+        lockY: true,
+      ));
+
+      engine.step(0.016);
+      expect(follower.transform.position.x, closeTo(10.0, 1e-4));
+      expect(follower.transform.position.y, closeTo(0.0, 1e-4)); // Y locked to 0
+    });
+
+    test('Scene.clone duplicates GameObjects, components, and hierarchies independently', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final original = engine.scene.createGameObject(
+        'Hero',
+        tag: 'Player',
+        layer: 3,
+        position: const Vec3(1, 2, 3),
+        components: [
+          MeshRenderer(meshData: Primitives.cube(), tintColor: LinearColor(1, 0, 0)),
+          BoxCollider(size: const Vec3(1, 1, 1)),
+        ],
+      );
+
+      final sword = engine.scene.createGameObject('Sword', parent: original);
+      sword.addComponent(Light.point(color: LinearColor(1, 1, 0), intensity: 5.0));
+
+      // Clone original to a new position
+      final clone = original.clone(
+        name: 'HeroClone',
+        position: const Vec3(10, 20, 30),
+      );
+
+      expect(clone.name, 'HeroClone');
+      expect(clone.tag, 'Player');
+      expect(clone.layer, 3);
+      expect(clone.transform.position, const Vec3(10, 20, 30));
+
+      // Must have own independent MeshRenderer and BoxCollider
+      final mr = clone.getComponent<MeshRenderer>();
+      expect(mr, isNotNull);
+      expect(mr!.tintColor?.r, closeTo(1.0, 1e-4));
+      expect(clone.getComponent<BoxCollider>(), isNotNull);
+
+      // Must have duplicated child hierarchy
+      expect(clone.children.length, 1);
+      final clonedSword = clone.children.first;
+      expect(clonedSword.name, 'Sword');
+      final light = clonedSword.getComponent<Light>();
+      expect(light, isNotNull);
+      expect(light!.intensity, 5.0);
+
+      // Modifying clone does not mutate original
+      clone.layer = 7;
+      mr.tintColor = LinearColor(0, 1, 0);
+      expect(original.layer, 3);
+      expect(original.getComponent<MeshRenderer>()!.tintColor?.r, closeTo(1.0, 1e-4));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

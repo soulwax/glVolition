@@ -123,6 +123,35 @@ final class Scene {
         active: active,
       );
 
+  /// Clones [original] (including all components, child GameObjects, and property
+  /// values) into this [Scene] (E25-3).
+  GameObject clone(
+    GameObject original, {
+    GameObject? parent,
+    Vec3? position,
+    Quat? rotation,
+    double? scale,
+    String? name,
+    bool active = true,
+    ComponentRegistry? registry,
+  }) {
+    final reg = registry ?? (_engine?.registry ?? ComponentRegistry.defaults());
+    final json = SceneSerializer._objectToJson(original, reg);
+    final copy = SceneSerializer._buildObjectFromJson(
+      this,
+      parent,
+      json,
+      reg,
+      const {},
+    );
+    if (name != null) copy.name = name;
+    if (position != null) copy.transform.position = position;
+    if (rotation != null) copy.transform.rotation = rotation;
+    if (scale != null) copy.transform.localScale = scale;
+    if (copy.activeSelf != active) copy.setActive(active);
+    return copy;
+  }
+
   /// Serializes this scene into a JSON-compatible map.
   Map<String, Object?> toJson({ComponentRegistry? registry}) =>
       SceneSerializer.toJson(this, registry: registry ?? _engine?.registry);
@@ -454,7 +483,10 @@ final class Scene {
       if (line._active) line._syncRibbon();
     }
     for (final src in _audioSources) {
-      if (src._active) src._syncChannelVolume();
+      if (src._active) {
+        if (_engine != null) src._stepFade(_engine!.time.deltaTime);
+        src._syncChannelVolume();
+      }
     }
     final mainCam = _cameras.lastOrNull;
     if (mainCam != null && _engine != null) {

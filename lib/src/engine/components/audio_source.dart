@@ -50,6 +50,46 @@ final class AudioMixer {
   }
 }
 
+final class _AudioFade {
+  final double startVolume;
+  final double targetVolume;
+  final double duration;
+  final void Function()? onComplete;
+  double elapsed = 0.0;
+
+  _AudioFade({
+    required this.startVolume,
+    required this.targetVolume,
+    required this.duration,
+    this.onComplete,
+  });
+
+  bool get isComplete => elapsed >= duration;
+  double get currentVolume {
+    if (duration <= 0.0) return targetVolume;
+    final t = (elapsed / duration).clamp(0.0, 1.0);
+    return startVolume + (targetVolume - startVolume) * t;
+  }
+}
+
+final class _AudioCrossFade {
+  final AudioClip nextClip;
+  final double duration;
+  final double targetVolume;
+  final bool loop;
+  final void Function()? onComplete;
+  double elapsed = 0.0;
+  bool _swapped = false;
+
+  _AudioCrossFade({
+    required this.nextClip,
+    required this.duration,
+    required this.targetVolume,
+    this.loop = true,
+    this.onComplete,
+  });
+}
+
 /// Plays [AudioClip]s through the host's [AudioDevice]: either overlapping
 /// one-shots via [playOneShot] or a single controllable voice via [play]
 /// (for engine hums, music, ambience).
@@ -73,6 +113,8 @@ final class AudioSource extends Component {
 
   AudioChannel? _channel;
   double _lastEvaluatedPan = 0.0;
+  _AudioFade? _activeFade;
+  _AudioCrossFade? _activeCrossFade;
 
   AudioSource({
     this.clip,
@@ -102,6 +144,82 @@ final class AudioSource extends Component {
   }
 
   bool get isPlaying => _channel?.isPlaying ?? false;
+  bool get isFading => _activeFade != null || _activeCrossFade != null;
+
+  /// Smoothly ramps volume to [targetVolume] over [duration] seconds (E25-1).
+  void fadeVolumeTo(
+    double targetVolume, {
+    double duration = 1.0,
+    void Function()? onComplete,
+  }) {
+    _activeCrossFade = null;
+    _activeFade = _AudioFade(
+      startVolume: _volume,
+      targetVolume: targetVolume,
+      duration: duration,
+      onComplete: onComplete,
+    );
+  }
+
+  /// Smoothly fades out current playback and cross-fades into [nextClip] over [duration] seconds (E25-1).
+  void crossFadeTo(
+    AudioClip nextClip, {
+    double duration = 1.5,
+    double targetVolume = 1.0,
+    bool loop = true,
+    void Function()? onComplete,
+  }) {
+    _activeFade = null;
+    _activeCrossFade = _AudioCrossFade(
+      nextClip: nextClip,
+      duration: duration,
+      targetVolume: targetVolume,
+      loop: loop,
+      onComplete: onComplete,
+    );
+  }
+
+  void _stepFade(double dt) {
+    final fade = _activeFade;
+    if (fade != null) {
+      fade.elapsed += dt;
+      _volume = fade.currentVolume;
+      _syncChannelVolume();
+      if (fade.isComplete) {
+        _volume = fade.targetVolume;
+        _syncChannelVolume();
+        _activeFade = null;
+        fade.onComplete?.call();
+      }
+      return;
+    }
+
+    final cross = _activeCrossFade;
+    if (cross != null) {
+      cross.elapsed += dt;
+      final half = cross.duration * 0.5;
+      if (!cross._swapped) {
+        final t = half <= 0.0 ? 1.0 : (cross.elapsed / half).clamp(0.0, 1.0);
+        _volume = cross.targetVolume * (1.0 - t);
+        _syncChannelVolume();
+        if (cross.elapsed >= half) {
+          cross._swapped = true;
+          loop = cross.loop;
+          play(cross.nextClip);
+        }
+      } else {
+        final t = half <= 0.0 ? 1.0 : ((cross.elapsed - half) / half).clamp(0.0, 1.0);
+        _volume = cross.targetVolume * t;
+        _syncChannelVolume();
+        if (cross.elapsed >= cross.duration) {
+          _volume = cross.targetVolume;
+          _syncChannelVolume();
+          _activeCrossFade = null;
+          cross.onComplete?.call();
+        }
+      }
+    }
+  }
 
   /// Most recent stereo pan (`-1.0` left .. `+1.0` right) computed from the
   /// listener's right vector.

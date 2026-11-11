@@ -117,6 +117,16 @@ final class MeshRenderer extends Component {
     _leaf?.blendMode = value;
   }
 
+  static final spec = ComponentSpec<MeshRenderer>(
+    'MeshRenderer',
+    MeshRenderer.new,
+    [
+      Field.color('tintColor', (m) => m.tintColor ?? LinearColor.white, (m, v) => m.tintColor = v),
+      Field.boolean('castsShadow', (m) => m.castsShadow, (m, v) => m.castsShadow = v),
+      Field.boolean('receivesShadow', (m) => m.receivesShadow, (m, v) => m.receivesShadow = v),
+    ],
+  );
+
   @override
   void _onAttach() {
     if (_materialOverride != null && _material == null && scene.isLoaded) {

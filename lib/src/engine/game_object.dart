@@ -168,6 +168,25 @@ final class GameObject {
     return current;
   }
 
+  /// Clones this GameObject and all attached components into this scene (E25-3).
+  GameObject clone({
+    GameObject? parent,
+    Vec3? position,
+    Quat? rotation,
+    double? scale,
+    String? name,
+    bool active = true,
+  }) =>
+      scene.clone(
+        this,
+        parent: parent,
+        position: position,
+        rotation: rotation,
+        scale: scale,
+        name: name,
+        active: active,
+      );
+
   /// Destroys this object, its children and their components at the end of
   /// the frame.
   void destroy() => scene.destroy(this);

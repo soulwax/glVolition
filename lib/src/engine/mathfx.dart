@@ -77,4 +77,41 @@ abstract final class Mathfx {
     final factor = math.exp(-lambda * dt);
     return target + (current - target) * factor;
   }
+
+  /// Spherical linear interpolation between quaternions [a] and [b] with parameter [t] (`0..1`).
+  static Quat slerp(Quat a, Quat b, double t) {
+    final clampedT = t.clamp(0.0, 1.0);
+    var cosHalfTheta = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+    var bx = b.x, by = b.y, bz = b.z, bw = b.w;
+
+    if (cosHalfTheta < 0.0) {
+      bx = -bx;
+      by = -by;
+      bz = -bz;
+      bw = -bw;
+      cosHalfTheta = -cosHalfTheta;
+    }
+
+    if (cosHalfTheta >= 0.9995) {
+      final x = a.x + (bx - a.x) * clampedT;
+      final y = a.y + (by - a.y) * clampedT;
+      final z = a.z + (bz - a.z) * clampedT;
+      final w = a.w + (bw - a.w) * clampedT;
+      final len = math.sqrt(x * x + y * y + z * z + w * w);
+      if (len <= 0.0) return Quat.identity;
+      return Quat(x / len, y / len, z / len, w / len);
+    }
+
+    final halfTheta = math.acos(cosHalfTheta);
+    final sinHalfTheta = math.sqrt(1.0 - cosHalfTheta * cosHalfTheta);
+    final ratioA = math.sin((1.0 - clampedT) * halfTheta) / sinHalfTheta;
+    final ratioB = math.sin(clampedT * halfTheta) / sinHalfTheta;
+
+    return Quat(
+      a.x * ratioA + bx * ratioB,
+      a.y * ratioA + by * ratioB,
+      a.z * ratioA + bz * ratioB,
+      a.w * ratioA + bw * ratioB,
+    );
+  }
 }

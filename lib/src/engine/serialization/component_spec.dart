@@ -438,5 +438,8 @@ final class ComponentRegistry {
     register<ThermalSourceComponent>(ThermalSourceComponent.spec);
     register<PhysicsRaycaster>(PhysicsRaycaster.spec);
     register<ParallaxBackground2D>(ParallaxBackground2D.spec);
+    register<LookAtConstraint>(LookAtConstraint.spec);
+    register<FollowConstraint>(FollowConstraint.spec);
+    register<MeshRenderer>(MeshRenderer.spec);
   }
 }

@@ -53,4 +53,5 @@ part 'engine/components/spline.dart';
 part 'engine/components/terrain_water.dart';
 part 'engine/components/atmosphere_volume.dart';
 part 'engine/components/post_process_volume.dart';
+part 'engine/components/constraints.dart';
 part 'engine/ui/canvas_ui.dart';

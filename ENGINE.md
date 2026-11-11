@@ -469,3 +469,20 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
   - _Touches:_ `lib/src/engine/scene_manager.dart`, `lib/src/engine/engine.dart`.
   - _APIs:_ `SceneManager.fadeTo(target, duration, fadeColor)`, `SceneManager.isTransitioning`, `SceneManager.transitionAlpha`, `SceneTransition`.
   - _Verify:_ `test/subsystems_test.dart` (alpha opacity ramp up/down curve, seamless midpoint scene swapping, and transition completion).
+
+---
+
+## E25: AudioSource Fades & Cross-Fades, Constraints, and Scene.clone
+
+- [x] **E25-1. `AudioSource` Volume Fade & Cross-Fade.**
+  - _Touches:_ `lib/src/engine/components/audio_source.dart`, `lib/src/engine/scene.dart`.
+  - _APIs:_ `AudioSource.fadeVolumeTo(targetVolume, {duration, onComplete})`, `AudioSource.crossFadeTo(nextClip, {duration, targetVolume, loop, onComplete})`, `AudioSource.isFading`.
+  - _Verify:_ `test/subsystems_test.dart` (linear volume attenuation curves, callback dispatch, and midpoint clip swapping).
+- [x] **E25-2. `LookAtConstraint` & `FollowConstraint` Components.**
+  - _Touches:_ `lib/src/engine/components/constraints.dart`, `lib/src/engine/mathfx.dart`, `lib/src/engine/serialization/component_spec.dart`.
+  - _APIs:_ `LookAtConstraint(target, upAxis, weight)`, `FollowConstraint(target, offset, smoothing, lockX, lockY, lockZ)`, `Mathfx.slerp`.
+  - _Verify:_ `test/subsystems_test.dart` (spherical orientation tracking with slerp blending, spatial position follow, and individual axis constraints).
+- [x] **E25-3. `Scene.clone` & `GameObject.clone` Runtime Duplication.**
+  - _Touches:_ `lib/src/engine/scene.dart`, `lib/src/engine/game_object.dart`, `lib/src/engine/components/renderers.dart`, `lib/src/engine/serialization/component_spec.dart`.
+  - _APIs:_ `Scene.clone(original, {parent, position, rotation, scale, name, active})`, `GameObject.clone(...)`, `MeshRenderer.spec`.
+  - _Verify:_ `test/subsystems_test.dart` (deep entity duplication, independent component state, and nested child hierarchy cloning).
