@@ -127,6 +127,70 @@ final class Scene {
   Map<String, Object?> toJson({ComponentRegistry? registry}) =>
       SceneSerializer.toJson(this, registry: registry ?? _engine?.registry);
 
+  /// Creates a GameObject with a 3D primitive mesh, renderer, and matching collider (E23-1).
+  ///
+  /// Matches Unity's `GameObject.CreatePrimitive(PrimitiveType)`.
+  GameObject createPrimitive(
+    PrimitiveType type, {
+    String? name,
+    GameObject? parent,
+    Vec3? position,
+    Quat? rotation,
+    double scale = 1.0,
+    LinearColor? color,
+    MaterialHandle? material,
+    bool isTrigger = false,
+  }) {
+    final eng = _engine;
+    final MeshData data;
+    final Collider col;
+    final String defaultName;
+
+    switch (type) {
+      case PrimitiveType.cube:
+        defaultName = 'Cube';
+        data = Primitives.cube();
+        col = BoxCollider(size: const Vec3(1, 1, 1), isTrigger: isTrigger);
+      case PrimitiveType.sphere:
+        defaultName = 'Sphere';
+        data = Primitives.sphere(radius: 0.5);
+        col = SphereCollider(radius: 0.5, isTrigger: isTrigger);
+      case PrimitiveType.capsule:
+        defaultName = 'Capsule';
+        data = Primitives.capsule(radius: 0.5, cylinderHeight: 1.0);
+        col = CapsuleCollider(radius: 0.5, height: 2.0, isTrigger: isTrigger);
+      case PrimitiveType.cylinder:
+        defaultName = 'Cylinder';
+        data = Primitives.cylinder(radius: 0.5, height: 2.0);
+        col = CapsuleCollider(radius: 0.5, height: 2.0, isTrigger: isTrigger);
+      case PrimitiveType.plane:
+        defaultName = 'Plane';
+        data = Primitives.plane(width: 10, depth: 10);
+        col = BoxCollider(size: const Vec3(10, 0.01, 10), isTrigger: isTrigger);
+      case PrimitiveType.quad:
+        defaultName = 'Quad';
+        data = Primitives.quad(width: 1, height: 1);
+        col = BoxCollider(size: const Vec3(1, 1, 0.01), isTrigger: isTrigger);
+    }
+
+    final MeshHandle? handle = eng?.graphics.createMesh(data, debugLabel: defaultName);
+    final renderer = MeshRenderer(
+      mesh: handle,
+      meshData: data,
+      material: material,
+      tintColor: color,
+    );
+
+    return createGameObject(
+      name ?? defaultName,
+      parent: parent,
+      position: position,
+      rotation: rotation,
+      scale: scale,
+      components: [renderer, col],
+    );
+  }
+
   // ── Queries ─────────────────────────────────────────────────────────────
 
   GameObject? find(String name) {

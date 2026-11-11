@@ -1,5 +1,15 @@
 part of '../../engine.dart';
 
+/// Supported primitive types for [Scene.createPrimitive] (E23-1).
+enum PrimitiveType {
+  cube,
+  sphere,
+  capsule,
+  cylinder,
+  plane,
+  quad,
+}
+
 /// Draws a single mesh with a material on its [GameObject]'s scene node, or
 /// on an offset child node when [localOffset] is given (handy when a primitive's
 /// pivot is at its centre rather than its base).

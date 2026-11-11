@@ -2540,6 +2540,108 @@ void main() {
       expect(restoredC2!.depth, 1);
     });
   });
+
+  group('E23 — Scene.createPrimitive, UIButton Enabled State, and InputActions.getVector2', () {
+    test('Scene.createPrimitive builds Cube, Sphere, and Capsule with MeshRenderer and Collider', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      // Create a Cube primitive
+      final cube = engine.scene.createPrimitive(
+        PrimitiveType.cube,
+        position: const Vec3(1, 2, 3),
+        color: const LinearColor(1, 0, 0),
+      );
+      expect(cube.name, 'Cube');
+      expect(cube.getComponent<MeshRenderer>(), isNotNull);
+      expect(cube.getComponent<BoxCollider>(), isNotNull);
+      expect(cube.transform.position.x, closeTo(1.0, 1e-4));
+
+      // Create a Sphere primitive
+      final sphere = engine.scene.createPrimitive(
+        PrimitiveType.sphere,
+        name: 'PlayerBall',
+        isTrigger: true,
+      );
+      expect(sphere.name, 'PlayerBall');
+      final sphereCol = sphere.getComponent<SphereCollider>();
+      expect(sphereCol, isNotNull);
+      expect(sphereCol!.isTrigger, isTrue);
+
+      // Create a Capsule primitive
+      final capsule = engine.scene.createPrimitive(PrimitiveType.capsule);
+      expect(capsule.name, 'Capsule');
+      expect(capsule.getComponent<CapsuleCollider>(), isNotNull);
+    });
+
+    test('UIButton enabled state controls hover/press interactions and disabled colors', () {
+      final host = HeadlessHost();
+      host.graphics
+        ..viewportWidth = 640
+        ..viewportHeight = 360;
+      final engine = Engine(host);
+
+      final canvas = UICanvas(designWidth: 640, designHeight: 360);
+      engine.scene.createGameObject('UI', components: [canvas]);
+
+      var clicked = false;
+      final btn = canvas.add(UIButton(
+        label: 'Submit',
+        x: 10,
+        y: 10,
+        width: 100,
+        height: 30,
+        enabled: false,
+        onPressed: () => clicked = true,
+      ));
+
+      // Pointer click while disabled -> no click, no hover
+      final input = host.input;
+      input
+        ..pointerX = 20
+        ..pointerY = 20
+        ..pointerDown = true
+        ..pointerPressed = true;
+      engine.step(0.016);
+      expect(btn.isHovered, isFalse);
+      expect(btn.isPressed, isFalse);
+      expect(clicked, isFalse);
+
+      // Enable button and click again -> succeeds
+      btn.enabled = true;
+      engine.step(0.016);
+      expect(btn.isPressed, isTrue);
+
+      input
+        ..pointerDown = false
+        ..pointerPressed = false
+        ..pointerReleased = true;
+      engine.step(0.016);
+      expect(clicked, isTrue);
+    });
+
+    test('InputActions.getVector2 evaluates clamped/normalized composite 2D input', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      // Only Right held -> (1.0, 0.0)
+      host.input.press('KeyD');
+      expect(engine.input.getVector2().x, closeTo(1.0, 1e-4));
+      expect(engine.input.getVector2().y, closeTo(0.0, 1e-4));
+
+      // Both Right + Up held -> (1.0, 1.0) normalized to ~ (0.7071, 0.7071)
+      host.input.press('KeyW');
+      final diag = engine.input.getVector2(normalize: true);
+      expect(diag.x, closeTo(math.sqrt(0.5), 1e-4));
+      expect(diag.y, closeTo(math.sqrt(0.5), 1e-4));
+      expect(diag.length, closeTo(1.0, 1e-4));
+
+      // Without normalization -> (1.0, 1.0)
+      final unnorm = engine.input.getVector2(normalize: false);
+      expect(unnorm.x, closeTo(1.0, 1e-4));
+      expect(unnorm.y, closeTo(1.0, 1e-4));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

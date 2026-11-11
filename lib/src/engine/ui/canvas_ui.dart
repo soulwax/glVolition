@@ -144,6 +144,9 @@ final class UIButton extends UIElement {
   int pressedColor;
   int textColor;
   double textScale;
+  bool enabled;
+  int disabledColor;
+  int disabledTextColor;
 
   bool isHovered = false;
   bool isPressed = false;
@@ -161,6 +164,9 @@ final class UIButton extends UIElement {
     this.pressedColor = 0xFFB347FF,
     this.textColor = 0xFFFFFFFF,
     this.textScale = 1,
+    this.enabled = true,
+    this.disabledColor = 0x18152488,
+    this.disabledTextColor = 0x7E789988,
     super.visible,
   });
 }
@@ -561,6 +567,11 @@ final class UICanvas extends Behaviour {
           _updateElement(worldAnchor.child, pt, raw);
         }
       case UIButton btn:
+        if (!btn.enabled) {
+          btn.isHovered = false;
+          btn.isPressed = false;
+          break;
+        }
         final hit = btn.containsPoint(pt.x, pt.y, designWidth, designHeight);
         btn.isHovered = hit;
         if (hit && raw.pointerPressed) {
@@ -702,9 +713,11 @@ final class UICanvas extends Behaviour {
           _drawBorder(rx, ry, bar.width, bar.height, 1, bar.borderColor!);
         }
       case UIButton btn:
-        final bg = btn.isPressed
-            ? btn.pressedColor
-            : (btn.isHovered ? btn.hoverColor : btn.normalColor);
+        final bg = !btn.enabled
+            ? btn.disabledColor
+            : (btn.isPressed
+                ? btn.pressedColor
+                : (btn.isHovered ? btn.hoverColor : btn.normalColor));
         _batch.drawRect(rx, ry, btn.width, btn.height, color: bg);
         final f = font;
         if (f != null && btn.label.isNotEmpty) {
@@ -715,7 +728,7 @@ final class UICanvas extends Behaviour {
             ry + (btn.height - f.lineHeight * btn.textScale) * 0.5,
             scale: btn.textScale,
             alignX: 0.5,
-            color: btn.textColor,
+            color: btn.enabled ? btn.textColor : btn.disabledTextColor,
           );
         }
       case UIToggle toggle:

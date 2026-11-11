@@ -438,3 +438,17 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [x] **E22-3. Multi-Camera Normalized Viewports & Depth Ordering (`normalizedViewportRect`, `depth`).**
   - _Touches:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/serialization/component_spec.dart`.
   - _Verify:_ `test/subsystems_test.dart` (multi-viewport split-screen and depth serialization round-trip).
+
+---
+
+## E23: Scene.createPrimitive, UIButton Enabled State, and InputActions.getVector2
+
+- [x] **E23-1. `Scene.createPrimitive` Factory Helper (`PrimitiveType.cube`, `sphere`, `capsule`, `cylinder`, `plane`, `quad`).**
+  - _Touches:_ `lib/src/engine/scene.dart`, `lib/src/engine/components/renderers.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (instant instantiation of 3D primitive GameObjects with matching MeshRenderer and Colliders).
+- [x] **E23-2. `UIButton` Enabled/Disabled Interactivity State.**
+  - _Touches:_ `lib/src/engine/ui/canvas_ui.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (suppression of hover/pressed events and visual styling when disabled).
+- [x] **E23-3. `InputActions.getVector2` Clamped & Normalized Directional Composition.**
+  - _Touches:_ `lib/src/engine/input_actions.dart`.
+  - _Verify:_ `test/subsystems_test.dart` (diagonal speed clamp / normalization of 2D directional axes).

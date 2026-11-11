@@ -61,4 +61,24 @@ final class InputActions {
     if (binding.$2.any(raw.isDown)) v += 1;
     return v;
   }
+
+  /// Evaluates 2D directional vector `(x, y)` composed of two named axes (default `Horizontal` and `Vertical`) (E23-3).
+  ///
+  /// When [normalize] is true and the length exceeds 1.0, scales the vector to unit length
+  /// so diagonal movement does not exceed cardinal movement speed.
+  Vec2 getVector2({
+    String horizontalAxis = 'Horizontal',
+    String verticalAxis = 'Vertical',
+    bool normalize = true,
+  }) {
+    final vx = getAxis(horizontalAxis);
+    final vy = getAxis(verticalAxis);
+    if (!normalize) return Vec2(vx, vy);
+    final lenSq = vx * vx + vy * vy;
+    if (lenSq > 1.0) {
+      final invLen = 1.0 / math.sqrt(lenSq);
+      return Vec2(vx * invLen, vy * invLen);
+    }
+    return Vec2(vx, vy);
+  }
 }
