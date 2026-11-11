@@ -87,6 +87,43 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Compiled volition CLI executable successfully." -ForegroundColor Green
 }
 
+# Build Standalone Windows Desktop Game Host
+Write-Host "`nBuilding standalone Windows desktop game into $resolvedDist\game..." -ForegroundColor Yellow
+$gameDist = Join-Path $resolvedDist "game"
+dart run bin/volition.dart build example/pixel_rocket/main.dart --target windows --out $gameDist
+if ($LASTEXITCODE -eq 0) {
+    $gameExe = Join-Path $gameDist "GlVolitionGame.exe"
+    if (Test-Path $gameExe) {
+        Copy-Item -Path $gameExe -Destination (Join-Path $resolvedDist "GlVolitionGame.exe") -Force
+        Write-Host "Packaged GlVolitionGame.exe in $resolvedDist" -ForegroundColor Green
+    }
+    
+    # Create double-clickable launcher script in dist
+    $launcherPath = Join-Path $resolvedDist "Launch_Pixel_Rocket.cmd"
+    @"
+@echo off
+setlocal
+cd /d "%~dp0"
+if exist "GlVolitionGame.exe" (
+    start "" "%~dp0GlVolitionGame.exe"
+    exit /b 0
+)
+if exist "game\GlVolitionGame.exe" (
+    start "" "%~dp0game\GlVolitionGame.exe"
+    exit /b 0
+)
+if exist "game\index.html" (
+    start "" msedge --app="%~dp0game\index.html"
+    exit /b 0
+)
+echo [ERROR] No runnable game binary found.
+pause
+"@ | Set-Content -Path $launcherPath -Encoding ASCII
+    Write-Host "Created game launcher: $launcherPath" -ForegroundColor Green
+} else {
+    Write-Warning "Windows game build could not complete (dotnet or WebView2 may be missing)."
+}
+
 Write-Host "`n==========================================" -ForegroundColor Green
 Write-Host " Distribution artifacts built successfully!" -ForegroundColor Green
 Write-Host " Version written to: $versionFilePath ($Version)" -ForegroundColor Green

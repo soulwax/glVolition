@@ -2,8 +2,58 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+String get _dartExecutable {
+  // If running inside a compiled standalone exe (e.g. volition.exe),
+  // Platform.resolvedExecutable points to volition.exe itself, NOT the Dart SDK.
+  // Resolve 'dart' or 'dart.exe' on PATH instead.
+  final current = Platform.resolvedExecutable;
+  if (current.toLowerCase().endsWith('dart') || current.toLowerCase().endsWith('dart.exe')) {
+    return current;
+  }
+  return Platform.isWindows ? 'dart.exe' : 'dart';
+}
+
 Future<void> main(List<String> args) async {
-  if (args.isEmpty || args.first == '--help' || args.first == '-h') {
+  if (args.isEmpty) {
+    _printUsage();
+    if (Platform.isWindows && stdout.hasTerminal) {
+      stdout.writeln('--------------------------------------------------');
+      stdout.writeln('Interactive Launcher (Console):');
+      stdout.writeln('  [1] serve  - Start live dev server with hot reload (pixel_rocket)');
+      stdout.writeln('  [2] build  - Build game (JS bundle + Windows desktop host)');
+      stdout.writeln('  [3] test   - Run engine test suite');
+      stdout.writeln('  [q] exit');
+      stdout.writeln('--------------------------------------------------');
+      stdout.write('Select an option [1]: ');
+      final input = stdin.readLineSync()?.trim();
+      if (input == null || input == 'q' || input == 'quit' || input == 'exit') {
+        return;
+      }
+      if (input.isEmpty || input == '1') {
+        await _runServe(['example/pixel_rocket/main.dart']);
+      } else if (input == '2') {
+        await _runBuild(['example/pixel_rocket/main.dart', '--target', 'windows']);
+        stdout.writeln('\nBuild completed. Press Enter to exit.');
+        stdin.readLineSync();
+      } else if (input == '3') {
+        final proc = await Process.start(
+          _dartExecutable,
+          ['test'],
+          mode: ProcessStartMode.inheritStdio,
+        );
+        final code = await proc.exitCode;
+        stdout.writeln('\nTests exited with code $code. Press Enter to exit.');
+        stdin.readLineSync();
+        exit(code);
+      } else {
+        final parts = input.split(RegExp(r'\s+'));
+        await main(parts);
+      }
+    }
+    return;
+  }
+
+  if (args.first == '--help' || args.first == '-h') {
     _printUsage();
     return;
   }
@@ -13,7 +63,7 @@ Future<void> main(List<String> args) async {
   switch (cmd) {
     case 'test':
       final proc = await Process.start(
-        Platform.resolvedExecutable,
+        _dartExecutable,
         ['test', ...rest],
         mode: ProcessStartMode.inheritStdio,
       );
@@ -264,7 +314,7 @@ Future<void> _runBuild(List<String> args) async {
     case 'js':
       final outJs = '${destDir.path}/main.dart.js';
       stdout.writeln('[volition] Building JS bundle -> $outJs');
-      final res = await Process.run(Platform.resolvedExecutable, [
+      final res = await Process.run(_dartExecutable, [
         'compile',
         'js',
         '-O4',
@@ -283,7 +333,7 @@ Future<void> _runBuild(List<String> args) async {
     case 'wasm':
       final outWasm = '${destDir.path}/main.wasm';
       stdout.writeln('[volition] Building WebAssembly bundle -> $outWasm');
-      final res = await Process.run(Platform.resolvedExecutable, [
+      final res = await Process.run(_dartExecutable, [
         'compile',
         'wasm',
         '-O4',
@@ -304,7 +354,7 @@ Future<void> _runBuild(List<String> args) async {
       final ext = Platform.isWindows ? '.exe' : '';
       final outExe = '${destDir.path}/game$ext';
       stdout.writeln('[volition] Building native AOT executable -> $outExe');
-      final res = await Process.run(Platform.resolvedExecutable, [
+      final res = await Process.run(_dartExecutable, [
         'compile',
         'exe',
         '-o',
@@ -351,7 +401,7 @@ Future<void> _buildWindowsExecutable(File entryFile, Directory destDir) async {
   final outJs = '${destDir.path}/main.dart.js';
   final outBuildJs = '${buildSubdir.path}/main.dart.js';
   stdout.writeln('[volition] Compiling JS bundle for Windows desktop host...');
-  final res = await Process.run(Platform.resolvedExecutable, [
+  final res = await Process.run(_dartExecutable, [
     'compile',
     'js',
     '-O4',
