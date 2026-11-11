@@ -5399,6 +5399,80 @@ void main() {
       expect(dl.commands.any((c) => c.type == DrawCmdType.circleFilled), isTrue);
       expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'Ready!'), isTrue);
     });
+
+    test('E47: ProgressionStatsComponent tracks combos, unlocks composable achievements & persists storage', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final stats = ProgressionStatsComponent(
+        comboDecayDuration: 1.0,
+        comboMultiplierStep: 0.5,
+        toastDisplayDuration: 2.0,
+      );
+      stats.registerAchievements([
+        const AchievementDef(
+          id: 'chain5',
+          title: 'Combo Apprentice',
+          description: 'Reach a 5-hit combo',
+          points: 15,
+          condition: MetricThresholdCondition('best_combo', 5),
+        ),
+        const AchievementDef(
+          id: 'ace_pilot',
+          title: 'Ace Pilot',
+          description: 'Defeat 3 bosses and reach combo rank C',
+          points: 40,
+          condition: AllOfConditions([
+            EventCountCondition('boss_down', requiredCount: 3),
+            MetricThresholdCondition('best_combo', 5),
+          ]),
+        ),
+      ]);
+      engine.scene.createGameObject('GameStats', components: [stats]);
+
+      // Hit 5 times -> hits best_combo == 5 -> unlocks 'chain5'
+      for (int i = 0; i < 5; i++) {
+        stats.registerComboHit(basePoints: 100.0);
+      }
+      expect(stats.combo.rank, ComboRank.c);
+      expect(stats.combo.multiplier, closeTo(3.0, 1e-6));
+      expect(stats.achievements.isUnlocked('chain5'), isTrue);
+      expect(stats.achievements.isUnlocked('ace_pilot'), isFalse);
+
+      // Step once so active toast dequeues, render HUD & submit leaderboard score
+      engine.step(0.1);
+      expect(stats.activeToast?.id, 'chain5');
+      stats.submitScore('arcade', playerId: 'p1', displayName: 'Nova', score: stats.combo.totalScore);
+
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      AchievementsHudUI.render(ui, stats, leaderboardId: 'arcade');
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text != null && c.text!.contains('UNLOCKED: Combo Apprentice')), isTrue);
+      expect(drawList.commands.any((c) => c.text != null && c.text!.contains('#1 Nova')), isTrue);
+
+      // Emit 3 boss events -> unlocks 'ace_pilot'
+      for (int i = 0; i < 3; i++) {
+        stats.emitEvent('boss_down');
+      }
+      expect(stats.achievements.isUnlocked('ace_pilot'), isTrue);
+
+      // Decay combo after 1.1s (Time.maximumDeltaTime clamps single steps to 0.1s)
+      for (int i = 0; i < 10; i++) {
+        engine.step(0.1);
+      }
+      expect(stats.combo.count, 0);
+
+      // Persist & reload into fresh engine sharing host storage
+      stats.saveToStorage('profile_e47');
+      final engine2 = Engine(host);
+      final stats2 = ProgressionStatsComponent();
+      stats2.registerAchievements(stats.achievements.all.map((a) => a.def));
+      engine2.scene.createGameObject('GameStats2', components: [stats2]);
+      expect(stats2.loadFromStorage('profile_e47'), isTrue);
+      expect(stats2.achievements.isUnlocked('ace_pilot'), isTrue);
+      expect(stats2.leaderboards['arcade']!.top().single.displayName, 'Nova');
+    });
   });
 }
 

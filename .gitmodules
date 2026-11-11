@@ -73,3 +73,6 @@
 [submodule "vendor/voxseq"]
 	path = vendor/voxseq
 	url = https://github.com/soulwax/voxseq.git
+[submodule "vendor/voxstat"]
+	path = vendor/voxstat
+	url = https://github.com/soulwax/voxstat.git

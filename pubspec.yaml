@@ -58,6 +58,8 @@ dependencies:
     path: vendor/voxrule
   voxseq:
     path: vendor/voxseq
+  voxstat:
+    path: vendor/voxstat
   web: ^0.5.0
 
 dev_dependencies:

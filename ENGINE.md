@@ -807,11 +807,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E47: Achievements, Telemetry Event Bus, Combo Multiplier & Leaderboards (`voxstat`)
 
-- [ ] **E47-1. `voxstat` Submodule: Typed Gameplay Telemetry, Achievement Conditions, Combos & Leaderboards.**
+- [x] **E47-1. `voxstat` Submodule: Typed Gameplay Telemetry, Achievement Conditions, Combos & Leaderboards.**
   - _Location:_ `./vendor/voxstat` (`https://github.com/soulwax/voxstat`).
   - _APIs:_ `TelemetryBus` (buffered typed event dispatch, frame counters, rolling rates & histograms), `MetricRegistry` (integer/float counters, min/max gauges, session vs lifetime rollups, JSON snapshot/restore), `AchievementDef` & `AchievementTracker` (threshold, compound `allOf`/`anyOf` rules, progressive unlock tiers, secret flags, unlock timestamps), `ComboTracker` (decay timer, multiplier curve, rank grades S/A/B/C/D), `Leaderboard` (ranked score entries with metadata, deterministic tie-breakers & JSON serialization).
   - _Verify:_ `vendor/voxstat/test/voxstat_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E47-2. `ProgressionStatsComponent` & `AchievementsHudUI` Engine Integration.**
+- [x] **E47-2. `ProgressionStatsComponent` & `AchievementsHudUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/progression_stats.dart`.
   - _APIs:_ `ProgressionStatsComponent` (wires metrics, achievements, combos & leaderboards to `engine.host.storage` persistence), `AchievementsHudUI.render` (toast notifications, progress bars, combo badge, and leaderboard view via `voxui`).
   - _Verify:_ `test/subsystems_test.dart`.
