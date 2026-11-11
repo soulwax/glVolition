@@ -4651,6 +4651,46 @@ void main() {
       );
       expect(hasChoiceText, isTrue);
     });
+
+    test('E38: VisualEffectComponent integrates voxvfx simulation with GameObject transform', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final fireVfx = VisualEffectComponent.fire(maxParticles: 100);
+      final go = engine.scene.createGameObject('Torch', components: [fireVfx]);
+      go.transform.position = const Vec3(10.0, 5.0, -2.0);
+
+      expect(fireVfx.simulation.activeParticleCount, 0);
+
+      // Step engine -> should update emitter position and spawn particles
+      engine.step(0.1);
+
+      expect(fireVfx.simulation.emitterPosition.x, closeTo(10.0, 1e-4));
+      expect(fireVfx.simulation.emitterPosition.y, closeTo(5.0, 1e-4));
+      expect(fireVfx.simulation.emitterPosition.z, closeTo(-2.0, 1e-4));
+      expect(fireVfx.simulation.activeParticleCount, greaterThan(0));
+
+      // Test manual burst and clear
+      fireVfx.burst(15);
+      final countAfterBurst = fireVfx.simulation.activeParticleCount;
+      expect(countAfterBurst, greaterThanOrEqualTo(15));
+
+      fireVfx.clear();
+      expect(fireVfx.simulation.activeParticleCount, 0);
+    });
+
+    test('E38: VisualEffectComponent.explosion triggers burst forces', () {
+      final explosion = VisualEffectComponent.explosion(particleCount: 50);
+      expect(explosion.simulation.activeParticleCount, 0);
+
+      // Advance simulation step -> burst triggered at time 0
+      explosion.step(0.016);
+      expect(explosion.simulation.activeParticleCount, 50);
+
+      for (final p in explosion.simulation.activeParticles) {
+        expect(p.velocity.length, greaterThan(0.0));
+      }
+    });
   });
 }
 

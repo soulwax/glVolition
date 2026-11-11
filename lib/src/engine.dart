@@ -23,6 +23,7 @@ import 'package:voxanim/voxanim.dart' as anim;
 import 'package:voxlight/voxlight.dart' as vlight;
 import 'package:voxdsp/voxdsp.dart' as dsp;
 import 'package:voxtalk/voxtalk.dart' as talk;
+import 'package:voxvfx/voxvfx.dart' as vfx;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -80,3 +81,4 @@ part 'engine/components/ik_animation.dart';
 part 'engine/components/lighting_2d.dart';
 part 'engine/components/audio_dsp.dart';
 part 'engine/components/dialogue.dart';
+part 'engine/components/vfx.dart';

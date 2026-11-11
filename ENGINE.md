@@ -691,14 +691,28 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E38: Particle Simulation, Force Fields & Visual Effects (voxvfx)
 
-- [ ] **E38-1. `voxvfx` Submodule: Particle Dynamics, Force Fields & Color/Size Gradients.**
+- [x] **E38-1. `voxvfx` Submodule: Particle Dynamics, Force Fields & Color/Size Gradients.**
   - _Location:_ `./vendor/voxvfx` (`https://github.com/soulwax/voxvfx`).
   - _APIs:_ `VfxParticle` (position, velocity, life, maxLife, size, color, rotation), `VfxEmitter` (burst, rate over time, shapes: sphere, cone, box, circle), `VfxColorGradient` (keyframe color/alpha lerp), `VfxCurve` (size/velocity multipliers over lifetime), `VfxForce` (`GravityForce`, `VortexForce`, `AttractorForce`, `TurbulenceForce`), `VfxSimulation`.
   - _Verify:_ `vendor/voxvfx/test/voxvfx_test.dart` & `test/subsystems_test.dart` (emitter lifetimes, force field acceleration, and color/size lifetime transitions).
-- [ ] **E38-2. `VisualEffectComponent` Engine Integration.**
+- [x] **E38-2. `VisualEffectComponent` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/vfx.dart`.
   - _APIs:_ `VisualEffectComponent(emitter, playOnAwake, looping)`, `play()`, `stop()`, `burst(count)`.
   - _Verify:_ `test/subsystems_test.dart` (scene lifecycle step, particle spawn, and world transform orientation sync).
+
+---
+
+## E39: Voxel Volume Chunks, Greedy Meshing, 3D DDA Raycasting & Destructible Terrain (voxvox)
+
+- [ ] **E39-1. `voxvox` Submodule: Voxel Volumes, Greedy Meshing & Fast 3D DDA Traversal.**
+  - _Location:_ `./vendor/voxvox` (`https://github.com/soulwax/voxvox`).
+  - _APIs:_ `VoxelChunk` (16x16x16 / 32x32x32 cubic voxel array, block palette, bit-packed storage), `VoxelWorld` (infinite/multi-chunk spatial hashing, coordinate translation), `GreedyMesher` (optimized quad merging reducing triangle count by 90%+, vertex ambient occlusion 0..3), `VoxelRaycaster` (fast 3D Amanatides-Woo DDA raymarching returning hit voxel, normal, adjacent empty block), `VoxelBrush` (box, sphere carve, cylinder carving and painting).
+  - _Verify:_ `vendor/voxvox/test/voxvox_test.dart` & `test/subsystems_test.dart` (chunk coordinate lookups, greedy mesh optimization quad count reduction, 3D DDA ray intersection precision, and sphere carving).
+- [ ] **E39-2. `VoxelTerrainComponent` & `VoxelCollider` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/voxel.dart`.
+  - _APIs:_ `VoxelTerrainComponent` (chunk management, mesh generation, dynamic carving/building), `raycastVoxel(ray, maxDistance)`.
+  - _Verify:_ `test/subsystems_test.dart` (scene integration, raycast hit verification, and terrain deformation).
+
 
 
 
