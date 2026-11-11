@@ -743,14 +743,40 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E42: Deterministic State Snapshots, Time Rewind & Ghost Replays (voxsnap)
 
-- [ ] **E42-1. `voxsnap` Submodule: Ring-Buffer State Recording, Binary Delta Snapshots & Ghost Playback.**
+- [x] **E42-1. `voxsnap` Submodule: Ring-Buffer State Recording, Binary Delta Snapshots & Ghost Playback.**
   - _Location:_ `./vendor/voxsnap` (`https://github.com/soulwax/voxsnap`).
   - _APIs:_ `BinarySnapshotWriter` / `BinarySnapshotReader` (compact varint, quantized vec3 & smallest-three compressed quaternion, RLE byte diffing), `RewindBuffer<T>` (bounded O(1) ring buffer supporting scrubbing backwards/forwards across frames/seconds), `GhostTrack` / `GhostPlayer` (interpolated transform replay tracks, binary export/import).
   - _Verify:_ `vendor/voxsnap/test/voxsnap_test.dart` & `test/subsystems_test.dart` (bit-packed quantization error bounds, XOR/delta compression ratio, circular rewind buffer wrapping, and smooth interpolated ghost playback).
-- [ ] **E42-2. `TimeRewindComponent` & `GhostReplayComponent` Engine Integration.**
+- [x] **E42-2. `TimeRewindComponent` & `GhostReplayComponent` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/rewind.dart`.
   - _APIs:_ `TimeRewindComponent(maxSeconds, captureCustomState)`, `GhostRecorderComponent` / `GhostPlaybackComponent`.
   - _Verify:_ `test/subsystems_test.dart` (rewinding moving `GameObject` transforms through history and multi-frame ghost transform playback).
+
+---
+
+## E43: Visual Node Graphs, Reactive Dataflow & Logic Blueprints (voxflow)
+
+- [ ] **E43-1. `voxflow` Submodule: Typed Node Graphs, Dataflow Evaluation & Blueprint Exec Runtime.**
+  - _Location:_ `./vendor/voxflow` (`https://github.com/soulwax/voxflow`).
+  - _APIs:_ `PinType` (`exec`, `boolVal`, `intVal`, `floatVal`, `vec2Val`, `vec3Val`, `stringVal`, `colorVal`, `any`), `FlowNodeDef`, `FlowNodeRegistry`, `StandardNodes`, `FlowNodeInstance`, `FlowLink`, `FlowGraph` (topological sort, Kahn cycle detection, JSON round-trip), `DataflowEvaluator` (memoized pull execution), `FlowRunner` (`triggerEvent`, `step(dt)`, latent `Delay`, `Branch`, `Sequence`, `ForLoop`, `FlowBlackboard`).
+  - _Verify:_ `vendor/voxflow/test/voxflow_test.dart` & `test/subsystems_test.dart` (cycle detection, implicit pin coercion, dirty pull evaluation, latent `Delay` coroutines, branching/looping blueprint execution, and JSON save/load).
+- [ ] **E43-2. `FlowGraphComponent` & Interactive ImGui Node Canvas (`FlowGraphUI`).**
+  - _Touches:_ `lib/src/engine/components/flow_graph.dart`.
+  - _APIs:_ `FlowGraphComponent(graph, autoRunOnUpdate)`, `triggerEvent(name, args)`, `setVariable(name, val)`, built-in scene/transform bindings, `FlowGraphUI.render(ui, graph, state)` rendering draggable node cards, colored sockets, Bezier wire links, and live pin values via `voxui`.
+  - _Verify:_ `test/subsystems_test.dart` (blueprint graph mutating `GameObject` transforms over engine frames, custom trigger events, and `voxui` node canvas interactive dragging/wiring).
+
+---
+
+## E44: Hexagonal Grids, Wave-Function Collapse & Tactical Pathfinding (voxhex)
+
+- [ ] **E44-1. `voxhex` Submodule: Cube/Axial Hex Math, Hex FOV, Reachability & Wave-Function Collapse.**
+  - _Location:_ `./vendor/voxhex` (`https://github.com/soulwax/voxhex`).
+  - _APIs:_ `HexCoord` (cube/axial math, rounding, rings, spirals, line draw, pixel projection), `HexMap<T>`, `HexPathfinder` (`findPath`, `reachableTiles`), `HexFov` (shadowcast line-of-sight), `WfcSolver` (entropy-minimization constraint propagation with backtracking).
+  - _Verify:_ `vendor/voxhex/test/voxhex_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E44-2. `HexGridComponent`, `WfcTilemapGenerator` & `HexGridUI` Integration.**
+  - _Touches:_ `lib/src/engine/components/hex_grid.dart`.
+  - _APIs:_ `HexGridComponent`, `WfcTilemapGenerator`, `HexGridUI.render`.
+  - _Verify:_ `test/subsystems_test.dart`.
 
 
 

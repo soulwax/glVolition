@@ -48,6 +48,8 @@ dependencies:
     path: vendor/voxpad
   voxitem:
     path: vendor/voxitem
+  voxsnap:
+    path: vendor/voxsnap
   web: ^0.5.0
 
 dev_dependencies:

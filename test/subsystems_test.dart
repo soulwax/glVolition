@@ -4936,6 +4936,71 @@ void main() {
       expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'Titanium Greatsword'), isTrue);
       expect(dl.commands.any((c) => c.type == DrawCmdType.text && c.text == 'x3'), isTrue);
     });
+
+    test('E42: TimeRewindComponent records Transform & custom binary state and rewinds back cleanly', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      engine.time.fixedDeltaTime = 0.1;
+
+      var health = 100;
+      final rewind = TimeRewindComponent(
+        maxFrames: 100,
+        onCaptureState: (w) => w.writeVarInt(health),
+        onRestoreState: (r) => health = r.readVarInt(),
+      );
+
+      final player = engine.scene.createGameObject('ChronoHero', components: [rewind]);
+
+      // Advance 5 fixed steps moving +2m per step while losing health
+      for (int i = 1; i <= 5; i++) {
+        player.transform.position = Vec3(i * 2.0, 0.0, 0.0);
+        health = 100 - i * 10;
+        engine.step(0.1);
+      }
+
+      expect(player.transform.position.x, closeTo(10.0, 1e-3));
+      expect(health, equals(50));
+      expect(rewind.recordedFrames, equals(5));
+
+      // Rewind continuously for 0.3s back in time (3 steps backward from 0.5s -> 0.2s)
+      rewind.beginRewind();
+      for (int i = 0; i < 3; i++) {
+        engine.step(0.1);
+      }
+
+      expect(player.transform.position.x, closeTo(4.0, 1e-2));
+      expect(health, equals(80));
+
+      // Resume live gameplay from rewound time and verify future timeline branched cleanly
+      rewind.stopRewind();
+      expect(rewind.recordedFrames, equals(2));
+    });
+
+    test('E42: GhostRecorderComponent exports binary GhostTrack and GhostPlaybackComponent replays smoothly', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final recorder = GhostRecorderComponent(sampleInterval: 0.1);
+      final racer = engine.scene.createGameObject('Racer', components: [recorder]);
+
+      for (int i = 0; i <= 10; i++) {
+        racer.transform.position = Vec3(i * 1.0, 0.0, 0.0);
+        engine.step(0.1);
+      }
+
+      final bytes = recorder.exportBinary();
+      expect(bytes, isNotEmpty);
+
+      // Replay in a fresh ghost object using binary decode
+      final playback = GhostPlaybackComponent.fromBinary(bytes, loop: false);
+      final ghost = engine.scene.createGameObject('GhostRacer', components: [playback]);
+
+      // Advance 5 frames of 0.1s (= 0.5s elapsed, respecting Time.maximumDeltaTime clamp)
+      for (int i = 0; i < 5; i++) {
+        engine.step(0.1);
+      }
+      expect(ghost.transform.position.x, closeTo(5.0, 1.0));
+    });
   });
 }
 

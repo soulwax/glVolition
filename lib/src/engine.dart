@@ -27,6 +27,7 @@ import 'package:voxvfx/voxvfx.dart' as vfx;
 import 'package:voxvox/voxvox.dart' as vworld;
 import 'package:voxpad/voxpad.dart' as pad;
 import 'package:voxitem/voxitem.dart' as items;
+import 'package:voxsnap/voxsnap.dart' as snap;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -88,3 +89,4 @@ part 'engine/components/vfx.dart';
 part 'engine/components/voxel.dart';
 part 'engine/components/input_manager.dart';
 part 'engine/components/inventory.dart';
+part 'engine/components/rewind.dart';
