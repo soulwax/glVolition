@@ -48,6 +48,8 @@ final class Scene {
   final List<WaterSurfaceComponent> _waters = [];
   final List<AtmosphereVolume> _atmospheres = [];
   final List<ParticleSystem> _particles = [];
+  final List<Light2DComponent> _lights2D = [];
+  final List<ShadowCaster2DComponent> _shadowCasters2D = [];
   final List<AudioListener> _audioListeners = [];
   final List<AudioSource> _audioSources = [];
   final List<LineRenderer> _lines = [];
@@ -337,6 +339,58 @@ final class Scene {
     maxDistance: maxDistance,
     mask: mask,
   );
+
+  List<Light2DComponent> get lights2D => List.unmodifiable(_lights2D);
+  List<ShadowCaster2DComponent> get shadowCasters2D => List.unmodifiable(_shadowCasters2D);
+
+  void _registerLight2D(Light2DComponent light) {
+    if (!_lights2D.contains(light)) _lights2D.add(light);
+  }
+
+  void _unregisterLight2D(Light2DComponent light) {
+    _lights2D.remove(light);
+  }
+
+  void _registerShadowCaster2D(ShadowCaster2DComponent caster) {
+    if (!_shadowCasters2D.contains(caster)) _shadowCasters2D.add(caster);
+  }
+
+  void _unregisterShadowCaster2D(ShadowCaster2DComponent caster) {
+    _shadowCasters2D.remove(caster);
+  }
+
+  /// Gathers all occluding segments from active [ShadowCaster2DComponent]s in this scene (E35).
+  List<vlight.Segment2D> gatherShadowSegments2D() {
+    final segments = <vlight.Segment2D>[];
+    for (final caster in _shadowCasters2D) {
+      if (caster._active) {
+        segments.addAll(caster.getWorldSegments());
+      }
+    }
+    return segments;
+  }
+
+  /// Evaluates composite 2D lighting at [worldPoint] across all active [Light2DComponent]s (E35).
+  vlight.Illumination2D evaluateLight2D(Vec2 worldPoint) {
+    final occluders = gatherShadowSegments2D();
+    var total = vlight.Illumination2D.zero;
+    for (final light in _lights2D) {
+      if (light._active) {
+        total += light.evaluate(worldPoint, occluders);
+      }
+    }
+    return total;
+  }
+
+  /// Computes the 2D visibility polygon from [origin] against all active 2D shadow casters (E35).
+  vlight.VisibilityPolygon computeVisibility2D(Vec2 origin, {double maxRadius = 50.0}) {
+    final occluders = gatherShadowSegments2D();
+    return vlight.VisibilityPolygon.compute(
+      origin: _toLightVec2(origin),
+      segments: occluders,
+      maxRadius: maxRadius,
+    );
+  }
 
   /// Shakes all active cameras in the scene with distance-attenuated trauma
   /// radiating from [epicenter] (E17-3).

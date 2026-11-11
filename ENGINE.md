@@ -644,18 +644,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E35: 2D Dynamic Visibility, Shadows & Fog of War (voxlight)
 
-- [ ] **E35-1. `voxlight` Submodule: 2D Visibility Polygon, Shadow Casting & Fog of War.**
+- [x] **E35-1. `voxlight` Submodule: 2D Visibility Polygon, Shadow Casting & Fog of War.**
   - _Location:_ `./vendor/voxlight` (`https://github.com/soulwax/voxlight`).
   - _APIs:_ `LightVec2`, `Segment2D`, `VisibilityPolygon` (angular ray sweep, edge-intersection, sorted boundary polygon generation), `Light2D` (point light, spot/cone light, radius, attenuation falloff, illumination sampling), `ShadowCaster2D` (occlusion edge extraction, shadow volume extrusion), `FogOfWar` (grid exploration, visibility masking, sight radius revelation, smooth fade).
   - _Verify:_ `vendor/voxlight/test/voxlight_test.dart` & `test/subsystems_test.dart` (angular ray sweeps, occluded shadow cones, spot light directionality, and fog of war tile exploration).
-- [ ] **E35-2. `Light2DComponent` & `ShadowCaster2DComponent` Engine Components.**
+- [x] **E35-2. `Light2DComponent` & `ShadowCaster2DComponent` Engine Components.**
   - _Touches:_ `lib/src/engine/components/lighting_2d.dart`.
   - _APIs:_ `Light2DComponent(type, color, intensity, radius, spotAngle, castsShadows)`, `ShadowCaster2DComponent(segments, shapeType, boxSize, radius)`.
   - _Verify:_ `test/subsystems_test.dart` (automatic collider occluder extraction, light boundary containment, and shadow casting).
-- [ ] **E35-3. `FogOfWar2DComponent` & Scene 2D Light Sampling.**
+- [x] **E35-3. `FogOfWar2DComponent` & Scene 2D Light Sampling.**
   - _Touches:_ `lib/src/engine/components/lighting_2d.dart`, `lib/src/engine/scene.dart`.
   - _APIs:_ `FogOfWar2DComponent(width, height, cellSize)`, `reveal(pos, radius)`, `isExplored(pos)`, `isVisible(pos)`, `scene.evaluateLight2D(pos)`.
   - _Verify:_ `test/subsystems_test.dart` (spatial 2D light evaluation with shadow obstruction, and player-centered fog of war revelation).
+
+---
+
+## E36: Audio DSP Effects, Spatial Audio 3D & Audio Mixer Graph (voxdsp)
+
+- [ ] **E36-1. `voxdsp` Submodule: Biquad Filters, Schroeder Reverb, Feedback Delay & Spatial 3D Audio.**
+  - _Location:_ `./vendor/voxdsp` (`https://github.com/soulwax/voxdsp`).
+  - _APIs:_ `BiquadFilter` (`lowpass`, `highpass`, `bandpass`, `notch`, `peakingEq`), `SchroederReverb` (comb/allpass filters, room size, dampening, wet/dry mix), `FeedbackDelay` (delay time, feedback gain, wet mix), `SpatialAudio3D` (inverse/linear/exponential distance attenuation, stereo equal-power panning, Doppler pitch factor), `AudioMixerGroup` (hierarchical bus routing, dB volume fader, mute/solo, DSP effect chain).
+  - _Verify:_ `vendor/voxdsp/test/voxdsp_test.dart` & `test/subsystems_test.dart` (frequency response attenuation, algorithmic reverberation tail, stereo pan balance, and bus hierarchy volume propagation).
+- [ ] **E36-2. `AudioListener` & 3D Spatial Audio Integration in `AudioSource`.**
+  - _Touches:_ `lib/src/engine/components/audio_source.dart`.
+  - _APIs:_ `AudioListener(attenuationModel, dopplerFactor)`, `AudioSource.spatialize3D`, `AudioSource.spatialVolume`, `AudioSource.spatialPan`, `AudioSource.outputGroup`.
+  - _Verify:_ `test/subsystems_test.dart` (distance falloff curves, left/right stereo panning relative to listener head, and mixer bus attenuation).
+- [ ] **E36-3. `AudioReverbZone` & Environmental Filter Triggers.**
+  - _Touches:_ `lib/src/engine/components/audio_dsp_components.dart`, `lib/src/engine/components/audio_source.dart`.
+  - _APIs:_ `AudioReverbZone(minDistance, maxDistance, preset, wetMix)`, `AudioLowPassFilterComponent(cutoffFrequency, resonance)`.
+  - _Verify:_ `test/subsystems_test.dart` (distance-blended reverb wet mix inside spatial zones, and lowpass cutoff muffled occlusion).
+
 
 
 

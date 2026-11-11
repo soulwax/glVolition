@@ -37,3 +37,6 @@
 [submodule "vendor/voxanim"]
 	path = vendor/voxanim
 	url = https://github.com/soulwax/voxanim.git
+[submodule "vendor/voxlight"]
+	path = vendor/voxlight
+	url = https://github.com/soulwax/voxlight.git

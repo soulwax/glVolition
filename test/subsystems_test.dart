@@ -4403,6 +4403,85 @@ void main() {
       expect(arm.transform.localPosition.z, closeTo(2.0, 1e-4));
       expect(arm.transform.localPosition.y, closeTo(1.0, 1e-4));
     });
+
+    test('E35: Light2DComponent and ShadowCaster2DComponent evaluate 2D lighting with shadow occlusion', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final lightGo = engine.scene.createGameObject('Torch', position: const Vec3(0.0, 0.0, 0.0));
+      lightGo.addComponent(Light2DComponent(
+        type: Light2DType.point,
+        radius: 10.0,
+        intensity: 2.0,
+        color: const LinearColor(1.0, 0.5, 0.0),
+      ));
+
+      // Wall at y = 4 with shadow caster
+      final wallGo = engine.scene.createGameObject('Wall', position: const Vec3(0.0, 4.0, 0.0));
+      wallGo.addComponent(ShadowCaster2DComponent.box(const Vec2(2.0, 0.5)));
+
+      engine.step(0.05);
+
+      // Point before wall is brightly illuminated
+      final beforeWall = engine.scene.evaluateLight2D(const Vec2(0.0, 2.0));
+      expect(beforeWall.intensity, greaterThan(1.0));
+      expect(beforeWall.r, greaterThan(beforeWall.g));
+
+      // Point behind wall is occluded in shadow
+      final behindWall = engine.scene.evaluateLight2D(const Vec2(0.0, 7.0));
+      expect(behindWall.intensity, equals(0.0));
+    });
+
+    test('E35: Light2DComponent calculates 2D VisibilityPolygon', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final lightGo = engine.scene.createGameObject('PlayerLight', position: const Vec3(0.0, 0.0, 0.0));
+      final lightComp = lightGo.addComponent(Light2DComponent(radius: 15.0));
+
+      // Wall occluder
+      final wall = engine.scene.createGameObject('Pillar', position: const Vec3(0.0, 5.0, 0.0));
+      wall.addComponent(ShadowCaster2DComponent.box(const Vec2(1.5, 0.5)));
+
+      engine.step(0.05);
+
+      final poly = lightComp.computeVisibilityPolygon();
+      expect(poly.vertices.length, greaterThanOrEqualTo(8));
+
+      // Free space in front of pillar is visible
+      expect(poly.contains(const LightVec2(0.0, 2.5)), isTrue);
+      // Behind pillar is occluded
+      expect(poly.contains(const LightVec2(0.0, 8.0)), isFalse);
+    });
+
+    test('E35: FogOfWar2DComponent reveals area and blocks exploration behind shadows', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final fogGo = engine.scene.createGameObject('FogManager');
+      final fogComp = fogGo.addComponent(FogOfWar2DComponent(
+        width: 30,
+        height: 30,
+        cellSize: 1.0,
+        origin: const Vec2(-15.0, -15.0),
+      ));
+
+      // Wall occluder at y = 3
+      final wall = engine.scene.createGameObject('WallOccluder', position: const Vec3(0.0, 3.0, 0.0));
+      wall.addComponent(ShadowCaster2DComponent.box(const Vec2(3.0, 0.5)));
+
+      engine.step(0.05);
+
+      // Reveal from origin with radius 8
+      fogComp.reveal(Vec2.zero, 8.0);
+
+      // Area in front of wall is visible and explored
+      expect(fogComp.isVisible(const Vec2(0.0, 1.5)), isTrue);
+      expect(fogComp.isExplored(const Vec2(0.0, 1.5)), isTrue);
+
+      // Area behind wall is blocked by occluder
+      expect(fogComp.isVisible(const Vec2(0.0, 5.0)), isFalse);
+    });
   });
 }
 
