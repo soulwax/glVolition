@@ -820,13 +820,20 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E48: Virtual File System, Binary Asset Bundles & Versioned Save Migrations (`voxpack`)
 
-- [ ] **E48-1. `voxpack` Submodule: Mounted VFS Layers, Chunked Binary Pak Reader/Writer, CRC32 & Migrations.**
+- [x] **E48-1. `voxpack` Submodule: Mounted VFS Layers, Chunked Binary Pak Reader/Writer, CRC32 & Migrations.**
   - _Location:_ `./vendor/voxpack` (`https://github.com/soulwax/voxpack`).
   - _APIs:_ `VfsMount` (`MemoryMount`, `PakMount`, priority overlay / DLC patch ordering), `VirtualFileSystem` (path normalization, glob search, readBytes/readText), `PakBuilder` & `PakArchive` (binary header, magic bytes, TOC offsets, CRC32 verification, RLE/XOR obfuscation & optional chunk compression), `SaveMigrator` (ordered schema version steps `v1 -> v2 -> ...`, atomic validation & rollback).
   - _Verify:_ `vendor/voxpack/test/voxpack_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E48-2. `PakAssetLoader`, `MigratedSaveStore` & `AssetBrowserUI` Engine Integration.**
+- [x] **E48-2. `VfsAssetLoader`, `MigratedSaveStore` & `AssetBrowserUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/assets/pak_vfs.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E49: Spatial Partitioning (`voxgrid`), Camera Director State Blending (`voxcam`) & Localization (`voxloc`)
+
+- [ ] **E49-1. Next-Wave Pure-Dart Engine Utilities (`voxloc` / `voxgrid`).**
+  - _Planned:_ Localization string tables with pluralization rules, CSV/JSON import, dynamic token interpolation, fallback locale resolution, and font-glyph prewarm sets.
 
 
 

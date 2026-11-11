@@ -5473,6 +5473,51 @@ void main() {
       expect(stats2.achievements.isUnlocked('ace_pilot'), isTrue);
       expect(stats2.leaderboards['arcade']!.top().single.displayName, 'Nova');
     });
+
+    test('E48: VfsAssetLoader resolves layered VPAK bundles, MigratedSaveStore upgrades schemas & AssetBrowserUI renders', () async {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+
+      final basePak = PakBuilder()
+        ..addText('data/config.json', '{"difficulty":"normal"}', xorKey: 0x77)
+        ..addText('levels/arena.lvl', 'ARENA_V1', xorKey: 0x77);
+      final dlcPak = PakBuilder()
+        ..addText('data/config.json', '{"difficulty":"hardcore"}');
+
+      final vfsLoader = VfsAssetLoader(fallback: host.assets)
+        ..mountPakBytes('base.pak', basePak.build(), priority: 0, xorKey: 0x77)
+        ..mountPakBytes('dlc.pak', dlcPak.build(), priority: 10);
+
+      expect(await vfsLoader.loadText('data/config.json'), '{"difficulty":"hardcore"}');
+      expect(await vfsLoader.loadText('levels/arena.lvl'), 'ARENA_V1');
+
+      final migrator = SaveMigrator(targetVersion: 2)
+        ..addStep(1, 2, (data) {
+          data['credits'] = ((data['gold'] as num?)?.toInt() ?? 0) * 10;
+          data.remove('gold');
+          return data;
+        });
+
+      host.storage.write('slot_1', '{"schemaVersion":1,"gold":45}');
+      final saveStore = MigratedSaveStore(storage: host.storage, migrator: migrator);
+      final migrated = saveStore.load('slot_1');
+      expect(migrated, isNotNull);
+      expect(migrated!.didMigrate, isTrue);
+      expect(migrated.data['credits'], 450);
+
+      // Re-reading after auto-persist is now already v2 (didMigrate == false)
+      final reloaded = saveStore.load('slot_1')!;
+      expect(reloaded.didMigrate, isFalse);
+      expect(reloaded.data['credits'], 450);
+
+      // Render AssetBrowserUI via voxui
+      final ui = VoxUiContext();
+      ui.beginFrame(VoxInput());
+      AssetBrowserUI.render(ui, vfsLoader.vfs, globFilter: '**/*.lvl');
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == 'levels/arena.lvl'), isTrue);
+      expect(engine.scene.isLoaded, isTrue);
+    });
   });
 }
 

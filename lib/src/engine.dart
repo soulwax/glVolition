@@ -33,6 +33,7 @@ import 'package:voxhex/voxhex.dart' as hex;
 import 'package:voxrule/voxrule.dart' as rule;
 import 'package:voxseq/voxseq.dart' as seq;
 import 'package:voxstat/voxstat.dart' as stat;
+import 'package:voxpack/voxpack.dart' as pack;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -60,6 +61,7 @@ part 'engine/prefab.dart';
 part 'engine/serialization/component_spec.dart';
 part 'engine/serialization/scene_serializer.dart';
 part 'engine/assets/asset_catalog.dart';
+part 'engine/assets/pak_vfs.dart';
 part 'engine/components/camera.dart';
 part 'engine/components/cinematic_camera.dart';
 part 'engine/components/light.dart';

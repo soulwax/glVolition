@@ -60,6 +60,8 @@ dependencies:
     path: vendor/voxseq
   voxstat:
     path: vendor/voxstat
+  voxpack:
+    path: vendor/voxpack
   web: ^0.5.0
 
 dev_dependencies:
