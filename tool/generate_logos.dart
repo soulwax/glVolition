@@ -82,6 +82,8 @@ enum MotifKind {
   shadowCascades, // 3 stepped frustum shadow cascade slices in iris (voxshadow)
   splineRibbon, // Banked cubic Hermite curve & orthogonal frame triads (voxspline3d)
   allocArena, // Segmented linear bump arena bars + telemetry pulse (voxalloc)
+  batchClusters, // Merged instanced draw buckets converging into single indirect command (voxbatch)
+  ikLimbs, // Articulated two-bone IK hinge segments + target reticle (voxik2d)
 }
 
 final class LogoSpec {
@@ -826,6 +828,16 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<rect x="63.0" y="69.5" width="10.5" height="5" rx="1" fill="#38BDF8"/>');
       overLayer.add('<rect x="54.5" y="76.5" width="13" height="5" rx="1" fill="#F59E0B"/>');
       overLayer.add('<rect x="69.0" y="76.5" width="4.5" height="5" rx="1" fill="#475569"/>');
+    case MotifKind.batchClusters:
+      overLayer.add('<rect x="54.5" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>');
+      overLayer.add('<rect x="61.6" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>');
+      overLayer.add('<rect x="68.7" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>');
+      overLayer.add('<rect x="56.5" y="77.5" width="15.0" height="5.2" rx="1.4" fill="#F59E0B"/>');
+    case MotifKind.ikLimbs:
+      overLayer.add('<path d="M 55 82 L 64 70 L 73 79" stroke="#2DD4BF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>');
+      overLayer.add('<circle cx="55" cy="82" r="2.2" fill="#38BDF8"/>');
+      overLayer.add('<circle cx="64" cy="70" r="2.4" fill="#F59E0B"/>');
+      overLayer.add('<circle cx="73" cy="79" r="2.4" fill="#34D399"/>');
     default:
       break;
   }
@@ -1212,6 +1224,30 @@ const List<LogoSpec> allLogoSpecs = [
     gap: 4.2,
     cornerFillet: 5.5,
     colors: ['#10B981', '#0EA5E9', '#6366F1'],
+  ),
+  LogoSpec(
+    name: 'voxbatch',
+    category: 'Rendering',
+    motif: MotifKind.batchClusters,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 6.0,
+    colors: ['#0EA5E9', '#3B82F6', '#6366F1'],
+  ),
+  LogoSpec(
+    name: 'voxik2d',
+    category: 'Physics & Motion',
+    motif: MotifKind.ikLimbs,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 7.0,
+    colors: ['#2DD4BF', '#10B981', '#059669'],
   ),
   LogoSpec(
     name: 'voxsky',

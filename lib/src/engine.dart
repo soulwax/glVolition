@@ -73,6 +73,8 @@ import 'package:voxblend/voxblend.dart' as blend;
 import 'package:voxshadow/voxshadow.dart' as shadow;
 import 'package:voxspline3d/voxspline3d.dart' as spline3d;
 import 'package:voxalloc/voxalloc.dart' as alloc;
+import 'package:voxbatch/voxbatch.dart' as batch;
+import 'package:voxik2d/voxik2d.dart' as ik2d;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -180,3 +182,5 @@ part 'engine/components/blend_tree_controller.dart';
 part 'engine/components/cascaded_shadow_rig.dart';
 part 'engine/components/spline_track_loft.dart';
 part 'engine/components/frame_profiler.dart';
+part 'engine/components/draw_batcher.dart';
+part 'engine/components/character_ik_2d.dart';

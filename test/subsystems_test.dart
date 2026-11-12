@@ -9095,6 +9095,134 @@ void main() {
       },
     );
   });
+
+  group('E88 — Static/Instanced Draw-Call Batching & Spatial Cell Clustering (voxbatch)', () {
+    test(
+      'DrawBatcherComponent batches shared MeshRenderers into indirect draw commands & drives DrawBatchInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final sharedMesh = host.graphics.createMesh(
+          Primitives.cube(size: 1.0),
+          debugLabel: 'SharedCube',
+        );
+        final sharedMat = host.graphics.createMaterial(
+          MaterialDefinition.dielectric(
+            key: 'SharedMat',
+            color: const LinearColor(0.8, 0.5, 0.3),
+          ),
+        );
+
+        for (var i = 0; i < 6; i++) {
+          final go = engine.scene.createGameObject(
+            'Prop_$i',
+            position: Vec3(i * 1.5, 0.0, 0.0),
+          );
+          go.addComponent(MeshRenderer(mesh: sharedMesh, material: sharedMat));
+        }
+
+        final batchGo = engine.scene.createGameObject('BatchManager');
+        final batcher = batchGo.addComponent(
+          DrawBatcherComponent(cellSize: 20.0, maxInstancesPerCluster: 32),
+        );
+
+        engine.step(0.016);
+        expect(batcher.inputObjectCount, 6);
+        expect(batcher.drawCallCount, 1);
+        expect(batcher.reductionRatio, closeTo(5.0 / 6.0, 1e-6));
+
+        // Test DrawBatchInspectorUI: click Cell +8m (x=156, y=159)
+        final ui = VoxUiContext();
+        final uiState = DrawBatchInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        DrawBatchInspectorUI.render(ui, batcher, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        DrawBatchInspectorUI.render(ui, batcher, state: uiState);
+        final dl = ui.endFrame();
+
+        expect(batcher.cellSize, closeTo(28.0, 1e-6));
+        expect(dl.commands.any((c) => c.text == 'Draw Batcher'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('DrawBatcherComponent'), isNotNull);
+        final json = reg.specFor(batcher)!.toJson(batcher);
+        expect(json['cellSize'], closeTo(28.0, 1e-6));
+        expect(json['maxInstancesPerCluster'], 32);
+      },
+    );
+  });
+
+  group('E89 — Analytic Two-Bone IK, FABRIK & Spring-Bone Secondary Motion (voxik2d)', () {
+    test(
+      'CharacterIk2DComponent solves 2-bone & FABRIK limbs, steps spring tail & drives IkSolverInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final charGo = engine.scene.createGameObject(
+          'HeroRig',
+          position: const Vec3(1.0, 2.0, 0.0),
+        );
+        final ik = charGo.addComponent(
+          CharacterIk2DComponent(
+            mode: IkSolver2DMode.twoBone,
+            upperBoneLength: 1.0,
+            lowerBoneLength: 1.0,
+            targetX: 2.2,
+            targetY: 2.0,
+          ),
+        );
+
+        engine.step(0.02);
+        expect(ik.solvedJoints.length, 3);
+        expect((ik.solvedJoints.last - const IkVec2(2.2, 2.0)).length, lessThan(1e-3));
+        expect(ik.springChain.nodes.last.position.y, lessThan(2.0));
+
+        // Test IkSolverInspectorUI: click Mode (x=74, y=159) -> click Flip Bend (x=172, y=159)
+        final ui = VoxUiContext();
+        final uiState = IkSolverInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 74.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        IkSolverInspectorUI.render(ui, ik, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 74.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        IkSolverInspectorUI.render(ui, ik, state: uiState);
+        ui.endFrame();
+        expect(ik.mode, IkSolver2DMode.fabrik);
+        expect(ik.solvedJoints.length, 4);
+
+        ui.beginFrame(
+          VoxInput(mouseX: 172.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        IkSolverInspectorUI.render(ui, ik, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 172.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        IkSolverInspectorUI.render(ui, ik, state: uiState);
+        final dl = ui.endFrame();
+        expect(ik.bendSign, closeTo(-1.0, 1e-6));
+        expect(dl.commands.any((c) => c.text == '2D IK & Spring Rig'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('CharacterIk2DComponent'), isNotNull);
+        final json = reg.specFor(ik)!.toJson(ik);
+        expect(json['mode'], 'fabrik');
+        expect(json['bendSign'], closeTo(-1.0, 1e-6));
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

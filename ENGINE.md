@@ -1302,11 +1302,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E88: Static & Instanced Draw-Call Batching & Spatial Cell Clustering (`voxbatch`)
 
-- [ ] **E88-1. `voxbatch` Submodule: Material/Mesh Bucket Sorting, Spatial Cell Merging & Indirect Draw Commands.**
+- [x] **E88-1. `voxbatch` Submodule: Material/Mesh Bucket Sorting, Spatial Cell Merging & Indirect Draw Commands.**
   - _Location:_ `./vendor/voxbatch` (`https://github.com/soulwax/voxbatch`).
   - _APIs:_ `RenderBatchSorter` (material/shader/distance front-to-back state-change minimization), `InstanceClusterBuilder` (spatial grid clustering & per-instance transform packing), `IndirectDrawTable` (multi-draw compact command stream + batch stats).
   - _Verify:_ `vendor/voxbatch/test/voxbatch_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E88-2. `DrawBatcherComponent` & `DrawBatchInspectorUI` Engine Integration.**
+- [x] **E88-2. `DrawBatcherComponent` & `DrawBatchInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/draw_batcher.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1314,10 +1314,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E89: Analytic Two-Bone IK, FABRIK Chains & Spring-Bone Secondary Motion (`voxik2d`)
 
-- [ ] **E89-1. `voxik2d` Submodule: Law-of-Cosines Limb Solvers, Multi-Link FABRIK Chains & Damped Jiggle Bones.**
+- [x] **E89-1. `voxik2d` Submodule: Law-of-Cosines Limb Solvers, Multi-Link FABRIK Chains & Damped Jiggle Bones.**
   - _Location:_ `./vendor/voxik2d` (`https://github.com/soulwax/voxik2d`).
-  - _APIs:_ `TwoBoneIkSolver` (pole-sign bend control & soft reach clamping), `FabrikChainSolver` (angular cone constraints & N-link convergence), `SpringBoneChain` (Verlet cape/hair/antenna secondary motion with gravity & wind).
+  - _APIs:_ `PlanarTwoBoneIkSolver` (pole-sign bend control & soft reach clamping), `FabrikChainSolver` (angular cone constraints & N-link convergence), `SpringBoneChain` (Verlet cape/hair/antenna secondary motion with gravity & wind).
   - _Verify:_ `vendor/voxik2d/test/voxik2d_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E89-2. `CharacterIk2DComponent` & `IkSolverInspectorUI` Engine Integration.**
+- [x] **E89-2. `CharacterIk2DComponent` & `IkSolverInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/character_ik_2d.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E90: Piecewise Animation Curves, ADSR Envelopes & Ease Evaluators (`voxcurve`)
+
+- [ ] **E90-1. `voxcurve` Submodule: Hermite/Bezier Keyframe Evaluators, Damped Springs & Audio/Gameplay Envelopes.**
+  - _Location:_ `./vendor/voxcurve` (`https://github.com/soulwax/voxcurve`).
+  - _APIs:_ `KeyframeCurve` (cubic Hermite tangents & wrap/clamp modes), `AdsrEnvelope` (trigger/release velocity-scaled amplitude envelopes), `CriticalSpringDamper` (frame-rate independent Critically Damped float/angle smoothers).
+  - _Verify:_ `vendor/voxcurve/test/voxcurve_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E90-2. `CurveEnvelopeComponent` & `CurveEditorInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/curve_envelope.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E91: Loose 3D Octree, Hierarchical Frustum Culling & Ray Queries (`voxoctree`)
+
+- [ ] **E91-1. `voxoctree` Submodule: Loose AABB Octree Insert/Update, Slab-Ray Casts & 6-Plane Frustum Sets.**
+  - _Location:_ `./vendor/voxoctree` (`https://github.com/soulwax/voxoctree`).
+  - _APIs:_ `LooseOctree` (hysteresis-stabilized dynamic bounds insert/remove/refit), `FrustumCullSet` (6-plane box/sphere visibility testing), `OctreeRayQuery` (front-to-back slab-sorted closest-hit ray traversal).
+  - _Verify:_ `vendor/voxoctree/test/voxoctree_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E91-2. `OctreeCullerComponent` & `OctreeStatsInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/octree_culler.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

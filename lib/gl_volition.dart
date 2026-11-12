@@ -69,5 +69,7 @@ export 'package:voxblend/voxblend.dart';
 export 'package:voxshadow/voxshadow.dart';
 export 'package:voxspline3d/voxspline3d.dart';
 export 'package:voxalloc/voxalloc.dart';
+export 'package:voxbatch/voxbatch.dart';
+export 'package:voxik2d/voxik2d.dart';
 
 export 'src/engine.dart';

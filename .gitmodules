@@ -196,3 +196,9 @@
 [submodule "vendor/voxalloc"]
 	path = vendor/voxalloc
 	url = https://github.com/soulwax/voxalloc.git
+[submodule "vendor/voxbatch"]
+	path = vendor/voxbatch
+	url = https://github.com/soulwax/voxbatch.git
+[submodule "vendor/voxik2d"]
+	path = vendor/voxik2d
+	url = https://github.com/soulwax/voxik2d.git

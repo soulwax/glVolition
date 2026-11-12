@@ -494,5 +494,7 @@ final class ComponentRegistry {
     register<CascadedShadowRigComponent>(CascadedShadowRigComponent.spec);
     register<SplineTrackLoftComponent>(SplineTrackLoftComponent.spec);
     register<FrameProfilerComponent>(FrameProfilerComponent.spec);
+    register<DrawBatcherComponent>(DrawBatcherComponent.spec);
+    register<CharacterIk2DComponent>(CharacterIk2DComponent.spec);
   }
 }
