@@ -471,5 +471,7 @@ final class ComponentRegistry {
     register<ArticulatedRagdollComponent>(ArticulatedRagdollComponent.spec);
     register<TrafficSignalComponent>(TrafficSignalComponent.spec);
     register<TrafficNetworkComponent>(TrafficNetworkComponent.spec);
+    register<LogicCircuitComponent>(LogicCircuitComponent.spec);
+    register<FluidSurfaceComponent>(FluidSurfaceComponent.spec);
   }
 }

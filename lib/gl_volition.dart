@@ -46,5 +46,7 @@ export 'package:voxbuild/voxbuild.dart';
 export 'package:voxfoliage/voxfoliage.dart';
 export 'package:voxragdoll/voxragdoll.dart';
 export 'package:voxtraffic/voxtraffic.dart';
+export 'package:voxcircuit/voxcircuit.dart';
+export 'package:voxfluid/voxfluid.dart';
 
 export 'src/engine.dart';

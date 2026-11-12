@@ -51,6 +51,8 @@ import 'package:voxbuild/voxbuild.dart' as vbuild;
 import 'package:voxfoliage/voxfoliage.dart' as foliage;
 import 'package:voxragdoll/voxragdoll.dart' as ragdoll;
 import 'package:voxtraffic/voxtraffic.dart' as traffic;
+import 'package:voxcircuit/voxcircuit.dart' as circuit;
+import 'package:voxfluid/voxfluid.dart' as fluid;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -136,3 +138,5 @@ part 'engine/components/modular_building.dart';
 part 'engine/components/foliage_scatter.dart';
 part 'engine/components/ragdoll_physics.dart';
 part 'engine/components/traffic_simulation.dart';
+part 'engine/components/logic_circuit.dart';
+part 'engine/components/fluid_simulation.dart';

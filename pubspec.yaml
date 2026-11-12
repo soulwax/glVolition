@@ -96,6 +96,10 @@ dependencies:
     path: vendor/voxragdoll
   voxtraffic:
     path: vendor/voxtraffic
+  voxcircuit:
+    path: vendor/voxcircuit
+  voxfluid:
+    path: vendor/voxfluid
   web: ^0.5.0
 
 dev_dependencies:

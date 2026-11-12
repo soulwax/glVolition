@@ -115,6 +115,10 @@ final class CircuitGraphSolver {
       delayTicks: delayTicks,
     );
     _wires.add(_WireRuntime(wire));
+    final dst = _gates[toGateId];
+    if (dst != null && toPinIndex >= 0 && toPinIndex < dst.inputs.length) {
+      dst.inputs[toPinIndex].isDriven = true;
+    }
   }
 
   void setInput(String gateId, bool value, {int busValue = 0}) {
@@ -316,7 +320,8 @@ final class CircuitGraphSolver {
         outSigs[0] = g.storedQ;
         if (outCount > 1) outSigs[1] = !g.storedQ;
       case CircuitGateKind.clockPulse:
-        final enabled = ins.isEmpty || inAt(0);
+        final hasEnableWire = g.inputs.isNotEmpty && g.inputs[0].isDriven;
+        final enabled = !hasEnableWire || inAt(0);
         final half = math.max(1, g.def.clockHalfPeriodTicks);
         if (enabled) {
           g.clockCounter++;

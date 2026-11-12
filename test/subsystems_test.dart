@@ -7170,6 +7170,179 @@ void main() {
       expect(reg.specFor(net)!.toJson(net)['timeScale'], 1.0);
     });
   });
+
+  group('E66 — Digital Logic Circuits & Clock Propagation (voxcircuit)', () {
+    test('LogicCircuitComponent propagates gates & clocked flip-flops, syncs bound lamps & renders CircuitDebuggerUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final lampGo = scene.createGameObject(
+        'OutputLamp',
+        components: [
+          MeshRenderer(meshData: Primitives.cube(size: 1.0)),
+          Light(intensity: 0.0),
+        ],
+      );
+
+      final circuit = scene.createGameObject('CircuitBoard').addComponent(
+        LogicCircuitComponent(tickHz: 20.0),
+      )
+        ..addGate(CircuitGateDef.input('sw_a'))
+        ..addGate(CircuitGateDef.input('sw_b'))
+        ..addGate(CircuitGateDef.gate('gate_and', CircuitGateKind.and))
+        ..addGate(CircuitGateDef.lamp('lamp_out'))
+        ..addGate(CircuitGateDef.clock('clk', halfPeriodTicks: 1))
+        ..addGate(CircuitGateDef.gate('dff', CircuitGateKind.dFlipFlop, inputCount: 3, outputCount: 2))
+        ..connect('sw_a', 0, 'gate_and', 0)
+        ..connect('sw_b', 0, 'gate_and', 1)
+        ..connect('gate_and', 0, 'lamp_out', 0)
+        ..connect('clk', 0, 'dff', 1)
+        ..connect('dff', 1, 'dff', 0)
+        ..bindLampObject('lamp_out', lampGo);
+
+      circuit.setInput('sw_a', true);
+      circuit.setInput('sw_b', false);
+      engine.step(0.05);
+      engine.step(0.05); // 2 ticks at 20 Hz
+      expect(circuit.readOutput('lamp_out'), isFalse);
+      expect(lampGo.getComponent<Light>()!.intensity, closeTo(0.0, 1e-6));
+      expect(circuit.readOutput('dff', pinIndex: 0), isTrue);
+
+      circuit.toggleInput('sw_b');
+      engine.step(0.05);
+      engine.step(0.05); // propagates AND -> lamp_out
+      expect(circuit.readOutput('lamp_out'), isTrue);
+      expect(lampGo.getComponent<Light>()!.intensity, greaterThan(1.0));
+      expect(lampGo.getComponent<Light>()!.color.g, greaterThan(0.8));
+
+      // Click 'Step +4' (x=152, y=156) and 'Pause' (x=236, y=156) in CircuitDebuggerUI
+      final ui = VoxUiContext();
+      final uiState = CircuitDebuggerUiState();
+      final ticksBefore = circuit.tickCount;
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 152.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      CircuitDebuggerUI.render(ui, circuit, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 152.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      CircuitDebuggerUI.render(ui, circuit, state: uiState);
+      ui.endFrame();
+      expect(circuit.tickCount, ticksBefore + 4);
+
+      ui.beginFrame(VoxInput(mouseX: 236.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      CircuitDebuggerUI.render(ui, circuit, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 236.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      CircuitDebuggerUI.render(ui, circuit, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      CircuitDebuggerUI.render(ui, circuit, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(circuit.paused, isTrue);
+      expect(drawList.commands.any((c) => c.text == 'PAUSED'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('LogicCircuitComponent'), isNotNull);
+      final json = reg.specFor(circuit)!.toJson(circuit);
+      expect(json['tickHz'], 20.0);
+      expect(json['paused'], isTrue);
+    });
+  });
+
+  group('E67 — Eulerian Shallow-Water & Cellular Fire Grids (voxfluid)', () {
+    test('FluidSurfaceComponent conserves water across terrain, quenches fire, builds MeshData & renders FluidInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      scene.createGameObject(
+        'BasinTerrain',
+        components: [
+          TerrainComponent(
+            TerrainGenerator(
+              width: 24,
+              depth: 24,
+              subdivisionsX: 16,
+              subdivisionsZ: 16,
+              maxHeight: 0.4,
+              seed: 3,
+            ),
+          ),
+        ],
+      );
+
+      final fluidGo = scene.createGameObject('BasinFluid');
+      final fluidSim = fluidGo.addComponent(
+        FluidSurfaceComponent(
+          gridWidth: 10,
+          gridDepth: 10,
+          cellSize: 1.0,
+          autoSyncTerrain: true,
+          generateMesh: true,
+        ),
+      );
+
+      fluidSim.addWaterVolume(2, 5, 16.0);
+      fluidSim.igniteFire(6, 5, heat: 2.4);
+      expect(fluidSim.currentWaterMeshData, isNotNull);
+      expect(fluidGo.getComponent<MeshRenderer>(), isNotNull);
+      expect(fluidSim.burningCellCount, greaterThanOrEqualTo(1));
+
+      for (var i = 0; i < 40; i++) {
+        engine.step(0.1);
+      }
+
+      expect(fluidSim.totalWaterVolume, closeTo(16.0, 1e-2));
+      expect(fluidSim.floodedCellCount, greaterThan(15));
+      expect(fluidSim.water.waterDepthAt(6, 5), greaterThan(0.02));
+      expect(fluidSim.fire.burnAt(6, 5), closeTo(0.0, 1e-6));
+
+      // Clear center cell to test UI 'Ignite' (x=158, y=156), 'Rain +2m3' (x=72, y=156) & 'Pause' (x=240, y=156)
+      fluidSim.water.clearWater();
+      fluidSim.fillFireFuelUniform(1.0);
+
+      final ui = VoxUiContext();
+      final uiState = FluidInspectorUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 158.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      FluidInspectorUI.render(ui, fluidSim, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 158.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      FluidInspectorUI.render(ui, fluidSim, state: uiState);
+      ui.endFrame();
+      expect(fluidSim.burningCellCount, greaterThanOrEqualTo(1));
+
+      ui.beginFrame(VoxInput(mouseX: 72.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      FluidInspectorUI.render(ui, fluidSim, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 72.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      FluidInspectorUI.render(ui, fluidSim, state: uiState);
+      ui.endFrame();
+      expect(fluidSim.totalWaterVolume, closeTo(2.0, 1e-5));
+
+      ui.beginFrame(VoxInput(mouseX: 240.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      FluidInspectorUI.render(ui, fluidSim, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 240.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      FluidInspectorUI.render(ui, fluidSim, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      FluidInspectorUI.render(ui, fluidSim, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(fluidSim.paused, isTrue);
+      expect(drawList.commands.any((c) => c.text == 'PAUSED'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('FluidSurfaceComponent'), isNotNull);
+      final json = reg.specFor(fluidSim)!.toJson(fluidSim);
+      expect(json['gridWidth'], 10);
+      expect(json['paused'], isTrue);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

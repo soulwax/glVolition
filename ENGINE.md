@@ -1038,11 +1038,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E66: Digital Logic Gates, Wire Propagation Graphs, Latches & Clocks (`voxcircuit`)
 
-- [ ] **E66-1. `voxcircuit` Submodule: Directed Gate Graphs, Signal Delay Tickers, Flip-Flops & Buses.**
+- [x] **E66-1. `voxcircuit` Submodule: Directed Gate Graphs, Signal Delay Tickers, Flip-Flops & Buses.**
   - _Location:_ `./vendor/voxcircuit` (`https://github.com/soulwax/voxcircuit`).
   - _APIs:_ `CircuitPin`, `CircuitGateKind` (`and`, `or`, `xor`, `nand`, `not`, `srLatch`, `dFlipFlop`, `clockPulse`), `CircuitGateDef`, `CircuitWire`, `CircuitGraphSolver` (topological evaluation with cycle-safe state buffers & configurable propagation ticks).
   - _Verify:_ `vendor/voxcircuit/test/voxcircuit_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E66-2. `LogicCircuitComponent` & `CircuitDebuggerUI` Engine Integration.**
+- [x] **E66-2. `LogicCircuitComponent` & `CircuitDebuggerUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/logic_circuit.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1050,12 +1050,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E67: Eulerian 2D Shallow-Water Waves, Terrain Overflow & Fire Grids (`voxfluid`)
 
-- [ ] **E67-1. `voxfluid` Submodule: Heightfield Shallow-Water Pipe Fluxes & Cellular Fire/Smoke Simulation.**
+- [x] **E67-1. `voxfluid` Submodule: Heightfield Shallow-Water Pipe Fluxes & Cellular Fire/Smoke Simulation.**
   - _Location:_ `./vendor/voxfluid` (`https://github.com/soulwax/voxfluid`).
   - _APIs:_ `ShallowWaterGrid` (virtual pipe flux integration, hydrostatic depth update, terrain overflow & velocity readout), `CellularFireGrid` (fuel heat ignition, wind-biased spread, burnout embers & smoke density field).
   - _Verify:_ `vendor/voxfluid/test/voxfluid_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E67-2. `FluidSurfaceComponent` & `FluidInspectorUI` Engine Integration.**
+- [x] **E67-2. `FluidSurfaceComponent` & `FluidInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/fluid_simulation.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E68: Real-Time Light Probes, Tetrahedral GI Volume Interpolation & SH3 Irradiance (`voxprobe`)
+
+- [ ] **E68-1. `voxprobe` Submodule: L2 Spherical Harmonics Coefficients, Tetrahedral Delaunay Localization & GI Sampling.**
+  - _Location:_ `./vendor/voxprobe` (`https://github.com/soulwax/voxprobe`).
+  - _APIs:_ `ProbeSH3` (9-band RGB Spherical Harmonics directional light baking, hemispherical sky/ground integrals & normal-irradiance evaluation), `LightProbeSample`, `TetrahedralProbeGrid` (regular/irregular 3D probe cell barycentric & tetrahedral barycentric weights, occlusion flags & dynamic sky blend), `ProbeBakeVolume`.
+  - _Verify:_ `vendor/voxprobe/test/voxprobe_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E68-2. `LightProbeVolumeComponent` & `ProbeGiInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/light_probe_gi.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E69: Branching Quest Graphs, Compound Objectives & Faction Reputation Matrices (`voxquest`)
+
+- [ ] **E69-1. `voxquest` Submodule: Directed Prerequisite Quest DAGs, Stateful Objectives & Faction Standing.**
+  - _Location:_ `./vendor/voxquest` (`https://github.com/soulwax/voxquest`).
+  - _APIs:_ `QuestObjectiveDef` & `QuestObjectiveState` (`counter`, `location`, `deliver`, `allOf`, `anyOf`, optional branches), `QuestStageDef`, `QuestDef`, `QuestTracker` (unlocks, progress increments, branch locks & JSON save snapshot), `FactionReputationMatrix` (pairwise faction affinity propagation, rank tiers & hostility thresholds).
+  - _Verify:_ `vendor/voxquest/test/voxquest_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E69-2. `QuestLogComponent` & `QuestJournalUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/quest_journal.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
 

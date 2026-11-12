@@ -24,6 +24,7 @@ final class CircuitPin {
   final bool isOutput;
   bool signal;
   int busValue;
+  bool isDriven;
 
   CircuitPin({
     required this.id,
@@ -31,6 +32,7 @@ final class CircuitPin {
     this.isOutput = false,
     this.signal = false,
     this.busValue = 0,
+    this.isDriven = false,
   });
 }
 
