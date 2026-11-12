@@ -144,6 +144,10 @@ dependencies:
     path: vendor/voxbatch
   voxik2d:
     path: vendor/voxik2d
+  voxcurve:
+    path: vendor/voxcurve
+  voxoctree:
+    path: vendor/voxoctree
   web: ^0.5.0
 
 dev_dependencies:

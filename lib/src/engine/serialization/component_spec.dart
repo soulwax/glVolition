@@ -496,5 +496,7 @@ final class ComponentRegistry {
     register<FrameProfilerComponent>(FrameProfilerComponent.spec);
     register<DrawBatcherComponent>(DrawBatcherComponent.spec);
     register<CharacterIk2DComponent>(CharacterIk2DComponent.spec);
+    register<CurveEnvelopeComponent>(CurveEnvelopeComponent.spec);
+    register<OctreeCullerComponent>(OctreeCullerComponent.spec);
   }
 }

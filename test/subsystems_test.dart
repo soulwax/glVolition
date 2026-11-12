@@ -9223,6 +9223,154 @@ void main() {
       },
     );
   });
+
+  group('E90 — Piecewise Animation Curves, ADSR Envelopes & Critical Springs (voxcurve)', () {
+    test(
+      'CurveEnvelopeComponent steps Hermite curve, ADSR envelope & spring damper & drives CurveEditorInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final envGo = engine.scene.createGameObject('CurveHost');
+        final env = envGo.addComponent(
+          CurveEnvelopeComponent(
+            springTarget: 2.0,
+            springSmoothTime: 0.1,
+            timeScale: 1.0,
+          ),
+        );
+
+        env.triggerEnvelope(velocity: 1.0);
+        for (var i = 0; i < 10; i++) {
+          engine.step(0.05);
+        }
+        expect(env.currentCurveValue, greaterThan(0.0));
+        expect(env.currentSpringValue, greaterThan(1.0));
+        expect(env.adsrPhase, isNot(AdsrPhase.idle));
+
+        // Test CurveEditorInspectorUI: click Trigger (x=150, y=159) -> click Release (x=240, y=159)
+        final ui = VoxUiContext();
+        final uiState = CurveEditorInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 150.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        CurveEditorInspectorUI.render(ui, env, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 150.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        CurveEditorInspectorUI.render(ui, env, state: uiState);
+        ui.endFrame();
+        expect(env.adsrPhase, AdsrPhase.attack);
+
+        ui.beginFrame(
+          VoxInput(mouseX: 240.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        CurveEditorInspectorUI.render(ui, env, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 240.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        CurveEditorInspectorUI.render(ui, env, state: uiState);
+        final dl = ui.endFrame();
+        expect(env.adsrPhase, AdsrPhase.release);
+        expect(dl.commands.any((c) => c.text == 'Curve & ADSR'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('CurveEnvelopeComponent'), isNotNull);
+        final json = reg.specFor(env)!.toJson(env);
+        expect(json['wrapMode'], 'loop');
+        expect(json['springTarget'], closeTo(2.0, 1e-6));
+      },
+    );
+  });
+
+  group('E91 — Dynamic Loose 3D Octree, Frustum Culling & Ray Queries (voxoctree)', () {
+    test(
+      'OctreeCullerComponent indexes MeshRenderers, culls frustum, raycasts closest & drives OctreeStatsInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final camGo = engine.scene.createGameObject(
+          'MainCamera',
+          position: const Vec3(0.0, 0.0, 10.0),
+        );
+        camGo.transform.lookAt(Vec3.zero);
+        final cam = camGo.addComponent(
+          Camera(fovYRadians: 1.0, near: 0.5, far: 100.0),
+        );
+
+        final cubeMesh = host.graphics.createMesh(
+          Primitives.cube(size: 1.0),
+          debugLabel: 'OctreeCube',
+        );
+        final mat = host.graphics.createMaterial(
+          MaterialDefinition.dielectric(
+            key: 'OctreeMat',
+            color: const LinearColor(0.4, 0.8, 0.9),
+          ),
+        );
+
+        final inFront = engine.scene.createGameObject(
+          'InFront',
+          position: const Vec3(0.0, 0.0, 0.0),
+        );
+        inFront.addComponent(MeshRenderer(mesh: cubeMesh, material: mat));
+
+        final behind = engine.scene.createGameObject(
+          'Behind',
+          position: const Vec3(0.0, 0.0, 25.0),
+        );
+        behind.addComponent(MeshRenderer(mesh: cubeMesh, material: mat));
+
+        final cullerGo = engine.scene.createGameObject('OctreeCuller');
+        final culler = cullerGo.addComponent(
+          OctreeCullerComponent(
+            worldHalfExtent: 64.0,
+            maxDepth: 4,
+            targetCamera: cam,
+          ),
+        );
+
+        engine.step(0.016);
+        expect(culler.indexedObjectCount, 2);
+        expect(culler.visibleCount, 1);
+        expect(culler.visibleEntries.first.item, equals(inFront));
+
+        final hit = culler.raycastClosest(
+          const Vec3(0.0, 0.0, 10.0),
+          const Vec3(0.0, 0.0, -1.0),
+        );
+        expect(hit, isNotNull);
+        expect(hit!.entry.item, equals(inFront));
+
+        // Test OctreeStatsInspectorUI: click Depth +1 (x=156, y=159)
+        final ui = VoxUiContext();
+        final uiState = OctreeStatsInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        OctreeStatsInspectorUI.render(ui, culler, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        OctreeStatsInspectorUI.render(ui, culler, state: uiState);
+        final dl = ui.endFrame();
+        expect(culler.maxDepth, 5);
+        expect(dl.commands.any((c) => c.text == 'Loose Octree Culler'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('OctreeCullerComponent'), isNotNull);
+        final json = reg.specFor(culler)!.toJson(culler);
+        expect(json['maxDepth'], 5);
+        expect(json['worldHalfExtent'], closeTo(64.0, 1e-6));
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

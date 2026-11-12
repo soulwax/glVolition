@@ -202,3 +202,9 @@
 [submodule "vendor/voxik2d"]
 	path = vendor/voxik2d
 	url = https://github.com/soulwax/voxik2d.git
+[submodule "vendor/voxcurve"]
+	path = vendor/voxcurve
+	url = https://github.com/soulwax/voxcurve.git
+[submodule "vendor/voxoctree"]
+	path = vendor/voxoctree
+	url = https://github.com/soulwax/voxoctree.git

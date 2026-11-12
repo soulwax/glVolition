@@ -71,5 +71,7 @@ export 'package:voxspline3d/voxspline3d.dart';
 export 'package:voxalloc/voxalloc.dart';
 export 'package:voxbatch/voxbatch.dart';
 export 'package:voxik2d/voxik2d.dart';
+export 'package:voxcurve/voxcurve.dart';
+export 'package:voxoctree/voxoctree.dart';
 
 export 'src/engine.dart';

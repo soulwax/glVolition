@@ -75,6 +75,8 @@ import 'package:voxspline3d/voxspline3d.dart' as spline3d;
 import 'package:voxalloc/voxalloc.dart' as alloc;
 import 'package:voxbatch/voxbatch.dart' as batch;
 import 'package:voxik2d/voxik2d.dart' as ik2d;
+import 'package:voxcurve/voxcurve.dart' as curve;
+import 'package:voxoctree/voxoctree.dart' as oct;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -184,3 +186,5 @@ part 'engine/components/spline_track_loft.dart';
 part 'engine/components/frame_profiler.dart';
 part 'engine/components/draw_batcher.dart';
 part 'engine/components/character_ik_2d.dart';
+part 'engine/components/curve_envelope.dart';
+part 'engine/components/octree_culler.dart';

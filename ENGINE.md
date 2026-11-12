@@ -1326,11 +1326,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E90: Piecewise Animation Curves, ADSR Envelopes & Ease Evaluators (`voxcurve`)
 
-- [ ] **E90-1. `voxcurve` Submodule: Hermite/Bezier Keyframe Evaluators, Damped Springs & Audio/Gameplay Envelopes.**
+- [x] **E90-1. `voxcurve` Submodule: Hermite/Bezier Keyframe Evaluators, Damped Springs & Audio/Gameplay Envelopes.**
   - _Location:_ `./vendor/voxcurve` (`https://github.com/soulwax/voxcurve`).
   - _APIs:_ `KeyframeCurve` (cubic Hermite tangents & wrap/clamp modes), `AdsrEnvelope` (trigger/release velocity-scaled amplitude envelopes), `CriticalSpringDamper` (frame-rate independent Critically Damped float/angle smoothers).
   - _Verify:_ `vendor/voxcurve/test/voxcurve_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E90-2. `CurveEnvelopeComponent` & `CurveEditorInspectorUI` Engine Integration.**
+- [x] **E90-2. `CurveEnvelopeComponent` & `CurveEditorInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/curve_envelope.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1338,10 +1338,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E91: Loose 3D Octree, Hierarchical Frustum Culling & Ray Queries (`voxoctree`)
 
-- [ ] **E91-1. `voxoctree` Submodule: Loose AABB Octree Insert/Update, Slab-Ray Casts & 6-Plane Frustum Sets.**
+- [x] **E91-1. `voxoctree` Submodule: Loose AABB Octree Insert/Update, Slab-Ray Casts & 6-Plane Frustum Sets.**
   - _Location:_ `./vendor/voxoctree` (`https://github.com/soulwax/voxoctree`).
-  - _APIs:_ `LooseOctree` (hysteresis-stabilized dynamic bounds insert/remove/refit), `FrustumCullSet` (6-plane box/sphere visibility testing), `OctreeRayQuery` (front-to-back slab-sorted closest-hit ray traversal).
+  - _APIs:_ `DynamicLooseOctree` (hysteresis-stabilized dynamic bounds insert/remove/refit), `FrustumCullSet` (6-plane box/sphere visibility testing), `OctreeRayQuery` (front-to-back slab-sorted closest-hit ray traversal).
   - _Verify:_ `vendor/voxoctree/test/voxoctree_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E91-2. `OctreeCullerComponent` & `OctreeStatsInspectorUI` Engine Integration.**
+- [x] **E91-2. `OctreeCullerComponent` & `OctreeStatsInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/octree_culler.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E92: 3D Coherent Noise, Worley Cellular & Domain-Warped Curl Fields (`voxnoise3d`)
+
+- [ ] **E92-1. `voxnoise3d` Submodule: Deterministic 3D Gradient/Simplex Noise, FBM, Worley Cells & 3D Curl Vectors.**
+  - _Location:_ `./vendor/voxnoise3d` (`https://github.com/soulwax/voxnoise3d`).
+  - _APIs:_ `SimplexNoise3D` (seeded 3D gradient noise & analytic FBM/ridged octaves), `WorleyNoise3D` (F1/F2 cellular distance & edge metrics), `DomainWarpField3D` (multi-pass warp + divergence-free 3D curl velocity sampling).
+  - _Verify:_ `vendor/voxnoise3d/test/voxnoise3d_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E92-2. `NoiseFieldVolumeComponent` & `NoiseFieldInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/noise_field_volume.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E93: Perceptual OKLab/OKLCH Gradients, CIE76 Distance & Procedural LUT Grading (`voxcolor`)
+
+- [ ] **E93-1. `voxcolor` Submodule: OKLab/OKLCH/HSV Color Spaces, Delta-E Distance, Harmony Palettes & 3D LUT Bakers.**
+  - _Location:_ `./vendor/voxcolor` (`https://github.com/soulwax/voxcolor`).
+  - _APIs:_ `OkLabColor` (sRGB <-> linear <-> OKLab/OKLCH perceptual conversions & uniform stops), `PerceptualGradient` (hue-shortest-path multi-stop sampling), `ColorLut3D` (trilinear-sampled procedural color grading LUTs).
+  - _Verify:_ `vendor/voxcolor/test/voxcolor_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E93-2. `ColorGradingLutComponent` & `ColorGradingInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/color_grading_lut.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

@@ -84,6 +84,8 @@ enum MotifKind {
   allocArena, // Segmented linear bump arena bars + telemetry pulse (voxalloc)
   batchClusters, // Merged instanced draw buckets converging into single indirect command (voxbatch)
   ikLimbs, // Articulated two-bone IK hinge segments + target reticle (voxik2d)
+  curveWave, // Piecewise Hermite S-curve & ADSR control points inside iris (voxcurve)
+  octreeBoxes, // Nested loose 3D octree bounding quadrants & frustum wedge (voxoctree)
 }
 
 final class LogoSpec {
@@ -838,6 +840,16 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<circle cx="55" cy="82" r="2.2" fill="#38BDF8"/>');
       overLayer.add('<circle cx="64" cy="70" r="2.4" fill="#F59E0B"/>');
       overLayer.add('<circle cx="73" cy="79" r="2.4" fill="#34D399"/>');
+    case MotifKind.curveWave:
+      overLayer.add('<path d="M 53.5 82 L 58.0 69.5 L 65.5 73.5 L 71.0 73.5 L 74.5 82" stroke="#F43F5E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>');
+      overLayer.add('<circle cx="58.0" cy="69.5" r="2.1" fill="#FBBF24"/>');
+      overLayer.add('<circle cx="65.5" cy="73.5" r="2.0" fill="#FB923C"/>');
+      overLayer.add('<circle cx="71.0" cy="73.5" r="2.0" fill="#38BDF8"/>');
+    case MotifKind.octreeBoxes:
+      overLayer.add('<rect x="54.0" y="67.5" width="20.0" height="17.0" rx="2.0" stroke="#38BDF8" stroke-width="1.9"/>');
+      overLayer.add('<line x1="64.0" y1="67.5" x2="64.0" y2="84.5" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>');
+      overLayer.add('<line x1="54.0" y1="76.0" x2="74.0" y2="76.0" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>');
+      overLayer.add('<rect x="65.5" y="69.0" width="6.8" height="5.5" rx="1.0" fill="#34D399"/>');
     default:
       break;
   }
@@ -1248,6 +1260,30 @@ const List<LogoSpec> allLogoSpecs = [
     gap: 4.2,
     cornerFillet: 7.0,
     colors: ['#2DD4BF', '#10B981', '#059669'],
+  ),
+  LogoSpec(
+    name: 'voxcurve',
+    category: 'Physics & Motion',
+    motif: MotifKind.curveWave,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 7.5,
+    colors: ['#FB7185', '#F43F5E', '#E11D48'],
+  ),
+  LogoSpec(
+    name: 'voxoctree',
+    category: 'World & Geometry',
+    motif: MotifKind.octreeBoxes,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 5.5,
+    colors: ['#38BDF8', '#0EA5E9', '#0284C7'],
   ),
   LogoSpec(
     name: 'voxsky',
