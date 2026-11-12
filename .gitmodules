@@ -154,3 +154,9 @@
 [submodule "vendor/voxrollback"]
 	path = vendor/voxrollback
 	url = https://github.com/soulwax/voxrollback.git
+[submodule "vendor/voxsdf"]
+	path = vendor/voxsdf
+	url = https://github.com/soulwax/voxsdf.git
+[submodule "vendor/voxhtn"]
+	path = vendor/voxhtn
+	url = https://github.com/soulwax/voxhtn.git

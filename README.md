@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" width="88" alt="glVolition logo"/>
+</p>
+
 # glVolition (`package:gl_volition`)
 
 A Unity-style game engine (`GameObject`, `Component`, `Behaviour`, fixed-step simulation, scenes, prefabs, object pools, 2D sprites/tilemaps/UI, 3D terrain/water/atmosphere, CLI, and live inspector) built around the [`pixeldart`](https://github.com/soulwax/pixeldart) WebGL2 renderer submodule (`./vendor/pixeldart`).

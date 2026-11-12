@@ -1134,11 +1134,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E74: Signed Distance Field CSG Sculpting, Raymarching & Surface Nets Meshing (`voxsdf`)
 
-- [ ] **E74-1. `voxsdf` Submodule: CSG SDF Primitives, Smooth Booleans, Gradient Normals & Surface Nets Isosurfaces.**
+- [x] **E74-1. `voxsdf` Submodule: CSG SDF Primitives, Smooth Booleans, Gradient Normals & Surface Nets Isosurfaces.**
   - _Location:_ `./vendor/voxsdf` (`https://github.com/soulwax/voxsdf`).
   - _APIs:_ `SdfPrimitive` (`SdfSphere`, `SdfBox`, `SdfCapsule`, `SdfTorus`), `SdfBrush` (union, smooth-union, subtract, intersect CSG operations), `SdfField` (3D dense voxel signed distance grid with trilinear interpolation, sphere-tracing raymarcher & finite-difference normals), `SdfSurfaceNets` (smooth dual surface-net quad/triangle extraction into indexed vertices & normals).
   - _Verify:_ `vendor/voxsdf/test/voxsdf_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E74-2. `SdfVolumeComponent` & `SdfSculptInspectorUI` Engine Integration.**
+- [x] **E74-2. `SdfVolumeComponent` & `SdfSculptInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/sdf_volume.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1146,10 +1146,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E75: Hierarchical Task Network (HTN) & Utility AI Planner with Memory Decay (`voxhtn`)
 
-- [ ] **E75-1. `voxhtn` Submodule: HTN Compound Task Decomposition, Worldstate Effects & Utility Considerations.**
+- [x] **E75-1. `voxhtn` Submodule: HTN Compound Task Decomposition, Worldstate Effects & Utility Considerations.**
   - _Location:_ `./vendor/voxhtn` (`https://github.com/soulwax/voxhtn`).
   - _APIs:_ `HtnBlackboard` (typed facts with confidence weights & temporal exponential memory decay), `UtilityScorer` (response curves & compensated geometric scoring), `HtnTask` & `HtnMethod` (primitive operators + compound task preconditions/effects), `HtnDomain` & `HtnPlanner` (depth-limited partial-order plan synthesis & runtime interruption replanning).
   - _Verify:_ `vendor/voxhtn/test/voxhtn_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E75-2. `HtnPlannerComponent` & `HtnDebuggerUI` Engine Integration.**
+- [x] **E75-2. `HtnPlannerComponent` & `HtnDebuggerUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/htn_planner.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E76: Beat-Synced Rhythm Sequencing, Note Charts, Hit Windows & DSP Calibration (`voxrhythm`)
+
+- [ ] **E76-1. `voxrhythm` Submodule: Beat Grids, Note Charts, Hit Timing Judgment & Combo Scoring.**
+  - _Location:_ `./vendor/voxrhythm` (`https://github.com/soulwax/voxrhythm`).
+  - _APIs:_ `BeatGrid` (BPM/subdivision beat-to-second conversion & audio latency offset compensation), `RhythmNote` (tap/hold lane note events with target beats), `RhythmChart` (sorted note chart, active lookahead query & peak note density), `NoteJudgment` (Marvelous/Perfect/Great/Good/Miss timing windows, combo & multiplier evaluator).
+  - _Verify:_ `vendor/voxrhythm/test/voxrhythm_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E76-2. `RhythmSequencerComponent` & `RhythmJudgeUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/rhythm_sequencer.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E77: Procedural Foot-Stepping IK, Quadruped/Biped Gait Cycles & Slope Adaptation (`voxgait`)
+
+- [ ] **E77-1. `voxgait` Submodule: Stride Phase Oscillators, Foot-Step Triggers, Parabolic Arcs & Pelvis Bobbing.**
+  - _Location:_ `./vendor/voxgait` (`https://github.com/soulwax/voxgait`).
+  - _APIs:_ `GaitCycle` (biped/quadruped/hexapod leg phase offsets, stance duty factor & speed-scaled stride frequency), `GaitFootTarget` (world foot rest anchor, lift/plant interpolation & step arc height), `ProceduralGaitSolver` (velocity-lead foot placement, diagonal support gating, terrain slope tilt & pelvis vertical bobbing).
+  - _Verify:_ `vendor/voxgait/test/voxgait_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E77-2. `ProceduralGaitComponent` & `GaitDebuggerUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/procedural_gait.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

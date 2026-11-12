@@ -112,6 +112,10 @@ dependencies:
     path: vendor/voxarch
   voxrollback:
     path: vendor/voxrollback
+  voxsdf:
+    path: vendor/voxsdf
+  voxhtn:
+    path: vendor/voxhtn
   web: ^0.5.0
 
 dev_dependencies:

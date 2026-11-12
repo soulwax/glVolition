@@ -480,5 +480,7 @@ final class ComponentRegistry {
     register<AdaptiveMusicComponent>(AdaptiveMusicComponent.spec);
     register<FloorplanGeneratorComponent>(FloorplanGeneratorComponent.spec);
     register<RollbackSessionComponent>(RollbackSessionComponent.spec);
+    register<SdfVolumeComponent>(SdfVolumeComponent.spec);
+    register<HtnPlannerComponent>(HtnPlannerComponent.spec);
   }
 }

@@ -59,6 +59,8 @@ import 'package:voxreverb/voxreverb.dart' as reverb;
 import 'package:voxscore/voxscore.dart' as score;
 import 'package:voxarch/voxarch.dart' as arch;
 import 'package:voxrollback/voxrollback.dart' as rollback;
+import 'package:voxsdf/voxsdf.dart' as sdf;
+import 'package:voxhtn/voxhtn.dart' as htn;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -152,3 +154,5 @@ part 'engine/components/room_acoustics.dart';
 part 'engine/components/adaptive_music.dart';
 part 'engine/components/floorplan_generator.dart';
 part 'engine/components/rollback_netcode.dart';
+part 'engine/components/sdf_volume.dart';
+part 'engine/components/htn_planner.dart';

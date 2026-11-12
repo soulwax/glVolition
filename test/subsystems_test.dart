@@ -7965,6 +7965,221 @@ void main() {
       expect(json['inputDelayFrames'], 1);
     });
   });
+
+  group('E74 — Signed Distance Field CSG Sculpting & Surface Nets (voxsdf)', () {
+    test('SdfVolumeComponent builds Surface Nets MeshRenderer, raymarches CSG ops & handles SdfSculptInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final go = engine.scene.createGameObject(
+        'SculptVolume',
+        position: const Vec3(2.0, 0.0, 0.0),
+      );
+      final vol = go.addComponent(
+        SdfVolumeComponent(
+          nx: 18,
+          ny: 18,
+          nz: 18,
+          voxelSize: 0.25,
+          brushRadius: 1.1,
+          brushSmoothness: 0.25,
+        ),
+      );
+
+      vol.addSphere(Vec3.zero, 1.1);
+      expect(vol.brushCount, 1);
+      expect(vol.vertexCount, greaterThan(40));
+      expect(vol.triangleCount, greaterThan(60));
+      expect(vol.currentMeshData, isNotNull);
+
+      final mr = go.getComponent<MeshRenderer>();
+      expect(mr, isNotNull);
+      expect(mr!.mesh, isNotNull);
+
+      final hit = vol.raymarchWorld(
+        const Vec3(6.0, 0.0, 0.0),
+        const Vec3(-1.0, 0.0, 0.0),
+      );
+      expect(hit, isNotNull);
+      expect(hit!.point.x, closeTo(3.1, 0.18));
+      expect(hit.normal.x, greaterThan(0.8));
+
+      final ui = VoxUiContext();
+      final uiState = SdfSculptInspectorUiState();
+      const btnY = 156.0;
+
+      // Click 'Carve' (x=149) -> carves sphere at (0.495, 0.495, 0)
+      ui.beginFrame(VoxInput(mouseX: 149.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      SdfSculptInspectorUI.render(ui, vol, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 149.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      SdfSculptInspectorUI.render(ui, vol, state: uiState);
+      ui.endFrame();
+
+      expect(vol.brushCount, 2);
+      expect(vol.triangleCount, greaterThan(0));
+      expect(vol.field.sampleTrilinear(const SdfVec3(0.495, 0.495, 0.0)), greaterThan(0.0));
+
+      // Undo carve returns cavity back to solid interior
+      expect(vol.undoLastBrush(), isTrue);
+      expect(vol.brushCount, 1);
+      expect(vol.field.sampleTrilinear(const SdfVec3(0.495, 0.495, 0.0)), lessThan(0.0));
+
+      // Click 'Rad +0.2' (x=318) -> 1.1 + 0.2 = 1.3
+      ui.beginFrame(VoxInput(mouseX: 318.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      SdfSculptInspectorUI.render(ui, vol, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 318.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      SdfSculptInspectorUI.render(ui, vol, state: uiState);
+      ui.endFrame();
+      expect(vol.brushRadius, closeTo(1.3, 1e-6));
+
+      ui.beginFrame(VoxInput());
+      SdfSculptInspectorUI.render(ui, vol, state: uiState);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == '1 ops / k=0.25'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('SdfVolumeComponent'), isNotNull);
+      final json = reg.specFor(vol)!.toJson(vol);
+      expect(json['brushRadius'], closeTo(1.3, 1e-6));
+    });
+  });
+
+  group('E75 — Hierarchical Task Network & Utility AI with Memory Decay (voxhtn)', () {
+    test('HtnPlannerComponent executes compound plans, decays facts, replans via HtnDebuggerUI & serializes', () {
+      final engine = Engine(HeadlessHost());
+      final executed = <String>[];
+
+      final domain = HtnDomain(
+        name: 'GuardAI',
+        rootTaskId: 'root',
+        tasks: [
+          HtnCompoundTask(
+            id: 'root',
+            methods: [
+              HtnMethod(
+                id: 'm_ambush',
+                preconditions: [(bb) => bb.hasFact('alert_rumor')],
+                considerations: [
+                  UtilityConsideration(
+                    name: 'alert_conf',
+                    inputSampler: (bb) => bb.confidenceOf('alert_rumor'),
+                  ),
+                ],
+                subtaskIds: ['sneak_to_cover', 'ambush_strike'],
+              ),
+              HtnMethod(
+                id: 'm_patrol',
+                basePriority: 0.4,
+                subtaskIds: ['walk_waypoint'],
+              ),
+            ],
+          ),
+          HtnPrimitiveTask(
+            id: 'sneak_to_cover',
+            preconditions: [(bb) => bb.hasFact('alert_rumor')],
+            effects: [(bb) => bb.setFact('in_cover', true)],
+            onExecute: (bb, dt) {
+              executed.add('sneak');
+              return HtnExecStatus.succeeded;
+            },
+          ),
+          HtnPrimitiveTask(
+            id: 'ambush_strike',
+            preconditions: [(bb) => bb.getBool('in_cover')],
+            effects: [(bb) => bb.setFact('ambushed', true)],
+            onExecute: (bb, dt) {
+              executed.add('ambush');
+              return HtnExecStatus.succeeded;
+            },
+          ),
+          HtnPrimitiveTask(
+            id: 'walk_waypoint',
+            effects: [(bb) => bb.setFact('patrolled', true)],
+            onExecute: (bb, dt) {
+              executed.add('patrol');
+              return HtnExecStatus.succeeded;
+            },
+          ),
+        ],
+      );
+
+      final go = engine.scene.createGameObject('GuardBot');
+      final htnComp = go.addComponent(
+        HtnPlannerComponent(
+          paused: true,
+          autoReplanWhenIdle: true,
+          pruneConfidenceThreshold: 0.1,
+          domain: domain,
+        ),
+      );
+      htnComp.setFact('alert_rumor', 'east_wing', confidence: 1.0, halfLifeSeconds: 1.0);
+
+      final preview = htnComp.replanNow();
+      expect(preview.found, isTrue);
+      expect(preview.decomposedTrace, ['root:m_ambush']);
+      expect(preview.steps.map((s) => s.id).toList(), ['sneak_to_cover', 'ambush_strike']);
+
+      final ui = VoxUiContext();
+      final uiState = HtnDebuggerUiState();
+      const btnY = 156.0;
+
+      // Click 'Replan' (x=68) -> builds m_ambush plan and runs step 0 (sneak_to_cover)
+      ui.beginFrame(VoxInput(mouseX: 68.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      HtnDebuggerUI.render(ui, htnComp, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 68.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      HtnDebuggerUI.render(ui, htnComp, state: uiState);
+      ui.endFrame();
+
+      expect(executed, ['sneak']);
+      expect(htnComp.activeTaskName, 'ambush_strike');
+      expect(htnComp.remainingSteps, 1);
+
+      // Click 'Step' (x=148) -> runs step 1 (ambush_strike)
+      ui.beginFrame(VoxInput(mouseX: 148.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      HtnDebuggerUI.render(ui, htnComp, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 148.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      HtnDebuggerUI.render(ui, htnComp, state: uiState);
+      ui.endFrame();
+      expect(executed, ['sneak', 'ambush']);
+
+      // Click 'Decay +1s' (x=233) 4 times -> 0.5^4 = 0.0625 < 0.1 threshold -> forgets alert_rumor
+      for (var i = 0; i < 4; i++) {
+        ui.beginFrame(VoxInput(mouseX: 233.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+        HtnDebuggerUI.render(ui, htnComp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(VoxInput(mouseX: 233.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+        HtnDebuggerUI.render(ui, htnComp, state: uiState);
+        ui.endFrame();
+      }
+      expect(htnComp.blackboard.hasFact('alert_rumor'), isFalse);
+
+      // Click 'Resume' (x=322) to unpause, then step engine so update() auto-replans m_patrol!
+      ui.beginFrame(VoxInput(mouseX: 322.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      HtnDebuggerUI.render(ui, htnComp, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 322.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      HtnDebuggerUI.render(ui, htnComp, state: uiState);
+      ui.endFrame();
+      expect(htnComp.paused, isFalse);
+
+      engine.step(0.05);
+      expect(executed, ['sneak', 'ambush', 'patrol']);
+      expect(htnComp.currentPlan!.decomposedTrace, ['root:m_patrol']);
+
+      ui.beginFrame(VoxInput());
+      HtnDebuggerUI.render(ui, htnComp, state: uiState);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == 'root:m_patrol'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('HtnPlannerComponent'), isNotNull);
+      final json = reg.specFor(htnComp)!.toJson(htnComp);
+      expect(json['paused'], isFalse);
+      expect(json['pruneConfidenceThreshold'], closeTo(0.1, 1e-6));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {
