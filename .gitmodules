@@ -208,3 +208,9 @@
 [submodule "vendor/voxoctree"]
 	path = vendor/voxoctree
 	url = https://github.com/soulwax/voxoctree.git
+[submodule "vendor/voxnoise3d"]
+	path = vendor/voxnoise3d
+	url = https://github.com/soulwax/voxnoise3d.git
+[submodule "vendor/voxcolor"]
+	path = vendor/voxcolor
+	url = https://github.com/soulwax/voxcolor.git

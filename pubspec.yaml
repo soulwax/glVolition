@@ -148,6 +148,10 @@ dependencies:
     path: vendor/voxcurve
   voxoctree:
     path: vendor/voxoctree
+  voxnoise3d:
+    path: vendor/voxnoise3d
+  voxcolor:
+    path: vendor/voxcolor
   web: ^0.5.0
 
 dev_dependencies:

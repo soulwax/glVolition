@@ -86,6 +86,8 @@ enum MotifKind {
   ikLimbs, // Articulated two-bone IK hinge segments + target reticle (voxik2d)
   curveWave, // Piecewise Hermite S-curve & ADSR control points inside iris (voxcurve)
   octreeBoxes, // Nested loose 3D octree bounding quadrants & frustum wedge (voxoctree)
+  noiseCurl, // Domain-warped curl ribbon & Worley cellular nuclei (voxnoise3d)
+  colorSpectrum, // Perceptual OKLab 3-stop arc & LUT swatch chips (voxcolor)
 }
 
 final class LogoSpec {
@@ -850,6 +852,18 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<line x1="64.0" y1="67.5" x2="64.0" y2="84.5" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>');
       overLayer.add('<line x1="54.0" y1="76.0" x2="74.0" y2="76.0" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>');
       overLayer.add('<rect x="65.5" y="69.0" width="6.8" height="5.5" rx="1.0" fill="#34D399"/>');
+    case MotifKind.noiseCurl:
+      overLayer.add('<path d="M 54.0 82.0 C 55.5 68.5 72.5 83.5 74.0 70.0" stroke="#22D3EE" stroke-width="2.4" stroke-linecap="round"/>');
+      overLayer.add('<path d="M 56.5 69.5 Q 64.0 76.0 71.5 82.5" stroke="#A78BFA" stroke-width="1.7" stroke-linecap="round" opacity="0.9"/>');
+      overLayer.add('<circle cx="56.0" cy="70.0" r="2.1" fill="#F59E0B"/>');
+      overLayer.add('<circle cx="72.0" cy="82.0" r="2.1" fill="#34D399"/>');
+      overLayer.add('<circle cx="64.0" cy="76.0" r="2.2" fill="#38BDF8"/>');
+    case MotifKind.colorSpectrum:
+      overLayer.add('<path d="M 54.5 79.5 A 10.5 10.5 0 0 1 73.5 79.5" stroke="#0EA5E9" stroke-width="2.4" stroke-linecap="round"/>');
+      overLayer.add('<circle cx="55.5" cy="78.0" r="2.4" fill="#38BDF8"/>');
+      overLayer.add('<circle cx="64.0" cy="70.0" r="2.6" fill="#A855F7"/>');
+      overLayer.add('<circle cx="72.5" cy="78.0" r="2.4" fill="#F43F5E"/>');
+      overLayer.add('<rect x="59.0" y="79.5" width="10.0" height="4.2" rx="1.2" fill="#F59E0B"/>');
     default:
       break;
   }
@@ -1860,6 +1874,30 @@ const List<LogoSpec> allLogoSpecs = [
     centerDotR: 4.6,
     centerColor: '#34D399',
     colors: ['#34D399', '#38BDF8', '#0284C7'],
+  ),
+  LogoSpec(
+    name: 'voxnoise3d',
+    category: 'World & Geometry',
+    motif: MotifKind.noiseCurl,
+    blades: 3,
+    outerR: 56,
+    innerR: 17.5,
+    twistDeg: 32,
+    gap: 4.2,
+    cornerFillet: 7.0,
+    colors: ['#22D3EE', '#818CF8', '#0EA5E9'],
+  ),
+  LogoSpec(
+    name: 'voxcolor',
+    category: 'Rendering',
+    motif: MotifKind.colorSpectrum,
+    blades: 3,
+    outerR: 56,
+    innerR: 18.0,
+    twistDeg: 28,
+    gap: 4.2,
+    cornerFillet: 7.0,
+    colors: ['#38BDF8', '#A855F7', '#F43F5E'],
   ),
 ];
 

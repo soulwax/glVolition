@@ -1350,11 +1350,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E92: 3D Coherent Noise, Worley Cellular & Domain-Warped Curl Fields (`voxnoise3d`)
 
-- [ ] **E92-1. `voxnoise3d` Submodule: Deterministic 3D Gradient/Simplex Noise, FBM, Worley Cells & 3D Curl Vectors.**
+- [x] **E92-1. `voxnoise3d` Submodule: Deterministic 3D Gradient/Simplex Noise, FBM, Worley Cells & 3D Curl Vectors.**
   - _Location:_ `./vendor/voxnoise3d` (`https://github.com/soulwax/voxnoise3d`).
   - _APIs:_ `SimplexNoise3D` (seeded 3D gradient noise & analytic FBM/ridged octaves), `WorleyNoise3D` (F1/F2 cellular distance & edge metrics), `DomainWarpField3D` (multi-pass warp + divergence-free 3D curl velocity sampling).
   - _Verify:_ `vendor/voxnoise3d/test/voxnoise3d_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E92-2. `NoiseFieldVolumeComponent` & `NoiseFieldInspectorUI` Engine Integration.**
+- [x] **E92-2. `NoiseFieldVolumeComponent` & `NoiseFieldInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/noise_field_volume.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1362,10 +1362,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E93: Perceptual OKLab/OKLCH Gradients, CIE76 Distance & Procedural LUT Grading (`voxcolor`)
 
-- [ ] **E93-1. `voxcolor` Submodule: OKLab/OKLCH/HSV Color Spaces, Delta-E Distance, Harmony Palettes & 3D LUT Bakers.**
+- [x] **E93-1. `voxcolor` Submodule: OKLab/OKLCH/HSV Color Spaces, Delta-E Distance, Harmony Palettes & 3D LUT Bakers.**
   - _Location:_ `./vendor/voxcolor` (`https://github.com/soulwax/voxcolor`).
   - _APIs:_ `OkLabColor` (sRGB <-> linear <-> OKLab/OKLCH perceptual conversions & uniform stops), `PerceptualGradient` (hue-shortest-path multi-stop sampling), `ColorLut3D` (trilinear-sampled procedural color grading LUTs).
   - _Verify:_ `vendor/voxcolor/test/voxcolor_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E93-2. `ColorGradingLutComponent` & `ColorGradingInspectorUI` Engine Integration.**
+- [x] **E93-2. `ColorGradingLutComponent` & `ColorGradingInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/color_grading_lut.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E94: Extended Position-Based Dynamics, Distance/Volume Constraints & Soft Bodies (`voxverlet`)
+
+- [ ] **E94-1. `voxverlet` Submodule: XPBD Distance, Bending & Tetrahedral Volume Solvers.**
+  - _Location:_ `./vendor/voxverlet` (`https://github.com/soulwax/voxverlet`).
+  - _APIs:_ `XpbdParticle` (inverse mass, position prediction, velocity integration), `DistanceConstraint` & `VolumeConstraint` (compliance-scaled XPBD Lagrange multipliers), `SoftBodySolver` (substepped constraint projection & floor collision).
+  - _Verify:_ `vendor/voxverlet/test/voxverlet_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E94-2. `SoftBodyXpbdComponent` & `XpbdSolverInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/soft_body_xpbd.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E95: Sparse Voxel Brick Greedy Meshing, Face Culling & Per-Vertex AO Baker (`voxgreedy`)
+
+- [ ] **E95-1. `voxgreedy` Submodule: 8x8x8 Sparse Voxel Bricks, Coplanar Quad Merging & Corner AO Masks.**
+  - _Location:_ `./vendor/voxgreedy` (`https://github.com/soulwax/voxgreedy`).
+  - _APIs:_ `VoxelBrick8` (bitmask occupancy & material ID storage), `GreedyBrickMesher` (slice-wise greedy quad coalescing with diagonal flip mitigation), `VoxelAoTable` (2x2 neighbor occlusion LUT per quad vertex).
+  - _Verify:_ `vendor/voxgreedy/test/voxgreedy_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E95-2. `GreedyVoxelBrickComponent` & `GreedyMesherInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/greedy_voxel_brick.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

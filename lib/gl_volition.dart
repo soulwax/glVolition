@@ -73,5 +73,7 @@ export 'package:voxbatch/voxbatch.dart';
 export 'package:voxik2d/voxik2d.dart';
 export 'package:voxcurve/voxcurve.dart';
 export 'package:voxoctree/voxoctree.dart';
+export 'package:voxnoise3d/voxnoise3d.dart';
+export 'package:voxcolor/voxcolor.dart';
 
 export 'src/engine.dart';

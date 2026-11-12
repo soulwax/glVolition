@@ -9371,6 +9371,105 @@ void main() {
       },
     );
   });
+
+  group('E92 — 3D Coherent Noise, Worley Cellular & Curl Fields (voxnoise3d)', () {
+    test(
+      'NoiseFieldVolumeComponent samples scalar & curl velocity, cycles mode via NoiseFieldInspectorUI & serializes',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final noiseGo = engine.scene.createGameObject(
+          'NoiseField',
+          position: const Vec3(2.4, -1.3, 4.1),
+        );
+        final field = noiseGo.addComponent(
+          NoiseFieldVolumeComponent(
+            seed: 4242,
+            frequency: 0.35,
+            warpAmplitude: 1.5,
+            octaves: 4,
+            mode: NoiseFieldMode.domainWarp,
+          ),
+        );
+
+        engine.step(0.016);
+        expect(field.lastSampleScalar.isFinite, isTrue);
+        expect(field.lastCurlVelocity.length, greaterThan(0.0));
+
+        // Test NoiseFieldInspectorUI: click Mode (x=156, y=159) -> cycles to simplexFbm
+        final ui = VoxUiContext();
+        final uiState = NoiseFieldInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        NoiseFieldInspectorUI.render(ui, field, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        NoiseFieldInspectorUI.render(ui, field, state: uiState);
+        final dl = ui.endFrame();
+        expect(field.mode, NoiseFieldMode.simplexFbm);
+        expect(dl.commands.any((c) => c.text == '3D Noise & Curl'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('NoiseFieldVolumeComponent'), isNotNull);
+        final json = reg.specFor(field)!.toJson(field);
+        expect(json['mode'], 'simplexFbm');
+        expect(json['seed'], 4242);
+      },
+    );
+  });
+
+  group('E93 — Perceptual OKLab/OKLCH Gradients & 3D LUT Color Grading (voxcolor)', () {
+    test(
+      'ColorGradingLutComponent evaluates OKLab gradient & 3D LUT, boosts Temp +0.2 via ColorGradingInspectorUI & serializes',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final colorGo = engine.scene.createGameObject('ColorGradeRig');
+        final comp = colorGo.addComponent(
+          ColorGradingLutComponent(
+            lutSize: 16,
+            temperature: 0.1,
+            contrast: 1.1,
+            saturation: 1.05,
+          ),
+        );
+
+        engine.step(0.016);
+        final graded = comp.gradeLinearColor(const LinearColor(0.25, 0.45, 0.75));
+        expect(graded.r.isFinite && graded.g.isFinite && graded.b.isFinite, isTrue);
+        expect(comp.lastDeltaE, greaterThanOrEqualTo(0.0));
+
+        // Test ColorGradingInspectorUI: click Temp +0.2 (x=152, y=159)
+        final ui = VoxUiContext();
+        final uiState = ColorGradingInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 152.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        ColorGradingInspectorUI.render(ui, comp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 152.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        ColorGradingInspectorUI.render(ui, comp, state: uiState);
+        final dl = ui.endFrame();
+        expect(comp.temperature, closeTo(0.3, 1e-6));
+        expect(dl.commands.any((c) => c.text == 'OKLab Color LUT'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('ColorGradingLutComponent'), isNotNull);
+        final json = reg.specFor(comp)!.toJson(comp);
+        expect(json['lutSize'], 16);
+        expect(json['temperature'], closeTo(0.3, 1e-6));
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

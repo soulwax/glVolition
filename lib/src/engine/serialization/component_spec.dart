@@ -498,5 +498,7 @@ final class ComponentRegistry {
     register<CharacterIk2DComponent>(CharacterIk2DComponent.spec);
     register<CurveEnvelopeComponent>(CurveEnvelopeComponent.spec);
     register<OctreeCullerComponent>(OctreeCullerComponent.spec);
+    register<NoiseFieldVolumeComponent>(NoiseFieldVolumeComponent.spec);
+    register<ColorGradingLutComponent>(ColorGradingLutComponent.spec);
   }
 }
