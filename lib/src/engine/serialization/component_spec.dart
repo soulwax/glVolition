@@ -500,5 +500,7 @@ final class ComponentRegistry {
     register<OctreeCullerComponent>(OctreeCullerComponent.spec);
     register<NoiseFieldVolumeComponent>(NoiseFieldVolumeComponent.spec);
     register<ColorGradingLutComponent>(ColorGradingLutComponent.spec);
+    register<SoftBodyXpbdComponent>(SoftBodyXpbdComponent.spec);
+    register<GreedyVoxelBrickComponent>(GreedyVoxelBrickComponent.spec);
   }
 }

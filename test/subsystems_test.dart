@@ -9470,6 +9470,131 @@ void main() {
       },
     );
   });
+
+  group('E94 — XPBD Constraints & Soft Body Solver (voxverlet)', () {
+    test(
+      'SoftBodyXpbdComponent steps Verlet cube rig, handles XpbdSolverInspectorUI & serializes',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final bodyGo = engine.scene.createGameObject(
+          'SoftCube',
+          position: const Vec3(0.0, 2.0, 0.0),
+        );
+        final comp = bodyGo.addComponent(
+          SoftBodyXpbdComponent(
+            compliance: 0.001,
+            volumeCompliance: 0.0005,
+            floorY: -1.0,
+            substeps: 8,
+            halfExtent: 0.5,
+          ),
+        );
+
+        final startY = comp.centerOfMass.y;
+        engine.step(0.04);
+        expect(comp.nodeCount, 8);
+        expect(comp.centerOfMass.y, lessThan(startY));
+        expect(comp.totalConstraintError.isFinite, isTrue);
+
+        // Test XpbdSolverInspectorUI: click Substep +1 at (156.0, 159.0) & Drop at (252.0, 159.0)
+        final ui = VoxUiContext();
+        final uiState = SoftBodyXpbdUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 252.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        XpbdSolverInspectorUI.render(ui, comp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 252.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        XpbdSolverInspectorUI.render(ui, comp, state: uiState);
+        ui.endFrame();
+
+        final beforeSubstepY = comp.centerOfMass.y;
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        XpbdSolverInspectorUI.render(ui, comp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        XpbdSolverInspectorUI.render(ui, comp, state: uiState);
+        final dl = ui.endFrame();
+        expect(comp.centerOfMass.y, lessThan(beforeSubstepY));
+        expect(dl.commands.any((c) => c.text == 'XPBD Soft Body'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('SoftBodyXpbdComponent'), isNotNull);
+        final json = reg.specFor(comp)!.toJson(comp);
+        expect(json['substeps'], 8);
+        expect(json['floorY'], closeTo(-1.0, 1e-6));
+      },
+    );
+  });
+
+  group('E95 — Sparse 8x8x8 Voxel Brick Greedy Meshing & AO Baker (voxgreedy)', () {
+    test(
+      'GreedyVoxelBrickComponent generates MeshData for MeshRenderer, toggles AO via GreedyMesherInspectorUI & serializes',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final mat = host.graphics.createMaterial(
+          MaterialDefinition.dielectric(
+            key: 'VoxelBrickMat',
+            color: const LinearColor(0.3, 0.8, 0.7),
+          ),
+        );
+        final brickGo = engine.scene.createGameObject('GreedyBrick');
+        final mr = brickGo.addComponent(MeshRenderer(material: mat));
+        final comp = brickGo.addComponent(
+          GreedyVoxelBrickComponent(
+            brickSize: 8,
+            voxelSize: 0.5,
+            bakeAo: true,
+            autoSyncMeshRenderer: true,
+          ),
+        );
+
+        engine.step(0.016);
+        expect(comp.solidCount, 80);
+        expect(comp.quadCount, greaterThan(0));
+        expect(comp.triangleCount, comp.quadCount * 2);
+        expect(mr.mesh, isNotNull);
+        expect(comp.currentMeshData, isNotNull);
+
+        final aoQuadCount = comp.quadCount;
+
+        // Test GreedyMesherInspectorUI: click Toggle AO at (156.0, 159.0) -> bakeAo = false
+        final ui = VoxUiContext();
+        final uiState = GreedyMesherInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        GreedyMesherInspectorUI.render(ui, comp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 156.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        GreedyMesherInspectorUI.render(ui, comp, state: uiState);
+        final dl = ui.endFrame();
+        expect(comp.bakeAo, isFalse);
+        expect(comp.quadCount, lessThanOrEqualTo(aoQuadCount));
+        expect(dl.commands.any((c) => c.text == 'Greedy Voxel Brick'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('GreedyVoxelBrickComponent'), isNotNull);
+        final json = reg.specFor(comp)!.toJson(comp);
+        expect(json['brickSize'], 8);
+        expect(json['bakeAo'], isFalse);
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

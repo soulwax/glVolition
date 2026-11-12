@@ -75,5 +75,7 @@ export 'package:voxcurve/voxcurve.dart';
 export 'package:voxoctree/voxoctree.dart';
 export 'package:voxnoise3d/voxnoise3d.dart';
 export 'package:voxcolor/voxcolor.dart';
+export 'package:voxverlet/voxverlet.dart';
+export 'package:voxgreedy/voxgreedy.dart';
 
 export 'src/engine.dart';

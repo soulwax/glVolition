@@ -88,6 +88,8 @@ enum MotifKind {
   octreeBoxes, // Nested loose 3D octree bounding quadrants & frustum wedge (voxoctree)
   noiseCurl, // Domain-warped curl ribbon & Worley cellular nuclei (voxnoise3d)
   colorSpectrum, // Perceptual OKLab 3-stop arc & LUT swatch chips (voxcolor)
+  verletMesh, // XPBD tetrahedral cage & compliant soft-body links (voxverlet)
+  greedyBrick, // Coalesced voxel brick slabs with corner AO shading (voxgreedy)
 }
 
 final class LogoSpec {
@@ -864,6 +866,20 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<circle cx="64.0" cy="70.0" r="2.6" fill="#A855F7"/>');
       overLayer.add('<circle cx="72.5" cy="78.0" r="2.4" fill="#F43F5E"/>');
       overLayer.add('<rect x="59.0" y="79.5" width="10.0" height="4.2" rx="1.2" fill="#F59E0B"/>');
+    case MotifKind.verletMesh:
+      overLayer.add('<polygon points="64.0,67.5 74.0,81.5 54.0,81.5" stroke="#FB923C" stroke-width="1.9" stroke-linejoin="round"/>');
+      overLayer.add('<line x1="64.0" y1="67.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>');
+      overLayer.add('<line x1="54.0" y1="81.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>');
+      overLayer.add('<line x1="74.0" y1="81.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>');
+      overLayer.add('<circle cx="64.0" cy="67.5" r="2.1" fill="#F43F5E"/>');
+      overLayer.add('<circle cx="54.0" cy="81.5" r="2.1" fill="#38BDF8"/>');
+      overLayer.add('<circle cx="74.0" cy="81.5" r="2.1" fill="#34D399"/>');
+      overLayer.add('<circle cx="64.0" cy="77.0" r="2.0" fill="#FBBF24"/>');
+    case MotifKind.greedyBrick:
+      overLayer.add('<rect x="54.0" y="68.0" width="12.5" height="7.5" rx="1.2" fill="#38BDF8"/>');
+      overLayer.add('<rect x="68.0" y="68.0" width="6.0" height="7.5" rx="1.2" fill="#22D3EE"/>');
+      overLayer.add('<rect x="54.0" y="77.0" width="20.0" height="6.8" rx="1.2" fill="#34D399"/>');
+      overLayer.add('<rect x="55.5" y="78.5" width="3.0" height="3.0" rx="0.6" fill="#0F172A" opacity="0.45"/>');
     default:
       break;
   }
@@ -1898,6 +1914,30 @@ const List<LogoSpec> allLogoSpecs = [
     gap: 4.2,
     cornerFillet: 7.0,
     colors: ['#38BDF8', '#A855F7', '#F43F5E'],
+  ),
+  LogoSpec(
+    name: 'voxverlet',
+    category: 'Physics & Simulation',
+    motif: MotifKind.verletMesh,
+    blades: 3,
+    outerR: 56,
+    innerR: 18.0,
+    twistDeg: 30,
+    gap: 4.2,
+    cornerFillet: 7.0,
+    colors: ['#FB923C', '#F43F5E', '#FBBF24'],
+  ),
+  LogoSpec(
+    name: 'voxgreedy',
+    category: 'World & Geometry',
+    motif: MotifKind.greedyBrick,
+    blades: 3,
+    outerR: 56,
+    innerR: 17.5,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 4.5,
+    colors: ['#22D3EE', '#38BDF8', '#34D399'],
   ),
 ];
 

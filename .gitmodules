@@ -214,3 +214,9 @@
 [submodule "vendor/voxcolor"]
 	path = vendor/voxcolor
 	url = https://github.com/soulwax/voxcolor.git
+[submodule "vendor/voxverlet"]
+	path = vendor/voxverlet
+	url = https://github.com/soulwax/voxverlet.git
+[submodule "vendor/voxgreedy"]
+	path = vendor/voxgreedy
+	url = https://github.com/soulwax/voxgreedy.git

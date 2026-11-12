@@ -79,6 +79,8 @@ import 'package:voxcurve/voxcurve.dart' as curve;
 import 'package:voxoctree/voxoctree.dart' as oct;
 import 'package:voxnoise3d/voxnoise3d.dart' as noise3d;
 import 'package:voxcolor/voxcolor.dart' as vcolor;
+import 'package:voxverlet/voxverlet.dart' as xpbd;
+import 'package:voxgreedy/voxgreedy.dart' as greedy;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -192,3 +194,5 @@ part 'engine/components/curve_envelope.dart';
 part 'engine/components/octree_culler.dart';
 part 'engine/components/noise_field_volume.dart';
 part 'engine/components/color_grading_lut.dart';
+part 'engine/components/soft_body_xpbd.dart';
+part 'engine/components/greedy_voxel_brick.dart';

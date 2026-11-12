@@ -1374,22 +1374,83 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E94: Extended Position-Based Dynamics, Distance/Volume Constraints & Soft Bodies (`voxverlet`)
 
-- [ ] **E94-1. `voxverlet` Submodule: XPBD Distance, Bending & Tetrahedral Volume Solvers.**
+- [x] **E94-1. `voxverlet` Submodule: XPBD Distance, Bending & Tetrahedral Volume Solvers.**
   - _Location:_ `./vendor/voxverlet` (`https://github.com/soulwax/voxverlet`).
-  - _APIs:_ `XpbdParticle` (inverse mass, position prediction, velocity integration), `DistanceConstraint` & `VolumeConstraint` (compliance-scaled XPBD Lagrange multipliers), `SoftBodySolver` (substepped constraint projection & floor collision).
+  - _Owner (Subagent W1-A):_ `submodule_author` (disjoint `./vendor/voxverlet/**`).
+  - _APIs:_ `VerletVec3`, `VerletNode` (inverse mass, position prediction, velocity integration), `VerletDistanceLink`, `VerletBendLink`, `VerletTetVolume` (compliance-scaled XPBD Lagrange multipliers), `VerletSoftBodySolver` (substepped constraint projection & floor collision).
   - _Verify:_ `vendor/voxverlet/test/voxverlet_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E94-2. `SoftBodyXpbdComponent` & `XpbdSolverInspectorUI` Engine Integration.**
-  - _Touches:_ `lib/src/engine/components/soft_body_xpbd.dart`.
+- [x] **E94-2. `SoftBodyXpbdComponent` & `XpbdSolverInspectorUI` Engine Integration.**
+  - _Owner (Subagent W1-C):_ `engine_integrator` (`lib/src/engine/components/soft_body_xpbd.dart`).
   - _Verify:_ `test/subsystems_test.dart`.
 
 ---
 
 ## E95: Sparse Voxel Brick Greedy Meshing, Face Culling & Per-Vertex AO Baker (`voxgreedy`)
 
-- [ ] **E95-1. `voxgreedy` Submodule: 8x8x8 Sparse Voxel Bricks, Coplanar Quad Merging & Corner AO Masks.**
+- [x] **E95-1. `voxgreedy` Submodule: 8x8x8 Sparse Voxel Bricks, Coplanar Quad Merging & Corner AO Masks.**
   - _Location:_ `./vendor/voxgreedy` (`https://github.com/soulwax/voxgreedy`).
-  - _APIs:_ `VoxelBrick8` (bitmask occupancy & material ID storage), `GreedyBrickMesher` (slice-wise greedy quad coalescing with diagonal flip mitigation), `VoxelAoTable` (2x2 neighbor occlusion LUT per quad vertex).
+  - _Owner (Subagent W1-B):_ `submodule_author` (disjoint `./vendor/voxgreedy/**`).
+  - _APIs:_ `BrickCoord3`, `VoxelBrick8` (bitmask occupancy & material ID storage), `GreedyQuadFace`, `GreedyMeshBuffer`, `GreedyBrickMesher` (slice-wise greedy quad coalescing with diagonal flip mitigation), `VoxelAoTable` (2x2 neighbor occlusion LUT per quad vertex).
   - _Verify:_ `vendor/voxgreedy/test/voxgreedy_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E95-2. `GreedyVoxelBrickComponent` & `GreedyMesherInspectorUI` Engine Integration.**
-  - _Touches:_ `lib/src/engine/components/greedy_voxel_brick.dart`.
+- [x] **E95-2. `GreedyVoxelBrickComponent` & `GreedyMesherInspectorUI` Engine Integration.**
+  - _Owner (Subagent W1-C):_ `engine_integrator` (`lib/src/engine/components/greedy_voxel_brick.dart`).
   - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E96: Cross-Platform `voxui` SpriteBatch Renderer & Dockable `EngineWorkbenchComponent`
+
+- [ ] **E96-1. `VoxUiRenderer` & `VoxUiInputBridge` (`SpriteStage.overlay` Encoder).**
+  - _Owner (Subagent W2-D):_ `engine_integrator` (`lib/src/engine/ui/voxui_renderer.dart`).
+  - _APIs:_ `VoxUiRenderer` (translates `VoxDrawList` rects, borders, lines, scissor clips, and `BitmapFont` glyphs into `SpriteBatch` draws), `VoxUiInputBridge` (maps `Host.input` pointer/key state into `VoxInput`).
+  - _Verify:_ `test/subsystems_test.dart` (headless + `NativeEngineHost` `GlesDevice` frame encode).
+- [ ] **E96-2. `EngineWorkbenchComponent` (DOM-Free Scene Hierarchy, `ComponentSpec` Inspector & Profiler).**
+  - _Owner (Subagent W2-E):_ `engine_integrator` (`lib/src/engine/components/engine_workbench.dart`).
+  - _APIs:_ `EngineWorkbenchComponent` (toggleable in-canvas hierarchy tree, live `ComponentSpec` inspector controls, and telemetry summary tab).
+  - _Verify:_ `test/subsystems_test.dart` & `Scene._encode` integration.
+
+---
+
+## E97: Active Runtime Integration Pass (Octree Culling, LUT Baking, Shadow Sync & `ShaderOverrideComponent`)
+
+- [ ] **E97-1. Active Frustum Culling (`OctreeCullerComponent`) & Procedural LUT Texture Baker (`ColorGradingLutComponent`).**
+  - _Owner (Subagent W3-F):_ `engine_integrator`.
+  - _Verify:_ `test/subsystems_test.dart`.
+- [ ] **E97-2. `ShaderOverrideComponent` & `CascadedShadowRigComponent` Environment Sync.**
+  - _Owner (Subagent W3-G):_ `engine_integrator` (`lib/src/engine/components/shader_override.dart`).
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E98: `Prefab` Variants, `PrefabRegistry`, `ModelPackage` Prefabs & `SceneStreamZone`
+
+- [ ] **E98-1. `PrefabRegistry`, `PrefabVariant` Diffing & `Prefab.fromModelPackage`.**
+  - _Owner (Subagent W4-I):_ `engine_integrator` (`lib/src/engine/prefab_registry.dart`).
+  - _Verify:_ `test/subsystems_test.dart`.
+- [ ] **E98-2. `SceneStreamZone` Distance/Trigger Additive Sub-Scene Streaming.**
+  - _Owner (Subagent W4-J):_ `engine_integrator` (`lib/src/engine/components/scene_stream_zone.dart`).
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E99: Native Desktop SDL3 / ANGLE FFI Transport Layer over `GlesDevice`
+
+- [ ] **E99-1. `NativeGlTransport` & `Sdl3EventPump` FFI Bridge (`lib/src/native/native_ffi_transport.dart`).**
+  - _Owner (Subagent W5-K):_ `engine_integrator`.
+  - _Verify:_ `test/subsystems_test.dart` (command dispatch validation + mocked proc-table execution on VM).
+
+---
+
+## E100: Multi-Example Parity, Zero-Leak GPU Audit & Benchmark Suite
+
+- [ ] **E100-1. Cross-Example `HeadlessHost` + `NativeEngineHost` Parity & Benchmark Suite (`test/parity_benchmark_test.dart`).**
+  - _Owner (Subagent W5-L + Coordinator):_ Automated draw-call, triangle, VRAM, `ComponentSpec` coverage, and zero-leak shutdown assertions across all examples.
+
+---
+
+## Subagent Dispatch & Ownership Matrix
+
+1. **Coordinator Locks Shared Hub Files:** Only the Coordinator modifies `pubspec.yaml`, `.gitmodules`, `lib/gl_volition.dart`, `lib/src/engine.dart`, `lib/src/engine/serialization/component_spec.dart`, `tool/generate_logos.dart`, `ENGINE.md`, and `test/subsystems_test.dart`.
+2. **Parallel Subagent Workstreams:** `submodule_author` agents own `vendor/<pkg>/**`; `engine_integrator` agents own assigned disjoint paths under `lib/src/engine/**`.
+3. **Collision-Free Contract:** Every new public symbol is checked across `vendor/*/lib/**/*.dart` and `lib/**/*.dart` before subagent launch.
+4. **Definition of Done Per Wave:** `0` non-pure-Dart imports, `dart analyze` clean, `100%` submodule + root `dart test` pass, submodule repos pushed before root `160000` gitlink commit.

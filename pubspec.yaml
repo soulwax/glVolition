@@ -152,6 +152,10 @@ dependencies:
     path: vendor/voxnoise3d
   voxcolor:
     path: vendor/voxcolor
+  voxverlet:
+    path: vendor/voxverlet
+  voxgreedy:
+    path: vendor/voxgreedy
   web: ^0.5.0
 
 dev_dependencies:
