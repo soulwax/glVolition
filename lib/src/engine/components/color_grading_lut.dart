@@ -14,6 +14,10 @@ final class ColorGradingLutComponent extends Behaviour {
   late vcolor.PerceptualGradient gradient;
   LinearColor sampledGradientColor = const LinearColor(0.22, 0.74, 0.97);
   double lastDeltaE = 0.0;
+  TextureHandle? bakedLutTexture;
+  bool _lutDirty = true;
+
+  bool get isLutTextureDirty => _lutDirty;
 
   ColorGradingLutComponent({
     this.lutSize = 16,
@@ -58,7 +62,50 @@ final class ColorGradingLutComponent extends Behaviour {
       saturation: saturation,
       gamma: gamma,
     );
+    _lutDirty = true;
     evaluateSample();
+  }
+
+  /// Encodes the current 3D [lut] (`N x N` width by `N` height RGBA8 horizontal slice strip).
+  Uint8List bakeRgbaLutBytes() {
+    final n = lut.size;
+    final bytes = Uint8List(n * n * n * 4);
+    final inv = 1.0 / (n - 1);
+    for (var b = 0; b < n; b++) {
+      final fb = b * inv;
+      for (var g = 0; g < n; g++) {
+        final fg = g * inv;
+        for (var r = 0; r < n; r++) {
+          final sample = lut.sample(r * inv, fg, fb);
+          final idx = ((g * n + b) * n + r) * 4;
+          bytes[idx] = (sample.r.clamp(0.0, 1.0) * 255.0).round();
+          bytes[idx + 1] = (sample.g.clamp(0.0, 1.0) * 255.0).round();
+          bytes[idx + 2] = (sample.b.clamp(0.0, 1.0) * 255.0).round();
+          bytes[idx + 3] = 255;
+        }
+      }
+    }
+    return bytes;
+  }
+
+  /// Returns the cached GPU LUT [TextureHandle], uploading a new strip when dirty.
+  TextureHandle ensureLutTexture(Graphics graphics) {
+    final existing = bakedLutTexture;
+    if (existing != null && !_lutDirty) return existing;
+    if (existing != null) {
+      graphics.releaseTexture(existing);
+    }
+    final handle = graphics.createTexture(
+      width: lut.size * lut.size,
+      height: lut.size,
+      pixels: bakeRgbaLutBytes(),
+      minFilter: GpuTextureFilter.linear,
+      magFilter: GpuTextureFilter.linear,
+      debugLabel: 'voxcolor_lut_${lut.size}',
+    );
+    bakedLutTexture = handle;
+    _lutDirty = false;
+    return handle;
   }
 
   void evaluateSample() {
@@ -91,6 +138,14 @@ final class ColorGradingLutComponent extends Behaviour {
       scene.renderSettings.post = scene.renderSettings.post.copyWith(
         colorGradeStrength: (contrast - 1.0).abs() > 1e-4 ? 1.0 : 0.5,
       );
+    }
+  }
+
+  @override
+  void onDestroy() {
+    if (bakedLutTexture != null && isAttached && scene.isLoaded) {
+      engine.graphics.releaseTexture(bakedLutTexture!);
+      bakedLutTexture = null;
     }
   }
 }

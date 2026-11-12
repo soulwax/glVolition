@@ -1400,11 +1400,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E96: Cross-Platform `voxui` SpriteBatch Renderer & Dockable `EngineWorkbenchComponent`
 
-- [ ] **E96-1. `VoxUiRenderer` & `VoxUiInputBridge` (`SpriteStage.overlay` Encoder).**
+- [x] **E96-1. `VoxUiRenderer` & `VoxUiInputBridge` (`SpriteStage.overlay` Encoder).**
   - _Owner (Subagent W2-D):_ `engine_integrator` (`lib/src/engine/ui/voxui_renderer.dart`).
   - _APIs:_ `VoxUiRenderer` (translates `VoxDrawList` rects, borders, lines, scissor clips, and `BitmapFont` glyphs into `SpriteBatch` draws), `VoxUiInputBridge` (maps `Host.input` pointer/key state into `VoxInput`).
   - _Verify:_ `test/subsystems_test.dart` (headless + `NativeEngineHost` `GlesDevice` frame encode).
-- [ ] **E96-2. `EngineWorkbenchComponent` (DOM-Free Scene Hierarchy, `ComponentSpec` Inspector & Profiler).**
+- [x] **E96-2. `EngineWorkbenchComponent` (DOM-Free Scene Hierarchy, `ComponentSpec` Inspector & Profiler).**
   - _Owner (Subagent W2-E):_ `engine_integrator` (`lib/src/engine/components/engine_workbench.dart`).
   - _APIs:_ `EngineWorkbenchComponent` (toggleable in-canvas hierarchy tree, live `ComponentSpec` inspector controls, and telemetry summary tab).
   - _Verify:_ `test/subsystems_test.dart` & `Scene._encode` integration.
@@ -1413,10 +1413,10 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E97: Active Runtime Integration Pass (Octree Culling, LUT Baking, Shadow Sync & `ShaderOverrideComponent`)
 
-- [ ] **E97-1. Active Frustum Culling (`OctreeCullerComponent`) & Procedural LUT Texture Baker (`ColorGradingLutComponent`).**
+- [x] **E97-1. Active Frustum Culling (`OctreeCullerComponent`) & Procedural LUT Texture Baker (`ColorGradingLutComponent`).**
   - _Owner (Subagent W3-F):_ `engine_integrator`.
   - _Verify:_ `test/subsystems_test.dart`.
-- [ ] **E97-2. `ShaderOverrideComponent` & `CascadedShadowRigComponent` Environment Sync.**
+- [x] **E97-2. `ShaderOverrideComponent` & `CascadedShadowRigComponent` Environment Sync.**
   - _Owner (Subagent W3-G):_ `engine_integrator` (`lib/src/engine/components/shader_override.dart`).
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1424,10 +1424,10 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E98: `Prefab` Variants, `PrefabRegistry`, `ModelPackage` Prefabs & `SceneStreamZone`
 
-- [ ] **E98-1. `PrefabRegistry`, `PrefabVariant` Diffing & `Prefab.fromModelPackage`.**
+- [x] **E98-1. `PrefabRegistry`, `PrefabVariant` Diffing & `Prefab.fromModelPackage`.**
   - _Owner (Subagent W4-I):_ `engine_integrator` (`lib/src/engine/prefab_registry.dart`).
   - _Verify:_ `test/subsystems_test.dart`.
-- [ ] **E98-2. `SceneStreamZone` Distance/Trigger Additive Sub-Scene Streaming.**
+- [x] **E98-2. `SceneStreamZone` Distance/Trigger Additive Sub-Scene Streaming.**
   - _Owner (Subagent W4-J):_ `engine_integrator` (`lib/src/engine/components/scene_stream_zone.dart`).
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1435,7 +1435,7 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E99: Native Desktop SDL3 / ANGLE FFI Transport Layer over `GlesDevice`
 
-- [ ] **E99-1. `NativeGlTransport` & `Sdl3EventPump` FFI Bridge (`lib/src/native/native_ffi_transport.dart`).**
+- [x] **E99-1. `NativeGlTransport` & `Sdl3EventPump` FFI Bridge (`lib/src/native/native_ffi_transport.dart`).**
   - _Owner (Subagent W5-K):_ `engine_integrator`.
   - _Verify:_ `test/subsystems_test.dart` (command dispatch validation + mocked proc-table execution on VM).
 
@@ -1443,7 +1443,7 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E100: Multi-Example Parity, Zero-Leak GPU Audit & Benchmark Suite
 
-- [ ] **E100-1. Cross-Example `HeadlessHost` + `NativeEngineHost` Parity & Benchmark Suite (`test/parity_benchmark_test.dart`).**
+- [x] **E100-1. Cross-Example `HeadlessHost` + `NativeEngineHost` Parity & Benchmark Suite (`test/parity_benchmark_test.dart`).**
   - _Owner (Subagent W5-L + Coordinator):_ Automated draw-call, triangle, VRAM, `ComponentSpec` coverage, and zero-leak shutdown assertions across all examples.
 
 ---

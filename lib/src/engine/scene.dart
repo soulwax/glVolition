@@ -18,6 +18,11 @@ final class RenderSettings {
   double? fogHeightFalloff;
   double? fogDensity;
 
+  double shadowFilterRadius = 1.0;
+  double shadowBias = 0.003;
+  double ambientLightScale = 1.0;
+  double directLightScale = 1.0;
+
   PostProcessState post = const PostProcessState();
 }
 
@@ -45,6 +50,7 @@ final class Scene {
   final List<SpriteRenderer> _sprites = [];
   final List<TilemapComponent> _tilemaps = [];
   final List<UICanvas> _uiCanvases = [];
+  final List<EngineWorkbenchComponent> _workbenches = [];
   final List<WaterSurfaceComponent> _waters = [];
   final List<AtmosphereVolume> _atmospheres = [];
   final List<ParticleSystem> _particles = [];
@@ -708,6 +714,10 @@ final class Scene {
       fogEnd: rs.fogEnabled ? rs.fogEnd : 100001,
       fogHeightFalloff: rs.fogEnabled ? rs.fogHeightFalloff : null,
       fogDensity: rs.fogEnabled ? rs.fogDensity : null,
+      shadowFilterRadius: rs.shadowFilterRadius.clamp(0.0, 3.0),
+      shadowBias: rs.shadowBias.clamp(0.0, 0.01),
+      ambientLightScale: rs.ambientLightScale.clamp(0.0, 3.0),
+      directLightScale: rs.directLightScale.clamp(0.0, 3.0),
       directionalLight: sun,
       pointLights: points,
       spotLights: spots,
@@ -765,6 +775,9 @@ final class Scene {
       gizmos
         ..collectAuto()
         .._encode(encoder, vw, vh);
+      for (final wb in _workbenches) {
+        if (wb._active) wb.encodeOverlay(encoder, vw, vh);
+      }
     }
   }
 

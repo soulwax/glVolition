@@ -9595,6 +9595,421 @@ void main() {
       },
     );
   });
+
+  group('E96 — Cross-Platform VoxUiRenderer & EngineWorkbenchComponent', () {
+    test(
+      'EngineWorkbenchComponent renders DOM-free voxui hierarchy/inspector/profiler onto GlesDevice SpriteStage.overlay',
+      () async {
+        final device = GlesDevice();
+        final runner = await NativeEngineHost.boot(
+          device: device,
+          width: 1280,
+          height: 720,
+          requestedProfile: QualityProfile.clean,
+        );
+        try {
+          final camGo = runner.scene.createGameObject(
+            'MainCamera',
+            position: const Vec3(0, 2, 6),
+          );
+          camGo.transform.lookAt(Vec3.zero);
+          camGo.addComponent(Camera());
+
+          final crate = runner.scene.createGameObject(
+            'SampleCrate',
+            position: const Vec3(1.5, 0.5, 0.0),
+          );
+          final workbenchGo = runner.scene.createGameObject('Workbench');
+          final wb = workbenchGo.addComponent(
+            EngineWorkbenchComponent(visible: true),
+          );
+          workbenchGo.addComponent(DebugController());
+
+          // Step & render on NativeEngineHost -> encodes voxui DrawList via VoxUiRenderer
+          runner.renderFrame(1 / 60);
+          expect(wb.lastDrawList, isNotNull);
+          expect(wb.lastRenderedCommands, greaterThan(10));
+          expect(wb.uiRenderer.lastBatchLength, greaterThan(10));
+
+          // Click Inspector tab at (206.0, 64.0) via ScriptedInput -> switches activeTab
+          runner.host.input
+            ..pointerX = 206.0
+            ..pointerY = 64.0
+            ..pointerPressed = true
+            ..pointerDown = true;
+          runner.renderFrame(1 / 60);
+          runner.host.input
+            ..pointerPressed = false
+            ..pointerReleased = true
+            ..pointerDown = false;
+          runner.renderFrame(1 / 60);
+          expect(wb.activeTab, WorkbenchTab.inspector);
+
+          // Select crate & switch to Profiler tab (328.0, 64.0)
+          wb.selectedObject = crate;
+          runner.host.input
+            ..pointerX = 328.0
+            ..pointerY = 64.0
+            ..pointerPressed = true
+            ..pointerDown = true
+            ..pointerReleased = false;
+          runner.renderFrame(1 / 60);
+          runner.host.input
+            ..pointerPressed = false
+            ..pointerReleased = true
+            ..pointerDown = false;
+          runner.renderFrame(1 / 60);
+          expect(wb.activeTab, WorkbenchTab.profiler);
+
+          // Press F11 toggles visibility off -> encode emits 0 new commands
+          runner.host.input.pointerReleased = false;
+          runner.host.input.press('F11');
+          runner.renderFrame(1 / 60);
+          expect(wb.visible, isFalse);
+
+          // ComponentRegistry round-trip
+          final reg = ComponentRegistry.defaults();
+          expect(reg.specByName('EngineWorkbenchComponent'), isNotNull);
+          final json = reg.specFor(wb)!.toJson(wb);
+          expect(json['toggleKeyCode'], 'F11');
+          expect(json['activeTab'], 'profiler');
+        } finally {
+          runner.dispose();
+        }
+        expect(device.liveObjectCount, 0);
+      },
+    );
+
+    test(
+      'ShaderOverrideComponent builds validated ShaderOverride presets, responds to ShaderOverrideInspectorUI & serializes',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final go = engine.scene.createGameObject('PostShader');
+        final so = go.addComponent(
+          ShaderOverrideComponent(
+            shaderKey: 'vignette_boost',
+            targetSlot: ShaderSlot.present,
+            isPostEffect: true,
+            intensity: 1.2,
+          ),
+        );
+
+        engine.step(0.016);
+        expect(so.isValid, isTrue);
+        expect(so.cachedOverride, isNotNull);
+        expect(so.uniformValues()['u_intensity'], closeTo(1.2, 1e-6));
+
+        // Click Int +0.1 at (248.0, 159.0) -> bumps intensity to 1.3
+        final ui = VoxUiContext();
+        final uiState = ShaderOverrideInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 248.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        ShaderOverrideInspectorUI.render(ui, so, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 248.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        ShaderOverrideInspectorUI.render(ui, so, state: uiState);
+        final dl = ui.endFrame();
+        expect(so.intensity, closeTo(1.3, 1e-5));
+        expect(dl.commands.any((c) => c.text == 'Shader Override'), isTrue);
+
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('ShaderOverrideComponent'), isNotNull);
+        final json = reg.specFor(so)!.toJson(so);
+        expect(json['shaderKey'], 'vignette_boost');
+        expect(json['targetSlot'], 'present');
+      },
+    );
+  });
+
+  group('E97 — Active Runtime Integration (Octree Culling, LUT Baking & Shadow Env Sync)', () {
+    test(
+      'OctreeCullerComponent(applyFrustumCulling: true) hides off-frustum MeshRenderers & restores on disable',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final camGo = engine.scene.createGameObject(
+          'MainCamera',
+          position: const Vec3(0.0, 0.0, 10.0),
+        );
+        camGo.transform.lookAt(Vec3.zero);
+        camGo.addComponent(Camera(fovYRadians: 1.0, near: 0.5, far: 100.0));
+
+        final cubeMesh = host.graphics.createMesh(Primitives.cube(size: 1.0));
+        final mat = host.graphics.createMaterial(
+          MaterialDefinition.dielectric(key: 'CullMat', color: const LinearColor(0.5, 0.7, 0.9)),
+        );
+
+        final frontGo = engine.scene.createGameObject('InFront', position: Vec3.zero);
+        frontGo.addComponent(MeshRenderer(mesh: cubeMesh, material: mat));
+        final backGo = engine.scene.createGameObject('Behind', position: const Vec3(0.0, 0.0, 25.0));
+        backGo.addComponent(MeshRenderer(mesh: cubeMesh, material: mat));
+
+        final culler = engine.scene.createGameObject('Culler').addComponent(
+          OctreeCullerComponent(applyFrustumCulling: true, maxDepth: 4),
+        );
+
+        engine.step(0.016);
+        expect(culler.culledCount, 1);
+        expect(frontGo.node.children.first.visible, isTrue);
+        expect(backGo.node.children.first.visible, isFalse);
+
+        // Disabling culler restores all hidden nodes
+        culler.enabled = false;
+        expect(culler.culledCount, 0);
+        expect(backGo.node.children.first.visible, isTrue);
+      },
+    );
+
+    test(
+      'ColorGradingLutComponent.ensureLutTexture bakes N*N x N RGBA8 strip & CascadedShadowRigComponent syncs RenderSettings',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final camGo = engine.scene.createGameObject('Cam', position: const Vec3(0, 5, 10));
+        camGo.transform.lookAt(Vec3.zero);
+        camGo.addComponent(Camera());
+
+        final rigGo = engine.scene.createGameObject('ShadowRig');
+        rigGo.transform.lookAt(const Vec3(0.3, -1.0, -0.2));
+        rigGo.addComponent(Light(type: LightType.directional, intensity: 2.0));
+        final rig = rigGo.addComponent(
+          CascadedShadowRigComponent(
+            cascadeCount: 3,
+            lightWorldRadius: 1.75,
+            syncEnvironmentSettings: true,
+          ),
+        );
+
+        final gradeComp = engine.scene.createGameObject('Grade').addComponent(
+          ColorGradingLutComponent(lutSize: 8, temperature: 0.25),
+        );
+
+        engine.step(0.016);
+        final bytes = gradeComp.bakeRgbaLutBytes();
+        expect(bytes.length, 8 * 8 * 8 * 4);
+        final tex1 = gradeComp.ensureLutTexture(engine.graphics);
+        expect(gradeComp.isLutTextureDirty, isFalse);
+        expect(gradeComp.ensureLutTexture(engine.graphics), same(tex1));
+
+        gradeComp
+          ..temperature = -0.2
+          ..rebuildLut();
+        expect(gradeComp.isLutTextureDirty, isTrue);
+        final tex2 = gradeComp.ensureLutTexture(engine.graphics);
+        expect(tex2, isNot(same(tex1)));
+
+        expect(engine.graphics.environment.shadowFilterRadius, closeTo(1.75, 1e-6));
+        expect(rig.cascades.length, 3);
+      },
+    );
+  });
+
+  group('E98 — PrefabVariants, PrefabRegistry & SceneStreamZone', () {
+    test(
+      'PrefabRegistry & PrefabVariant apply hierarchical field overrides with cycle protection',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final basePrefab = Prefab('TurretPrefab', (root) {
+          root.addComponent(Light(type: LightType.point, intensity: 1.0, range: 8.0));
+          engine.scene.createGameObject('Barrel', parent: root);
+        });
+
+        final registry = PrefabRegistry()
+          ..register('turret_base', basePrefab)
+          ..registerVariant(
+            'turret_heavy',
+            const PrefabVariant(
+              name: 'HeavyTurret',
+              basePrefabId: 'turret_base',
+              overrides: [
+                PrefabNodeOverride(
+                  componentFieldOverrides: {
+                    'Light': {'intensity': 3.5, 'range': 16.0},
+                  },
+                ),
+                PrefabNodeOverride(
+                  nodePath: 'Barrel',
+                  localPosition: Vec3(0.0, 1.0, 2.0),
+                  localScale: 1.5,
+                ),
+              ],
+            ),
+          );
+
+        final spawned = registry.instantiate(
+          engine.scene,
+          'turret_heavy',
+          position: const Vec3(10.0, 0.0, -5.0),
+        );
+        expect(spawned.transform.localPosition.x, closeTo(10.0, 1e-6));
+        expect(spawned.getComponent<Light>()!.intensity, closeTo(3.5, 1e-6));
+        expect(spawned.getComponent<Light>()!.range, closeTo(16.0, 1e-6));
+        final barrel = spawned.children.firstWhere((c) => c.name == 'Barrel');
+        expect(barrel.transform.localPosition.z, closeTo(2.0, 1e-6));
+        expect(barrel.transform.localScale, closeTo(1.5, 1e-6));
+        expect(registry.exportManifestJson()['registeredIds'], contains('turret_heavy'));
+      },
+    );
+
+    test(
+      'SceneStreamZone streams additive chunk objects with distance hysteresis & SceneStreamZoneInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final player = engine.scene.createGameObject(
+          'PlayerHero',
+          tag: 'Player',
+          position: const Vec3(50.0, 0.0, 0.0),
+        );
+
+        final zoneGo = engine.scene.createGameObject('SectorA');
+        final zone = zoneGo.addComponent(
+          SceneStreamZone(
+            zoneId: 'Sector_A',
+            loadRadius: 12.0,
+            unloadRadius: 20.0,
+            targetTag: 'Player',
+          )..zoneBuilder = (scene, owner) => [
+                scene.createGameObject('StreamedCrate', parent: owner.gameObject),
+                scene.createGameObject('StreamedTorch', parent: owner.gameObject),
+              ],
+        );
+
+        // Far away -> stays unloaded
+        engine.step(0.016);
+        expect(zone.state, StreamZoneState.unloaded);
+        expect(zone.loadedObjectCount, 0);
+
+        // Move player inside loadRadius (10 <= 12) -> loads chunk
+        player.transform.position = const Vec3(10.0, 0.0, 0.0);
+        engine.step(0.016);
+        expect(zone.state, StreamZoneState.loaded);
+        expect(zone.loadedObjectCount, 2);
+
+        // Hysteresis band (16m: >12m but <20m) -> stays loaded
+        player.transform.position = const Vec3(16.0, 0.0, 0.0);
+        engine.step(0.016);
+        expect(zone.state, StreamZoneState.loaded);
+
+        // Move beyond unloadRadius (25m >= 20m) -> unloads cleanly
+        player.transform.position = const Vec3(25.0, 0.0, 0.0);
+        engine.step(0.016);
+        engine.step(0.016);
+        expect(zone.state, StreamZoneState.unloaded);
+
+        // Test SceneStreamZoneInspectorUI: click Load button at (148.0, 159.0)
+        zone.autoStream = false;
+        final ui = VoxUiContext();
+        final uiState = SceneStreamZoneUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 148.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        SceneStreamZoneInspectorUI.render(ui, zone, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 148.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        SceneStreamZoneInspectorUI.render(ui, zone, state: uiState);
+        final dl = ui.endFrame();
+        expect(zone.state, StreamZoneState.loaded);
+        expect(zone.loadedObjectCount, 2);
+        expect(dl.commands.any((c) => c.text == 'Scene Stream Zone'), isTrue);
+
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('SceneStreamZone'), isNotNull);
+      },
+    );
+  });
+
+  group('E99 — NativeGlTransport, Sdl3EventPump & NativeDesktopBridge', () {
+    test(
+      'NativeGlTransport records GlesDevice commands and Sdl3EventPump drives NativeDesktopBridge',
+      () async {
+        final missingDynLoader = DynamicLibraryGlLoader(
+          candidateLibraries: const ['definitely_nonexistent_gles_lib_e99.dll'],
+        );
+        expect(missingDynLoader.isAvailable, isFalse);
+        expect(missingDynLoader.hasSymbol('glDrawElements'), isFalse);
+
+        final stubLoader = StubGlProcLoader(
+          supportedSymbols: const {'glDrawElements', 'glUseProgram', 'glCreateShader'},
+          libraryName: 'mock-angle-gles3',
+        );
+        expect(stubLoader.isAvailable, isTrue);
+        expect(stubLoader.hasSymbol('glDrawElements'), isTrue);
+        expect(stubLoader.hasSymbol('glUnknownProc'), isFalse);
+
+        final forwarded = <GlCommandRecord>[];
+        final transport = NativeGlTransport(
+          procLoader: stubLoader,
+          onForward: forwarded.add,
+          maxRecordedCommands: 2048,
+        );
+        final device = transport.createDevice();
+
+        final runner = await NativeEngineHost.boot(
+          device: device,
+          width: 640,
+          height: 360,
+          initialScene: buildDungeon2DScene(),
+        );
+        final bridge = NativeDesktopBridge(
+          runner: runner,
+          transport: transport,
+        );
+
+        // Enqueue a raw packet (keyDown 'KeyD') and mouse movement + click.
+        final packetBytes = ByteData(28)
+          ..setUint32(0, Sdl3EventKind.keyDown.index, Endian.little)
+          ..setInt32(4, 1, Endian.little)
+          ..setFloat64(8, 120.0, Endian.little)
+          ..setFloat64(16, 80.0, Endian.little)
+          ..setUint8(24, 0x4B) // 'K'
+          ..setUint8(25, 0x65) // 'e'
+          ..setUint8(26, 0x79) // 'y'
+          ..setUint8(27, 0x44); // 'D'
+        final decoded = Sdl3EventPump.decodeRawEventPacket(packetBytes);
+        expect(decoded, isNotNull);
+        expect(decoded!.kind, Sdl3EventKind.keyDown);
+        expect(decoded.keyCode, 'KeyD');
+
+        bridge.eventPump.enqueueAll([
+          decoded,
+          const Sdl3InputEvent(kind: Sdl3EventKind.mouseDown, x: 160, y: 90),
+        ]);
+
+        final stats = bridge.stepAndRender(1 / 60);
+        expect(stats, isNotNull);
+        expect(stats!.drawCalls, greaterThan(0));
+        expect(transport.totalDispatched, greaterThan(0));
+        expect(transport.records.length, lessThanOrEqualTo(2048));
+        expect(forwarded.length, transport.totalDispatched);
+        expect(transport.commandCounts.isNotEmpty, isTrue);
+        expect(runner.host.input.isDown('KeyD'), isTrue);
+        expect(runner.host.input.pointerX, closeTo(160.0, 1e-4));
+        expect(runner.host.input.pointerDown, isTrue);
+
+        // Enqueue quit -> stepAndRender returns null.
+        bridge.eventPump.enqueue(const Sdl3InputEvent(kind: Sdl3EventKind.quit));
+        expect(bridge.stepAndRender(1 / 60), isNull);
+        expect(bridge.isQuitRequested, isTrue);
+
+        bridge.dispose();
+        expect(device.liveObjectCount, 0);
+        expect(device.liveTimerCount, 0);
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

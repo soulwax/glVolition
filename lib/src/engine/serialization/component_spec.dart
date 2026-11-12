@@ -502,5 +502,8 @@ final class ComponentRegistry {
     register<ColorGradingLutComponent>(ColorGradingLutComponent.spec);
     register<SoftBodyXpbdComponent>(SoftBodyXpbdComponent.spec);
     register<GreedyVoxelBrickComponent>(GreedyVoxelBrickComponent.spec);
+    register<EngineWorkbenchComponent>(EngineWorkbenchComponent.spec);
+    register<ShaderOverrideComponent>(ShaderOverrideComponent.spec);
+    register<SceneStreamZone>(SceneStreamZone.spec);
   }
 }

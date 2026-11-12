@@ -10,6 +10,7 @@ final class CascadedShadowRigComponent extends Behaviour {
   double lightWorldRadius;
   int pcfSampleCount;
   bool autoRebuildOnUpdate;
+  bool syncEnvironmentSettings;
 
   Camera? targetCamera;
   Light? targetLight;
@@ -27,6 +28,7 @@ final class CascadedShadowRigComponent extends Behaviour {
     this.lightWorldRadius = 0.5,
     this.pcfSampleCount = 16,
     this.autoRebuildOnUpdate = true,
+    this.syncEnvironmentSettings = true,
     this.targetCamera,
     this.targetLight,
   }) {
@@ -60,6 +62,11 @@ final class CascadedShadowRigComponent extends Behaviour {
         'autoRebuildOnUpdate',
         (c) => c.autoRebuildOnUpdate,
         (c, v) => c.autoRebuildOnUpdate = v,
+      ),
+      Field.boolean(
+        'syncEnvironmentSettings',
+        (c) => c.syncEnvironmentSettings,
+        (c, v) => c.syncEnvironmentSettings = v,
       ),
     ],
   );
@@ -135,6 +142,12 @@ final class CascadedShadowRigComponent extends Behaviour {
 
     if (pcssKernel.taps.length != pcfSampleCount.clamp(1, 128)) {
       pcssKernel = shadow.PcssKernelTable.vogelDisk(sampleCount: pcfSampleCount);
+    }
+    if (syncEnvironmentSettings && isAttached && scene.isLoaded) {
+      final baseTexel = cascades.isNotEmpty ? cascades.first.texelWorldSize : 0.05;
+      scene.renderSettings
+        ..shadowFilterRadius = lightWorldRadius.clamp(0.0, 3.0)
+        ..shadowBias = (baseTexel * 0.008).clamp(0.0005, 0.01);
     }
     return cascades;
   }

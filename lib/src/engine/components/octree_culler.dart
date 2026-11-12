@@ -7,10 +7,14 @@ final class OctreeCullerComponent extends Behaviour {
   int splitThreshold;
   bool autoSyncOnUpdate;
   bool paused;
+  bool applyFrustumCulling;
 
   late oct.DynamicLooseOctree<GameObject> octree;
   List<oct.OctreeEntry<GameObject>> visibleEntries = const [];
   Camera? targetCamera;
+
+  final Set<int> _culledRendererIds = {};
+  int _totalTracked = 0;
 
   OctreeCullerComponent({
     this.worldHalfExtent = 128.0,
@@ -18,6 +22,7 @@ final class OctreeCullerComponent extends Behaviour {
     this.splitThreshold = 8,
     this.autoSyncOnUpdate = true,
     this.paused = false,
+    this.applyFrustumCulling = false,
     this.targetCamera,
   }) {
     _resetTree();
@@ -44,6 +49,11 @@ final class OctreeCullerComponent extends Behaviour {
         (c, v) => c.autoSyncOnUpdate = v,
       ),
       Field.boolean('paused', (c) => c.paused, (c, v) => c.paused = v),
+      Field.boolean(
+        'applyFrustumCulling',
+        (c) => c.applyFrustumCulling,
+        (c, v) => c.applyFrustumCulling = v,
+      ),
     ],
   );
 
@@ -58,13 +68,31 @@ final class OctreeCullerComponent extends Behaviour {
   int get indexedObjectCount => octree.count;
   int get nodeCount => octree.nodeCount;
   int get visibleCount => visibleEntries.length;
+  int get culledCount => _culledRendererIds.length;
+  int get totalTracked => _totalTracked;
+
+  /// Restores scene-node visibility for any [MeshRenderer]s hidden by frustum culling.
+  void restoreAllVisibility() {
+    if (_culledRendererIds.isEmpty) return;
+    if (isAttached && scene.isLoaded) {
+      for (final mr in scene.findObjectsOfType<MeshRenderer>()) {
+        if (_culledRendererIds.contains(mr.instanceId)) {
+          final leaf = mr._leaf;
+          if (leaf != null) leaf.visible = true;
+        }
+      }
+    }
+    _culledRendererIds.clear();
+  }
 
   /// Rebuilds loose octree bounds from scene [MeshRenderer]s and queries camera frustum visibility.
   List<oct.OctreeEntry<GameObject>> rebuildFromScene() {
     _resetTree();
+    var tracked = 0;
     if (isAttached && scene.isLoaded) {
       for (final mr in scene.findObjectsOfType<MeshRenderer>()) {
         if (!mr.isActiveAndEnabled) continue;
+        tracked++;
         final pos = mr.transform.position;
         final localB = mr.meshData?.bounds;
         final minV = localB != null
@@ -80,6 +108,7 @@ final class OctreeCullerComponent extends Behaviour {
         );
       }
     }
+    _totalTracked = tracked;
 
     final cam = targetCamera ?? (isAttached && scene.isLoaded ? Camera.of(scene) : null);
     if (cam != null && cam.isAttached) {
@@ -105,6 +134,32 @@ final class OctreeCullerComponent extends Behaviour {
     } else {
       visibleEntries = octree.queryAabb(octree.rootBounds);
     }
+
+    if (applyFrustumCulling && isAttached && scene.isLoaded) {
+      final visibleGos = <GameObject>{
+        for (final entry in visibleEntries) entry.item,
+      };
+      final activeIds = <int>{};
+      for (final mr in scene.findObjectsOfType<MeshRenderer>()) {
+        if (!mr.isActiveAndEnabled) continue;
+        activeIds.add(mr.instanceId);
+        final leaf = mr._leaf;
+        if (visibleGos.contains(mr.gameObject)) {
+          if (_culledRendererIds.remove(mr.instanceId) && leaf != null) {
+            leaf.visible = true;
+          }
+        } else {
+          if (leaf != null && leaf.visible) {
+            leaf.visible = false;
+            _culledRendererIds.add(mr.instanceId);
+          }
+        }
+      }
+      _culledRendererIds.retainAll(activeIds);
+    } else {
+      restoreAllVisibility();
+    }
+
     return visibleEntries;
   }
 
@@ -124,6 +179,16 @@ final class OctreeCullerComponent extends Behaviour {
   void update() {
     if (paused || !autoSyncOnUpdate) return;
     rebuildFromScene();
+  }
+
+  @override
+  void _onDisableInternal() {
+    restoreAllVisibility();
+  }
+
+  @override
+  void onDestroy() {
+    restoreAllVisibility();
   }
 }
 
@@ -214,8 +279,8 @@ final class OctreeStatsInspectorUI {
       valueColor: VoxColor.lightGray,
     );
     ui.labelValue(
-      'Status / Auto',
-      '${culler.paused ? 'Paused' : 'Active'} | Auto ${culler.autoSyncOnUpdate ? 'On' : 'Off'}',
+      'Status / Cull',
+      '${culler.paused ? 'Paused' : 'Active'} | Auto ${culler.autoSyncOnUpdate ? 'On' : 'Off'} | Culled ${culler.culledCount}/${culler._totalTracked}',
       valueColor: culler.paused ? VoxColor.yellow : VoxColor.lightGray,
     );
 
@@ -239,6 +304,18 @@ final class OctreeStatsInspectorUI {
 
     final rebRect = VoxRect(splitRect.right + 8.0, barY, 78.0, 22.0);
     if (_drawButton(ui, uiState, 'oct_reb', 'Rebuild', rebRect)) {
+      culler.rebuildFromScene();
+    }
+
+    final cullRect = VoxRect(x + pad, barY + 28.0, 108.0, 22.0);
+    if (_drawButton(
+      ui,
+      uiState,
+      'oct_cull',
+      culler.applyFrustumCulling ? 'Cull: On' : 'Cull: Off',
+      cullRect,
+    )) {
+      culler.applyFrustumCulling = !culler.applyFrustumCulling;
       culler.rebuildFromScene();
     }
 

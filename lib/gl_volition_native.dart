@@ -9,3 +9,4 @@ export 'package:pixeldart/pixeldart_advanced.dart';
 export 'package:pixeldart/rendering/webgl/device_api.dart';
 
 export 'src/native/native_host.dart';
+export 'src/native/native_ffi_transport.dart';
