@@ -8977,6 +8977,124 @@ void main() {
       },
     );
   });
+
+  group('E86 — Cubic Hermite Splines, Bishop Frames & Track Lofts (voxspline3d)', () {
+    test(
+      'SplineTrackLoftComponent builds MeshRenderer track geometry & drives SplineTrackInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final trackGo = engine.scene.createGameObject('CircuitTrack');
+        final loft = trackGo.addComponent(
+          SplineTrackLoftComponent(
+            trackWidth: 6.0,
+            curbHeight: 0.35,
+            sampleCount: 16,
+            closedLoop: false,
+          ),
+        );
+
+        engine.step(0.016);
+        expect(trackGo.getComponent<MeshRenderer>(), isNotNull);
+        expect(loft.vertexCount, 16 * 4);
+        expect(loft.triangleCount, 15 * 3 * 2);
+        expect(loft.totalArcLength, greaterThan(30.0));
+
+        // Test SplineTrackInspectorUI: click Width +1.0 (x=160, y=159)
+        final ui = VoxUiContext();
+        final uiState = SplineTrackInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 160.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        SplineTrackInspectorUI.render(ui, loft, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 160.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        SplineTrackInspectorUI.render(ui, loft, state: uiState);
+        final dl = ui.endFrame();
+
+        expect(loft.trackWidth, closeTo(7.0, 1e-6));
+        expect(dl.commands.any((c) => c.text == 'Spline Track Loft'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('SplineTrackLoftComponent'), isNotNull);
+        final json = reg.specFor(loft)!.toJson(loft);
+        expect(json['trackWidth'], closeTo(7.0, 1e-6));
+        expect(json['sampleCount'], 16);
+      },
+    );
+  });
+
+  group('E87 — Frame Arena, Slab Pool & Telemetry Counters (voxalloc)', () {
+    test(
+      'FrameProfilerComponent manages arena resets, generational slabs, P99 telemetry & ProfilerTelemetryInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final profGo = engine.scene.createGameObject('Profiler');
+        final prof = profGo.addComponent(
+          FrameProfilerComponent(
+            arenaCapacityBytes: 8192,
+            slabCapacity: 8,
+            autoResetArenaOnUpdate: true,
+          ),
+        );
+
+        final alloc1 = prof.allocScratchBytes(512);
+        expect(alloc1, isNotNull);
+        expect(prof.frameArena.usedBytes, 512);
+
+        final h0 = prof.allocateSlab('RenderTarget#0')!;
+        expect(prof.resolveSlab(h0), 'RenderTarget#0');
+
+        engine.step(0.016);
+        // Auto-reset clears usedBytes after frame while preserving peakBytes
+        expect(prof.frameArena.usedBytes, 0);
+        expect(prof.frameArena.peakBytes, 512);
+        expect(prof.telemetry.totalFramesRecorded, 1);
+
+        // Test ProfilerTelemetryInspectorUI: click Alloc +1KB (x=154, y=159) -> click Reset Arena (x=254, y=159)
+        final ui = VoxUiContext();
+        final uiState = ProfilerTelemetryInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 154.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        ProfilerTelemetryInspectorUI.render(ui, prof, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 154.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        ProfilerTelemetryInspectorUI.render(ui, prof, state: uiState);
+        ui.endFrame();
+        expect(prof.frameArena.usedBytes, 1024);
+        expect(prof.frameArena.peakBytes, 1024);
+
+        ui.beginFrame(
+          VoxInput(mouseX: 254.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        ProfilerTelemetryInspectorUI.render(ui, prof, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 254.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        ProfilerTelemetryInspectorUI.render(ui, prof, state: uiState);
+        final dl = ui.endFrame();
+        expect(prof.frameArena.usedBytes, 0);
+        expect(dl.commands.any((c) => c.text == 'Frame Telemetry'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('FrameProfilerComponent'), isNotNull);
+        final json = reg.specFor(prof)!.toJson(prof);
+        expect(json['arenaCapacityBytes'], 8192);
+        expect(json['slabCapacity'], 8);
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

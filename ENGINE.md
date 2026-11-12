@@ -1278,11 +1278,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E86: Cubic Hermite/B-Spline Curves, Frenet Frames & Lofted Track Geometry (`voxspline3d`)
 
-- [ ] **E86-1. `voxspline3d` Submodule: Arc-Length Parameterized Splines, Minimized-Twist Bishop Frames & Track Cross-Section Lofts.**
+- [x] **E86-1. `voxspline3d` Submodule: Arc-Length Parameterized Splines, Minimized-Twist Bishop Frames & Track Cross-Section Lofts.**
   - _Location:_ `./vendor/voxspline3d` (`https://github.com/soulwax/voxspline3d`).
-  - _APIs:_ `CubicHermiteSpline3D` (Catmull-Rom / clamped endpoint tangents & Gauss-Legendre arc-length LUT), `BishopFrameTransport` (rotation-minimizing tangent/normal/binormal frames along 3D curves), `TrackLoftBuilder` (extruded banked road/rail vertex & UV ribbon buffers).
+  - _APIs:_ `CubicHermiteSpline3D` (Catmull-Rom / clamped endpoint tangents & arc-length LUT), `BishopFrameTransport` (rotation-minimizing tangent/normal/binormal frames along 3D curves), `TrackLoftBuilder` (extruded banked road/rail vertex & UV ribbon buffers).
   - _Verify:_ `vendor/voxspline3d/test/voxspline3d_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E86-2. `SplineTrackLoftComponent` & `SplineTrackInspectorUI` Engine Integration.**
+- [x] **E86-2. `SplineTrackLoftComponent` & `SplineTrackInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/spline_track_loft.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1290,10 +1290,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E87: Frame Arena, Slab Pool & Telemetry Profiler Counters (`voxalloc`)
 
-- [ ] **E87-1. `voxalloc` Submodule: Linear Frame Bump Allocators, Typed Slab Pools & Hierarchical Scope Timers.**
+- [x] **E87-1. `voxalloc` Submodule: Linear Frame Bump Allocators, Typed Slab Pools & Hierarchical Scope Timers.**
   - _Location:_ `./vendor/voxalloc` (`https://github.com/soulwax/voxalloc`).
   - _APIs:_ `LinearFrameArena` (reset-free byte/slice sub-allocator with high-water telemetry), `FixedSlabPool` (O(1) slot handle allocate/free & generation validation), `FrameTelemetryRecorder` (hierarchical CPU/pass scope spans, rolling average & P99 budget tracking).
   - _Verify:_ `vendor/voxalloc/test/voxalloc_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E87-2. `FrameProfilerComponent` & `ProfilerTelemetryInspectorUI` Engine Integration.**
+- [x] **E87-2. `FrameProfilerComponent` & `ProfilerTelemetryInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/frame_profiler.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E88: Static & Instanced Draw-Call Batching & Spatial Cell Clustering (`voxbatch`)
+
+- [ ] **E88-1. `voxbatch` Submodule: Material/Mesh Bucket Sorting, Spatial Cell Merging & Indirect Draw Commands.**
+  - _Location:_ `./vendor/voxbatch` (`https://github.com/soulwax/voxbatch`).
+  - _APIs:_ `RenderBatchSorter` (material/shader/distance front-to-back state-change minimization), `InstanceClusterBuilder` (spatial grid clustering & per-instance transform packing), `IndirectDrawTable` (multi-draw compact command stream + batch stats).
+  - _Verify:_ `vendor/voxbatch/test/voxbatch_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E88-2. `DrawBatcherComponent` & `DrawBatchInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/draw_batcher.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E89: Analytic Two-Bone IK, FABRIK Chains & Spring-Bone Secondary Motion (`voxik2d`)
+
+- [ ] **E89-1. `voxik2d` Submodule: Law-of-Cosines Limb Solvers, Multi-Link FABRIK Chains & Damped Jiggle Bones.**
+  - _Location:_ `./vendor/voxik2d` (`https://github.com/soulwax/voxik2d`).
+  - _APIs:_ `TwoBoneIkSolver` (pole-sign bend control & soft reach clamping), `FabrikChainSolver` (angular cone constraints & N-link convergence), `SpringBoneChain` (Verlet cape/hair/antenna secondary motion with gravity & wind).
+  - _Verify:_ `vendor/voxik2d/test/voxik2d_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E89-2. `CharacterIk2DComponent` & `IkSolverInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/character_ik_2d.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

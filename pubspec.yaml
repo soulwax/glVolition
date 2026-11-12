@@ -136,6 +136,10 @@ dependencies:
     path: vendor/voxblend
   voxshadow:
     path: vendor/voxshadow
+  voxspline3d:
+    path: vendor/voxspline3d
+  voxalloc:
+    path: vendor/voxalloc
   web: ^0.5.0
 
 dev_dependencies:

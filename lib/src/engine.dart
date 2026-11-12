@@ -71,6 +71,8 @@ import 'package:voxsteer/voxsteer.dart' as steer;
 import 'package:voxgraph/voxgraph.dart' as graph;
 import 'package:voxblend/voxblend.dart' as blend;
 import 'package:voxshadow/voxshadow.dart' as shadow;
+import 'package:voxspline3d/voxspline3d.dart' as spline3d;
+import 'package:voxalloc/voxalloc.dart' as alloc;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -176,3 +178,5 @@ part 'engine/components/steering_agent.dart';
 part 'engine/components/render_graph.dart';
 part 'engine/components/blend_tree_controller.dart';
 part 'engine/components/cascaded_shadow_rig.dart';
+part 'engine/components/spline_track_loft.dart';
+part 'engine/components/frame_profiler.dart';

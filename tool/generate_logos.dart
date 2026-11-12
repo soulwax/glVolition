@@ -80,6 +80,8 @@ enum MotifKind {
   dagNodes, // Directed acyclic render-pass pipeline nodes + barrier edges (voxgraph)
   blendCross, // Overlapping blendspace wave curves + crossfade node (voxblend)
   shadowCascades, // 3 stepped frustum shadow cascade slices in iris (voxshadow)
+  splineRibbon, // Banked cubic Hermite curve & orthogonal frame triads (voxspline3d)
+  allocArena, // Segmented linear bump arena bars + telemetry pulse (voxalloc)
 }
 
 final class LogoSpec {
@@ -814,6 +816,16 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<polygon points="64,67.5 68.5,73 59.5,73" fill="#FBBF24"/>');
       overLayer.add('<polygon points="57.5,75.5 70.5,75.5 72.5,79 55.5,79" fill="#94A3B8"/>');
       overLayer.add('<polygon points="54.5,81 73.5,81 75.5,84.5 52.5,84.5" fill="#475569"/>');
+    case MotifKind.splineRibbon:
+      overLayer.add('<path d="M 54 83 C 58 67 70 85 74 69" stroke="#38BDF8" stroke-width="2.4" stroke-linecap="round"/>');
+      overLayer.add('<circle cx="54" cy="83" r="2.2" fill="#2DD4BF"/>');
+      overLayer.add('<circle cx="64" cy="76" r="2.2" fill="#F59E0B"/>');
+      overLayer.add('<circle cx="74" cy="69" r="2.2" fill="#38BDF8"/>');
+    case MotifKind.allocArena:
+      overLayer.add('<rect x="54.5" y="69.5" width="7" height="5" rx="1" fill="#34D399"/>');
+      overLayer.add('<rect x="63.0" y="69.5" width="10.5" height="5" rx="1" fill="#38BDF8"/>');
+      overLayer.add('<rect x="54.5" y="76.5" width="13" height="5" rx="1" fill="#F59E0B"/>');
+      overLayer.add('<rect x="69.0" y="76.5" width="4.5" height="5" rx="1" fill="#475569"/>');
     default:
       break;
   }
@@ -1176,6 +1188,30 @@ const List<LogoSpec> allLogoSpecs = [
     gap: 4.2,
     cornerFillet: 5.5,
     colors: ['#475569', '#64748B', '#0EA5E9'],
+  ),
+  LogoSpec(
+    name: 'voxspline3d',
+    category: 'World & Geometry',
+    motif: MotifKind.splineRibbon,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 8.0,
+    colors: ['#06B6D4', '#38BDF8', '#2DD4BF'],
+  ),
+  LogoSpec(
+    name: 'voxalloc',
+    category: 'Core & Systems',
+    motif: MotifKind.allocArena,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 5.5,
+    colors: ['#10B981', '#0EA5E9', '#6366F1'],
   ),
   LogoSpec(
     name: 'voxsky',

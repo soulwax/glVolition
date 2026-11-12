@@ -492,5 +492,7 @@ final class ComponentRegistry {
     register<RenderGraphComponent>(RenderGraphComponent.spec);
     register<BlendTreeControllerComponent>(BlendTreeControllerComponent.spec);
     register<CascadedShadowRigComponent>(CascadedShadowRigComponent.spec);
+    register<SplineTrackLoftComponent>(SplineTrackLoftComponent.spec);
+    register<FrameProfilerComponent>(FrameProfilerComponent.spec);
   }
 }

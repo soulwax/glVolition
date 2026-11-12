@@ -190,3 +190,9 @@
 [submodule "vendor/voxshadow"]
 	path = vendor/voxshadow
 	url = https://github.com/soulwax/voxshadow.git
+[submodule "vendor/voxspline3d"]
+	path = vendor/voxspline3d
+	url = https://github.com/soulwax/voxspline3d.git
+[submodule "vendor/voxalloc"]
+	path = vendor/voxalloc
+	url = https://github.com/soulwax/voxalloc.git
