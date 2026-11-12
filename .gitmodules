@@ -184,3 +184,9 @@
 [submodule "vendor/voxgraph"]
 	path = vendor/voxgraph
 	url = https://github.com/soulwax/voxgraph.git
+[submodule "vendor/voxblend"]
+	path = vendor/voxblend
+	url = https://github.com/soulwax/voxblend.git
+[submodule "vendor/voxshadow"]
+	path = vendor/voxshadow
+	url = https://github.com/soulwax/voxshadow.git

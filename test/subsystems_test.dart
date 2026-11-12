@@ -8845,6 +8845,138 @@ void main() {
       },
     );
   });
+
+  group('E84 — Blendspaces, Motion Clips & Root-Motion State Machines (voxblend)', () {
+    test(
+      'BlendTreeControllerComponent transitions via parameter, applies root motion & drives BlendTreeInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final hero = engine.scene.createGameObject('LocomotionHero');
+        final ctrl = hero.addComponent(
+          BlendTreeControllerComponent(
+            parameterY: 3.5,
+            applyRootMotion: true,
+          ),
+        );
+
+        for (var i = 0; i < 6; i++) {
+          engine.step(0.05);
+        }
+
+        expect(ctrl.activeStateName, 'Run');
+        expect(hero.transform.position.z, greaterThan(0.5));
+        expect(ctrl.lastBlendResult?.dominantClipName, 'run');
+
+        // Test BlendTreeInspectorUI: click Pause (x=66, y=159) -> click Jump (x=146, y=159)
+        final ui = VoxUiContext();
+        final uiState = BlendTreeInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 66.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        BlendTreeInspectorUI.render(ui, ctrl, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 66.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        BlendTreeInspectorUI.render(ui, ctrl, state: uiState);
+        ui.endFrame();
+        expect(ctrl.paused, isTrue);
+
+        ui.beginFrame(
+          VoxInput(mouseX: 146.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        BlendTreeInspectorUI.render(ui, ctrl, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 146.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        BlendTreeInspectorUI.render(ui, ctrl, state: uiState);
+        final dl = ui.endFrame();
+
+        ctrl.stepController(0.05);
+        expect(ctrl.activeStateName, 'Jump');
+        expect(dl.commands.any((c) => c.text == 'Blend Tree FSM'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('BlendTreeControllerComponent'), isNotNull);
+        final json = reg.specFor(ctrl)!.toJson(ctrl);
+        expect(json['parameterY'], closeTo(3.5, 1e-6));
+        expect(json['paused'], isTrue);
+      },
+    );
+  });
+
+  group('E85 — Cascaded Shadow Splits, Texel Snapping & PCSS Kernels (voxshadow)', () {
+    test(
+      'CascadedShadowRigComponent builds practical splits, texel-snapped ortho bounds & drives ShadowCascadeInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final camGo = engine.scene.createGameObject(
+          'MainCam',
+          position: const Vec3(0.0, 6.0, 12.0),
+        );
+        final cam = camGo.addComponent(Camera(near: 0.5, far: 150.0));
+
+        final sunGo = engine.scene.createGameObject('SunLight');
+        sunGo.transform.lookAt(const Vec3(1.0, -2.0, -1.0));
+        final sun = sunGo.addComponent(Light.directional());
+
+        final rigGo = engine.scene.createGameObject('ShadowRig');
+        final rig = rigGo.addComponent(
+          CascadedShadowRigComponent(
+            cascadeCount: 4,
+            shadowMapResolution: 512,
+            splitLambda: 0.65,
+            maxShadowDistance: 100.0,
+            snapToTexels: true,
+            targetCamera: cam,
+            targetLight: sun,
+          ),
+        );
+
+        engine.step(0.016);
+        expect(rig.splits.length, 4);
+        expect(rig.cascades.length, 4);
+        expect(rig.pcssKernel.taps.length, 16);
+        final prevMinX = rig.cascades.first.minX;
+
+        // Tiny sub-texel camera pan keeps snapped cascade-0 bounds locked cleanly
+        camGo.transform.position = Vec3(rig.cascades.first.texelWorldSize * 0.1, 6.0, 12.0);
+        engine.step(0.016);
+        expect(rig.cascades.first.minX, closeTo(prevMinX, 1e-6));
+
+        // Test ShadowCascadeInspectorUI: click Cascades +1 (x=160, y=159)
+        final ui = VoxUiContext();
+        final uiState = ShadowCascadeInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 160.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        ShadowCascadeInspectorUI.render(ui, rig, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 160.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        ShadowCascadeInspectorUI.render(ui, rig, state: uiState);
+        final dl = ui.endFrame();
+
+        expect(rig.cascadeCount, 5);
+        expect(rig.cascades.length, 5);
+        expect(dl.commands.any((c) => c.text == 'Shadow Cascades'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('CascadedShadowRigComponent'), isNotNull);
+        final json = reg.specFor(rig)!.toJson(rig);
+        expect(json['cascadeCount'], 5);
+        expect(json['snapToTexels'], isTrue);
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

@@ -1254,11 +1254,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E84: Sprite-Sheet State Machines, 2D Blendspaces & Root-Motion Clips (`voxblend`)
 
-- [ ] **E84-1. `voxblend` Submodule: 1D/2D Parameterized Blend Trees, Locomotion Crossfades & Root-Motion Deltas.**
+- [x] **E84-1. `voxblend` Submodule: 1D/2D Parameterized Blend Trees, Locomotion Crossfades & Root-Motion Deltas.**
   - _Location:_ `./vendor/voxblend` (`https://github.com/soulwax/voxblend`).
   - _APIs:_ `BlendSpace1D` / `BlendSpace2D` (Barycentric / bilinear motion sample weight blending), `MotionClipSampler` (looping frame & root-motion velocity delta extraction), `StateBlendMachine` (transition rules, exit-time normalization & crossfade weights).
   - _Verify:_ `vendor/voxblend/test/voxblend_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E84-2. `BlendTreeControllerComponent` & `BlendTreeInspectorUI` Engine Integration.**
+- [x] **E84-2. `BlendTreeControllerComponent` & `BlendTreeInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/blend_tree_controller.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1266,10 +1266,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E85: Cascaded Shadow Splits, Texel Snapping & Penumbra Kernels (`voxshadow`)
 
-- [ ] **E85-1. `voxshadow` Submodule: Practical Split CSM Frusta, Light-Space Ortho Fitting & Stabilized Shadow Matrices.**
+- [x] **E85-1. `voxshadow` Submodule: Practical Split CSM Frusta, Light-Space Ortho Fitting & Stabilized Shadow Matrices.**
   - _Location:_ `./vendor/voxshadow` (`https://github.com/soulwax/voxshadow`).
-  - _APIs:_ `CascadeSplitCalculator` (logarithmic/uniform hybrid cascade plane partition), `LightOrthoFitter` (bounding sphere frustum fit & shadow-texel grid snapping), `PcssKernelTable` (Poisson disk blocker search & soft PCF tap weights).
+  - _APIs:_ `ShadowCascadeSplitter` (logarithmic/uniform hybrid cascade plane partition), `LightOrthoFitter` (bounding sphere frustum fit & shadow-texel grid snapping), `PcssKernelTable` (Poisson disk blocker search & soft PCF tap weights).
   - _Verify:_ `vendor/voxshadow/test/voxshadow_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E85-2. `CascadedShadowRigComponent` & `ShadowCascadeInspectorUI` Engine Integration.**
+- [x] **E85-2. `CascadedShadowRigComponent` & `ShadowCascadeInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/cascaded_shadow_rig.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E86: Cubic Hermite/B-Spline Curves, Frenet Frames & Lofted Track Geometry (`voxspline3d`)
+
+- [ ] **E86-1. `voxspline3d` Submodule: Arc-Length Parameterized Splines, Minimized-Twist Bishop Frames & Track Cross-Section Lofts.**
+  - _Location:_ `./vendor/voxspline3d` (`https://github.com/soulwax/voxspline3d`).
+  - _APIs:_ `CubicHermiteSpline3D` (Catmull-Rom / clamped endpoint tangents & Gauss-Legendre arc-length LUT), `BishopFrameTransport` (rotation-minimizing tangent/normal/binormal frames along 3D curves), `TrackLoftBuilder` (extruded banked road/rail vertex & UV ribbon buffers).
+  - _Verify:_ `vendor/voxspline3d/test/voxspline3d_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E86-2. `SplineTrackLoftComponent` & `SplineTrackInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/spline_track_loft.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E87: Frame Arena, Slab Pool & Telemetry Profiler Counters (`voxalloc`)
+
+- [ ] **E87-1. `voxalloc` Submodule: Linear Frame Bump Allocators, Typed Slab Pools & Hierarchical Scope Timers.**
+  - _Location:_ `./vendor/voxalloc` (`https://github.com/soulwax/voxalloc`).
+  - _APIs:_ `LinearFrameArena` (reset-free byte/slice sub-allocator with high-water telemetry), `FixedSlabPool` (O(1) slot handle allocate/free & generation validation), `FrameTelemetryRecorder` (hierarchical CPU/pass scope spans, rolling average & P99 budget tracking).
+  - _Verify:_ `vendor/voxalloc/test/voxalloc_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E87-2. `FrameProfilerComponent` & `ProfilerTelemetryInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/frame_profiler.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

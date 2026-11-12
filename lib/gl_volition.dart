@@ -65,5 +65,7 @@ export 'package:voxbroad/voxbroad.dart';
 export 'package:voxribbon/voxribbon.dart';
 export 'package:voxsteer/voxsteer.dart';
 export 'package:voxgraph/voxgraph.dart';
+export 'package:voxblend/voxblend.dart';
+export 'package:voxshadow/voxshadow.dart';
 
 export 'src/engine.dart';

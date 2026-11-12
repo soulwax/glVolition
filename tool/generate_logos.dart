@@ -78,6 +78,8 @@ enum MotifKind {
   ribbonSwirl, // Curl turbulence swirling double-ribbon stroke (voxribbon)
   steerWedge, // Wedge formation chevrons + vector heading arc (voxsteer)
   dagNodes, // Directed acyclic render-pass pipeline nodes + barrier edges (voxgraph)
+  blendCross, // Overlapping blendspace wave curves + crossfade node (voxblend)
+  shadowCascades, // 3 stepped frustum shadow cascade slices in iris (voxshadow)
 }
 
 final class LogoSpec {
@@ -804,6 +806,14 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<circle cx="56.5" cy="71.5" r="2.7" fill="#38BDF8"/>');
       overLayer.add('<circle cx="71.5" cy="71.5" r="2.7" fill="#818CF8"/>');
       overLayer.add('<circle cx="64.0" cy="81.5" r="3.0" fill="#F59E0B"/>');
+    case MotifKind.blendCross:
+      overLayer.add('<path d="M 55 82 C 60 82 68 70 73 70" stroke="#F43F5E" stroke-width="2.2" stroke-linecap="round"/>');
+      overLayer.add('<path d="M 55 70 C 60 70 68 82 73 82" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round"/>');
+      overLayer.add('<circle cx="64.0" cy="76.0" r="2.6" fill="#F59E0B"/>');
+    case MotifKind.shadowCascades:
+      overLayer.add('<polygon points="64,67.5 68.5,73 59.5,73" fill="#FBBF24"/>');
+      overLayer.add('<polygon points="57.5,75.5 70.5,75.5 72.5,79 55.5,79" fill="#94A3B8"/>');
+      overLayer.add('<polygon points="54.5,81 73.5,81 75.5,84.5 52.5,84.5" fill="#475569"/>');
     default:
       break;
   }
@@ -1142,6 +1152,30 @@ const List<LogoSpec> allLogoSpecs = [
     gap: 4.2,
     cornerFillet: 6.0,
     colors: ['#38BDF8', '#6366F1', '#0284C7'],
+  ),
+  LogoSpec(
+    name: 'voxblend',
+    category: 'Physics & Motion',
+    motif: MotifKind.blendCross,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 7.5,
+    colors: ['#EC4899', '#8B5CF6', '#38BDF8'],
+  ),
+  LogoSpec(
+    name: 'voxshadow',
+    category: 'Lighting & Optics',
+    motif: MotifKind.shadowCascades,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 5.5,
+    colors: ['#475569', '#64748B', '#0EA5E9'],
   ),
   LogoSpec(
     name: 'voxsky',

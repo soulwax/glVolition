@@ -132,6 +132,10 @@ dependencies:
     path: vendor/voxsteer
   voxgraph:
     path: vendor/voxgraph
+  voxblend:
+    path: vendor/voxblend
+  voxshadow:
+    path: vendor/voxshadow
   web: ^0.5.0
 
 dev_dependencies:

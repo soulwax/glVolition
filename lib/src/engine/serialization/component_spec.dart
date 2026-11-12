@@ -490,5 +490,7 @@ final class ComponentRegistry {
     register<ParticleRibbonComponent>(ParticleRibbonComponent.spec);
     register<SteeringAgentComponent>(SteeringAgentComponent.spec);
     register<RenderGraphComponent>(RenderGraphComponent.spec);
+    register<BlendTreeControllerComponent>(BlendTreeControllerComponent.spec);
+    register<CascadedShadowRigComponent>(CascadedShadowRigComponent.spec);
   }
 }
