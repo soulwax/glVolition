@@ -142,3 +142,9 @@
 [submodule "vendor/voxquest"]
 	path = vendor/voxquest
 	url = https://github.com/soulwax/voxquest.git
+[submodule "vendor/voxreverb"]
+	path = vendor/voxreverb
+	url = https://github.com/soulwax/voxreverb.git
+[submodule "vendor/voxscore"]
+	path = vendor/voxscore
+	url = https://github.com/soulwax/voxscore.git

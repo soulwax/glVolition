@@ -17,7 +17,8 @@ export 'package:voxnet/voxnet.dart';
 export 'package:voxanim/voxanim.dart';
 export 'package:voxlight/voxlight.dart';
 export 'package:voxdsp/voxdsp.dart';
-export 'package:voxtalk/voxtalk.dart' hide LocalizationTable, QuestStatus, QuestTracker;
+export 'package:voxtalk/voxtalk.dart'
+    hide LocalizationTable, QuestStatus, QuestTracker;
 export 'package:voxvfx/voxvfx.dart';
 export 'package:voxvox/voxvox.dart';
 export 'package:voxpad/voxpad.dart';
@@ -50,5 +51,7 @@ export 'package:voxcircuit/voxcircuit.dart';
 export 'package:voxfluid/voxfluid.dart';
 export 'package:voxprobe/voxprobe.dart';
 export 'package:voxquest/voxquest.dart';
+export 'package:voxreverb/voxreverb.dart';
+export 'package:voxscore/voxscore.dart';
 
 export 'src/engine.dart';

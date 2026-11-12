@@ -475,5 +475,8 @@ final class ComponentRegistry {
     register<FluidSurfaceComponent>(FluidSurfaceComponent.spec);
     register<LightProbeVolumeComponent>(LightProbeVolumeComponent.spec);
     register<QuestLogComponent>(QuestLogComponent.spec);
+    register<AcousticRoomComponent>(AcousticRoomComponent.spec);
+    register<AcousticPortalComponent>(AcousticPortalComponent.spec);
+    register<AdaptiveMusicComponent>(AdaptiveMusicComponent.spec);
   }
 }

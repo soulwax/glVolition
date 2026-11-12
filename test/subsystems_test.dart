@@ -7566,6 +7566,255 @@ void main() {
       expect(json['storageKey'], 'campaign_save_01');
     });
   });
+
+  group('E70 — Room Acoustics, Eyring RT60 & Portal Diffraction (voxreverb)', () {
+    test('AcousticRoomComponent & AcousticPortalComponent drive AudioReverbZone, LPF & AcousticsInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final listenerGo = scene.createGameObject(
+        'PlayerListener',
+        position: const Vec3(-4.0, 1.5, 0.0),
+        components: [AudioListener()],
+      );
+
+      final cavernZone = AudioReverbZone();
+      final cavernGo = scene.createGameObject(
+        'StoneCavern',
+        position: const Vec3(-5.0, 2.5, 0.0),
+      );
+      cavernGo.addComponent(cavernZone);
+      final cavernRoom = cavernGo.addComponent(
+        AcousticRoomComponent(
+          roomId: 'cavern',
+          size: const Vec3(10.0, 6.0, 10.0),
+          materialPreset: AcousticMaterialPreset.stoneCavern,
+          autoSyncReverbZone: true,
+        ),
+      );
+
+      final boothGo = scene.createGameObject(
+        'VoiceBooth',
+        position: const Vec3(5.0, 2.5, 0.0),
+      );
+      final boothRoom = boothGo.addComponent(
+        AcousticRoomComponent(
+          roomId: 'booth',
+          size: const Vec3(10.0, 6.0, 10.0),
+          materialPreset: AcousticMaterialPreset.acousticFoam,
+        ),
+      );
+
+      final lpf = AudioLowPassFilterComponent();
+      final doorGo = scene.createGameObject(
+        'OakPortal',
+        position: const Vec3(0.0, 1.5, 3.0),
+      );
+      doorGo.addComponent(lpf);
+      final doorPortal = doorGo.addComponent(
+        AcousticPortalComponent(
+          portalId: 'oak_door',
+          roomAId: 'cavern',
+          roomBId: 'booth',
+          openFactor: 1.0,
+        ),
+      );
+
+      engine.step(0.05);
+      expect(cavernRoom.eyringRt60, greaterThan(boothRoom.eyringRt60 * 3.0));
+      expect(cavernZone.roomSize, greaterThan(0.5));
+
+      final openRes = boothRoom.solveToListener(
+        emitterPosition: const Vec3(6.0, 1.5, -2.0),
+        listenerPosition: listenerGo.transform.position,
+      );
+      expect(openRes.traversedPortalIds, ['oak_door']);
+      expect(openRes.diffractionGain, greaterThan(0.5));
+      expect(openRes.lowPassCutoffHz, greaterThan(15000.0));
+
+      // Click 'Toggle Door' (x=174, y=156) & 'Solve Path' (x=74, y=156) & 'Cycle Mat' (x=271, y=156)
+      final ui = VoxUiContext();
+      final uiState = AcousticsInspectorUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 174.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      AcousticsInspectorUI.render(
+        ui,
+        boothRoom,
+        portal: doorPortal,
+        emitterPosition: const Vec3(6.0, 1.5, -2.0),
+        listenerPosition: listenerGo.transform.position,
+        state: uiState,
+      );
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 174.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      AcousticsInspectorUI.render(
+        ui,
+        boothRoom,
+        portal: doorPortal,
+        emitterPosition: const Vec3(6.0, 1.5, -2.0),
+        listenerPosition: listenerGo.transform.position,
+        state: uiState,
+      );
+      ui.endFrame();
+      expect(doorPortal.openFactor, closeTo(0.0, 1e-6));
+      expect(lpf.cutoffFrequency, lessThan(800.0));
+
+      ui.beginFrame(VoxInput(mouseX: 74.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      AcousticsInspectorUI.render(
+        ui,
+        boothRoom,
+        portal: doorPortal,
+        emitterPosition: const Vec3(6.0, 1.5, -2.0),
+        listenerPosition: listenerGo.transform.position,
+        state: uiState,
+      );
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 74.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      AcousticsInspectorUI.render(
+        ui,
+        boothRoom,
+        portal: doorPortal,
+        emitterPosition: const Vec3(6.0, 1.5, -2.0),
+        listenerPosition: listenerGo.transform.position,
+        state: uiState,
+      );
+      ui.endFrame();
+      expect(boothRoom.lastSolvedPath!.diffractionGain, lessThan(0.15));
+
+      ui.beginFrame(VoxInput(mouseX: 271.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      AcousticsInspectorUI.render(ui, cavernRoom, portal: doorPortal, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 271.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      AcousticsInspectorUI.render(ui, cavernRoom, portal: doorPortal, state: uiState);
+      ui.endFrame();
+
+      expect(cavernRoom.materialPreset, AcousticMaterialPreset.woodPanel);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('AcousticRoomComponent'), isNotNull);
+      expect(reg.specByName('AcousticPortalComponent'), isNotNull);
+      expect(reg.specFor(cavernRoom)!.toJson(cavernRoom)['roomId'], 'cavern');
+      expect(reg.specFor(doorPortal)!.toJson(doorPortal)['portalId'], 'oak_door');
+    });
+  });
+
+  group('E71 — Adaptive Music Stems & Beat-Quantized Transitions (voxscore)', () {
+    test('AdaptiveMusicComponent drives bound stem AudioSources, triggers stingers & renders MusicScoreInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final padClip = ProceduralAudioClip.fromSynth(SynthSound.laser(), name: 'pad');
+      final drumClip = ProceduralAudioClip.fromSynth(SynthSound.explosion(), name: 'drums');
+      final stingerClip = ProceduralAudioClip.fromSynth(SynthSound.powerup(), name: 'sting');
+
+      final padSrc = scene
+          .createGameObject('StemPad')
+          .addComponent(AudioSource(clip: padClip, loop: true, bus: 'music'));
+      final drumSrc = scene
+          .createGameObject('StemDrums')
+          .addComponent(AudioSource(clip: drumClip, loop: true, bus: 'music'));
+
+      final music = scene.createGameObject('MusicDirector').addComponent(
+        AdaptiveMusicComponent(
+          initialIntensity: 0.2,
+          targetIntensity: 0.2,
+          intensitySmoothingPerSecond: 10.0,
+        ),
+      )
+        ..registerSection(
+          MusicSectionDef(
+            id: 'calm',
+            name: 'Explore',
+            bpm: 120.0,
+            stems: [
+              MusicStemLayer(id: 'pad', minIntensity: 0.0, fadeInSeconds: 0.1),
+              MusicStemLayer(id: 'drums', minIntensity: 0.45, fadeInSeconds: 0.1, fadeOutSeconds: 0.1),
+            ],
+          ),
+        )
+        ..registerSection(
+          MusicSectionDef(
+            id: 'battle',
+            name: 'Combat',
+            bpm: 140.0,
+            stems: [
+              MusicStemLayer(id: 'drums', minIntensity: 0.0, fadeInSeconds: 0.1),
+            ],
+          ),
+        )
+        ..registerStinger(
+          const MusicStingerCue(
+            id: 'alert_fanfare',
+            quantization: MusicQuantization.nextBeat,
+            durationSeconds: 0.8,
+            duckAmount: 0.5,
+          ),
+          clip: stingerClip,
+        )
+        ..bindStemSource('pad', padSrc)
+        ..bindStemSource('drums', drumSrc);
+
+      expect(music.startSection('calm'), isTrue);
+      for (var i = 0; i < 6; i++) {
+        engine.step(0.05);
+      }
+      expect(padSrc.volume, closeTo(1.0, 0.05));
+      expect(padSrc.isPlaying, isTrue);
+      expect(drumSrc.volume, closeTo(0.0, 1e-6));
+
+      // Click 'Int +0.3' (x=71), 'Stinger' (x=159), and 'Next Sec' (x=247) at y=156 in MusicScoreInspectorUI
+      final ui = VoxUiContext();
+      final uiState = MusicScoreInspectorUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 71.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      MusicScoreInspectorUI.render(ui, music, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 71.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      MusicScoreInspectorUI.render(ui, music, state: uiState);
+      ui.endFrame();
+      expect(music.targetIntensity, closeTo(0.5, 1e-6));
+
+      ui.beginFrame(VoxInput(mouseX: 159.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      MusicScoreInspectorUI.render(ui, music, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 159.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      MusicScoreInspectorUI.render(ui, music, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: 247.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      MusicScoreInspectorUI.render(ui, music, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 247.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      MusicScoreInspectorUI.render(ui, music, state: uiState);
+      ui.endFrame();
+      expect(music.pendingSectionId, 'battle');
+
+      // Advance past beat (stinger fires & drums swell) then past bar 1 (section switches to 'battle' @ 140 BPM)
+      for (var i = 0; i < 6; i++) {
+        engine.step(0.05); // t = 0.60s (> beat 1 at 0.50s)
+      }
+      expect(music.lastSnapshot!.musicDuckMultiplier, lessThan(0.75));
+      expect(drumSrc.volume, greaterThan(0.2));
+
+      for (var i = 0; i < 32; i++) {
+        engine.step(0.05); // crosses bar 1 at 2.00s
+      }
+      expect(music.activeSectionId, 'battle');
+      expect(music.conductor.clock.bpm, 140.0);
+
+      ui.beginFrame(VoxInput());
+      MusicScoreInspectorUI.render(ui, music, state: uiState);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == 'Combat (140 BPM)'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('AdaptiveMusicComponent'), isNotNull);
+      final json = reg.specFor(music)!.toJson(music);
+      expect(json['targetIntensity'], closeTo(0.5, 1e-6));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

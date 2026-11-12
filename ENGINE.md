@@ -274,7 +274,7 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 - [x] **E11-1. `NavGrid2D` & `NavAgent`.**
   - _Touches:_ `lib/src/engine/navigation.dart`.
-  - _Verify:_ `test/subsystems_test.dart` (A* pathfinding with corner prevention, tilemap extraction, and waypoint steering).
+  - _Verify:_ `test/subsystems_test.dart` (A\* pathfinding with corner prevention, tilemap extraction, and waypoint steering).
 - [x] **E11-2. `LodGroup` & `Billboard`.**
   - _Touches:_ `lib/src/engine/components/lod_billboard.dart`.
   - _Verify:_ `test/subsystems_test.dart` (camera-distance child switching and spherical/cylindrical camera facing).
@@ -559,7 +559,7 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E30: High-Performance Pathfinding Submodule (voxpath), Crowd Flow Fields, and Autonomous NavAgent2D
 
-- [x] **E30-1. `voxpath` Submodule: Jump Point Search (JPS), Weighted A*, Flow Fields & Path Smoothing.**
+- [x] **E30-1. `voxpath` Submodule: Jump Point Search (JPS), Weighted A\*, Flow Fields & Path Smoothing.**
   - _Location:_ `./vendor/voxpath` (`https://github.com/soulwax/voxpath`).
   - _APIs:_ `GridPoint`, `NavGrid`, `AStarFinder`, `JumpPointSearch`, `FlowField`, `PathSmoother`, `Heuristics` (`manhattan`, `euclidean`, `octile`, `chebyshev`).
   - _Verify:_ `vendor/voxpath/test/voxpath_test.dart` & `test/subsystems_test.dart` (Bresenham line-of-sight, obstacle avoidance, JPS open-field pruning, Dijkstra integration gradient vector field, and collinear waypoint reduction).
@@ -868,11 +868,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ---
 
-## E52: 3D Polygon Navigation Mesh, A* Corridor & Funnel Path Smoothing (`voxnav3d`)
+## E52: 3D Polygon Navigation Mesh, A\* Corridor & Funnel Path Smoothing (`voxnav3d`)
 
 - [x] **E52-1. `voxnav3d` Submodule: NavMesh Polygon Graph, Funnel String-Pulling & Off-Mesh Links.**
   - _Location:_ `./vendor/voxnav3d` (`https://github.com/soulwax/voxnav3d`).
-  - _APIs:_ `NavPolygonMesh`, `NavMeshBuilder` (heightfield walkability regions & shared portal edges), `NavMeshQuery` (A* polygon portal corridor + Simple Stupid Funnel string-pulling + closest point on mesh), `OffMeshLink` (jump/drop/teleporter portals).
+  - _APIs:_ `NavPolygonMesh`, `NavMeshBuilder` (heightfield walkability regions & shared portal edges), `NavMeshQuery` (A\* polygon portal corridor + Simple Stupid Funnel string-pulling + closest point on mesh), `OffMeshLink` (jump/drop/teleporter portals).
   - _Verify:_ `vendor/voxnav3d/test/voxnav3d_test.dart` & `test/subsystems_test.dart`.
 - [x] **E52-2. `NavMeshSurfaceComponent`, `NavMeshAgent3DComponent` & `NavMeshDebuggerUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/navmesh_3d.dart`.
@@ -1105,20 +1105,3 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 - [ ] **E71-2. `AdaptiveMusicComponent` & `MusicScoreInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/adaptive_music.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

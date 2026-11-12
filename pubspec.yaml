@@ -104,6 +104,10 @@ dependencies:
     path: vendor/voxprobe
   voxquest:
     path: vendor/voxquest
+  voxreverb:
+    path: vendor/voxreverb
+  voxscore:
+    path: vendor/voxscore
   web: ^0.5.0
 
 dev_dependencies:
