@@ -124,6 +124,10 @@ dependencies:
     path: vendor/voxatlas
   voxlens:
     path: vendor/voxlens
+  voxbroad:
+    path: vendor/voxbroad
+  voxribbon:
+    path: vendor/voxribbon
   web: ^0.5.0
 
 dev_dependencies:

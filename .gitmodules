@@ -172,3 +172,9 @@
 [submodule "vendor/voxlens"]
 	path = vendor/voxlens
 	url = https://github.com/soulwax/voxlens.git
+[submodule "vendor/voxbroad"]
+	path = vendor/voxbroad
+	url = https://github.com/soulwax/voxbroad.git
+[submodule "vendor/voxribbon"]
+	path = vendor/voxribbon
+	url = https://github.com/soulwax/voxribbon.git

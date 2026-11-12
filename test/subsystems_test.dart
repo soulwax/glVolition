@@ -8573,6 +8573,142 @@ void main() {
       },
     );
   });
+
+  group('E80 — Spatial Hash Grids, SAP Broadphase & Swept-AABB TOI (voxbroad)', () {
+    test(
+      'BroadphaseWorldComponent syncs scene colliders, queries neighborhoods, solves swept TOI & drives BroadphaseStatsUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final bpGo = engine.scene.createGameObject('Broadphase');
+        final bp = bpGo.addComponent(
+          BroadphaseWorldComponent(
+            cellSize: 3.0,
+            useSapBroadphase: false,
+          ),
+        );
+
+        final a = engine.scene.createGameObject(
+          'BoxA',
+          position: const Vec3(0.0, 0.0, 0.0),
+          components: [BoxCollider(size: const Vec3(2.0, 2.0, 2.0))],
+        );
+        engine.scene.createGameObject(
+          'BoxB',
+          position: const Vec3(1.4, 0.0, 0.0),
+          components: [BoxCollider(size: const Vec3(2.0, 2.0, 2.0))],
+        );
+        engine.scene.createGameObject(
+          'Wall',
+          position: const Vec3(10.0, 0.0, 0.0),
+          components: [BoxCollider(size: const Vec3(2.0, 4.0, 4.0))],
+        );
+
+        engine.step(0.02);
+        expect(bp.trackedCount, 3);
+        expect(bp.overlapPairCount, 1);
+
+        final nearHits = bp.queryAabb(
+          Aabb(const Vec3(-1.5, -1.5, -1.5), const Vec3(0.5, 1.5, 1.5)),
+          exclude: a.getComponent<BoxCollider>(),
+        );
+        expect(nearHits.map((c) => c.gameObject.name).toList(), ['BoxB']);
+
+        // Sweep mover box from x=4 to x=19 -> hits Wall (min x=9.0, mover half=0.5 -> contact x=8.5, dist=4.5, toi=0.3)
+        final toiHit = bp.sweepAabbToi(
+          Aabb(const Vec3(3.5, -0.5, -0.5), const Vec3(4.5, 0.5, 0.5)),
+          const Vec3(15.0, 0.0, 0.0),
+        );
+        expect(toiHit, isNotNull);
+        expect(bp.colliderByEntryId(toiHit!.targetId!)?.gameObject.name, 'Wall');
+        expect(toiHit.toi, closeTo(4.5 / 15.0, 1e-4));
+        expect(toiHit.normal.x, closeTo(-1.0, 1e-5));
+
+        // Test BroadphaseStatsUI: click Toggle SAP (x=144, y=159)
+        final ui = VoxUiContext();
+        final uiState = BroadphaseStatsUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 144.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        BroadphaseStatsUI.render(ui, bp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 144.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        BroadphaseStatsUI.render(ui, bp, state: uiState);
+        final dl = ui.endFrame();
+        expect(bp.useSapBroadphase, isTrue);
+        expect(bp.overlapPairCount, 1);
+        expect(dl.commands.any((c) => c.text == 'Broadphase World'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('BroadphaseWorldComponent'), isNotNull);
+        final json = reg.specFor(bp)!.toJson(bp);
+        expect(json['useSapBroadphase'], isTrue);
+        expect(json['cellSize'], closeTo(3.0, 1e-6));
+      },
+    );
+  });
+
+  group('E81 — Particle Ribbons & Divergence-Free Curl Turbulence (voxribbon)', () {
+    test(
+      'ParticleRibbonComponent builds Catmull-Rom ribbon MeshRenderer, emits curl particles & drives RibbonInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final mr = MeshRenderer();
+        final rib = ParticleRibbonComponent(
+          emissionRate: 30.0,
+          curlAmplitude: 3.5,
+          startWidth: 0.8,
+          endWidth: 0.1,
+          minVertexDistance: 0.25,
+        );
+        final go = engine.scene.createGameObject(
+          'Comet',
+          position: const Vec3(0.0, 0.0, 0.0),
+          components: [mr, rib],
+        );
+
+        for (var i = 0; i < 6; i++) {
+          go.transform.position = Vec3(i * 0.6, (i * 0.2), 0.0);
+          engine.step(0.05);
+        }
+
+        expect(rib.ribbonPointCount, greaterThanOrEqualTo(5));
+        expect(rib.particleCount, greaterThan(0));
+        expect(rib.lastMeshData, isNotNull);
+        expect(mr.mesh, isNotNull);
+
+        // Test RibbonInspectorUI: click Burst +12 (x=140, y=159)
+        final beforeCount = rib.particleCount;
+        final ui = VoxUiContext();
+        final uiState = RibbonInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 140.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        RibbonInspectorUI.render(ui, rib, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 140.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        RibbonInspectorUI.render(ui, rib, state: uiState);
+        final dl = ui.endFrame();
+        expect(rib.particleCount, greaterThanOrEqualTo(beforeCount + 12));
+        expect(dl.commands.any((c) => c.text == 'Particle Ribbon FX'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('ParticleRibbonComponent'), isNotNull);
+        final json = reg.specFor(rib)!.toJson(rib);
+        expect(json['curlAmplitude'], closeTo(3.5, 1e-6));
+        expect(json['emitting'], isTrue);
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

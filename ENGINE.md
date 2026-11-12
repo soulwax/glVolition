@@ -1206,11 +1206,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E80: Spatial Hash Grids, Sweep-and-Prune Broadphase & Continuous Collision TOI (`voxbroad`)
 
-- [ ] **E80-1. `voxbroad` Submodule: Hierarchical Spatial Hash, SAP AABB Pruning & Speculative TOI Sweeps.**
+- [x] **E80-1. `voxbroad` Submodule: Hierarchical Spatial Hash, SAP AABB Pruning & Speculative TOI Sweeps.**
   - _Location:_ `./vendor/voxbroad` (`https://github.com/soulwax/voxbroad`).
-  - _APIs:_ `SpatialHashGrid3D` (lock-free dynamic cell buckets & neighborhood AABB query), `SweepAndPrune1D` (sorted endpoint pair tracking), `SweptAabbToi` (ray/box Minkowski speculative contact TOI solver).
+  - _APIs:_ `SpatialHashGrid3D` (dynamic 3D cell buckets, neighborhood AABB query & pair deduplication), `SweepAndPrune1D` (insertion-sorted endpoint pair tracking with 3D AABB check), `SweptAabbToi` (ray/box Minkowski speculative contact TOI solver).
   - _Verify:_ `vendor/voxbroad/test/voxbroad_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E80-2. `BroadphaseWorldComponent` & `BroadphaseStatsUI` Engine Integration.**
+- [x] **E80-2. `BroadphaseWorldComponent` & `BroadphaseStatsUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/broadphase_world.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1218,10 +1218,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E81: Deterministic Particle Ribbons, GPU-Ready Billboard Streams & Curl Turbulence (`voxribbon`)
 
-- [ ] **E81-1. `voxribbon` Submodule: Catmull-Rom Trail Buffers, Curl Noise Fields & Age Gradient Evaluators.**
+- [x] **E81-1. `voxribbon` Submodule: Catmull-Rom Trail Buffers, Curl Noise Fields & Age Gradient Evaluators.**
   - _Location:_ `./vendor/voxribbon` (`https://github.com/soulwax/voxribbon`).
-  - _APIs:_ `RibbonTrailBuffer` (distance-gated ring buffer, normal-aligned ribbon vertex emission & taper width curve), `CurlTurbulenceField` (divergence-free 3D finite-difference noise advection), `ParticleStreamEmitter` (seedable burst/rate emitter with drag & lifetime color LUT).
+  - _APIs:_ `RibbonTrailBuffer` (distance-gated ring buffer, Catmull-Rom smoothing, normal-aligned ribbon vertex emission & taper width curve), `CurlTurbulenceField` (divergence-free 3D finite-difference noise advection), `ParticleStreamEmitter` (seedable burst/rate emitter with drag, curl & lifetime color LUT).
   - _Verify:_ `vendor/voxribbon/test/voxribbon_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E81-2. `ParticleRibbonComponent` & `RibbonInspectorUI` Engine Integration.**
+- [x] **E81-2. `ParticleRibbonComponent` & `RibbonInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/particle_ribbon.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E82: Reynolds Steering, Dynamic Flocking & Formation Slots (`voxsteer`)
+
+- [ ] **E82-1. `voxsteer` Submodule: Seek/Arrive/Pursuit/Evade, Boid Separation-Alignment-Cohesion & Obstacle Whiskers.**
+  - _Location:_ `./vendor/voxsteer` (`https://github.com/soulwax/voxsteer`).
+  - _APIs:_ `SteeringAgent` (velocity-clamped force accumulator & damped turn rate), `SteeringBehaviors` (`seek`, `flee`, `arrive`, `pursue`, `evade`, `wander`, `wallAvoidance`), `FormationSlotPlanner` (`wedge`, `line`, `circle` slot offsets relative to leader heading).
+  - _Verify:_ `vendor/voxsteer/test/voxsteer_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E82-2. `SteeringAgentComponent` & `SteeringInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/steering_agent.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E83: Render/Compute Pass DAG, Resource Barriers & Frame Memory Aliasing (`voxgraph`)
+
+- [ ] **E83-1. `voxgraph` Submodule: Acyclic Render-Pass Topological Compile, Dead-Pass Culling & Transient Pool Lifetime.**
+  - _Location:_ `./vendor/voxgraph` (`https://github.com/soulwax/voxgraph`).
+  - _APIs:_ `RenderGraphBuilder` (pass read/write virtual texture declarations), `RenderGraphCompiler` (topological sort, unused-pass culling & barrier inference), `TransientResourceAliaser` (interval coloring & memory reuse efficiency).
+  - _Verify:_ `vendor/voxgraph/test/voxgraph_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E83-2. `RenderGraphComponent` & `RenderGraphInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/render_graph.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

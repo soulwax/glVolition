@@ -74,6 +74,8 @@ enum MotifKind {
   gaitStrides, // Alternating left/right foot-step stride arcs (voxgait)
   atlasGrid, // Asymmetric MaxRects packed texture tiles (voxatlas)
   lensDolly, // 6-blade optical lens ring + curved camera dolly track (voxlens)
+  broadSweep, // Spatial hash bounds + sweeping TOI arrow (voxbroad)
+  ribbonSwirl, // Curl turbulence swirling double-ribbon stroke (voxribbon)
 }
 
 final class LogoSpec {
@@ -782,6 +784,14 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<circle cx="64" cy="76" r="8.2" stroke="#38BDF8" stroke-width="2.1"/>');
       overLayer.add('<path d="M 30 112 Q 64 103 98 112" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="6 4"/>');
       overLayer.add('<circle cx="64" cy="107.5" r="2.6" fill="#F59E0B"/>');
+    case MotifKind.broadSweep:
+      overLayer.add('<rect x="55" y="69" width="7.5" height="7.5" rx="1.2" stroke="#34D399" stroke-width="1.9"/>');
+      overLayer.add('<rect x="65.5" y="75" width="7.5" height="7.5" rx="1.2" stroke="#22D3EE" stroke-width="1.9"/>');
+      overLayer.add('<path d="M 54 83 L 74 68" stroke="#F59E0B" stroke-width="2.1" stroke-linecap="round"/>');
+      overLayer.add('<circle cx="74" cy="68" r="2.1" fill="#F59E0B"/>');
+    case MotifKind.ribbonSwirl:
+      overLayer.add('<path d="M 55 83 C 58 70 70 82 73 69" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round"/>');
+      overLayer.add('<path d="M 55 76 C 58 63 70 75 73 62" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round" opacity="0.88"/>');
     default:
       break;
   }
@@ -1072,6 +1082,30 @@ const List<LogoSpec> allLogoSpecs = [
     gap: 4.2,
     cornerFillet: 6.5,
     colors: ['#0EA5E9', '#6366F1', '#38BDF8'],
+  ),
+  LogoSpec(
+    name: 'voxbroad',
+    category: 'Physics & Motion',
+    motif: MotifKind.broadSweep,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 6.0,
+    colors: ['#10B981', '#14B8A6', '#0D9488'],
+  ),
+  LogoSpec(
+    name: 'voxribbon',
+    category: 'Rendering',
+    motif: MotifKind.ribbonSwirl,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 8.5,
+    colors: ['#F43F5E', '#FB7185', '#EC4899'],
   ),
   LogoSpec(
     name: 'voxsky',

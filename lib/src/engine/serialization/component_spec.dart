@@ -486,5 +486,7 @@ final class ComponentRegistry {
     register<ProceduralGaitComponent>(ProceduralGaitComponent.spec);
     register<TextureAtlasComponent>(TextureAtlasComponent.spec);
     register<CameraLensRigComponent>(CameraLensRigComponent.spec);
+    register<BroadphaseWorldComponent>(BroadphaseWorldComponent.spec);
+    register<ParticleRibbonComponent>(ParticleRibbonComponent.spec);
   }
 }
