@@ -6790,6 +6790,203 @@ void main() {
       expect(json['maxActiveSlots'], 1);
     });
   });
+
+  group('E62 — Modular Snap-Grid Construction & Blueprints (voxbuild)', () {
+    test('ConstructionPlannerComponent snaps sockets, spawns colliders, captures/stamps blueprints & renders BuilderInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      const floorDef = BuildPieceDef(
+        id: 'floor',
+        name: 'Wood Deck',
+        halfExtents: BuildVec3(1.0, 0.1, 1.0),
+        providesFoundationSupport: true,
+        costs: [BuildCostItem('wood', 4.0)],
+        sockets: [
+          BuildSocket(
+            id: 'wall_north',
+            socketType: 'wall_base',
+            localPosition: BuildVec3(0.0, 0.1, -1.0),
+            localForward: BuildVec3(0.0, 0.0, -1.0),
+          ),
+        ],
+      );
+      const wallDef = BuildPieceDef(
+        id: 'wall',
+        name: 'Stone Wall',
+        halfExtents: BuildVec3(1.0, 1.0, 0.15),
+        requiresGrounded: true,
+        costs: [BuildCostItem('stone', 6.0)],
+        sockets: [
+          BuildSocket(
+            id: 'bottom',
+            socketType: 'wall_base',
+            localPosition: BuildVec3(0.0, -1.0, 0.0),
+            localForward: BuildVec3(0.0, 0.0, 1.0),
+          ),
+        ],
+      );
+
+      final planner = scene.createGameObject('BuilderRig').addComponent(
+        ConstructionPlannerComponent(gridSize: 2.0, socketSnapRadius: 1.5),
+      )
+        ..registerPieceDef(floorDef)
+        ..registerPieceDef(wallDef);
+
+      planner.activeDefId = 'floor';
+      final fObj = planner.placeAt(const Vec3(0.1, 0.05, 0.2));
+      expect(fObj, isNotNull);
+      expect(fObj!.getComponent<BoxCollider>(), isNotNull);
+      expect(fObj.getComponent<BlueprintPieceComponent>()!.defId, 'floor');
+
+      planner.activeDefId = 'wall';
+      final cand = planner.previewAt(const Vec3(0.0, 0.15, -1.05));
+      expect(cand.isValid, isTrue);
+      expect(cand.snappedToSocketId, 'wall_north');
+      final wObj = planner.placeAt(const Vec3(0.0, 0.15, -1.05));
+      expect(wObj, isNotNull);
+      expect(planner.placedCount, 2);
+      expect(planner.totalStructureCost['wood'], closeTo(4.0, 1e-6));
+      expect(planner.totalStructureCost['stone'], closeTo(6.0, 1e-6));
+
+      final bp = planner.captureBlueprint('WatchBay', origin: Vec3.zero);
+      final stamped = planner.stampBlueprint(bp, const Vec3(10.0, 0.0, 0.0), yawSteps: 1);
+      expect(stamped.length, 2);
+      expect(planner.placedCount, 4);
+
+      // Click 'Rot +90' (x=150, y=156) and 'Undo' (x=232, y=156) via BuilderInspectorUI.
+      final ui = VoxUiContext();
+      final uiState = BuilderInspectorUiState();
+      const rotX = 150.0;
+      const undoX = 232.0;
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: rotX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      BuilderInspectorUI.render(ui, planner, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: rotX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      BuilderInspectorUI.render(ui, planner, state: uiState);
+      ui.endFrame();
+      expect(planner.activeYawSteps, 1);
+
+      ui.beginFrame(VoxInput(mouseX: undoX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      BuilderInspectorUI.render(ui, planner, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: undoX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      BuilderInspectorUI.render(ui, planner, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      BuilderInspectorUI.render(ui, planner, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(planner.placedCount, 3);
+      expect(drawList.commands.any((c) => c.text == 'wall / 90deg'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('BlueprintPieceComponent'), isNotNull);
+      expect(reg.specByName('ConstructionPlannerComponent'), isNotNull);
+      final json = reg.specFor(planner)!.toJson(planner);
+      expect(json['gridSize'], 2.0);
+    });
+  });
+
+  group('E63 — Poisson-Disk Foliage Scattering & Wind Sway (voxfoliage)', () {
+    test('FoliageScatterComponent scatters TerrainComponent heightfield, culls LOD clusters, sways in wind & renders FoliageInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      // Ground terrain sloped gentle meadow
+      final terrainGen = TerrainGenerator(
+        width: 64.0,
+        depth: 64.0,
+        subdivisionsX: 32,
+        subdivisionsZ: 32,
+        maxHeight: 4.0,
+        islandRadius: 28.0,
+        seed: 7,
+      );
+      scene.createGameObject(
+        'MeadowTerrain',
+        components: [TerrainComponent(terrainGen)],
+      );
+
+      final cam = scene.createGameObject(
+        'MainCam',
+        position: const Vec3(0.0, 4.0, 0.0),
+        components: [Camera()],
+      ).getComponent<Camera>()!;
+
+      final scatterGo = scene.createGameObject('ForestFoliage');
+      final foli = scatterGo.addComponent(
+        FoliageScatterComponent(
+          originX: -24.0,
+          originZ: -24.0,
+          areaWidth: 48.0,
+          areaDepth: 48.0,
+          clusterCellSize: 12.0,
+          lodFullDistance: 12.0,
+          lodMidDistance: 24.0,
+          maxDrawDistance: 40.0,
+          windSpeed: 5.0,
+        ),
+      )..addSpecies(
+          const FoliageSpeciesDef(
+            id: 'spruce',
+            name: 'Spruce',
+            minSpacing: 3.2,
+            minElevation: -10.0,
+            maxElevation: 20.0,
+            maxSlopeDegrees: 45.0,
+          ),
+        );
+
+      final count = foli.scatter();
+      expect(count, greaterThan(40));
+      expect(foli.instancedRenderer, isNotNull);
+
+      engine.step(0.05);
+      final nearVisible = foli.visibleCount;
+      expect(nearVisible, greaterThan(0));
+      expect(foli.lastSwayPoses.first.totalBendRadians, greaterThan(0.005));
+
+      // Moving camera outside draw distance culls all distant foliage clusters
+      cam.transform.position = const Vec3(200.0, 10.0, 200.0);
+      engine.step(0.05);
+      expect(foli.visibleCount, 0);
+
+      // Restore camera & click 'Gust +2' (x=170, y=156) in FoliageInspectorUI
+      cam.transform.position = const Vec3(0.0, 4.0, 0.0);
+      engine.step(0.05);
+
+      final ui = VoxUiContext();
+      final uiState = FoliageInspectorUiState();
+      const gustX = 170.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: gustX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      FoliageInspectorUI.render(ui, foli, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: gustX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      FoliageInspectorUI.render(ui, foli, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      FoliageInspectorUI.render(ui, foli, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(foli.windSpeed, closeTo(7.0, 1e-6));
+      expect(
+        drawList.commands.any((c) => (c.text?.startsWith('7.0 m/s') ?? false)),
+        isTrue,
+      );
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('FoliageScatterComponent'), isNotNull);
+      final json = reg.specFor(foli)!.toJson(foli);
+      expect(json['windSpeed'], closeTo(7.0, 1e-6));
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

@@ -465,5 +465,8 @@ final class ComponentRegistry {
     register<SurfaceSkidTrailComponent>(SurfaceSkidTrailComponent.spec);
     register<FactoryProducerComponent>(FactoryProducerComponent.spec);
     register<DynamicMarketComponent>(DynamicMarketComponent.spec);
+    register<BlueprintPieceComponent>(BlueprintPieceComponent.spec);
+    register<ConstructionPlannerComponent>(ConstructionPlannerComponent.spec);
+    register<FoliageScatterComponent>(FoliageScatterComponent.spec);
   }
 }

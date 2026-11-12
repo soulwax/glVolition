@@ -118,3 +118,9 @@
 [submodule "vendor/voxcraft"]
 	path = vendor/voxcraft
 	url = https://github.com/soulwax/voxcraft.git
+[submodule "vendor/voxbuild"]
+	path = vendor/voxbuild
+	url = https://github.com/soulwax/voxbuild.git
+[submodule "vendor/voxfoliage"]
+	path = vendor/voxfoliage
+	url = https://github.com/soulwax/voxfoliage.git

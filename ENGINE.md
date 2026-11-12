@@ -990,11 +990,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E62: Modular Snap-Grid Construction, Architectural Sockets & Blueprints (`voxbuild`)
 
-- [ ] **E62-1. `voxbuild` Submodule: Typed Connection Sockets, Rotated Grid Snapping & Clearance Solver.**
+- [x] **E62-1. `voxbuild` Submodule: Typed Connection Sockets, Rotated Grid Snapping & Clearance Solver.**
   - _Location:_ `./vendor/voxbuild` (`https://github.com/soulwax/voxbuild`).
-  - _APIs:_ `BuildSocket`, `BuildPieceDef` (local socket ports, rotation steps, grounding requirements), `SnapGridSolver` (socket-to-socket alignment, magnetic cursor snap, OBB overlap clearance validation), `ConstructionBlueprint` (reusable multi-piece structure stamps & material cost tally).
+  - _APIs:_ `BuildSocket`, `BuildPieceDef` (local socket ports, rotation steps, grounding requirements), `SnapGridSolver` (socket-to-socket alignment, magnetic cursor snap, 15-axis SAT OBB overlap clearance validation, BFS support collapse), `ConstructionBlueprint` (reusable multi-piece structure stamps & material cost tally).
   - _Verify:_ `vendor/voxbuild/test/voxbuild_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E62-2. `BlueprintPieceComponent`, `ConstructionPlannerComponent` & `BuilderInspectorUI` Engine Integration.**
+- [x] **E62-2. `BlueprintPieceComponent`, `ConstructionPlannerComponent` & `BuilderInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/modular_building.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1002,12 +1002,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E63: Poisson-Disk Foliage Scattering, Clump LODs & Wind Bending (`voxfoliage`)
 
-- [ ] **E63-1. `voxfoliage` Submodule: Seeded Poisson-Disk Sampling, Slope/Altitude Masks & Cluster Culling.**
+- [x] **E63-1. `voxfoliage` Submodule: Seeded Poisson-Disk Sampling, Slope/Altitude Masks & Cluster Culling.**
   - _Location:_ `./vendor/voxfoliage` (`https://github.com/soulwax/voxfoliage`).
-  - _APIs:_ `PoissonDiskSampler` (Bridson fast 2D blue-noise scatter), `FoliageBiomeScatterer` (elevation/slope/density noise weight placement), `FoliageClusterGrid` (spatial cell batching & camera distance density LOD), `WindSwayInstanceBuffer` (per-instance transform & harmonic breeze phase).
+  - _APIs:_ `PoissonDiskSampler` (Bridson fast 2D blue-noise scatter with multi-island seeding), `FoliageBiomeScatterer` (elevation/slope/density noise weight placement), `FoliageClusterGrid` (spatial cell batching & camera distance density LOD), `WindSwayInstanceBuffer` (per-instance transform & dual-octave harmonic breeze phase).
   - _Verify:_ `vendor/voxfoliage/test/voxfoliage_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E63-2. `FoliageScatterComponent` & `FoliageInspectorUI` Engine Integration.**
+- [x] **E63-2. `FoliageScatterComponent` & `FoliageInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/foliage_scatter.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E64: Articulated Ragdoll Constraints, Active Balance Motors & Hit Reactions (`voxragdoll`)
+
+- [ ] **E64-1. `voxragdoll` Submodule: Rigid Limb Chain Constraints, Cone-Twist Joint Limits & PD Motors.**
+  - _Location:_ `./vendor/voxragdoll` (`https://github.com/soulwax/voxragdoll`).
+  - _APIs:_ `RagdollSkeletonDef`, `RagdollJointLimit` (cone-twist swing & twist angle clamps, hinge limits), `RagdollSolver` (XPBD positional & angular joint constraint projections), `RagdollPoseMatcher` (PD active-balance motor torques & partial hit-flinch impulse blending).
+  - _Verify:_ `vendor/voxragdoll/test/voxragdoll_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E64-2. `ArticulatedRagdollComponent` & `RagdollInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/ragdoll_physics.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E65: Lane Spline Graphs, Traffic Signal Phases & Autonomous Vehicle Traffic (`voxtraffic`)
+
+- [ ] **E65-1. `voxtraffic` Submodule: Directed Lane Networks, Intersection Signals & IDM Car-Following.**
+  - _Location:_ `./vendor/voxtraffic` (`https://github.com/soulwax/voxtraffic`).
+  - _APIs:_ `TrafficLaneNode`, `TrafficLaneEdge`, `IntersectionSignalController` (timed green/yellow/red cycles, crosswalk & turn phase matrices), `TrafficVehicleAgent` (Intelligent Driver Model longitudinal acceleration, headway braking & lane switching), `TrafficNetworkSolver`.
+  - _Verify:_ `vendor/voxtraffic/test/voxtraffic_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E65-2. `TrafficNetworkComponent`, `TrafficSignalComponent` & `TrafficMonitorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/traffic_simulation.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
 
