@@ -8180,6 +8180,207 @@ void main() {
       expect(json['pruneConfidenceThreshold'], closeTo(0.1, 1e-6));
     });
   });
+
+  group('E76 — Beat-Synced Rhythm Sequencing, Note Charts & DSP Calibration (voxrhythm)', () {
+    test(
+      'RhythmSequencerComponent & RhythmJudgeUI handle lookahead, hit grading, DSP calibration & serialization',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        var crossedBeats = 0;
+
+        final chart = RhythmChart(
+          title: 'Pulse Trial',
+          laneCount: 4,
+          notes: const [
+            RhythmNote(id: 'n1', lane: 0, beat: 1.0),
+            RhythmNote(id: 'n2', lane: 1, beat: 2.0),
+            RhythmNote(id: 'n3', lane: 2, beat: 3.0, durationBeats: 1.0),
+          ],
+        );
+
+        final go = engine.scene.createGameObject('RhythmRig');
+        final seq = go.addComponent(
+          RhythmSequencerComponent(
+            bpm: 120.0,
+            lookaheadSeconds: 1.5,
+            paused: true,
+            chart: chart,
+          ),
+        );
+        seq.onBeatCrossed = (_, __) => crossedBeats++;
+
+        // At 0.0s, 1.5s lookahead shows notes up to beat 3.0 (1.5s)
+        final initialVisible = seq.queryActiveNotes();
+        expect(initialVisible.map((n) => n.note.id).toList(), ['n1', 'n2', 'n3']);
+
+        // Step to 0.510s (+10ms past beat 1.0 @ 0.500s -> marvelous hit, records +10ms delta)
+        seq.stepSequencer(0.510);
+        expect(crossedBeats, greaterThanOrEqualTo(1));
+        final j1 = seq.submitLaneInput(0);
+        expect(j1, isNotNull);
+        expect(j1!.grade, HitGrade.marvelous);
+        expect(seq.combo, 1);
+        expect(seq.score, greaterThan(0));
+
+        // Step to 1.012s (+12ms past beat 2.0 @ 1.000s -> marvelous hit, records +12ms delta)
+        seq.stepSequencer(0.502);
+        final j2 = seq.submitLaneInput(1);
+        expect(j2, isNotNull);
+        expect(j2!.grade, HitGrade.marvelous);
+        expect(seq.combo, 2);
+
+        // UI interaction: click Ofs +5ms (x=226, y=159) then Calibrate (x=309, y=159)
+        final ui = VoxUiContext();
+        final uiState = RhythmJudgeUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 226.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        RhythmJudgeUI.render(ui, seq, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 226.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        RhythmJudgeUI.render(ui, seq, state: uiState);
+        ui.endFrame();
+        expect(seq.audioOffsetSeconds, closeTo(0.005, 1e-6));
+
+        ui.beginFrame(
+          VoxInput(mouseX: 309.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        RhythmJudgeUI.render(ui, seq, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 309.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        RhythmJudgeUI.render(ui, seq, state: uiState);
+        final dl = ui.endFrame();
+        expect(seq.audioOffsetSeconds, greaterThan(0.010));
+        expect(dl.commands.any((c) => c.text == 'Rhythm Sequencer'), isTrue);
+
+        // Verify ComponentRegistry registration & round-trip
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('RhythmSequencerComponent'), isNotNull);
+        final json = reg.specFor(seq)!.toJson(seq);
+        expect(json['bpm'], closeTo(120.0, 1e-6));
+        expect(json['paused'], isTrue);
+      },
+    );
+  });
+
+  group('E77 — Procedural Foot-Stepping IK & Slope Adaptation (voxgait)', () {
+    test(
+      'ProceduralGaitComponent drives foot IK targets, terrain slope tilt, pelvis bob & GaitDebuggerUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final walkerGo = engine.scene.createGameObject(
+          'Walker',
+          position: const Vec3(0.0, 0.0, 0.0),
+        );
+        final pelvisGo = engine.scene.createGameObject(
+          'Pelvis',
+          position: const Vec3(0.0, 1.0, 0.0),
+        );
+        pelvisGo.transform.setParent(walkerGo.transform);
+
+        final leftFootTarget = engine.scene.createGameObject('LeftFootTarget');
+        final hipGo = engine.scene.createGameObject(
+          'LeftHip',
+          position: const Vec3(-0.17, 1.0, 0.0),
+        );
+        final kneeGo = engine.scene.createGameObject(
+          'LeftKnee',
+          position: const Vec3(-0.17, 0.5, 0.1),
+        );
+        final ankleGo = engine.scene.createGameObject(
+          'LeftAnkle',
+          position: const Vec3(-0.17, 0.0, 0.0),
+        );
+        final ik = walkerGo.addComponent(
+          TwoBoneIkComponent(
+            rootBone: hipGo,
+            midBone: kneeGo,
+            endEffector: ankleGo,
+          ),
+        );
+
+        // Sloped terrain y = 0.25 * z
+        const slopeTan = 0.25;
+        final gaitComp = walkerGo.addComponent(
+          ProceduralGaitComponent(
+            preset: GaitPreset.biped,
+            pelvisTarget: pelvisGo,
+            pelvisBobAmplitude: 0.06,
+            autoApplySlopeTilt: true,
+            explicitVelocity: const Vec3(0.0, 0.0, 2.0),
+            terrainSampler: (x, z) => GaitTerrainSample(
+              groundY: z * slopeTan,
+              normal: GaitVec3(0.0, 1.0, -slopeTan).normalized,
+            ),
+          ),
+        );
+        gaitComp.bindFootTarget('left', leftFootTarget);
+        gaitComp.bindTwoBoneIk('left', ik);
+
+        var maxLeftLift = 0.0;
+        for (var i = 0; i < 36; i++) {
+          walkerGo.transform.position = Vec3(
+            0.0,
+            walkerGo.transform.position.z * slopeTan,
+            walkerGo.transform.position.z + 2.0 * 0.025,
+          );
+          engine.step(0.025);
+          final lf = gaitComp.footTarget('left')!;
+          if (lf.stepArcLift > maxLeftLift) maxLeftLift = lf.stepArcLift;
+          expect(gaitComp.groundedFootCount, greaterThanOrEqualTo(1));
+        }
+
+        expect(maxLeftLift, greaterThan(0.10));
+        expect(leftFootTarget.transform.position.z, greaterThan(0.5));
+        expect(leftFootTarget.transform.position.y, greaterThan(0.1));
+        expect(ik.targetPosition, isNotNull);
+        expect(gaitComp.lastSnapshot!.bodyPitchRad.abs(), greaterThan(0.10));
+        expect(walkerGo.transform.localRotation.x.abs(), greaterThan(0.05));
+
+        // Test GaitDebuggerUI interaction: Pause (x=66, y=159) -> Next Gait (x=235, y=159)
+        final ui = VoxUiContext();
+        final uiState = GaitDebuggerUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 66.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        GaitDebuggerUI.render(ui, gaitComp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 66.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        GaitDebuggerUI.render(ui, gaitComp, state: uiState);
+        ui.endFrame();
+        expect(gaitComp.paused, isTrue);
+
+        ui.beginFrame(
+          VoxInput(mouseX: 235.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        GaitDebuggerUI.render(ui, gaitComp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 235.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        GaitDebuggerUI.render(ui, gaitComp, state: uiState);
+        final dl = ui.endFrame();
+        expect(gaitComp.preset, GaitPreset.quadrupedTrot);
+        expect(dl.commands.any((c) => c.text == 'Procedural Gait Solver'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('ProceduralGaitComponent'), isNotNull);
+        final json = reg.specFor(gaitComp)!.toJson(gaitComp);
+        expect(json['preset'], 'quadrupedTrot');
+        expect(json['paused'], isTrue);
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

@@ -1158,11 +1158,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E76: Beat-Synced Rhythm Sequencing, Note Charts, Hit Windows & DSP Calibration (`voxrhythm`)
 
-- [ ] **E76-1. `voxrhythm` Submodule: Beat Grids, Note Charts, Hit Timing Judgment & Combo Scoring.**
+- [x] **E76-1. `voxrhythm` Submodule: Beat Grids, Note Charts, Hit Timing Judgment & Combo Scoring.**
   - _Location:_ `./vendor/voxrhythm` (`https://github.com/soulwax/voxrhythm`).
-  - _APIs:_ `BeatGrid` (BPM/subdivision beat-to-second conversion & audio latency offset compensation), `RhythmNote` (tap/hold lane note events with target beats), `RhythmChart` (sorted note chart, active lookahead query & peak note density), `NoteJudgment` (Marvelous/Perfect/Great/Good/Miss timing windows, combo & multiplier evaluator).
+  - _APIs:_ `BeatGrid` (BPM/variable-tempo `BeatTempoEvent` beat-to-second conversion, quantization & outlier-trimmed DSP latency calibration), `RhythmNote` (`tap`/`hold` lane events with beat + duration), `RhythmChart` (sorted chart, lookahead spawn window queries & sliding-window peak note density), `HitWindows` / `NoteJudgment` / `RhythmSessionTracker` (`marvelous`/`perfect`/`great`/`good`/`miss` timing windows, hold tracking, combo & multiplier evaluator).
   - _Verify:_ `vendor/voxrhythm/test/voxrhythm_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E76-2. `RhythmSequencerComponent` & `RhythmJudgeUI` Engine Integration.**
+- [x] **E76-2. `RhythmSequencerComponent` & `RhythmJudgeUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/rhythm_sequencer.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1170,10 +1170,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E77: Procedural Foot-Stepping IK, Quadruped/Biped Gait Cycles & Slope Adaptation (`voxgait`)
 
-- [ ] **E77-1. `voxgait` Submodule: Stride Phase Oscillators, Foot-Step Triggers, Parabolic Arcs & Pelvis Bobbing.**
+- [x] **E77-1. `voxgait` Submodule: Stride Phase Oscillators, Foot-Step Triggers, Parabolic Arcs & Pelvis Bobbing.**
   - _Location:_ `./vendor/voxgait` (`https://github.com/soulwax/voxgait`).
-  - _APIs:_ `GaitCycle` (biped/quadruped/hexapod leg phase offsets, stance duty factor & speed-scaled stride frequency), `GaitFootTarget` (world foot rest anchor, lift/plant interpolation & step arc height), `ProceduralGaitSolver` (velocity-lead foot placement, diagonal support gating, terrain slope tilt & pelvis vertical bobbing).
+  - _APIs:_ `GaitCycle` (`biped`/`quadrupedTrot`/`quadrupedWalk`/`hexapodTripod` leg phase offsets, stance duty factor & speed-scaled stride frequency), `GaitFootTarget` & `GaitPoseSnapshot` (world foot anchor, lift/plant interpolation & step arc height), `ProceduralGaitSolver` (velocity-lead foot placement, minimum simultaneous support gating, terrain slope pitch/roll adaptation & pelvis vertical bobbing).
   - _Verify:_ `vendor/voxgait/test/voxgait_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E77-2. `ProceduralGaitComponent` & `GaitDebuggerUI` Engine Integration.**
+- [x] **E77-2. `ProceduralGaitComponent` & `GaitDebuggerUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/procedural_gait.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E78: Texture Atlas Packing, 9-Slice Sprites & Bitmap/SDF Font Metrics (`voxatlas`)
+
+- [ ] **E78-1. `voxatlas` Submodule: MaxRects Shelf/Guillotine Packing, UV Rects, 9-Slice Borders & Kerning Glyph Tables.**
+  - _Location:_ `./vendor/voxatlas` (`https://github.com/soulwax/voxatlas`).
+  - _APIs:_ `MaxRectsAtlasPacker` (deterministic bin packing, margin/extrusion padding & page overflow split), `AtlasSpriteEntry` (`uvMin`, `uvMax`, `nineSliceInsets`, trimmed pivot), `BitmapFontLayout` (kerning pairs, line metrics, word-wrap shaping & SDF glyph bounds).
+  - _Verify:_ `vendor/voxatlas/test/voxatlas_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E78-2. `TextureAtlasComponent` & `AtlasPackerInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/texture_atlas.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E79: Camera Spline Rails, Trauma Shake Impulses & Screen Transitions (`voxlens`)
+
+- [ ] **E79-1. `voxlens` Submodule: Smooth Dolly Track Evaluation, Rotational Trauma Decay & Transition Blends.**
+  - _Location:_ `./vendor/voxlens` (`https://github.com/soulwax/voxlens`).
+  - _APIs:_ `CameraDollyTrack` (catmull-rom track parameterization & nearest-target projection), `TraumaShakeGenerator` (perlin/trig micro-oscillation decay on translation + roll/yaw/pitch), `LensTransitionBlender` (FOV/exposure/vignette crossfade curves).
+  - _Verify:_ `vendor/voxlens/test/voxlens_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E79-2. `CameraLensRigComponent` & `LensRigInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/camera_lens_rig.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

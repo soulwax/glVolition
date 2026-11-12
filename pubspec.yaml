@@ -116,6 +116,10 @@ dependencies:
     path: vendor/voxsdf
   voxhtn:
     path: vendor/voxhtn
+  voxrhythm:
+    path: vendor/voxrhythm
+  voxgait:
+    path: vendor/voxgait
   web: ^0.5.0
 
 dev_dependencies:

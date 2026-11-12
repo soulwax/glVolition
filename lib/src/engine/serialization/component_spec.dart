@@ -482,5 +482,7 @@ final class ComponentRegistry {
     register<RollbackSessionComponent>(RollbackSessionComponent.spec);
     register<SdfVolumeComponent>(SdfVolumeComponent.spec);
     register<HtnPlannerComponent>(HtnPlannerComponent.spec);
+    register<RhythmSequencerComponent>(RhythmSequencerComponent.spec);
+    register<ProceduralGaitComponent>(ProceduralGaitComponent.spec);
   }
 }

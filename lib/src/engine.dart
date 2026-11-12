@@ -61,6 +61,8 @@ import 'package:voxarch/voxarch.dart' as arch;
 import 'package:voxrollback/voxrollback.dart' as rollback;
 import 'package:voxsdf/voxsdf.dart' as sdf;
 import 'package:voxhtn/voxhtn.dart' as htn;
+import 'package:voxrhythm/voxrhythm.dart' as rhythm;
+import 'package:voxgait/voxgait.dart' as gait;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -156,3 +158,5 @@ part 'engine/components/floorplan_generator.dart';
 part 'engine/components/rollback_netcode.dart';
 part 'engine/components/sdf_volume.dart';
 part 'engine/components/htn_planner.dart';
+part 'engine/components/rhythm_sequencer.dart';
+part 'engine/components/procedural_gait.dart';

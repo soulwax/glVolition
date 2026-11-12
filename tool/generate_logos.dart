@@ -70,6 +70,8 @@ enum MotifKind {
   locMeridian, // Swept globe latitude/meridian curves inside iris (voxloc)
   logChevron, // Crisp '>_ ' terminal prompt inside open iris (voxlog)
   uiWindow, // Title-bar horizontal header split inside outer frame (voxui)
+  rhythmBeat, // Receptor bar + beat diamond + lane note pips (voxrhythm)
+  gaitStrides, // Alternating left/right foot-step stride arcs (voxgait)
 }
 
 final class LogoSpec {
@@ -549,14 +551,14 @@ String renderApertureSvg(LogoSpec spec) {
         bodyLayer.add('<path d="$d" fill="${spec.colors[(b + ci) % spec.colors.length]}"/>');
       }
     }
-  } else if (spec.motif == MotifKind.skyHorizon || spec.motif == MotifKind.seqTimeline || spec.motif == MotifKind.uiWindow) {
+  } else if (spec.motif == MotifKind.skyHorizon || spec.motif == MotifKind.seqTimeline || spec.motif == MotifKind.uiWindow || spec.motif == MotifKind.rhythmBeat) {
     // True transparent negative-space horizontal band slicing through blades!
     final yCut = spec.motif == MotifKind.skyHorizon
         ? 68.0
-        : (spec.motif == MotifKind.seqTimeline ? 84.0 : 54.5);
+        : (spec.motif == MotifKind.seqTimeline || spec.motif == MotifKind.rhythmBeat ? 84.0 : 54.5);
     final halfH = spec.motif == MotifKind.skyHorizon
         ? 2.2
-        : (spec.motif == MotifKind.seqTimeline ? 2.8 : 1.8);
+        : (spec.motif == MotifKind.seqTimeline || spec.motif == MotifKind.rhythmBeat ? 2.8 : 1.8);
     for (var b = 0; b < bladePolys.length; b++) {
       final parts = applyNegativeSpaceBandCuts([bladePolys[b]], yCut, halfH);
       for (final p in parts) {
@@ -758,6 +760,17 @@ String renderApertureSvg(LogoSpec spec) {
       break;
     case MotifKind.padCluster:
       overLayer.add('<path d="M 64 70.5 L 64 81.5 M 58.5 76 L 69.5 76" stroke="#3B82F6" stroke-width="3.0" stroke-linecap="round"/>');
+    case MotifKind.rhythmBeat:
+      overLayer.add('<line x1="25" y1="84" x2="103" y2="84" stroke="#F43F5E" stroke-width="2.4" stroke-linecap="round"/>');
+      overLayer.add('<polygon points="64,77.5 70.5,84 64,90.5 57.5,84" fill="#FB923C"/>');
+      overLayer.add('<circle cx="48" cy="84" r="2.8" fill="#F43F5E"/>');
+      overLayer.add('<circle cx="80" cy="84" r="2.8" fill="#FB7185"/>');
+    case MotifKind.gaitStrides:
+      overLayer.add('<path d="M 52 79 Q 58 68 64 78" stroke="#10B981" stroke-width="2.2" stroke-linecap="round"/>');
+      overLayer.add('<path d="M 64 79 Q 70 68 76 78" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="2.4 2.2"/>');
+      overLayer.add('<circle cx="52" cy="79" r="2.2" fill="#059669"/>');
+      overLayer.add('<circle cx="64" cy="79" r="2.2" fill="#10B981"/>');
+      overLayer.add('<circle cx="76" cy="79" r="2.2" fill="#34D399"/>');
     default:
       break;
   }
@@ -1109,6 +1122,18 @@ const List<LogoSpec> allLogoSpecs = [
     colors: ['#10B981', '#0D9488', '#0F766E'],
   ),
   LogoSpec(
+    name: 'voxgait',
+    category: 'Physics & Motion',
+    motif: MotifKind.gaitStrides,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 7.0,
+    colors: ['#34D399', '#10B981', '#059669'],
+  ),
+  LogoSpec(
     name: 'voxcrowd',
     category: 'Physics & Motion',
     motif: MotifKind.crowdBoids,
@@ -1372,6 +1397,21 @@ const List<LogoSpec> allLogoSpecs = [
     centerDotR: 3.6,
     centerColor: '#EA580C',
     colors: ['#FB923C', '#F97316', '#EA580C'],
+  ),
+  LogoSpec(
+    name: 'voxrhythm',
+    category: 'Audio & VFX',
+    motif: MotifKind.rhythmBeat,
+    blades: 3,
+    outerR: 41,
+    innerR: 12.0,
+    twistDeg: 60,
+    gap: 3.6,
+    cornerFillet: 4.5,
+    outerRingR: 55,
+    outerRingStroke: 3.5,
+    outerRingColor: '#F43F5E',
+    colors: ['#FB7185', '#F43F5E', '#E11D48'],
   ),
   LogoSpec(
     name: 'voxvfx',

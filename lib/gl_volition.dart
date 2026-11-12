@@ -57,5 +57,7 @@ export 'package:voxarch/voxarch.dart';
 export 'package:voxrollback/voxrollback.dart';
 export 'package:voxsdf/voxsdf.dart';
 export 'package:voxhtn/voxhtn.dart';
+export 'package:voxrhythm/voxrhythm.dart';
+export 'package:voxgait/voxgait.dart';
 
 export 'src/engine.dart';
