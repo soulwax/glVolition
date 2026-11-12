@@ -484,5 +484,7 @@ final class ComponentRegistry {
     register<HtnPlannerComponent>(HtnPlannerComponent.spec);
     register<RhythmSequencerComponent>(RhythmSequencerComponent.spec);
     register<ProceduralGaitComponent>(ProceduralGaitComponent.spec);
+    register<TextureAtlasComponent>(TextureAtlasComponent.spec);
+    register<CameraLensRigComponent>(CameraLensRigComponent.spec);
   }
 }

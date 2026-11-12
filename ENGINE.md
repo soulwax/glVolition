@@ -1182,11 +1182,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E78: Texture Atlas Packing, 9-Slice Sprites & Bitmap/SDF Font Metrics (`voxatlas`)
 
-- [ ] **E78-1. `voxatlas` Submodule: MaxRects Shelf/Guillotine Packing, UV Rects, 9-Slice Borders & Kerning Glyph Tables.**
+- [x] **E78-1. `voxatlas` Submodule: MaxRects Shelf/Guillotine Packing, UV Rects, 9-Slice Borders & Kerning Glyph Tables.**
   - _Location:_ `./vendor/voxatlas` (`https://github.com/soulwax/voxatlas`).
-  - _APIs:_ `MaxRectsAtlasPacker` (deterministic bin packing, margin/extrusion padding & page overflow split), `AtlasSpriteEntry` (`uvMin`, `uvMax`, `nineSliceInsets`, trimmed pivot), `BitmapFontLayout` (kerning pairs, line metrics, word-wrap shaping & SDF glyph bounds).
+  - _APIs:_ `MaxRectsAtlasPacker` (`bestShortSideFit`/`bestAreaFit`/`bottomLeft` deterministic multi-page bin packing, margin padding & page overflow split), `AtlasSpriteEntry` (`uvMinX`/`uvMinY`/`uvMaxX`/`uvMaxY`, `NineSliceInsets`, trimmed pivot & `computeNineSliceQuads`), `BitmapFontLayout` (kerning pairs, line metrics, word-wrap shaping & SDF glyph bounds).
   - _Verify:_ `vendor/voxatlas/test/voxatlas_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E78-2. `TextureAtlasComponent` & `AtlasPackerInspectorUI` Engine Integration.**
+- [x] **E78-2. `TextureAtlasComponent` & `AtlasPackerInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/texture_atlas.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1194,10 +1194,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E79: Camera Spline Rails, Trauma Shake Impulses & Screen Transitions (`voxlens`)
 
-- [ ] **E79-1. `voxlens` Submodule: Smooth Dolly Track Evaluation, Rotational Trauma Decay & Transition Blends.**
+- [x] **E79-1. `voxlens` Submodule: Smooth Dolly Track Evaluation, Rotational Trauma Decay & Transition Blends.**
   - _Location:_ `./vendor/voxlens` (`https://github.com/soulwax/voxlens`).
-  - _APIs:_ `CameraDollyTrack` (catmull-rom track parameterization & nearest-target projection), `TraumaShakeGenerator` (perlin/trig micro-oscillation decay on translation + roll/yaw/pitch), `LensTransitionBlender` (FOV/exposure/vignette crossfade curves).
+  - _APIs:_ `CameraDollyTrack` (Catmull-Rom track arc-length LUT parameterization, tangents & golden-section nearest-target projection), `TraumaShakeGenerator` (multi-octave trig micro-oscillation power-law decay on translation + roll/yaw/pitch), `LensTransitionBlender` (`fade`/`wipeHorizontal`/`wipeRadial`/`irisCircle`/`zoomPulse` FOV/exposure/vignette crossfade curves).
   - _Verify:_ `vendor/voxlens/test/voxlens_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E79-2. `CameraLensRigComponent` & `LensRigInspectorUI` Engine Integration.**
+- [x] **E79-2. `CameraLensRigComponent` & `LensRigInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/camera_lens_rig.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E80: Spatial Hash Grids, Sweep-and-Prune Broadphase & Continuous Collision TOI (`voxbroad`)
+
+- [ ] **E80-1. `voxbroad` Submodule: Hierarchical Spatial Hash, SAP AABB Pruning & Speculative TOI Sweeps.**
+  - _Location:_ `./vendor/voxbroad` (`https://github.com/soulwax/voxbroad`).
+  - _APIs:_ `SpatialHashGrid3D` (lock-free dynamic cell buckets & neighborhood AABB query), `SweepAndPrune1D` (sorted endpoint pair tracking), `SweptAabbToi` (ray/box Minkowski speculative contact TOI solver).
+  - _Verify:_ `vendor/voxbroad/test/voxbroad_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E80-2. `BroadphaseWorldComponent` & `BroadphaseStatsUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/broadphase_world.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E81: Deterministic Particle Ribbons, GPU-Ready Billboard Streams & Curl Turbulence (`voxribbon`)
+
+- [ ] **E81-1. `voxribbon` Submodule: Catmull-Rom Trail Buffers, Curl Noise Fields & Age Gradient Evaluators.**
+  - _Location:_ `./vendor/voxribbon` (`https://github.com/soulwax/voxribbon`).
+  - _APIs:_ `RibbonTrailBuffer` (distance-gated ring buffer, normal-aligned ribbon vertex emission & taper width curve), `CurlTurbulenceField` (divergence-free 3D finite-difference noise advection), `ParticleStreamEmitter` (seedable burst/rate emitter with drag & lifetime color LUT).
+  - _Verify:_ `vendor/voxribbon/test/voxribbon_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E81-2. `ParticleRibbonComponent` & `RibbonInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/particle_ribbon.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

@@ -59,5 +59,7 @@ export 'package:voxsdf/voxsdf.dart';
 export 'package:voxhtn/voxhtn.dart';
 export 'package:voxrhythm/voxrhythm.dart';
 export 'package:voxgait/voxgait.dart';
+export 'package:voxatlas/voxatlas.dart';
+export 'package:voxlens/voxlens.dart';
 
 export 'src/engine.dart';

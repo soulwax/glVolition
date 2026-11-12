@@ -166,3 +166,9 @@
 [submodule "vendor/voxgait"]
 	path = vendor/voxgait
 	url = https://github.com/soulwax/voxgait.git
+[submodule "vendor/voxatlas"]
+	path = vendor/voxatlas
+	url = https://github.com/soulwax/voxatlas.git
+[submodule "vendor/voxlens"]
+	path = vendor/voxlens
+	url = https://github.com/soulwax/voxlens.git

@@ -8381,6 +8381,198 @@ void main() {
       },
     );
   });
+
+  group('E78 — Texture Atlas Packing, 9-Slice Sprites & Bitmap/SDF Font Metrics (voxatlas)', () {
+    test(
+      'TextureAtlasComponent packs 9-slice UI & glyph sprites, shapes bitmap font & drives AtlasPackerInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final tex0 = host.graphics.createTexture(
+          width: 128,
+          height: 128,
+          pixels: Uint8List(128 * 128 * 4),
+        );
+        final atlasGo = engine.scene.createGameObject('UIAtlas');
+        final atlasComp = atlasGo.addComponent(
+          TextureAtlasComponent(
+            pageWidth: 128,
+            pageHeight: 128,
+            padding: 2,
+          ),
+        );
+        atlasComp.bindPageTexture(0, tex0);
+        atlasComp.registerSprite(
+          const AtlasSpriteInput(
+            id: 'panel_bg',
+            width: 48,
+            height: 48,
+            nineSlice: NineSliceInsets.all(12.0),
+          ),
+        );
+        atlasComp.registerSprite(
+          const AtlasSpriteInput(id: 'glyph_A', width: 20, height: 24),
+        );
+        atlasComp.registerSprite(
+          const AtlasSpriteInput(id: 'glyph_V', width: 20, height: 24),
+        );
+
+        atlasComp.registerFont(
+          BitmapFontLayout(
+            fontFamily: 'VoxSansSDF',
+            lineHeight: 28.0,
+            baseLine: 22.0,
+            glyphs: const {
+              65: BitmapGlyphMetrics(
+                codePoint: 65,
+                atlasEntryId: 'glyph_A',
+                width: 20.0,
+                height: 24.0,
+                xAdvance: 18.0,
+                sdfSpread: 4.0,
+              ),
+              86: BitmapGlyphMetrics(
+                codePoint: 86,
+                atlasEntryId: 'glyph_V',
+                width: 20.0,
+                height: 24.0,
+                xAdvance: 18.0,
+                sdfSpread: 4.0,
+              ),
+            },
+            kerningPairs: const {(65, 86): -2.5},
+          ),
+        );
+
+        final region = atlasComp.spriteRegionFor('panel_bg');
+        expect(region, isNotNull);
+        expect(region!.texture, same(tex0));
+        expect(region.width, closeTo(48.0, 1e-6));
+
+        final slices = atlasComp.sliceQuadsFor(
+          'panel_bg',
+          destX: 10.0,
+          destY: 20.0,
+          destW: 200.0,
+          destH: 100.0,
+        );
+        expect(slices.length, 9);
+
+        final glyphs = atlasComp.layoutFontText('VoxSansSDF', 'AV');
+        expect(glyphs.length, 2);
+        expect(glyphs[1].x - glyphs[0].x, closeTo(15.5, 1e-5));
+
+        // Test AtlasPackerInspectorUI: click Heuristic (x=153, y=159) -> bestAreaFit
+        final ui = VoxUiContext();
+        final uiState = AtlasPackerInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 153.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        AtlasPackerInspectorUI.render(ui, atlasComp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 153.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        AtlasPackerInspectorUI.render(ui, atlasComp, state: uiState);
+        final dl = ui.endFrame();
+        expect(atlasComp.heuristic, MaxRectsHeuristic.bestAreaFit);
+        expect(dl.commands.any((c) => c.text == 'Texture Atlas Packer'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('TextureAtlasComponent'), isNotNull);
+        final json = reg.specFor(atlasComp)!.toJson(atlasComp);
+        expect(json['pageWidth'], 128);
+        expect(json['heuristic'], 'bestAreaFit');
+      },
+    );
+  });
+
+  group('E79 — Camera Spline Rails, Trauma Shake & Lens Transitions (voxlens)', () {
+    test(
+      'CameraLensRigComponent drives Camera along dolly rail, applies trauma shake, transitions FOV/exposure & LensRigInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final targetGo = engine.scene.createGameObject(
+          'Hero',
+          position: const Vec3(0.0, 1.0, 0.0),
+        );
+        final cam = Camera(fovYRadians: 60.0 * 3.141592653589793 / 180.0);
+        final pp = PostProcessVolume(exposure: 1.0, vignette: 0.15);
+        final rig = CameraLensRigComponent(
+          railSpeed: 0.5,
+          loopRail: false,
+          lookAtTarget: targetGo,
+          waypoints: const [
+            Vec3(0.0, 2.0, 10.0),
+            Vec3(6.0, 3.0, 6.0),
+            Vec3(12.0, 4.0, 0.0),
+          ],
+        );
+        final camGo = engine.scene.createGameObject(
+          'CineCam',
+          components: [cam, pp, rig],
+        );
+
+        rig.addTrauma(0.6);
+        rig.startTransition(
+          effect: LensTransitionEffect.zoomPulse,
+          durationSeconds: 0.8,
+          fovBoostDeg: 18.0,
+          exposureShift: -0.3,
+        );
+
+        for (var i = 0; i < 8; i++) {
+          engine.step(0.05);
+        }
+
+        expect(rig.progress, closeTo(0.2, 0.02));
+        expect(camGo.transform.position.x, greaterThan(1.5));
+        expect(cam.fovYRadians * 180.0 / 3.141592653589793, greaterThan(72.0));
+        expect(pp.exposure, lessThan(0.9));
+        expect(pp.vignette, greaterThan(0.4));
+
+        // Test LensRigInspectorUI: Pause (x=65, y=159) & Shake +0.5 (x=152, y=159)
+        final ui = VoxUiContext();
+        final uiState = LensRigInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 65.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        LensRigInspectorUI.render(ui, rig, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 65.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        LensRigInspectorUI.render(ui, rig, state: uiState);
+        ui.endFrame();
+        expect(rig.playing, isFalse);
+
+        final prevTrauma = rig.trauma;
+        ui.beginFrame(
+          VoxInput(mouseX: 152.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        LensRigInspectorUI.render(ui, rig, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 152.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        LensRigInspectorUI.render(ui, rig, state: uiState);
+        final dl = ui.endFrame();
+        expect(rig.trauma, greaterThan(prevTrauma));
+        expect(dl.commands.any((c) => c.text == 'Camera Lens Rig'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('CameraLensRigComponent'), isNotNull);
+        final json = reg.specFor(rig)!.toJson(rig);
+        expect(json['playing'], isFalse);
+        expect(json['railSpeed'], closeTo(0.5, 1e-6));
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

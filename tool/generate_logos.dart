@@ -72,6 +72,8 @@ enum MotifKind {
   uiWindow, // Title-bar horizontal header split inside outer frame (voxui)
   rhythmBeat, // Receptor bar + beat diamond + lane note pips (voxrhythm)
   gaitStrides, // Alternating left/right foot-step stride arcs (voxgait)
+  atlasGrid, // Asymmetric MaxRects packed texture tiles (voxatlas)
+  lensDolly, // 6-blade optical lens ring + curved camera dolly track (voxlens)
 }
 
 final class LogoSpec {
@@ -771,6 +773,15 @@ String renderApertureSvg(LogoSpec spec) {
       overLayer.add('<circle cx="52" cy="79" r="2.2" fill="#059669"/>');
       overLayer.add('<circle cx="64" cy="79" r="2.2" fill="#10B981"/>');
       overLayer.add('<circle cx="76" cy="79" r="2.2" fill="#34D399"/>');
+    case MotifKind.atlasGrid:
+      overLayer.add('<rect x="55" y="67.5" width="10.2" height="7.5" rx="1.4" fill="#38BDF8"/>');
+      overLayer.add('<rect x="66.8" y="67.5" width="6.4" height="10.8" rx="1.4" fill="#F59E0B"/>');
+      overLayer.add('<rect x="55" y="76.8" width="10.2" height="6.2" rx="1.4" fill="#34D399"/>');
+      overLayer.add('<rect x="66.8" y="79.8" width="6.4" height="3.2" rx="1.0" fill="#818CF8"/>');
+    case MotifKind.lensDolly:
+      overLayer.add('<circle cx="64" cy="76" r="8.2" stroke="#38BDF8" stroke-width="2.1"/>');
+      overLayer.add('<path d="M 30 112 Q 64 103 98 112" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="6 4"/>');
+      overLayer.add('<circle cx="64" cy="107.5" r="2.6" fill="#F59E0B"/>');
     default:
       break;
   }
@@ -1034,6 +1045,33 @@ const List<LogoSpec> allLogoSpecs = [
     centerDotR: 4.2,
     centerColor: '#38BDF8',
     colors: ['#586982', '#72839B'],
+  ),
+  LogoSpec(
+    name: 'voxlens',
+    category: 'Lighting & Optics',
+    motif: MotifKind.lensDolly,
+    blades: 6,
+    outerR: 53,
+    innerR: 15.5,
+    twistDeg: 30,
+    gap: 3.4,
+    cornerFillet: 7.0,
+    centerShape: 'circle',
+    centerDotR: 3.4,
+    centerColor: '#38BDF8',
+    colors: ['#0EA5E9', '#3B82F6'],
+  ),
+  LogoSpec(
+    name: 'voxatlas',
+    category: 'Rendering',
+    motif: MotifKind.atlasGrid,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 6.5,
+    colors: ['#0EA5E9', '#6366F1', '#38BDF8'],
   ),
   LogoSpec(
     name: 'voxsky',

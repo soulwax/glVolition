@@ -120,6 +120,10 @@ dependencies:
     path: vendor/voxrhythm
   voxgait:
     path: vendor/voxgait
+  voxatlas:
+    path: vendor/voxatlas
+  voxlens:
+    path: vendor/voxlens
   web: ^0.5.0
 
 dev_dependencies:

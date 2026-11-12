@@ -63,6 +63,8 @@ import 'package:voxsdf/voxsdf.dart' as sdf;
 import 'package:voxhtn/voxhtn.dart' as htn;
 import 'package:voxrhythm/voxrhythm.dart' as rhythm;
 import 'package:voxgait/voxgait.dart' as gait;
+import 'package:voxatlas/voxatlas.dart' as atlas;
+import 'package:voxlens/voxlens.dart' as lens;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -160,3 +162,5 @@ part 'engine/components/sdf_volume.dart';
 part 'engine/components/htn_planner.dart';
 part 'engine/components/rhythm_sequencer.dart';
 part 'engine/components/procedural_gait.dart';
+part 'engine/components/texture_atlas.dart';
+part 'engine/components/camera_lens_rig.dart';
