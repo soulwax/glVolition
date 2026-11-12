@@ -25,7 +25,7 @@ dart run gl_volition:volition build lib/gl_volition.dart --target windows
 
 # Build dungeon_2d example (2D dungeon crawler)
 dart run gl_volition:volition build example/dungeon_2d/main.dart --target js
-dart run gl_volition:volition build example/dungeon_2d/main.dart -- target wasm
+dart run gl_volition:volition build example/dungeon_2d/main.dart --target wasm
 dart run gl_volition:volition build example/dungeon_2d/main.dart --target windows
 
 # Build island_3d example (3D harbour simulation)
