@@ -478,5 +478,7 @@ final class ComponentRegistry {
     register<AcousticRoomComponent>(AcousticRoomComponent.spec);
     register<AcousticPortalComponent>(AcousticPortalComponent.spec);
     register<AdaptiveMusicComponent>(AdaptiveMusicComponent.spec);
+    register<FloorplanGeneratorComponent>(FloorplanGeneratorComponent.spec);
+    register<RollbackSessionComponent>(RollbackSessionComponent.spec);
   }
 }

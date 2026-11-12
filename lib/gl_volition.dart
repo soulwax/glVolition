@@ -53,5 +53,7 @@ export 'package:voxprobe/voxprobe.dart';
 export 'package:voxquest/voxquest.dart';
 export 'package:voxreverb/voxreverb.dart';
 export 'package:voxscore/voxscore.dart';
+export 'package:voxarch/voxarch.dart';
+export 'package:voxrollback/voxrollback.dart';
 
 export 'src/engine.dart';

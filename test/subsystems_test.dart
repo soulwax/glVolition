@@ -7815,6 +7815,156 @@ void main() {
       expect(json['targetIntensity'], closeTo(0.5, 1e-6));
     });
   });
+
+  group('E72 — Procedural Floorplan Split-Grammar & Connectivity (voxarch)', () {
+    test('FloorplanGeneratorComponent subdivides specs, builds doorway-cut geometry & NavGrid and responds to FloorplanInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final gen = scene.createGameObject('BuildingGen').addComponent(
+        FloorplanGeneratorComponent(
+          boundsWidth: 16.0,
+          boundsDepth: 12.0,
+          wallHeight: 3.0,
+          seed: 101,
+          carveCentralCorridor: false,
+          spawnGeometry: true,
+        ),
+      );
+
+      engine.step(0.016);
+      final initial = gen.lastResult!;
+      expect(initial.rooms.length, 5);
+      expect(initial.isFullyConnected, isTrue);
+      expect(gen.spawnedObjectCount, greaterThan(10));
+
+      final nav = gen.toNavGrid(cellSize: 1.0);
+      expect(nav.width, 16);
+      expect(nav.height, 12);
+
+      final ui = VoxUiContext();
+      final uiState = FloorplanInspectorUiState();
+      const btnY = 156.0;
+
+      // Click 'Seed +1' (x=150) then 'Corridor' (x=237)
+      ui.beginFrame(VoxInput(mouseX: 150.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      FloorplanInspectorUI.render(ui, gen, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 150.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      FloorplanInspectorUI.render(ui, gen, state: uiState);
+      ui.endFrame();
+      expect(gen.seed, 102);
+
+      ui.beginFrame(VoxInput(mouseX: 237.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      FloorplanInspectorUI.render(ui, gen, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 237.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      FloorplanInspectorUI.render(ui, gen, state: uiState);
+      ui.endFrame();
+      expect(gen.carveCentralCorridor, isTrue);
+      expect(gen.lastResult!.rooms.any((r) => r.isCorridor), isTrue);
+      expect(gen.lastResult!.isFullyConnected, isTrue);
+
+      ui.beginFrame(VoxInput());
+      FloorplanInspectorUI.render(ui, gen, state: uiState);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == 'CONNECTED'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('FloorplanGeneratorComponent'), isNotNull);
+      final json = reg.specFor(gen)!.toJson(gen);
+      expect(json['seed'], 102);
+    });
+  });
+
+  group('E73 — Deterministic Rollback Frames & State Checksums (voxrollback)', () {
+    test('RollbackSessionComponent rewinds tracked GameObjects on late remote input & renders RollbackDiagnosticsUI', () {
+      final engineA = Engine(HeadlessHost());
+      final p0A = engineA.scene.createGameObject('P0_A');
+      final p1A = engineA.scene.createGameObject('P1_A');
+      final rbA = engineA.scene.createGameObject('RollbackA').addComponent(
+        RollbackSessionComponent(
+          playerCount: 2,
+          localPlayerId: 0,
+          inputDelayFrames: 0,
+          autoStepInFixedUpdate: false,
+        ),
+      )
+        ..trackGameObject(p0A)
+        ..trackGameObject(p1A);
+
+      final engineB = Engine(HeadlessHost());
+      final p0B = engineB.scene.createGameObject('P0_B');
+      final p1B = engineB.scene.createGameObject('P1_B');
+      final rbB = engineB.scene.createGameObject('RollbackB').addComponent(
+        RollbackSessionComponent(
+          playerCount: 2,
+          localPlayerId: 0,
+          inputDelayFrames: 0,
+          autoStepInFixedUpdate: false,
+        ),
+      )
+        ..trackGameObject(p0B)
+        ..trackGameObject(p1B);
+
+      // Step frames 0..3: Peer B receives true P1 moveX = -1.0; Peer A initially predicts 0.0
+      for (var f = 0; f < 4; f++) {
+        final in0 = RollbackFrameInput.fromAxes(frame: f, playerId: 0, moveX: 1.0);
+        final in1True = RollbackFrameInput.fromAxes(
+          frame: f,
+          playerId: 1,
+          moveX: f == 0 ? 0.0 : -1.0,
+        );
+        rbB.submitLocalInput(in0, overrideTargetFrame: f);
+        rbB.receiveRemoteInput(in1True);
+        rbB.stepRollbackTick();
+
+        rbA.submitLocalInput(in0, overrideTargetFrame: f);
+        if (f == 0) rbA.receiveRemoteInput(in1True);
+        rbA.stepRollbackTick();
+      }
+
+      expect(rbA.latestChecksum, isNot(rbB.latestChecksum));
+
+      // Deliver late remote inputs for frames 1..3 via UI click on 'Resim' (x=145, y=156)
+      for (var f = 1; f < 4; f++) {
+        expect(
+          rbA.receiveRemoteInput(RollbackFrameInput.fromAxes(frame: f, playerId: 1, moveX: -1.0)),
+          isTrue,
+        );
+      }
+
+      final ui = VoxUiContext();
+      final uiState = RollbackDiagnosticsUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 145.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      RollbackDiagnosticsUI.render(ui, rbA, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 145.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      RollbackDiagnosticsUI.render(ui, rbA, state: uiState);
+      ui.endFrame();
+
+      expect(rbA.totalRollbacks, 1);
+      expect(p1A.transform.position.x, closeTo(p1B.transform.position.x, 1e-6));
+      expect(rbA.latestChecksum, rbB.latestChecksum);
+      expect(rbA.receiveRemoteChecksum(3, rbB.latestChecksum), isTrue);
+
+      // Click 'Delay +1' (x=230)
+      ui.beginFrame(VoxInput(mouseX: 230.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      RollbackDiagnosticsUI.render(ui, rbA, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 230.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      RollbackDiagnosticsUI.render(ui, rbA, state: uiState);
+      ui.endFrame();
+      expect(rbA.inputDelayFrames, 1);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('RollbackSessionComponent'), isNotNull);
+      final json = reg.specFor(rbA)!.toJson(rbA);
+      expect(json['inputDelayFrames'], 1);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

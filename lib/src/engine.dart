@@ -57,6 +57,8 @@ import 'package:voxprobe/voxprobe.dart' as probe;
 import 'package:voxquest/voxquest.dart' as quest;
 import 'package:voxreverb/voxreverb.dart' as reverb;
 import 'package:voxscore/voxscore.dart' as score;
+import 'package:voxarch/voxarch.dart' as arch;
+import 'package:voxrollback/voxrollback.dart' as rollback;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -148,3 +150,5 @@ part 'engine/components/light_probe_gi.dart';
 part 'engine/components/quest_journal.dart';
 part 'engine/components/room_acoustics.dart';
 part 'engine/components/adaptive_music.dart';
+part 'engine/components/floorplan_generator.dart';
+part 'engine/components/rollback_netcode.dart';

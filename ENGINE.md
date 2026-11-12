@@ -1086,11 +1086,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E70: Room Acoustics, Eyring RT60 Reverb Zones & Portal Diffraction (`voxreverb`)
 
-- [ ] **E70-1. `voxreverb` Submodule: Material Absorption, Sabine/Eyring Reverb Decay & Portal Graph Propagation.**
+- [x] **E70-1. `voxreverb` Submodule: Material Absorption, Sabine/Eyring Reverb Decay & Portal Graph Propagation.**
   - _Location:_ `./vendor/voxreverb` (`https://github.com/soulwax/voxreverb`).
   - _APIs:_ `AcousticSurfaceMaterial` (sabine absorption & scattering coefficients by surface preset: stone, wood, carpet, glass, metal, cavern), `AcousticRoomVolume` (room bounds, surface mix & Eyring/Sabine RT60 decay computation), `AcousticAperture` (doorway/window opening fraction `0..1` & transmission loss), `AcousticPropagationSolver` (shortest-path portal diffraction attenuation, direct occlusion, and wet/dry send blend).
   - _Verify:_ `vendor/voxreverb/test/voxreverb_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E70-2. `AcousticRoomComponent`, `AcousticPortalComponent` & `AcousticsInspectorUI` Engine Integration.**
+- [x] **E70-2. `AcousticRoomComponent`, `AcousticPortalComponent` & `AcousticsInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/room_acoustics.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1098,10 +1098,58 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E71: Adaptive Music Stems, Beat-Quantized Transitions & Dynamic Stingers (`voxscore`)
 
-- [ ] **E71-1. `voxscore` Submodule: Musical Tempo Clocks, Vertical Layering & Bar/Beat Quantized Cue Transitions.**
+- [x] **E71-1. `voxscore` Submodule: Musical Tempo Clocks, Vertical Layering & Bar/Beat Quantized Cue Transitions.**
   - _Location:_ `./vendor/voxscore` (`https://github.com/soulwax/voxscore`).
   - _APIs:_ `MusicalClock` (BPM tempo, time-signature numerator/denominator, beat/bar tracking & next-quantized boundary calculation), `MusicStemLayer` (intensity curve activation & smooth crossfade weights), `MusicSectionDef` (looping bar count & transition matrix), `MusicStingerCue` (beat-aligned one-shot ducking stingers), `InteractiveScoreConductor`.
   - _Verify:_ `vendor/voxscore/test/voxscore_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E71-2. `AdaptiveMusicComponent` & `MusicScoreInspectorUI` Engine Integration.**
+- [x] **E71-2. `AdaptiveMusicComponent` & `MusicScoreInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/adaptive_music.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E72: Procedural Floorplan Split-Grammar, Room Connectivity & Corridor Solver (`voxarch`)
+
+- [x] **E72-1. `voxarch` Submodule: Architectural Split-Grammar, Programmatic Room Specs & Doorway Layouts.**
+  - _Location:_ `./vendor/voxarch` (`https://github.com/soulwax/voxarch`).
+  - _APIs:_ `ArchRoomSpec` (typed program role, target weight, minimum extent, aspect bounds, adjacency requirements), `ArchSplitGrammar` (deterministic seeded recursive BSP/squarified parcel subdivision), `ArchDoorway` (shared wall portal placement & swing clearance), `ArchFloorplanSolver` (connectivity graph verification, corridor insertion & exterior window facade rules).
+  - _Verify:_ `vendor/voxarch/test/voxarch_test.dart` & `test/subsystems_test.dart`.
+- [x] **E72-2. `FloorplanGeneratorComponent` & `FloorplanInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/floorplan_generator.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E73: Deterministic Rollback Frames, Input Ring Buffers & State Checksums (`voxrollback`)
+
+- [x] **E73-1. `voxrollback` Submodule: Frame Input Prediction, Snapshot Ring Buffers & Desync Checksums.**
+  - _Location:_ `./vendor/voxrollback` (`https://github.com/soulwax/voxrollback`).
+  - _APIs:_ `RollbackFrameInput`, `InputRingBuffer` (predicted repeat-last-input fill, confirmed remote overwrite & divergence frame lookup), `StateChecksum` (FNV-1a cross-platform deterministic quantized state hashing), `DeterministicRollbackSession` (tick advance, misprediction rewind-resimulate window & frame advantage sync).
+  - _Verify:_ `vendor/voxrollback/test/voxrollback_test.dart` & `test/subsystems_test.dart`.
+- [x] **E73-2. `RollbackSessionComponent` & `RollbackDiagnosticsUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/rollback_netcode.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E74: Signed Distance Field CSG Sculpting, Raymarching & Surface Nets Meshing (`voxsdf`)
+
+- [ ] **E74-1. `voxsdf` Submodule: CSG SDF Primitives, Smooth Booleans, Gradient Normals & Surface Nets Isosurfaces.**
+  - _Location:_ `./vendor/voxsdf` (`https://github.com/soulwax/voxsdf`).
+  - _APIs:_ `SdfPrimitive` (`SdfSphere`, `SdfBox`, `SdfCapsule`, `SdfTorus`), `SdfBrush` (union, smooth-union, subtract, intersect CSG operations), `SdfField` (3D dense voxel signed distance grid with trilinear interpolation, sphere-tracing raymarcher & finite-difference normals), `SdfSurfaceNets` (smooth dual surface-net quad/triangle extraction into indexed vertices & normals).
+  - _Verify:_ `vendor/voxsdf/test/voxsdf_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E74-2. `SdfVolumeComponent` & `SdfSculptInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/sdf_volume.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E75: Hierarchical Task Network (HTN) & Utility AI Planner with Memory Decay (`voxhtn`)
+
+- [ ] **E75-1. `voxhtn` Submodule: HTN Compound Task Decomposition, Worldstate Effects & Utility Considerations.**
+  - _Location:_ `./vendor/voxhtn` (`https://github.com/soulwax/voxhtn`).
+  - _APIs:_ `HtnBlackboard` (typed facts with confidence weights & temporal exponential memory decay), `UtilityScorer` (response curves & compensated geometric scoring), `HtnTask` & `HtnMethod` (primitive operators + compound task preconditions/effects), `HtnDomain` & `HtnPlanner` (depth-limited partial-order plan synthesis & runtime interruption replanning).
+  - _Verify:_ `vendor/voxhtn/test/voxhtn_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E75-2. `HtnPlannerComponent` & `HtnDebuggerUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/htn_planner.dart`.
   - _Verify:_ `test/subsystems_test.dart`.

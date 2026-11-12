@@ -148,3 +148,9 @@
 [submodule "vendor/voxscore"]
 	path = vendor/voxscore
 	url = https://github.com/soulwax/voxscore.git
+[submodule "vendor/voxarch"]
+	path = vendor/voxarch
+	url = https://github.com/soulwax/voxarch.git
+[submodule "vendor/voxrollback"]
+	path = vendor/voxrollback
+	url = https://github.com/soulwax/voxrollback.git
