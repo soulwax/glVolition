@@ -104,7 +104,10 @@ final class WaterSurfaceComponent extends Behaviour {
 
   static final spec = ComponentSpec<WaterSurfaceComponent>(
     'WaterSurfaceComponent',
-    () => throw StateError('WaterSurfaceComponent requires surface and waves'),
+    () => WaterSurfaceComponent(
+      surface: WaterSurfaceMesh(width: 8.0, depth: 8.0, subdivisionsX: 4, subdivisionsZ: 4),
+      waves: GerstnerWaveEvaluator.ocean(),
+    ),
     const [],
   );
 

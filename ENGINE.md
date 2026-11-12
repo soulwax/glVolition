@@ -1448,6 +1448,30 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ---
 
+## E101: `ValidatedModelPackage` Prefab Integration (`Prefab.fromModelPackage`)
+
+- [x] **E101-1. `Prefab.fromModelPackage` Loader (`lib/src/engine/prefab.dart`).**
+  - _Owner (Subagent W6-A):_ Decodes `.qmesh` part payloads via `ModelCache`, registers slot materials on `Graphics`, and builds child `GameObject`s carrying `MeshRenderer`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E102: `ShadowCasterLodComponent` & Inspector
+
+- [x] **E102-1. `ShadowCasterLodComponent` & `ShadowCasterLodInspectorUI` (`lib/src/engine/components/shadow_caster_lod.dart`).**
+  - _Owner (Subagent W6-B):_ Hysteresis-aware `ShadowCasterLodPolicy` driver toggling `MeshRenderer.castsShadow` and optional reduced proxy meshes relative to active lights/camera, with state restoration on disable.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E103: 100% `ComponentSpec` Coverage (`ComponentRegistry.defaults()`)
+
+- [x] **E103-1. `registerExtendedDefaultSpecs` (`lib/src/engine/serialization/component_spec_extra.dart`).**
+  - _Owner (Subagent W6-C + Coordinator):_ Registers all remaining 48 concrete engine `Component`/`Behaviour` subclasses (2D physics/lighting/nav, AI, VFX, terrain, tilemap, splines, rewind, audio DSP, inventory, localization, networking, state machine) so `ComponentRegistry.defaults()` covers 100% of serializable engine components.
+  - _Verify:_ `test/subsystems_test.dart` (instantiates + round-trips every spec in `ComponentRegistry.defaults().allSpecs`).
+
+---
+
 ## Subagent Dispatch & Ownership Matrix
 
 1. **Coordinator Locks Shared Hub Files:** Only the Coordinator modifies `pubspec.yaml`, `.gitmodules`, `lib/gl_volition.dart`, `lib/src/engine.dart`, `lib/src/engine/serialization/component_spec.dart`, `tool/generate_logos.dart`, `ENGINE.md`, and `test/subsystems_test.dart`.

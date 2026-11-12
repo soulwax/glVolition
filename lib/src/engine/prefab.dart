@@ -132,6 +132,99 @@ final class Prefab {
         receiveShadows: receiveShadows,
       );
 
+  /// Creates a [Prefab] from a validated [ValidatedModelPackage] by decoding
+  /// its `.qmesh` part payloads at [lod] via [ModelCache] and registering
+  /// meshes and slot materials on [engine]'s [Graphics] device (E98-1 / E101).
+  factory Prefab.fromModelPackage(
+    ValidatedModelPackage package,
+    Engine engine, {
+    String? name,
+    String lod = 'LOD0',
+    MaterialOverride? materialOverride,
+    bool castShadows = true,
+    bool receiveShadows = true,
+    ModelCache? cache,
+  }) {
+    if (!package.manifest.lods.contains(lod)) {
+      throw ArgumentError.value(
+        lod,
+        'lod',
+        'package does not declare this LOD',
+      );
+    }
+    for (final part in package.manifest.parts) {
+      if (!part.lodFiles.containsKey(lod)) {
+        throw StateError('part ${part.id} has no $lod payload');
+      }
+    }
+
+    final assetName = name ?? package.manifest.assetId;
+
+    final materials = <MaterialHandle>[];
+    for (final matName in package.manifest.materials) {
+      var def = MaterialDefinition(key: '$assetName/$matName');
+      if (materialOverride != null) def = materialOverride(matName, def);
+      materials.add(engine.graphics.createMaterial(def));
+    }
+    if (materials.isEmpty) {
+      materials.add(
+        engine.graphics.createMaterial(
+          MaterialDefinition(key: '$assetName/default'),
+        ),
+      );
+    }
+
+    final meshCache = cache ?? ModelCache();
+    final parts = <({
+      ModelPackagePart part,
+      MeshHandle mesh,
+      MeshData meshData,
+      MaterialHandle material,
+    })>[];
+    for (final part in package.manifest.parts) {
+      final path = part.lodFiles[lod];
+      if (path == null) {
+        throw StateError('part ${part.id} has no $lod payload');
+      }
+      final cached = meshCache.decodeAndCache(
+        Uint8List.fromList(package.payload(path)),
+      );
+      try {
+        final meshHandle = engine.graphics.createMesh(
+          cached.deduplicated,
+          debugLabel: '$assetName/${part.id}',
+        );
+        final matIdx = part.materialSlot.clamp(0, materials.length - 1);
+        parts.add((
+          part: part,
+          mesh: meshHandle,
+          meshData: cached.deduplicated,
+          material: materials[matIdx],
+        ));
+      } finally {
+        meshCache.release(cached);
+      }
+    }
+
+    return Prefab.builder(assetName, (root) {
+      for (final entry in parts) {
+        final child = root.scene.createGameObject(
+          entry.part.id,
+          parent: root,
+        );
+        child.addComponent(
+          MeshRenderer(
+            mesh: entry.mesh,
+            meshData: entry.meshData,
+            material: entry.material,
+            castsShadow: castShadows,
+            receivesShadow: receiveShadows,
+          ),
+        );
+      }
+    });
+  }
+
   static void _populateFromSceneNode(
     GameObject targetGo,
     SceneNode srcNode, {

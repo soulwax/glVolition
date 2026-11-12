@@ -505,5 +505,7 @@ final class ComponentRegistry {
     register<EngineWorkbenchComponent>(EngineWorkbenchComponent.spec);
     register<ShaderOverrideComponent>(ShaderOverrideComponent.spec);
     register<SceneStreamZone>(SceneStreamZone.spec);
+    register<ShadowCasterLodComponent>(ShadowCasterLodComponent.spec);
+    registerExtendedDefaultSpecs(this);
   }
 }

@@ -10010,6 +10010,193 @@ void main() {
       },
     );
   });
+
+  group('E101-E103 — Prefab.fromModelPackage, ShadowCasterLodComponent & Full ComponentSpec Coverage', () {
+    test(
+      'E101: Prefab.fromModelPackage decodes QMSH parts, registers materials & instantiates child MeshRenderers',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        final cube = Primitives.cube(size: 1.0);
+        final stride = cube.layout.strideFloats; // 18 (surfaceV2)
+        final expanded = <double>[];
+        if (cube.indices != null) {
+          for (final idx in cube.indices!) {
+            final base = idx * stride;
+            for (var k = 0; k < stride; k++) {
+              expanded.add(cube.vertices[base + k]);
+            }
+          }
+        } else {
+          expanded.addAll(cube.vertices);
+        }
+        final vCount = expanded.length ~/ stride;
+        const headerBytes = 36;
+        final payload = Uint8List(headerBytes + expanded.length * 4);
+        final bd = ByteData.sublistView(payload)
+          ..setUint8(0, 0x51) // 'Q'
+          ..setUint8(1, 0x4D) // 'M'
+          ..setUint8(2, 0x53) // 'S'
+          ..setUint8(3, 0x48) // 'H'
+          ..setUint16(4, stride == 14 ? 1 : 2, Endian.little)
+          ..setUint16(6, stride, Endian.little)
+          ..setUint32(8, vCount, Endian.little)
+          ..setFloat32(12, cube.localBounds.min.x, Endian.little)
+          ..setFloat32(16, cube.localBounds.min.y, Endian.little)
+          ..setFloat32(20, cube.localBounds.min.z, Endian.little)
+          ..setFloat32(24, cube.localBounds.max.x, Endian.little)
+          ..setFloat32(28, cube.localBounds.max.y, Endian.little)
+          ..setFloat32(32, cube.localBounds.max.z, Endian.little);
+        for (var i = 0; i < expanded.length; i++) {
+          bd.setFloat32(headerBytes + i * 4, expanded[i], Endian.little);
+        }
+
+        final manifest = ModelPackageManifest(
+          assetId: 'crate-prop',
+          packageHash: '0' * 64,
+          sourceFormat: 'glb',
+          materials: const ['crate_mat'],
+          lods: const ['LOD0'],
+          parts: const [
+            ModelPackagePart(
+              id: 'hull',
+              materialSlot: 0,
+              lodFiles: {'LOD0': 'hull_lod0.qmesh'},
+            ),
+          ],
+        );
+        final pkg = ValidatedModelPackage(
+          manifest: manifest,
+          payloads: {'hull_lod0.qmesh': payload},
+        );
+
+        final cache = ModelCache();
+        final prefab = Prefab.fromModelPackage(pkg, engine, cache: cache);
+        final instance = prefab.instantiate(engine.scene, position: const Vec3(2, 0, -4));
+
+        expect(instance.name, 'crate-prop');
+        expect(instance.children.length, 1);
+        final partGo = instance.children.first;
+        expect(partGo.name, 'hull');
+        final mr = partGo.getComponent<MeshRenderer>();
+        expect(mr, isNotNull);
+        expect(mr!.mesh, isNotNull);
+        expect(mr.material, isNotNull);
+        expect(mr.meshData!.vertices.length, greaterThan(0));
+        // Local acquisition inside Prefab.fromModelPackage releases back cleanly to 0.
+        expect(cache.cachedCount, 0);
+      },
+    );
+
+    test(
+      'E102: ShadowCasterLodComponent toggles shadow casting/mesh with hysteresis, inspector buttons & disable restore',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        final fullMesh = engine.graphics.createMesh(Primitives.cube(size: 1.0));
+        final reducedMesh = engine.graphics.createMesh(Primitives.cube(size: 0.5));
+
+        engine.scene.createGameObject(
+          'Spot',
+          position: Vec3.zero,
+          components: [Light.spot(range: 40.0)],
+        );
+
+        final caster = engine.scene.createGameObject(
+          'Caster',
+          position: const Vec3(0, 0, 4), // distance 4 -> full (< 8)
+          components: [
+            MeshRenderer(mesh: fullMesh, castsShadow: true),
+            ShadowCasterLodComponent(
+              fullToReduced: 8.0,
+              reducedToCulled: 20.0,
+              hysteresisDistance: 1.0,
+              fullMesh: fullMesh,
+              reducedMesh: reducedMesh,
+            ),
+          ],
+        );
+        final mr = caster.getComponent<MeshRenderer>()!;
+        final lod = caster.getComponent<ShadowCasterLodComponent>()!;
+
+        engine.step(0.016);
+        expect(lod.currentLod, ShadowCasterLod.full);
+        expect(mr.castsShadow, isTrue);
+        expect(mr.mesh, fullMesh);
+
+        // Inside hysteresis band (8.5 < 8 + 1) -> stays full.
+        caster.transform.position = const Vec3(0, 0, 8.5);
+        engine.step(0.016);
+        expect(lod.currentLod, ShadowCasterLod.full);
+
+        // Beyond 8 + 1 -> transitions to reduced & swaps reducedMesh.
+        caster.transform.position = const Vec3(0, 0, 12.0);
+        engine.step(0.016);
+        expect(lod.currentLod, ShadowCasterLod.reduced);
+        expect(mr.castsShadow, isTrue);
+        expect(mr.mesh, reducedMesh);
+
+        // Beyond 20 + 1 -> transitions to culled & disables castsShadow.
+        caster.transform.position = const Vec3(0, 0, 25.0);
+        engine.step(0.016);
+        expect(lod.currentLod, ShadowCasterLod.culled);
+        expect(mr.castsShadow, isFalse);
+
+        // Inspector click: click Full at (152, 159), then Auto at (68, 159).
+        final ui = VoxUiContext();
+        final uiState = ShadowCasterLodUiState();
+        ui.beginFrame(VoxInput(mouseX: 152, mouseY: 159, isMouseDown: true, wasMouseClicked: true));
+        ShadowCasterLodInspectorUI.render(ui, lod, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(VoxInput(mouseX: 152, mouseY: 159, isMouseDown: false, wasMouseReleased: true));
+        ShadowCasterLodInspectorUI.render(ui, lod, state: uiState);
+        final dl = ui.endFrame();
+        expect(lod.currentLod, ShadowCasterLod.full);
+        expect(mr.castsShadow, isTrue);
+        expect(dl.commands.any((c) => c.text == 'Shadow Caster LOD'), isTrue);
+
+        // Clearing override restores distance-based culling and onDisable restores full mesh & castsShadow.
+        ui.beginFrame(VoxInput(mouseX: 68, mouseY: 159, isMouseDown: true, wasMouseClicked: true));
+        ShadowCasterLodInspectorUI.render(ui, lod, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(VoxInput(mouseX: 68, mouseY: 159, isMouseDown: false, wasMouseReleased: true));
+        ShadowCasterLodInspectorUI.render(ui, lod, state: uiState);
+        ui.endFrame();
+        expect(lod.forcedLod, isNull);
+        expect(lod.currentLod, ShadowCasterLod.culled);
+        expect(mr.castsShadow, isFalse);
+
+        lod.enabled = false;
+        expect(mr.castsShadow, isTrue);
+        expect(mr.mesh, fullMesh);
+      },
+    );
+
+    test(
+      'E103: ComponentRegistry.defaults instantiates and round-trips every registered ComponentSpec (142+ specs)',
+      () {
+        final reg = ComponentRegistry.defaults();
+        final specs = reg.registeredSpecs.toList();
+        // 93 baseline + E94-E98 (5) + E102 (1) + E103 extended (48) = 147 specs.
+        expect(specs.length, greaterThanOrEqualTo(142));
+
+        final engine = Engine(HeadlessHost());
+        final go = engine.scene.createGameObject('Target');
+        for (final spec in specs) {
+          final comp = spec.create();
+          final json = spec.toJson(comp);
+          final restored = spec.create();
+          spec.applyJson(restored, json);
+          expect(restored.runtimeType, comp.runtimeType, reason: 'Type mismatch on ${spec.typeName}');
+          expect(json['type'], spec.typeName);
+          if (spec.typeName == 'RigidBody2D' || spec.typeName == 'BoxCollider2D' || spec.typeName == 'AudioLowPassFilterComponent') {
+            go.addComponent(restored);
+          }
+        }
+        expect(go.components.length, greaterThanOrEqualTo(4));
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

@@ -9,6 +9,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:pixeldart/pixeldart.dart';
+import 'package:pixeldart/pixeldart_advanced.dart'
+    show ModelCache, ShadowCasterLod, ShadowCasterLodPolicy;
 import 'package:voxlog/voxlog.dart';
 import 'package:voxui/voxui.dart';
 import 'package:voxai/voxai.dart';
@@ -201,3 +203,5 @@ part 'engine/components/greedy_voxel_brick.dart';
 part 'engine/components/engine_workbench.dart';
 part 'engine/components/shader_override.dart';
 part 'engine/components/scene_stream_zone.dart';
+part 'engine/components/shadow_caster_lod.dart';
+part 'engine/serialization/component_spec_extra.dart';
