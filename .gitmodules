@@ -112,3 +112,9 @@
 [submodule "vendor/voxfracture"]
 	path = vendor/voxfracture
 	url = https://github.com/soulwax/voxfracture.git
+[submodule "vendor/voxdecal"]
+	path = vendor/voxdecal
+	url = https://github.com/soulwax/voxdecal.git
+[submodule "vendor/voxcraft"]
+	path = vendor/voxcraft
+	url = https://github.com/soulwax/voxcraft.git

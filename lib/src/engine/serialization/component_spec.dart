@@ -460,5 +460,10 @@ final class ComponentRegistry {
     register<VehicleChassisComponent>(VehicleChassisComponent.spec);
     register<FracturableMeshComponent>(FracturableMeshComponent.spec);
     register<StructuralSupportComponent>(StructuralSupportComponent.spec);
+    register<DecalPoolComponent>(DecalPoolComponent.spec);
+    register<DecalProjectorComponent>(DecalProjectorComponent.spec);
+    register<SurfaceSkidTrailComponent>(SurfaceSkidTrailComponent.spec);
+    register<FactoryProducerComponent>(FactoryProducerComponent.spec);
+    register<DynamicMarketComponent>(DynamicMarketComponent.spec);
   }
 }

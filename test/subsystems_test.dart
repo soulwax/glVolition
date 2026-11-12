@@ -6627,6 +6627,169 @@ void main() {
       expect(json['voronoiCellCount'], 6);
     });
   });
+
+  group('E60 — Projective 3D Decals, Skid Ribbons & Decal Pools (voxdecal)', () {
+    test('DecalProjectorComponent, DecalPoolComponent, SurfaceSkidTrailComponent & DecalPoolInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      // Ground target mesh
+      final floorGo = scene.createGameObject(
+        'DecalFloor',
+        position: const Vec3(0.0, 0.0, 0.0),
+        components: [
+          MeshRenderer(meshData: Primitives.plane(width: 10.0, depth: 10.0, subdivisionsX: 4, subdivisionsZ: 4)),
+        ],
+      );
+
+      // Oriented box decal projecting straight downward (-Y -> lookRotation(0,-1,0)) onto floor.
+      final projGo = scene.createGameObject(
+        'ScorchProjector',
+        position: const Vec3(0.5, 0.0, -0.5),
+        rotation: lookRotation(const Vec3(0.0, -1.0, 0.0), Vec3.unitZ),
+      );
+      final projector = projGo.addComponent(
+        DecalProjectorComponent(size: const Vec3(2.0, 2.0, 1.0)),
+      );
+      final clipped = projector.projectOntoTarget(floorGo);
+      expect(clipped.isEmpty, isFalse);
+      expect(projector.triangleCount, greaterThanOrEqualTo(2));
+      projector.currentMeshData!.validate();
+
+      // Ring-buffer pool + skid trail
+      final pool = scene.createGameObject('DecalCoordinator').addComponent(
+        DecalPoolComponent(maxCapacity: 3, mergeCullRadius: 0.15, defaultLifetimeSeconds: 8.0),
+      );
+      pool.stampDecal(worldPosition: const Vec3(0.0, 0.0, 0.0), worldNormal: Vec3.unitY, target: floorGo);
+      // Duplicate inside mergeCullRadius is dropped
+      final dup = pool.stampDecal(worldPosition: const Vec3(0.05, 0.0, 0.0), worldNormal: Vec3.unitY, target: floorGo);
+      expect(dup, isNull);
+      expect(pool.mergeCulledCount, 1);
+
+      final skidGo = scene.createGameObject('LeftTireSkid');
+      final skid = skidGo.addComponent(SurfaceSkidTrailComponent(ribbonWidth: 0.35, minSegmentDistance: 0.25));
+      for (var i = 0; i < 6; i++) {
+        skid.addStamp(Vec3(0.0, 0.0, -i * 0.6));
+      }
+      engine.step(0.05);
+      expect(skid.sampleCount, 6);
+      expect(skid.triangleCount, 10);
+      skid.currentMeshData!.validate();
+
+      // Click 'Stamp' button at x=70, y=156 in DecalPoolInspectorUI.
+      final ui = VoxUiContext();
+      final uiState = DecalPoolInspectorUiState();
+      const stampX = 70.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: stampX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      DecalPoolInspectorUI.render(ui, pool, skidTrail: skid, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: stampX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      DecalPoolInspectorUI.render(ui, pool, skidTrail: skid, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      DecalPoolInspectorUI.render(ui, pool, skidTrail: skid, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(pool.activeCount, 2);
+      expect(drawList.commands.any((c) => c.text == '2 / 3'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('DecalPoolComponent'), isNotNull);
+      expect(reg.specByName('DecalProjectorComponent'), isNotNull);
+      expect(reg.specByName('SurfaceSkidTrailComponent'), isNotNull);
+      final json = reg.specFor(pool)!.toJson(pool);
+      expect(json['maxCapacity'], 3);
+    });
+  });
+
+  group('E61 — Production Pipelines, Conveyors & Dynamic Economy (voxcraft)', () {
+    test('FactoryProducerComponent, DynamicMarketComponent & EconomyFactoryUI run production, belts & market trades', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      const alloyRecipe = FactoryRecipe(
+        id: 'alloy',
+        name: 'Titanium Alloy',
+        inputs: [CraftResourceAmount('ore', 2.0)],
+        outputs: [CraftResourceAmount('alloy', 1.0)],
+        byproducts: [CraftResourceAmount('slag', 0.5)],
+        craftDurationSeconds: 1.0,
+      );
+
+      final factory = FactoryProducerComponent(maxActiveSlots: 1, speedMultiplier: 1.0)
+        ..registerRecipe(alloyRecipe)
+        ..depositResource('ore', 10.0)
+        ..enqueueRecipe('alloy', batches: 4);
+      factory.techTree
+        ..addNode(const TechNodeDef(
+          id: 'fast_smelt',
+          name: 'Fast Smelt',
+          bonus: TechBonusEffect(recipeSpeedBonus: 1.0),
+        ))
+        ..unlockImmediate('fast_smelt');
+
+      factory.conveyors
+        ..addNode(ConveyorNode(id: 'mine', kind: ConveyorNodeKind.producer)..deposit('ore', 6.0))
+        ..addNode(ConveyorNode(id: 'bin', kind: ConveyorNodeKind.consumer))
+        ..connect(id: 'c1', fromNodeId: 'mine', toNodeId: 'bin', itemsPerSecond: 10.0, lengthMeters: 0.5, beltSpeedMps: 5.0);
+
+      final market = DynamicMarketComponent()
+        ..registerCommodity(
+          const MarketCommoditySpec(
+            id: 'alloy',
+            name: 'Titanium Alloy',
+            basePrice: 50.0,
+            equilibriumStock: 40.0,
+            elasticity: 0.75,
+          ),
+        );
+
+      scene.createGameObject('IndustrialHub', components: [factory, market]);
+
+      // Run 20 x 0.1s frames (= 2.0s; at 2x speed completes all 4 x 1.0s alloy batches!).
+      for (var i = 0; i < 20; i++) {
+        engine.step(0.1);
+      }
+
+      expect(factory.completedBatches, 4);
+      expect(factory.amountOf('alloy'), closeTo(4.0, 1e-4));
+      expect(factory.amountOf('slag'), closeTo(2.0, 1e-4));
+      expect(factory.conveyors.nodes['bin']!.amountOf('ore'), greaterThanOrEqualTo(4.0));
+
+      final spotBefore = market.priceOf('alloy');
+      // Click 'Buy 10' at x=250, y=156 in EconomyFactoryUI.
+      final ui = VoxUiContext();
+      final uiState = EconomyFactoryUiState();
+      const buyX = 250.0;
+      const btnY = 156.0;
+      ui.beginFrame(VoxInput(mouseX: buyX, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      EconomyFactoryUI.render(ui, factory, market: market, primaryCommodityId: 'alloy', state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput(mouseX: buyX, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      EconomyFactoryUI.render(ui, factory, market: market, primaryCommodityId: 'alloy', state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      EconomyFactoryUI.render(ui, factory, market: market, primaryCommodityId: 'alloy', state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(market.priceOf('alloy'), greaterThan(spotBefore));
+      expect(
+        drawList.commands.any((c) => (c.text?.startsWith('alloy @ ') ?? false)),
+        isTrue,
+      );
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('FactoryProducerComponent'), isNotNull);
+      expect(reg.specByName('DynamicMarketComponent'), isNotNull);
+      final json = reg.specFor(factory)!.toJson(factory);
+      expect(json['maxActiveSlots'], 1);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

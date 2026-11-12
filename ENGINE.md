@@ -966,11 +966,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E60: Projective 3D Decals, Surface Footprints & Damage Scars (`voxdecal`)
 
-- [ ] **E60-1. `voxdecal` Submodule: Oriented Decal Projectors, Tire Skid Ribbons & Ring-Buffer Decal Pools.**
+- [x] **E60-1. `voxdecal` Submodule: Oriented Decal Projectors, Tire Skid Ribbons & Ring-Buffer Decal Pools.**
   - _Location:_ `./vendor/voxdecal` (`https://github.com/soulwax/voxdecal`).
   - _APIs:_ `DecalBoxProjector` (OBB surface mesh clipping, normal-angle cutoff & planar UV remapping), `SkidRibbonBuilder` (continuous ground-hugged ribbon strips for tire tracks/footprints/trails), `DecalPoolManager` (FIFO LRU ring buffer, smooth fade-out lifetimes, spatial merge culling).
   - _Verify:_ `vendor/voxdecal/test/voxdecal_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E60-2. `DecalProjectorComponent`, `SurfaceSkidTrailComponent` & `DecalPoolInspectorUI` Engine Integration.**
+- [x] **E60-2. `DecalProjectorComponent`, `SurfaceSkidTrailComponent` & `DecalPoolInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/surface_decals.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -978,12 +978,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E61: Production Pipelines, Automation Conveyors & Dynamic Resource Economies (`voxcraft`)
 
-- [ ] **E61-1. `voxcraft` Submodule: Multi-Stage Production Graphs, Conveyor Belts, Tech Trees & Market Pricing.**
+- [x] **E61-1. `voxcraft` Submodule: Multi-Stage Production Graphs, Conveyor Belts, Tech Trees & Market Pricing.**
   - _Location:_ `./vendor/voxcraft` (`https://github.com/soulwax/voxcraft`).
   - _APIs:_ `FactoryRecipe` & `ProductionQueue` (parallel batch slots, power/speed efficiency scaling, byproduct yields), `ConveyorNetwork` (throughput-capped item transport lanes & splitter/merger routers), `TechTreeSolver` (DAG research prerequisites & multiplier unlocks), `DynamicMarketBook` (supply/demand elasticity, rolling price history & equilibrium mean-reversion).
   - _Verify:_ `vendor/voxcraft/test/voxcraft_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E61-2. `FactoryProducerComponent`, `DynamicMarketComponent` & `EconomyFactoryUI` Engine Integration.**
+- [x] **E61-2. `FactoryProducerComponent`, `DynamicMarketComponent` & `EconomyFactoryUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/factory_economy.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E62: Modular Snap-Grid Construction, Architectural Sockets & Blueprints (`voxbuild`)
+
+- [ ] **E62-1. `voxbuild` Submodule: Typed Connection Sockets, Rotated Grid Snapping & Clearance Solver.**
+  - _Location:_ `./vendor/voxbuild` (`https://github.com/soulwax/voxbuild`).
+  - _APIs:_ `BuildSocket`, `BuildPieceDef` (local socket ports, rotation steps, grounding requirements), `SnapGridSolver` (socket-to-socket alignment, magnetic cursor snap, OBB overlap clearance validation), `ConstructionBlueprint` (reusable multi-piece structure stamps & material cost tally).
+  - _Verify:_ `vendor/voxbuild/test/voxbuild_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E62-2. `BlueprintPieceComponent`, `ConstructionPlannerComponent` & `BuilderInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/modular_building.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E63: Poisson-Disk Foliage Scattering, Clump LODs & Wind Bending (`voxfoliage`)
+
+- [ ] **E63-1. `voxfoliage` Submodule: Seeded Poisson-Disk Sampling, Slope/Altitude Masks & Cluster Culling.**
+  - _Location:_ `./vendor/voxfoliage` (`https://github.com/soulwax/voxfoliage`).
+  - _APIs:_ `PoissonDiskSampler` (Bridson fast 2D blue-noise scatter), `FoliageBiomeScatterer` (elevation/slope/density noise weight placement), `FoliageClusterGrid` (spatial cell batching & camera distance density LOD), `WindSwayInstanceBuffer` (per-instance transform & harmonic breeze phase).
+  - _Verify:_ `vendor/voxfoliage/test/voxfoliage_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E63-2. `FoliageScatterComponent` & `FoliageInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/foliage_scatter.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
 

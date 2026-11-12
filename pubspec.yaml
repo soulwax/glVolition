@@ -84,6 +84,10 @@ dependencies:
     path: vendor/voxwheel
   voxfracture:
     path: vendor/voxfracture
+  voxdecal:
+    path: vendor/voxdecal
+  voxcraft:
+    path: vendor/voxcraft
   web: ^0.5.0
 
 dev_dependencies:
