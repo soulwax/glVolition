@@ -124,3 +124,9 @@
 [submodule "vendor/voxfoliage"]
 	path = vendor/voxfoliage
 	url = https://github.com/soulwax/voxfoliage.git
+[submodule "vendor/voxragdoll"]
+	path = vendor/voxragdoll
+	url = https://github.com/soulwax/voxragdoll.git
+[submodule "vendor/voxtraffic"]
+	path = vendor/voxtraffic
+	url = https://github.com/soulwax/voxtraffic.git

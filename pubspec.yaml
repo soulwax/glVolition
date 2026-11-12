@@ -92,6 +92,10 @@ dependencies:
     path: vendor/voxbuild
   voxfoliage:
     path: vendor/voxfoliage
+  voxragdoll:
+    path: vendor/voxragdoll
+  voxtraffic:
+    path: vendor/voxtraffic
   web: ^0.5.0
 
 dev_dependencies:

@@ -49,6 +49,8 @@ import 'package:voxdecal/voxdecal.dart' as decal;
 import 'package:voxcraft/voxcraft.dart' as craft;
 import 'package:voxbuild/voxbuild.dart' as vbuild;
 import 'package:voxfoliage/voxfoliage.dart' as foliage;
+import 'package:voxragdoll/voxragdoll.dart' as ragdoll;
+import 'package:voxtraffic/voxtraffic.dart' as traffic;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -132,3 +134,5 @@ part 'engine/components/surface_decals.dart';
 part 'engine/components/factory_economy.dart';
 part 'engine/components/modular_building.dart';
 part 'engine/components/foliage_scatter.dart';
+part 'engine/components/ragdoll_physics.dart';
+part 'engine/components/traffic_simulation.dart';

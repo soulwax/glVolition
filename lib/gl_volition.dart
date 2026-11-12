@@ -44,5 +44,7 @@ export 'package:voxdecal/voxdecal.dart';
 export 'package:voxcraft/voxcraft.dart';
 export 'package:voxbuild/voxbuild.dart';
 export 'package:voxfoliage/voxfoliage.dart';
+export 'package:voxragdoll/voxragdoll.dart';
+export 'package:voxtraffic/voxtraffic.dart';
 
 export 'src/engine.dart';

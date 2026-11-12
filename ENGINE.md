@@ -1014,11 +1014,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E64: Articulated Ragdoll Constraints, Active Balance Motors & Hit Reactions (`voxragdoll`)
 
-- [ ] **E64-1. `voxragdoll` Submodule: Rigid Limb Chain Constraints, Cone-Twist Joint Limits & PD Motors.**
+- [x] **E64-1. `voxragdoll` Submodule: Rigid Limb Chain Constraints, Cone-Twist Joint Limits & PD Motors.**
   - _Location:_ `./vendor/voxragdoll` (`https://github.com/soulwax/voxragdoll`).
   - _APIs:_ `RagdollSkeletonDef`, `RagdollJointLimit` (cone-twist swing & twist angle clamps, hinge limits), `RagdollSolver` (XPBD positional & angular joint constraint projections), `RagdollPoseMatcher` (PD active-balance motor torques & partial hit-flinch impulse blending).
   - _Verify:_ `vendor/voxragdoll/test/voxragdoll_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E64-2. `ArticulatedRagdollComponent` & `RagdollInspectorUI` Engine Integration.**
+- [x] **E64-2. `ArticulatedRagdollComponent` & `RagdollInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/ragdoll_physics.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1026,12 +1026,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E65: Lane Spline Graphs, Traffic Signal Phases & Autonomous Vehicle Traffic (`voxtraffic`)
 
-- [ ] **E65-1. `voxtraffic` Submodule: Directed Lane Networks, Intersection Signals & IDM Car-Following.**
+- [x] **E65-1. `voxtraffic` Submodule: Directed Lane Networks, Intersection Signals & IDM Car-Following.**
   - _Location:_ `./vendor/voxtraffic` (`https://github.com/soulwax/voxtraffic`).
   - _APIs:_ `TrafficLaneNode`, `TrafficLaneEdge`, `IntersectionSignalController` (timed green/yellow/red cycles, crosswalk & turn phase matrices), `TrafficVehicleAgent` (Intelligent Driver Model longitudinal acceleration, headway braking & lane switching), `TrafficNetworkSolver`.
   - _Verify:_ `vendor/voxtraffic/test/voxtraffic_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E65-2. `TrafficNetworkComponent`, `TrafficSignalComponent` & `TrafficMonitorUI` Engine Integration.**
+- [x] **E65-2. `TrafficNetworkComponent`, `TrafficSignalComponent` & `TrafficMonitorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/traffic_simulation.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E66: Digital Logic Gates, Wire Propagation Graphs, Latches & Clocks (`voxcircuit`)
+
+- [ ] **E66-1. `voxcircuit` Submodule: Directed Gate Graphs, Signal Delay Tickers, Flip-Flops & Buses.**
+  - _Location:_ `./vendor/voxcircuit` (`https://github.com/soulwax/voxcircuit`).
+  - _APIs:_ `CircuitPin`, `CircuitGateKind` (`and`, `or`, `xor`, `nand`, `not`, `srLatch`, `dFlipFlop`, `clockPulse`), `CircuitGateDef`, `CircuitWire`, `CircuitGraphSolver` (topological evaluation with cycle-safe state buffers & configurable propagation ticks).
+  - _Verify:_ `vendor/voxcircuit/test/voxcircuit_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E66-2. `LogicCircuitComponent` & `CircuitDebuggerUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/logic_circuit.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E67: Eulerian 2D Shallow-Water Waves, Terrain Overflow & Fire Grids (`voxfluid`)
+
+- [ ] **E67-1. `voxfluid` Submodule: Heightfield Shallow-Water Pipe Fluxes & Cellular Fire/Smoke Simulation.**
+  - _Location:_ `./vendor/voxfluid` (`https://github.com/soulwax/voxfluid`).
+  - _APIs:_ `ShallowWaterGrid` (virtual pipe flux integration, hydrostatic depth update, terrain overflow & velocity readout), `CellularFireGrid` (fuel heat ignition, wind-biased spread, burnout embers & smoke density field).
+  - _Verify:_ `vendor/voxfluid/test/voxfluid_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E67-2. `FluidSurfaceComponent` & `FluidInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/fluid_simulation.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
 

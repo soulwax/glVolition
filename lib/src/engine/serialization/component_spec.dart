@@ -468,5 +468,8 @@ final class ComponentRegistry {
     register<BlueprintPieceComponent>(BlueprintPieceComponent.spec);
     register<ConstructionPlannerComponent>(ConstructionPlannerComponent.spec);
     register<FoliageScatterComponent>(FoliageScatterComponent.spec);
+    register<ArticulatedRagdollComponent>(ArticulatedRagdollComponent.spec);
+    register<TrafficSignalComponent>(TrafficSignalComponent.spec);
+    register<TrafficNetworkComponent>(TrafficNetworkComponent.spec);
   }
 }

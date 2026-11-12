@@ -6987,6 +6987,189 @@ void main() {
       expect(json['windSpeed'], closeTo(7.0, 1e-6));
     });
   });
+
+  group('E64 — Articulated Ragdoll Constraints & Active Balance (voxragdoll)', () {
+    test('ArticulatedRagdollComponent syncs limb GameObjects, handles hit flinch, recovers & renders RagdollInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final ragGo = scene.createGameObject('HeroRagdoll', position: const Vec3(0, 0, 0));
+      final rag = ragGo.addComponent(
+        ArticulatedRagdollComponent(
+          floorY: 0.0,
+          activeBalanceStrength: 0.9,
+          flinchRecoveryRate: 3.0,
+        ),
+      );
+
+      final limbs = rag.spawnDebugLimbs();
+      expect(limbs.length, rag.skeleton.limbs.length);
+      rag.pinLimb('pelvis', true);
+
+      rag.applyHitImpulse(
+        'torso',
+        const Vec3(140.0, 20.0, 60.0),
+        localHitOffset: const Vec3(0.0, 0.2, 0.0),
+        flinchStrength: 0.85,
+        durationSeconds: 0.25,
+      );
+      expect(rag.mode, RagdollMode.hitReactionFlinch);
+      expect(rag.motorBlend, lessThan(0.3));
+
+      engine.step(0.05);
+      engine.step(0.05);
+      final torsoPos = limbs['torso']!.transform.position;
+      expect(torsoPos.x.abs() + torsoPos.z.abs(), greaterThan(0.02));
+      expect(rag.maxJointViolationMeters, lessThan(0.05));
+
+      for (var i = 0; i < 40; i++) {
+        engine.step(0.05);
+      }
+      expect(rag.mode, RagdollMode.activeBalanced);
+      expect(rag.motorBlend, greaterThan(0.8));
+
+      // Click 'Punch Torso' (x=72, y=156) and 'Go Limp' (x=168, y=156) in RagdollInspectorUI
+      final ui = VoxUiContext();
+      final uiState = RagdollInspectorUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 72.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      RagdollInspectorUI.render(ui, rag, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 72.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      RagdollInspectorUI.render(ui, rag, state: uiState);
+      ui.endFrame();
+      expect(rag.mode, RagdollMode.hitReactionFlinch);
+
+      ui.beginFrame(VoxInput(mouseX: 168.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      RagdollInspectorUI.render(ui, rag, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 168.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      RagdollInspectorUI.render(ui, rag, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      RagdollInspectorUI.render(ui, rag, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(rag.isLimp, isTrue);
+      expect(rag.mode, RagdollMode.fullLimp);
+      expect(drawList.commands.any((c) => c.text == 'fullLimp / 0%'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('ArticulatedRagdollComponent'), isNotNull);
+      final json = reg.specFor(rag)!.toJson(rag);
+      expect(json['isLimp'], isTrue);
+      expect(json['activeBalanceStrength'], closeTo(0.9, 1e-6));
+    });
+  });
+
+  group('E65 — Autonomous Traffic Lane Graphs & Signals (voxtraffic)', () {
+    test('TrafficNetworkComponent & TrafficSignalComponent brake platoon on red, clear on green & render TrafficMonitorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      final sigGo = scene.createGameObject(
+        'MainSignal',
+        components: [
+          MeshRenderer(meshData: Primitives.cube(size: 1.0)),
+          Light(),
+        ],
+      );
+      final sig = sigGo.addComponent(
+        TrafficSignalComponent(
+          signalId: 'sig_main',
+          activeGroupName: 'ns',
+          customPhases: const [
+            TrafficPhaseSpec(
+              id: 'p_ew',
+              name: 'EW Green',
+              greenGroupIds: {'ew'},
+              greenDurationSeconds: 10.0,
+              yellowDurationSeconds: 2.0,
+              allRedClearanceSeconds: 0.5,
+            ),
+            TrafficPhaseSpec(
+              id: 'p_ns',
+              name: 'NS Green',
+              greenGroupIds: {'ns'},
+              greenDurationSeconds: 10.0,
+              yellowDurationSeconds: 2.0,
+              allRedClearanceSeconds: 0.5,
+            ),
+          ],
+        ),
+      );
+      expect(sig.currentColor, TrafficSignalColor.red);
+
+      final net = scene.createGameObject('CityTraffic').addComponent(TrafficNetworkComponent())
+        ..addNode(const TrafficLaneNode(id: 'a', position: TrafficVec3(0, 0, -60)))
+        ..addNode(
+          const TrafficLaneNode(
+            id: 'b',
+            position: TrafficVec3(0, 0, 0),
+            signalControllerId: 'sig_main',
+            signalGroupId: 'ns',
+          ),
+        )
+        ..addNode(const TrafficLaneNode(id: 'c', position: TrafficVec3(0, 0, 60)))
+        ..addEdge(TrafficLaneEdge(id: 'in', fromNodeId: 'a', toNodeId: 'b', speedLimitMps: 14.0, nextEdgeIds: ['out']))
+        ..addEdge(TrafficLaneEdge(id: 'out', fromNodeId: 'b', toNodeId: 'c', speedLimitMps: 14.0))
+        ..attachSignalComponent(sig);
+
+      final lead = net.spawnVehicle('lead', edgeId: 'in', distanceAlongEdge: 32.0, initialSpeedMps: 10.0);
+      final tail = net.spawnVehicle('tail', edgeId: 'in', distanceAlongEdge: 14.0, initialSpeedMps: 10.0);
+      expect(net.vehicleObject('lead'), isNotNull);
+      expect(net.vehicleObject('lead')!.getComponent<BoxCollider>(), isNotNull);
+
+      for (var i = 0; i < 110; i++) {
+        engine.step(0.05);
+      }
+      expect(lead.speedMps, lessThan(0.5));
+      expect(lead.waitingAtSignal, isTrue);
+      expect(lead.currentEdgeId, 'in');
+      expect(tail.distanceAlongEdge, lessThan(lead.distanceAlongEdge - 4.0));
+      expect(net.vehicleObject('lead')!.transform.position.z, closeTo(lead.worldPosition.z, 1e-4));
+
+      // Click 'Next Phase' (x=76, y=156) and 'Step +2s' (x=172, y=156) twice in TrafficMonitorUI
+      final ui = VoxUiContext();
+      final uiState = TrafficMonitorUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 76.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      TrafficMonitorUI.render(ui, net, signal: sig, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 76.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      TrafficMonitorUI.render(ui, net, signal: sig, state: uiState);
+      ui.endFrame();
+
+      expect(sig.currentColor, TrafficSignalColor.green);
+      expect(sigGo.getComponent<Light>()!.color.g, greaterThan(0.8));
+
+      for (var k = 0; k < 2; k++) {
+        ui.beginFrame(VoxInput(mouseX: 172.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+        TrafficMonitorUI.render(ui, net, signal: sig, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(VoxInput(mouseX: 172.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+        TrafficMonitorUI.render(ui, net, signal: sig, state: uiState);
+        ui.endFrame();
+      }
+
+      ui.beginFrame(VoxInput());
+      TrafficMonitorUI.render(ui, net, signal: sig, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(lead.currentEdgeId, 'out');
+      expect(lead.speedMps, greaterThan(4.0));
+      expect(drawList.commands.any((c) => c.text == 'NS Green (GREEN)'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('TrafficSignalComponent'), isNotNull);
+      expect(reg.specByName('TrafficNetworkComponent'), isNotNull);
+      expect(reg.specFor(sig)!.toJson(sig)['signalId'], 'sig_main');
+      expect(reg.specFor(net)!.toJson(net)['timeScale'], 1.0);
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {
