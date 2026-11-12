@@ -65,8 +65,18 @@ final class Camera extends Component {
 
   CameraController get controller => customController ?? _transformController;
 
-  /// The most recently enabled camera in the active scene.
-  static Camera? of(Scene scene) => scene._cameras.lastOrNull;
+  /// The active camera with the highest [depth] in [scene] (ties resolve to
+  /// the most recently enabled camera), or `null` if none are active.
+  static Camera? of(Scene scene) {
+    final cameras = scene._cameras;
+    if (cameras.isEmpty) return null;
+    var best = cameras.first;
+    for (var i = 1; i < cameras.length; i++) {
+      final c = cameras[i];
+      if (c.depth >= best.depth) best = c;
+    }
+    return best;
+  }
 
   void shake({double trauma = 0.5, double? rotation}) {
     if (rotation != null) shakeEngine.rotationScale = rotation;

@@ -724,6 +724,7 @@ final class NativeEngineHost implements EngineHost {
 
   Engine? _engine;
   double _elapsedSeconds = 0.0;
+  bool _disposed = false;
 
   NativeEngineHost._({
     required this.device,
@@ -838,6 +839,7 @@ final class NativeEngineHost implements EngineHost {
       environment: graphics.environment,
       post: graphics.post,
       timeSeconds: _elapsedSeconds,
+      visibilityMask: graphics.visibilityMask,
     );
 
     final encoder = renderer.beginFrame(world, frameInput);
@@ -890,6 +892,8 @@ final class NativeEngineHost implements EngineHost {
   /// Disposes the [Engine], removes all nodes from [world], and releases all
   /// GPU resources held by [world] and [renderer].
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     _engine?.dispose();
     _engine = null;
     sceneRoot.removeFromWorld(world);
@@ -922,11 +926,49 @@ final class NativeGraphics implements Graphics {
   final CameraShakeEngine shakeEngine = CameraShakeEngine();
   final List<ParticleEmitter> _emitters = [];
   final Map<MaterialHandle, MaterialDefinition> _materialDefinitions = {};
+  final Map<ShaderTarget, Map<String, ShaderUniform>> _shaderUniforms = {};
+  final Map<ShaderTarget, Map<String, TextureHandle>> _shaderTextures = {};
+  Map<ShaderSlot, ShaderOverride> _shaderOverrides = const {};
+  Map<String, ShaderOverride> _postEffects = const {};
+  int _visibilityMask = -1;
+  int _configureCalls = 0;
+  String? _lastAppliedShaderSignature;
+  String? _lastShaderError;
   CameraView? _lastCameraView;
 
   NativeGraphics._(this._host);
 
   ResourceLibrary get resources => _host.renderer.resources;
+
+  Map<ShaderTarget, Map<String, ShaderUniform>> get shaderUniforms =>
+      Map<ShaderTarget, Map<String, ShaderUniform>>.unmodifiable(
+        <ShaderTarget, Map<String, ShaderUniform>>{
+          for (final entry in _shaderUniforms.entries)
+            entry.key: Map<String, ShaderUniform>.unmodifiable(entry.value),
+        },
+      );
+
+  Map<ShaderTarget, Map<String, TextureHandle>> get shaderTextures =>
+      Map<ShaderTarget, Map<String, TextureHandle>>.unmodifiable(
+        <ShaderTarget, Map<String, TextureHandle>>{
+          for (final entry in _shaderTextures.entries)
+            entry.key: Map<String, TextureHandle>.unmodifiable(entry.value),
+        },
+      );
+
+  Map<ShaderSlot, ShaderOverride> get shaderOverrides => _shaderOverrides;
+
+  Map<String, ShaderOverride> get postEffects => _postEffects;
+
+  int get configureCalls => _configureCalls;
+
+  String? get lastShaderError => _lastShaderError;
+
+  @override
+  int get visibilityMask => _visibilityMask;
+
+  @override
+  set visibilityMask(int value) => _visibilityMask = value;
 
   @override
   FrameEnvironment environment = const FrameEnvironment(
@@ -1031,6 +1073,92 @@ final class NativeGraphics implements Graphics {
   void shakeCamera({double trauma = 0.5, double? rotation}) {
     if (rotation != null) shakeEngine.rotationScale = rotation;
     shakeEngine.addTrauma(trauma);
+  }
+
+  @override
+  void setShaderUniform(
+    ShaderTarget target,
+    String name,
+    ShaderUniform value,
+  ) {
+    _shaderUniforms.putIfAbsent(target, () => {})[name] = value;
+    _guardShaderOp(() => _host.renderer.setShaderUniform(target, name, value));
+  }
+
+  @override
+  void setShaderTexture(
+    ShaderTarget target,
+    String name,
+    TextureHandle texture,
+  ) {
+    _shaderTextures.putIfAbsent(target, () => {})[name] = texture;
+    _guardShaderOp(
+      () => _host.renderer.setShaderTexture(target, name, texture),
+    );
+  }
+
+  void _guardShaderOp(void Function() action) {
+    if (_host._disposed || _host.renderer.state == RendererState.disposed) {
+      return;
+    }
+    try {
+      action();
+    } on ArgumentError catch (e) {
+      _lastShaderError = e.toString();
+    } on StateError catch (e) {
+      _lastShaderError = e.toString();
+    }
+  }
+
+  String _initialShaderSignature() {
+    if (!_host._disposed && _host.renderer.state == RendererState.ready) {
+      final config = _host.renderer.configuration;
+      return shaderConfigurationSignature(
+        config.shaderOverrides,
+        config.postEffects,
+      );
+    }
+    return shaderConfigurationSignature(const {}, const {});
+  }
+
+  @override
+  void applyShaderConfiguration({
+    Map<ShaderSlot, ShaderOverride> shaderOverrides = const {},
+    Map<String, ShaderOverride> postEffects = const {},
+  }) {
+    final nextOverrides = Map<ShaderSlot, ShaderOverride>.unmodifiable(
+      shaderOverrides,
+    );
+    final nextEffects = Map<String, ShaderOverride>.unmodifiable(postEffects);
+    final signature = shaderConfigurationSignature(nextOverrides, nextEffects);
+    _shaderOverrides = nextOverrides;
+    _postEffects = nextEffects;
+
+    final baseline = _lastAppliedShaderSignature ??= _initialShaderSignature();
+    if (signature == baseline) return;
+    if (_host._disposed || _host.renderer.state != RendererState.ready) return;
+
+    _lastAppliedShaderSignature = signature;
+    _configureCalls += 1;
+    _lastShaderError = null;
+    final nextConfig = _host.renderer.configuration.copyWith(
+      shaderOverrides: nextOverrides,
+      postEffects: nextEffects,
+    );
+    try {
+      _host.renderer.configure(nextConfig).then<void>(
+        (_) {},
+        onError: (Object error, StackTrace _) {
+          if (!_host._disposed) {
+            _lastShaderError = error.toString();
+          }
+        },
+      );
+    } on Object catch (error) {
+      if (!_host._disposed) {
+        _lastShaderError = error.toString();
+      }
+    }
   }
 
   @override

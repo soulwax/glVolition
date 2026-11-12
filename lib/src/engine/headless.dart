@@ -84,11 +84,22 @@ final class HeadlessGraphics implements Graphics {
   int viewportWidth = 1280;
   @override
   int viewportHeight = 720;
+  @override
+  int visibilityMask = -1;
 
   final List<ParticleEmitter> emitters = [];
   final Set<MeshHandle> liveMeshes = {};
   final Set<MaterialHandle> liveMaterials = {};
   final Set<TextureHandle> liveTextures = {};
+  final Map<ShaderTarget, Map<String, ShaderUniform>> shaderUniforms = {};
+  final Map<ShaderTarget, Map<String, TextureHandle>> shaderTextures = {};
+  Map<ShaderSlot, ShaderOverride> shaderOverrides = const {};
+  Map<String, ShaderOverride> postEffects = const {};
+  int configureCalls = 0;
+  String _lastShaderSignature = shaderConfigurationSignature(
+    const {},
+    const {},
+  );
   double shakeTrauma = 0;
   int _slot = 0;
 
@@ -151,6 +162,41 @@ final class HeadlessGraphics implements Graphics {
 
   @override
   void shakeCamera({double trauma = 0.5, double? rotation}) => shakeTrauma += trauma;
+
+  @override
+  void setShaderUniform(
+    ShaderTarget target,
+    String name,
+    ShaderUniform value,
+  ) {
+    shaderUniforms.putIfAbsent(target, () => {})[name] = value;
+  }
+
+  @override
+  void setShaderTexture(
+    ShaderTarget target,
+    String name,
+    TextureHandle texture,
+  ) {
+    shaderTextures.putIfAbsent(target, () => {})[name] = texture;
+  }
+
+  @override
+  void applyShaderConfiguration({
+    Map<ShaderSlot, ShaderOverride> shaderOverrides = const {},
+    Map<String, ShaderOverride> postEffects = const {},
+  }) {
+    final nextOverrides = Map<ShaderSlot, ShaderOverride>.unmodifiable(
+      shaderOverrides,
+    );
+    final nextEffects = Map<String, ShaderOverride>.unmodifiable(postEffects);
+    final signature = shaderConfigurationSignature(nextOverrides, nextEffects);
+    this.shaderOverrides = nextOverrides;
+    this.postEffects = nextEffects;
+    if (signature == _lastShaderSignature) return;
+    _lastShaderSignature = signature;
+    configureCalls += 1;
+  }
 
   @override
   Ray? screenRay(double x, double y) => null;

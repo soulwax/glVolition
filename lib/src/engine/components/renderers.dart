@@ -138,6 +138,23 @@ final class MeshRenderer extends Component {
       Field.color('tintColor', (m) => m.tintColor ?? LinearColor.white, (m, v) => m.tintColor = v),
       Field.boolean('castsShadow', (m) => m.castsShadow, (m, v) => m.castsShadow = v),
       Field.boolean('receivesShadow', (m) => m.receivesShadow, (m, v) => m.receivesShadow = v),
+      Field.enumValue<MeshRenderer, DrawMode>(
+        'drawMode',
+        DrawMode.values,
+        (m) => m.drawMode,
+        (m, v) => m.drawMode = v,
+      ),
+      Field.enumValue<MeshRenderer, BlendMode>(
+        'blendMode',
+        BlendMode.values,
+        (m) => m.blendMode,
+        (m, v) => m.blendMode = v,
+      ),
+      Field.vec3(
+        'localOffsetPos',
+        (m) => m.localOffset.translation,
+        (m, v) => m.localOffset = m.localOffset.copyWith(translation: v),
+      ),
     ],
   );
 
@@ -157,6 +174,7 @@ final class MeshRenderer extends Component {
       meshData: meshData,
       bounds: meshData?.bounds,
       material: _material,
+      visibilityMask: 1 << gameObject.layer,
       castsShadow: _castsShadow,
       receivesShadow: _receivesShadow,
       drawMode: _drawMode,
@@ -164,6 +182,11 @@ final class MeshRenderer extends Component {
     )..visible = false;
     gameObject.node.addChild(leaf);
     _leaf = leaf;
+    _syncVisibilityMask();
+  }
+
+  void _syncVisibilityMask() {
+    _leaf?.visibilityMask = 1 << gameObject.layer;
   }
 
   @override
@@ -207,6 +230,12 @@ final class ModelRenderer extends Component {
     )..visible = false;
     gameObject.node.addChild(instance);
     _instance = instance;
+    _syncVisibilityMask();
+  }
+
+  void _syncVisibilityMask() {
+    final mask = 1 << gameObject.layer;
+    _instance?.traverse((node) => node.visibilityMask = mask);
   }
 
   @override
@@ -327,6 +356,7 @@ final class InstancedMeshRenderer extends Component {
       meshData: meshData,
       bounds: meshData?.bounds,
       material: _material,
+      visibilityMask: 1 << gameObject.layer,
       castsShadow: _castsShadow,
       receivesShadow: _receivesShadow,
       drawMode: _drawMode,
@@ -335,6 +365,11 @@ final class InstancedMeshRenderer extends Component {
     )..visible = false;
     gameObject.node.addChild(node);
     _node = node;
+    _syncVisibilityMask();
+  }
+
+  void _syncVisibilityMask() {
+    _node?.visibilityMask = 1 << gameObject.layer;
   }
 
   @override

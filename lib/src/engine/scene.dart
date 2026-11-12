@@ -61,6 +61,7 @@ final class Scene {
   final List<LineRenderer> _lines = [];
   final List<VolumetricLightSource> _volumetricSources = [];
   final List<ThermalSourceComponent> _thermalSources = [];
+  final List<ShaderOverrideComponent> _shaderOverrides = [];
   final SpriteBatch _worldSprites = SpriteBatch(
     initialCapacity: 2048,
     sort: SpriteSort.layerThenY,
@@ -628,16 +629,18 @@ final class Scene {
         src._syncChannelVolume();
       }
     }
-    final mainCam = _cameras.lastOrNull;
+    final mainCam = Camera.of(this);
     if (mainCam != null && _engine != null) {
       mainCam.shakeEngine.update(_engine!.time.deltaTime);
     }
-    if (_engine != null && _engine!.editor.isFreeLookEnabled) {
+    final freeLook = _engine != null && _engine!.editor.isFreeLookEnabled;
+    if (freeLook) {
       graphics.camera = _engine!.editor.freeLookCamera;
     } else if (mainCam != null) {
       mainCam._sync();
       graphics.camera = mainCam.controller;
     }
+    graphics.visibilityMask = freeLook ? -1 : (mainCam?.cullingMask ?? -1);
 
     DirectionalLight? sun;
     final points = <PointLight>[];
@@ -725,6 +728,36 @@ final class Scene {
       thermalSources: thermSources,
     );
     graphics.post = rs.post;
+
+    final shaderOverrides = <ShaderSlot, ShaderOverride>{};
+    final postEffects = <String, ShaderOverride>{};
+    final activeEntries = <(ShaderOverrideComponent, ShaderOverride)>[];
+    for (final comp in _shaderOverrides) {
+      if (!comp.paused && comp.isActiveAndEnabled) {
+        final built = comp.tryBuildOverride();
+        if (built != null) {
+          if (comp.isPostEffect) {
+            postEffects[comp.shaderKey] = built;
+          } else {
+            shaderOverrides[comp.targetSlot] = built;
+          }
+          activeEntries.add((comp, built));
+        }
+      }
+    }
+    graphics.applyShaderConfiguration(
+      shaderOverrides: shaderOverrides,
+      postEffects: postEffects,
+    );
+    for (final (comp, _) in activeEntries) {
+      for (final entry in comp.uniformValues().entries) {
+        graphics.setShaderUniform(
+          comp.shaderTarget,
+          entry.key,
+          ShaderUniform.float(entry.value),
+        );
+      }
+    }
   }
 
   /// Evaluates the combined thermal dissolution (`0..1`) at [worldPosition]

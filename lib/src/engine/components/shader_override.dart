@@ -134,6 +134,18 @@ final class ShaderOverrideComponent extends Behaviour {
   }
 
   @override
+  void _onEnableInternal() {
+    if (!scene._shaderOverrides.contains(this)) {
+      scene._shaderOverrides.add(this);
+    }
+  }
+
+  @override
+  void _onDisableInternal() {
+    scene._shaderOverrides.remove(this);
+  }
+
+  @override
   void awake() {
     tryBuildOverride();
   }

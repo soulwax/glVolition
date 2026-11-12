@@ -43,6 +43,13 @@ abstract final class SceneSerializer {
         'fogColor': _colorToJson(rs.fogColor),
         'fogStart': rs.fogStart,
         'fogEnd': rs.fogEnd,
+        if (rs.fogHeightFalloff != null) 'fogHeightFalloff': rs.fogHeightFalloff,
+        if (rs.fogDensity != null) 'fogDensity': rs.fogDensity,
+        'shadowFilterRadius': rs.shadowFilterRadius,
+        'shadowBias': rs.shadowBias,
+        'ambientLightScale': rs.ambientLightScale,
+        'directLightScale': rs.directLightScale,
+        'post': _postToJson(rs.post),
       },
       'objects': [
         for (final root in scene.rootGameObjects)
@@ -112,6 +119,32 @@ abstract final class SceneSerializer {
       if (rsMap['fogColor'] != null) rs.fogColor = _colorFromJson(rsMap['fogColor']);
       if (rsMap['fogStart'] != null) rs.fogStart = (rsMap['fogStart'] as num).toDouble();
       if (rsMap['fogEnd'] != null) rs.fogEnd = (rsMap['fogEnd'] as num).toDouble();
+      if (rsMap.containsKey('fogHeightFalloff')) {
+        final raw = rsMap['fogHeightFalloff'];
+        rs.fogHeightFalloff = raw is num ? raw.toDouble() : null;
+      }
+      if (rsMap.containsKey('fogDensity')) {
+        final raw = rsMap['fogDensity'];
+        rs.fogDensity = raw is num ? raw.toDouble() : null;
+      }
+      if (rsMap['shadowFilterRadius'] is num) {
+        rs.shadowFilterRadius = (rsMap['shadowFilterRadius'] as num).toDouble();
+      }
+      if (rsMap['shadowBias'] is num) {
+        rs.shadowBias = (rsMap['shadowBias'] as num).toDouble();
+      }
+      if (rsMap['ambientLightScale'] is num) {
+        rs.ambientLightScale = (rsMap['ambientLightScale'] as num).toDouble();
+      }
+      if (rsMap['directLightScale'] is num) {
+        rs.directLightScale = (rsMap['directLightScale'] as num).toDouble();
+      }
+      final postRaw = rsMap['post'];
+      if (postRaw is Map<String, Object?>) {
+        rs.post = _postFromJson(postRaw);
+      } else if (postRaw is Map) {
+        rs.post = _postFromJson(Map<String, Object?>.from(postRaw));
+      }
     }
 
     final objects = (data['objects'] as List<Object?>?) ?? const [];
@@ -193,5 +226,114 @@ abstract final class SceneSerializer {
     for (final rawChild in children) {
       _buildObjectFromJson(go.scene, go, rawChild as Map<String, Object?>, reg, prefabs);
     }
+  }
+
+  static Map<String, Object?> _postToJson(PostProcessState p) => {
+        'exposure': p.exposure,
+        'bloomStrength': p.bloomStrength,
+        'ssaoStrength': p.ssaoStrength,
+        'depthOfFieldStrength': p.depthOfFieldStrength,
+        'vignette': p.vignette,
+        'grain': p.grain,
+        'rainIntensity': p.rainIntensity,
+        'surfaceWetness': p.surfaceWetness,
+        'surfaceSnowCoverage': p.surfaceSnowCoverage,
+        'surfaceDissolution': p.surfaceDissolution,
+        'rainWindowVisibility': p.rainWindowVisibility,
+        'ditherStrength': p.ditherStrength,
+        'colorGradeStrength': p.colorGradeStrength,
+        'affineWarpStrength': p.affineWarpStrength,
+        'vertexSnapGrid': p.vertexSnapGrid,
+        'quantizationBits': p.quantizationBits,
+        'vhsChromaWeight': p.vhsChromaWeight,
+        'vhsTrackingWeight': p.vhsTrackingWeight,
+        'vhsNoiseWeight': p.vhsNoiseWeight,
+        'vhsHeadSwitchWeight': p.vhsHeadSwitchWeight,
+        'vhsDropoutWeight': p.vhsDropoutWeight,
+        'vhsGhostWeight': p.vhsGhostWeight,
+        'reducedMotion': p.reducedMotion,
+        'toneMapping': p.toneMapping.name,
+      };
+
+  static PostProcessState _postFromJson(Map<String, Object?> map) {
+    const defaults = PostProcessState();
+    double readDouble(String key, double fallback) {
+      final raw = map[key];
+      return raw is num ? raw.toDouble() : fallback;
+    }
+
+    int readInt(String key, int fallback) {
+      final raw = map[key];
+      return raw is num ? raw.toInt() : fallback;
+    }
+
+    bool readBool(String key, bool fallback) {
+      final raw = map[key];
+      return raw is bool ? raw : fallback;
+    }
+
+    var toneMapping = defaults.toneMapping;
+    final rawTone = map['toneMapping'];
+    if (rawTone is String) {
+      try {
+        toneMapping = ToneMappingMode.values.byName(rawTone);
+      } on ArgumentError {
+        toneMapping = defaults.toneMapping;
+      }
+    }
+
+    return PostProcessState(
+      exposure: readDouble('exposure', defaults.exposure),
+      bloomStrength: readDouble('bloomStrength', defaults.bloomStrength),
+      ssaoStrength: readDouble('ssaoStrength', defaults.ssaoStrength),
+      depthOfFieldStrength: readDouble(
+        'depthOfFieldStrength',
+        defaults.depthOfFieldStrength,
+      ),
+      vignette: readDouble('vignette', defaults.vignette),
+      grain: readDouble('grain', defaults.grain),
+      rainIntensity: readDouble('rainIntensity', defaults.rainIntensity),
+      surfaceWetness: readDouble('surfaceWetness', defaults.surfaceWetness),
+      surfaceSnowCoverage: readDouble(
+        'surfaceSnowCoverage',
+        defaults.surfaceSnowCoverage,
+      ),
+      surfaceDissolution: readDouble(
+        'surfaceDissolution',
+        defaults.surfaceDissolution,
+      ),
+      rainWindowVisibility: readDouble(
+        'rainWindowVisibility',
+        defaults.rainWindowVisibility,
+      ),
+      ditherStrength: readDouble('ditherStrength', defaults.ditherStrength),
+      colorGradeStrength: readDouble(
+        'colorGradeStrength',
+        defaults.colorGradeStrength,
+      ),
+      affineWarpStrength: readDouble(
+        'affineWarpStrength',
+        defaults.affineWarpStrength,
+      ),
+      vertexSnapGrid: readDouble('vertexSnapGrid', defaults.vertexSnapGrid),
+      quantizationBits: readInt('quantizationBits', defaults.quantizationBits),
+      vhsChromaWeight: readDouble('vhsChromaWeight', defaults.vhsChromaWeight),
+      vhsTrackingWeight: readDouble(
+        'vhsTrackingWeight',
+        defaults.vhsTrackingWeight,
+      ),
+      vhsNoiseWeight: readDouble('vhsNoiseWeight', defaults.vhsNoiseWeight),
+      vhsHeadSwitchWeight: readDouble(
+        'vhsHeadSwitchWeight',
+        defaults.vhsHeadSwitchWeight,
+      ),
+      vhsDropoutWeight: readDouble(
+        'vhsDropoutWeight',
+        defaults.vhsDropoutWeight,
+      ),
+      vhsGhostWeight: readDouble('vhsGhostWeight', defaults.vhsGhostWeight),
+      reducedMotion: readBool('reducedMotion', defaults.reducedMotion),
+      toneMapping: toneMapping,
+    );
   }
 }

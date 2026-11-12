@@ -7,8 +7,7 @@ final class GameObject {
   String name;
   String tag;
 
-  /// 0..31, used by physics layer filtering and queries.
-  int layer;
+  int _layer;
 
   /// The pixeldart scene node this object drives. Renderers hang their
   /// drawable nodes beneath it.
@@ -23,8 +22,9 @@ final class GameObject {
   bool _destroyRequested = false;
   bool _destroyed = false;
 
-  GameObject._(this._scene, this.name, {this.tag = 'Untagged', this.layer = 0})
-      : node = SceneNode.group(name: name) {
+  GameObject._(this._scene, this.name, {this.tag = 'Untagged', int layer = 0})
+      : _layer = layer,
+        node = SceneNode.group(name: name) {
     if (layer < 0 || layer > 31) throw RangeError.range(layer, 0, 31, 'layer');
     transform = TransformComponent._();
     transform._gameObject = this;
@@ -32,6 +32,21 @@ final class GameObject {
   }
 
   Scene get scene => _scene;
+
+  /// 0..31, used by physics layer filtering, visibility masks, and queries.
+  int get layer => _layer;
+
+  set layer(int value) {
+    if (value < 0 || value > 31) throw RangeError.range(value, 0, 31, 'layer');
+    _layer = value;
+    for (final c in _components) {
+      if (c is MeshRenderer) {
+        c._syncVisibilityMask();
+      } else if (c is InstancedMeshRenderer) {
+        c._syncVisibilityMask();
+      }
+    }
+  }
 
   void _detachFromSceneForMigration(Scene outgoing) {
     for (final c in _components) {

@@ -77,9 +77,118 @@ abstract interface class Graphics {
 
   void shakeCamera({double trauma = 0.5, double? rotation});
 
+  /// Visibility layer bitmask applied when rendering frames (-1 renders all).
+  int get visibilityMask;
+  set visibilityMask(int value);
+
+  /// Updates a single uniform value on an active shader target.
+  void setShaderUniform(ShaderTarget target, String name, ShaderUniform value);
+
+  /// Binds a texture sampler on an active shader target.
+  void setShaderTexture(ShaderTarget target, String name, TextureHandle texture);
+
+  /// Applies active shader slot overrides and custom post-effect stages.
+  void applyShaderConfiguration({
+    Map<ShaderSlot, ShaderOverride> shaderOverrides = const {},
+    Map<String, ShaderOverride> postEffects = const {},
+  });
+
   /// A world-space ray through drawing-buffer pixel ([x], [y]) for the
   /// camera rendered last frame, or null when unavailable.
   Ray? screenRay(double x, double y);
+}
+
+/// Computes a canonical structural signature for a shader override and
+/// post-effect configuration.
+///
+/// Includes slot/effect keys, shader sources (`vertex`, `fragment`, `effect`),
+/// declared uniform names and their `glslType`s, and declared texture sampler
+/// names, while ignoring bound uniform values and [TextureHandle] instances.
+String shaderConfigurationSignature(
+  Map<ShaderSlot, ShaderOverride> shaderOverrides,
+  Map<String, ShaderOverride> postEffects,
+) {
+  final buffer = StringBuffer();
+
+  void writeString(String? value) {
+    if (value == null) {
+      buffer.write('0;');
+    } else {
+      buffer
+        ..write('1:')
+        ..write(value.length)
+        ..write(':')
+        ..write(value)
+        ..write(';');
+    }
+  }
+
+  void writeOverride(ShaderOverride override) {
+    writeString(override.vertex);
+    writeString(override.fragment);
+    writeString(override.effect);
+
+    final uniformKeys = override.uniforms.keys.toList()..sort();
+    buffer
+      ..write('u')
+      ..write(uniformKeys.length)
+      ..write(':');
+    for (final key in uniformKeys) {
+      final glslType = override.uniforms[key]!.glslType;
+      buffer
+        ..write(key.length)
+        ..write(':')
+        ..write(key)
+        ..write('=')
+        ..write(glslType.length)
+        ..write(':')
+        ..write(glslType)
+        ..write(';');
+    }
+
+    final textureKeys = override.textures.keys.toList()..sort();
+    buffer
+      ..write('t')
+      ..write(textureKeys.length)
+      ..write(':');
+    for (final key in textureKeys) {
+      buffer
+        ..write(key.length)
+        ..write(':')
+        ..write(key)
+        ..write(';');
+    }
+  }
+
+  final sortedSlots = shaderOverrides.keys.toList()
+    ..sort((a, b) => a.index.compareTo(b.index));
+  buffer
+    ..write('s')
+    ..write(sortedSlots.length)
+    ..write('[');
+  for (final slot in sortedSlots) {
+    buffer
+      ..write(slot.index)
+      ..write('=>');
+    writeOverride(shaderOverrides[slot]!);
+  }
+  buffer.write(']');
+
+  buffer
+    ..write('p')
+    ..write(postEffects.length)
+    ..write('[');
+  for (final entry in postEffects.entries) {
+    buffer
+      ..write(entry.key.length)
+      ..write(':')
+      ..write(entry.key)
+      ..write('=>');
+    writeOverride(entry.value);
+  }
+  buffer.write(']');
+
+  return buffer.toString();
 }
 
 abstract interface class AssetLoader {

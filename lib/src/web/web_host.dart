@@ -166,6 +166,12 @@ final class _WebGraphics implements Graphics {
   _WebGraphics(this._app);
 
   @override
+  int visibilityMask = -1;
+
+  String? _lastAppliedShaderSignature;
+  String? lastShaderError;
+
+  @override
   FrameEnvironment get environment => _app.environment;
   @override
   set environment(FrameEnvironment value) => _app.environment = value;
@@ -254,6 +260,82 @@ final class _WebGraphics implements Graphics {
   @override
   void shakeCamera({double trauma = 0.5, double? rotation}) =>
       _app.shakeCamera(trauma: trauma, rotation: rotation);
+
+  @override
+  void setShaderUniform(
+    ShaderTarget target,
+    String name,
+    ShaderUniform value,
+  ) {
+    _guardShaderOp(() => _app.setShaderUniform(target, name, value));
+  }
+
+  @override
+  void setShaderTexture(
+    ShaderTarget target,
+    String name,
+    TextureHandle texture,
+  ) {
+    _guardShaderOp(() => _app.setShaderTexture(target, name, texture));
+  }
+
+  void _guardShaderOp(void Function() action) {
+    if (_app.renderer.state == RendererState.disposed) return;
+    try {
+      action();
+    } on ArgumentError catch (e) {
+      lastShaderError = e.toString();
+    } on StateError catch (e) {
+      lastShaderError = e.toString();
+    }
+  }
+
+  String _initialShaderSignature() {
+    if (_app.renderer.state == RendererState.ready) {
+      final config = _app.renderer.configuration;
+      return shaderConfigurationSignature(
+        config.shaderOverrides,
+        config.postEffects,
+      );
+    }
+    return shaderConfigurationSignature(const {}, const {});
+  }
+
+  @override
+  void applyShaderConfiguration({
+    Map<ShaderSlot, ShaderOverride> shaderOverrides = const {},
+    Map<String, ShaderOverride> postEffects = const {},
+  }) {
+    final nextOverrides = Map<ShaderSlot, ShaderOverride>.unmodifiable(
+      shaderOverrides,
+    );
+    final nextEffects = Map<String, ShaderOverride>.unmodifiable(postEffects);
+    final signature = shaderConfigurationSignature(nextOverrides, nextEffects);
+    final baseline = _lastAppliedShaderSignature ??= _initialShaderSignature();
+    if (signature == baseline) return;
+    if (_app.renderer.state != RendererState.ready) return;
+
+    _lastAppliedShaderSignature = signature;
+    lastShaderError = null;
+    final nextConfig = _app.renderer.configuration.copyWith(
+      shaderOverrides: nextOverrides,
+      postEffects: nextEffects,
+    );
+    try {
+      _app.renderer.configure(nextConfig).then<void>(
+        (_) {},
+        onError: (Object error, StackTrace _) {
+          if (_app.renderer.state != RendererState.disposed) {
+            lastShaderError = error.toString();
+          }
+        },
+      );
+    } on Object catch (error) {
+      if (_app.renderer.state != RendererState.disposed) {
+        lastShaderError = error.toString();
+      }
+    }
+  }
 
   @override
   Ray? screenRay(double x, double y) {
