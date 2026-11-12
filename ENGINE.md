@@ -1062,11 +1062,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E68: Real-Time Light Probes, Tetrahedral GI Volume Interpolation & SH3 Irradiance (`voxprobe`)
 
-- [ ] **E68-1. `voxprobe` Submodule: L2 Spherical Harmonics Coefficients, Tetrahedral Delaunay Localization & GI Sampling.**
+- [x] **E68-1. `voxprobe` Submodule: L2 Spherical Harmonics Coefficients, Tetrahedral Delaunay Localization & GI Sampling.**
   - _Location:_ `./vendor/voxprobe` (`https://github.com/soulwax/voxprobe`).
   - _APIs:_ `ProbeSH3` (9-band RGB Spherical Harmonics directional light baking, hemispherical sky/ground integrals & normal-irradiance evaluation), `LightProbeSample`, `TetrahedralProbeGrid` (regular/irregular 3D probe cell barycentric & tetrahedral barycentric weights, occlusion flags & dynamic sky blend), `ProbeBakeVolume`.
   - _Verify:_ `vendor/voxprobe/test/voxprobe_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E68-2. `LightProbeVolumeComponent` & `ProbeGiInspectorUI` Engine Integration.**
+- [x] **E68-2. `LightProbeVolumeComponent` & `ProbeGiInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/light_probe_gi.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1074,12 +1074,36 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E69: Branching Quest Graphs, Compound Objectives & Faction Reputation Matrices (`voxquest`)
 
-- [ ] **E69-1. `voxquest` Submodule: Directed Prerequisite Quest DAGs, Stateful Objectives & Faction Standing.**
+- [x] **E69-1. `voxquest` Submodule: Directed Prerequisite Quest DAGs, Stateful Objectives & Faction Standing.**
   - _Location:_ `./vendor/voxquest` (`https://github.com/soulwax/voxquest`).
   - _APIs:_ `QuestObjectiveDef` & `QuestObjectiveState` (`counter`, `location`, `deliver`, `allOf`, `anyOf`, optional branches), `QuestStageDef`, `QuestDef`, `QuestTracker` (unlocks, progress increments, branch locks & JSON save snapshot), `FactionReputationMatrix` (pairwise faction affinity propagation, rank tiers & hostility thresholds).
   - _Verify:_ `vendor/voxquest/test/voxquest_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E69-2. `QuestLogComponent` & `QuestJournalUI` Engine Integration.**
+- [x] **E69-2. `QuestLogComponent` & `QuestJournalUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/quest_journal.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E70: Room Acoustics, Eyring RT60 Reverb Zones & Portal Diffraction (`voxreverb`)
+
+- [ ] **E70-1. `voxreverb` Submodule: Material Absorption, Sabine/Eyring Reverb Decay & Portal Graph Propagation.**
+  - _Location:_ `./vendor/voxreverb` (`https://github.com/soulwax/voxreverb`).
+  - _APIs:_ `AcousticSurfaceMaterial` (sabine absorption & scattering coefficients by surface preset: stone, wood, carpet, glass, metal, cavern), `AcousticRoomVolume` (room bounds, surface mix & Eyring/Sabine RT60 decay computation), `AcousticAperture` (doorway/window opening fraction `0..1` & transmission loss), `AcousticPropagationSolver` (shortest-path portal diffraction attenuation, direct occlusion, and wet/dry send blend).
+  - _Verify:_ `vendor/voxreverb/test/voxreverb_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E70-2. `AcousticRoomComponent`, `AcousticPortalComponent` & `AcousticsInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/room_acoustics.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E71: Adaptive Music Stems, Beat-Quantized Transitions & Dynamic Stingers (`voxscore`)
+
+- [ ] **E71-1. `voxscore` Submodule: Musical Tempo Clocks, Vertical Layering & Bar/Beat Quantized Cue Transitions.**
+  - _Location:_ `./vendor/voxscore` (`https://github.com/soulwax/voxscore`).
+  - _APIs:_ `MusicalClock` (BPM tempo, time-signature numerator/denominator, beat/bar tracking & next-quantized boundary calculation), `MusicStemLayer` (intensity curve activation & smooth crossfade weights), `MusicSectionDef` (looping bar count & transition matrix), `MusicStingerCue` (beat-aligned one-shot ducking stingers), `InteractiveScoreConductor`.
+  - _Verify:_ `vendor/voxscore/test/voxscore_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E71-2. `AdaptiveMusicComponent` & `MusicScoreInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/adaptive_music.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
 

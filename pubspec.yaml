@@ -100,6 +100,10 @@ dependencies:
     path: vendor/voxcircuit
   voxfluid:
     path: vendor/voxfluid
+  voxprobe:
+    path: vendor/voxprobe
+  voxquest:
+    path: vendor/voxquest
   web: ^0.5.0
 
 dev_dependencies:

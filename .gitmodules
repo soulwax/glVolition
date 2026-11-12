@@ -136,3 +136,9 @@
 [submodule "vendor/voxfluid"]
 	path = vendor/voxfluid
 	url = https://github.com/soulwax/voxfluid.git
+[submodule "vendor/voxprobe"]
+	path = vendor/voxprobe
+	url = https://github.com/soulwax/voxprobe.git
+[submodule "vendor/voxquest"]
+	path = vendor/voxquest
+	url = https://github.com/soulwax/voxquest.git

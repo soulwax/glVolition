@@ -473,5 +473,7 @@ final class ComponentRegistry {
     register<TrafficNetworkComponent>(TrafficNetworkComponent.spec);
     register<LogicCircuitComponent>(LogicCircuitComponent.spec);
     register<FluidSurfaceComponent>(FluidSurfaceComponent.spec);
+    register<LightProbeVolumeComponent>(LightProbeVolumeComponent.spec);
+    register<QuestLogComponent>(QuestLogComponent.spec);
   }
 }

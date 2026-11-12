@@ -7343,6 +7343,229 @@ void main() {
       expect(json['paused'], isTrue);
     });
   });
+
+  group('E68 — Light Probe GI Volume & SH3 Irradiance (voxprobe)', () {
+    test('LightProbeVolumeComponent syncs DayNight sky, bakes scene lights, samples SH27 & renders ProbeGiInspectorUI', () {
+      final engine = Engine(HeadlessHost());
+      final scene = engine.scene;
+
+      // Sky gradient source at noon
+      scene.createGameObject(
+        'SkyCtrl',
+        components: [DayNightSkyComponent(initialHours: 12.0, paused: true)],
+      );
+
+      // Warm point light inside the baked volume
+      scene.createGameObject(
+        'LanternLight',
+        position: const Vec3(2.0, 2.5, 0.0),
+        components: [
+          Light.point(
+            color: const LinearColor(1.0, 0.65, 0.25),
+            intensity: 4.0,
+            range: 10.0,
+          ),
+        ],
+      );
+
+      // Solid pillar collider to test probe interior-wall occlusion filtering
+      scene.createGameObject(
+        'StonePillar',
+        position: const Vec3(-4.0, 0.0, -4.0),
+        components: [BoxCollider(size: const Vec3(2.0, 8.0, 2.0), isTrigger: false)],
+      );
+
+      final giGo = scene.createGameObject('GiVolume');
+      final gi = giGo.addComponent(
+        LightProbeVolumeComponent(
+          minCorner: const Vec3(-4.0, 0.0, -4.0),
+          maxCorner: const Vec3(4.0, 4.0, 4.0),
+          nx: 3,
+          ny: 3,
+          nz: 3,
+          checkColliderOcclusion: true,
+        ),
+      );
+
+      engine.step(0.05);
+      gi.bakeFromScene();
+
+      expect(gi.totalProbeCount, 27);
+      expect(gi.occludedProbeCount, greaterThan(0));
+      expect(gi.bakeGeneration, 1);
+
+      final nearLantern = gi.sampleIrradiance(const Vec3(1.2, 2.0, 0.0), const Vec3(1.0, 0.0, 0.0));
+      final awayFromLantern = gi.sampleIrradiance(const Vec3(-2.5, 2.0, 2.0), const Vec3(-1.0, 0.0, 0.0));
+      expect(nearLantern.r, greaterThan(awayFromLantern.r * 1.3));
+
+      final sh27 = gi.sampleUniformSH27(const Vec3(1.2, 2.0, 0.0));
+      expect(sh27.length, 27);
+      expect(sh27[0], greaterThan(0.1));
+
+      // Test ProbeGiInspectorUI buttons: 'Clear' (x=238), 'Sync Sky' (x=155), 'Bake GI' (x=68), y=156
+      final ui = VoxUiContext();
+      final uiState = ProbeGiInspectorUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 238.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      ProbeGiInspectorUI.render(ui, gi, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 238.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      ProbeGiInspectorUI.render(ui, gi, state: uiState);
+      ui.endFrame();
+      expect(gi.sampleIrradiance(const Vec3(1.2, 2.0, 0.0), Vec3.unitY).r, closeTo(0.0, 1e-6));
+
+      ui.beginFrame(VoxInput(mouseX: 68.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      ProbeGiInspectorUI.render(ui, gi, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 68.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      ProbeGiInspectorUI.render(ui, gi, state: uiState);
+      ui.endFrame();
+
+      ui.beginFrame(VoxInput());
+      ProbeGiInspectorUI.render(ui, gi, state: uiState);
+      final drawList = ui.endFrame();
+
+      expect(gi.bakeGeneration, 2);
+      expect(gi.sampleIrradiance(const Vec3(1.2, 2.0, 0.0), const Vec3(1.0, 0.0, 0.0)).r, greaterThan(0.5));
+      expect(drawList.commands.any((c) => c.text == '#2'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('LightProbeVolumeComponent'), isNotNull);
+      final json = reg.specFor(gi)!.toJson(gi);
+      expect(json['nx'], 3);
+      expect(json['checkColliderOcclusion'], isTrue);
+    });
+  });
+
+  group('E69 — Branching Quest DAGs & Faction Matrix (voxquest)', () {
+    test('QuestLogComponent drives branching quests, saves/loads via engine.host.storage & renders QuestJournalUI', () {
+      final host = HeadlessHost();
+      final engine = Engine(host);
+      final scene = engine.scene;
+
+      final journal = scene.createGameObject('PlayerJournal').addComponent(
+        QuestLogComponent(storageKey: 'campaign_save_01'),
+      );
+      journal
+        ..registerFaction(
+          const FactionDef(
+            id: 'keepers',
+            displayName: 'Lantern Keepers',
+            relations: {'brigands': -0.75},
+          ),
+        )
+        ..registerFaction(const FactionDef(id: 'brigands', displayName: 'Iron Brigands'))
+        ..registerQuest(
+          const QuestDef(
+            id: 'q_beacon',
+            title: 'Relight the Beacon',
+            entryStageId: 's_fork',
+            stages: [
+              QuestStageDef(
+                id: 's_fork',
+                title: 'Approach Ruins',
+                branchChoices: {
+                  'help_keepers': 's_oil',
+                  'raid_convoy': 's_sabotage',
+                },
+              ),
+              QuestStageDef(
+                id: 's_oil',
+                title: 'Collect Oil Flasks',
+                mutuallyExclusiveWithStages: ['s_sabotage'],
+                objectives: [
+                  QuestObjectiveDef.allOf(
+                    id: 'obj_prep',
+                    description: 'Reach tower with 2 oil flasks',
+                    children: [
+                      QuestObjectiveDef.location(
+                        id: 'c_loc',
+                        description: 'Tower Spire',
+                        targetTag: 'spire',
+                      ),
+                      QuestObjectiveDef.deliver(
+                        id: 'c_oil',
+                        description: 'Oil Flasks',
+                        targetTag: 'oil_flask',
+                        requiredCount: 2,
+                      ),
+                    ],
+                  ),
+                ],
+                factionRewards: {'keepers': 35.0},
+              ),
+              QuestStageDef(
+                id: 's_sabotage',
+                title: 'Siphon Fuel',
+                mutuallyExclusiveWithStages: ['s_oil'],
+                objectives: [
+                  QuestObjectiveDef.location(
+                    id: 'c_camp',
+                    description: 'Brigand Camp',
+                    targetTag: 'camp',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+
+      // Click 'Accept Next' (x=77, y=156) in QuestJournalUI
+      final ui = VoxUiContext();
+      final uiState = QuestJournalUiState();
+      const btnY = 156.0;
+
+      ui.beginFrame(VoxInput(mouseX: 77.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      QuestJournalUI.render(ui, journal, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 77.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      QuestJournalUI.render(ui, journal, state: uiState);
+      ui.endFrame();
+      expect(journal.activeQuests.length, 1);
+
+      expect(journal.chooseBranch('q_beacon', 'help_keepers'), isTrue);
+      expect(journal.getQuest('q_beacon')!.isBranchLocked('s_sabotage'), isTrue);
+      journal.recordProgress(targetTag: 'oil_flask', kind: QuestObjectiveKind.deliver, amount: 1);
+
+      // Click 'Save Log' (x=173, y=156) in QuestJournalUI
+      ui.beginFrame(VoxInput(mouseX: 173.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      QuestJournalUI.render(ui, journal, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 173.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      QuestJournalUI.render(ui, journal, state: uiState);
+      ui.endFrame();
+      expect(host.storage.read('campaign_save_01'), isNotNull);
+
+      // Advance then reload old snapshot via UI 'Reload' (x=258, y=156)
+      journal.recordProgress(targetTag: 'spire', kind: QuestObjectiveKind.location);
+      expect(journal.getQuest('q_beacon')!.activeObjectives['obj_prep']!.children[0].completed, isTrue);
+
+      ui.beginFrame(VoxInput(mouseX: 258.0, mouseY: btnY, isMouseDown: true, wasMouseClicked: true));
+      QuestJournalUI.render(ui, journal, state: uiState);
+      ui.endFrame();
+      ui.beginFrame(VoxInput(mouseX: 258.0, mouseY: btnY, isMouseDown: false, wasMouseReleased: true));
+      QuestJournalUI.render(ui, journal, state: uiState);
+      ui.endFrame();
+
+      expect(journal.getQuest('q_beacon')!.activeObjectives['obj_prep']!.children[0].completed, isFalse);
+      journal.recordProgress(targetTag: 'spire', kind: QuestObjectiveKind.location);
+      journal.recordProgress(targetTag: 'oil_flask', kind: QuestObjectiveKind.deliver, amount: 1);
+      expect(journal.getQuest('q_beacon')!.isCompleted, isTrue);
+      expect(journal.factions.getRank('keepers'), FactionRank.friendly);
+      expect(journal.factions.isHostile('brigands'), isTrue);
+
+      ui.beginFrame(VoxInput());
+      QuestJournalUI.render(ui, journal, state: uiState);
+      final drawList = ui.endFrame();
+      expect(drawList.commands.any((c) => c.text == '0 / 1'), isTrue);
+
+      final reg = ComponentRegistry.defaults();
+      expect(reg.specByName('QuestLogComponent'), isNotNull);
+      final json = reg.specFor(journal)!.toJson(journal);
+      expect(json['storageKey'], 'campaign_save_01');
+    });
+  });
 }
 
 final class _PointerSpy extends Behaviour {

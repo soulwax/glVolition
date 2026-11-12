@@ -53,6 +53,8 @@ import 'package:voxragdoll/voxragdoll.dart' as ragdoll;
 import 'package:voxtraffic/voxtraffic.dart' as traffic;
 import 'package:voxcircuit/voxcircuit.dart' as circuit;
 import 'package:voxfluid/voxfluid.dart' as fluid;
+import 'package:voxprobe/voxprobe.dart' as probe;
+import 'package:voxquest/voxquest.dart' as quest;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -140,3 +142,5 @@ part 'engine/components/ragdoll_physics.dart';
 part 'engine/components/traffic_simulation.dart';
 part 'engine/components/logic_circuit.dart';
 part 'engine/components/fluid_simulation.dart';
+part 'engine/components/light_probe_gi.dart';
+part 'engine/components/quest_journal.dart';
