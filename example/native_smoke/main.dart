@@ -4,6 +4,7 @@ import 'package:gl_volition/gl_volition_native.dart';
 
 import '../dungeon_2d/game.dart';
 import '../island_3d/game.dart';
+import '../prism_pulse/game.dart';
 import '../procession/game.dart';
 
 Future<void> main() async {
@@ -17,6 +18,7 @@ Future<void> main() async {
       registerDungeon2DSpecs(reg);
       registerProcessionSpecs(reg);
       registerIsland3DSpecs(reg);
+      registerPrismPulseSpecs(reg);
     },
     initialScene: buildDungeon2DScene(),
   );
@@ -41,6 +43,14 @@ Future<void> main() async {
     '[native_smoke] Island3D   -> draws=${islandStats.drawCalls}, '
     'tris=${islandStats.trianglesSubmitted}, '
     'vram=${(islandStats.liveGpuBytes / 1024).toStringAsFixed(1)} KB',
+  );
+
+  runner.engine.loadScene(buildPrismPulseScene());
+  final prismStats = runner.renderFrame(1 / 60);
+  stdout.writeln(
+    '[native_smoke] PrismPulse -> draws=${prismStats.drawCalls}, '
+    'tris=${prismStats.trianglesSubmitted}, '
+    'vram=${(prismStats.liveGpuBytes / 1024).toStringAsFixed(1)} KB',
   );
 
   runner.dispose();
