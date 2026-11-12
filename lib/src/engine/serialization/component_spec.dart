@@ -488,5 +488,7 @@ final class ComponentRegistry {
     register<CameraLensRigComponent>(CameraLensRigComponent.spec);
     register<BroadphaseWorldComponent>(BroadphaseWorldComponent.spec);
     register<ParticleRibbonComponent>(ParticleRibbonComponent.spec);
+    register<SteeringAgentComponent>(SteeringAgentComponent.spec);
+    register<RenderGraphComponent>(RenderGraphComponent.spec);
   }
 }

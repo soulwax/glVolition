@@ -8709,6 +8709,142 @@ void main() {
       },
     );
   });
+
+  group('E82 — Reynolds Steering, Dynamic Flocking & Formation Slots (voxsteer)', () {
+    test(
+      'SteeringAgentComponent drives arrival, formation slots, obstacle whiskers & SteeringInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final leader = engine.scene.createGameObject(
+          'SquadLeader',
+          position: const Vec3(10.0, 0.0, 0.0),
+        );
+
+        final wingman = engine.scene.createGameObject(
+          'Wingman',
+          position: const Vec3(0.0, 0.0, 0.0),
+        );
+        final steerComp = wingman.addComponent(
+          SteeringAgentComponent(
+            mode: SteeringBehaviorMode.formation,
+            formationShape: FormationShape.wedge,
+            formationSpacing: 2.0,
+            formationSlotIndex: 1,
+            formationTotalSlots: 3,
+            maxSpeed: 8.0,
+            maxForce: 24.0,
+            target: leader,
+          ),
+        );
+        steerComp.addObstacle(const Vec3(5.0, 0.0, 0.2), 1.0);
+
+        for (var i = 0; i < 60; i++) {
+          engine.step(0.05);
+        }
+
+        // Moves toward trailing left wedge slot near (10 - 1.7, 0, +2.0) and avoids obstacle at x=5
+        expect(wingman.transform.position.x, greaterThan(6.5));
+        expect(
+          (wingman.transform.position - const Vec3(5.0, 0.0, 0.2)).length,
+          greaterThan(0.9),
+        );
+
+        // Test SteeringInspectorUI: click Pause (x=66, y=159) -> click Next Mode (x=144, y=159)
+        final ui = VoxUiContext();
+        final uiState = SteeringInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 66.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        SteeringInspectorUI.render(ui, steerComp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 66.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        SteeringInspectorUI.render(ui, steerComp, state: uiState);
+        ui.endFrame();
+        expect(steerComp.paused, isTrue);
+
+        ui.beginFrame(
+          VoxInput(mouseX: 144.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        SteeringInspectorUI.render(ui, steerComp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 144.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        SteeringInspectorUI.render(ui, steerComp, state: uiState);
+        final dl = ui.endFrame();
+        expect(steerComp.mode, SteeringBehaviorMode.arrive);
+        expect(dl.commands.any((c) => c.text == 'Steering Agent'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('SteeringAgentComponent'), isNotNull);
+        final json = reg.specFor(steerComp)!.toJson(steerComp);
+        expect(json['mode'], 'arrive');
+        expect(json['paused'], isTrue);
+      },
+    );
+  });
+
+  group('E83 — Render/Compute Pass DAG, Barriers & Transient Aliasing (voxgraph)', () {
+    test(
+      'RenderGraphComponent compiles pass DAG, culls dead passes, aliases transient targets & drives RenderGraphInspectorUI',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+
+        final rgGo = engine.scene.createGameObject('PipelineGraph');
+        final rgComp = rgGo.addComponent(
+          RenderGraphComponent(
+            viewportWidth: 1280,
+            viewportHeight: 720,
+            enableTransientAliasing: true,
+            includePostProcessPass: true,
+            includeUnusedDebugPass: true,
+          ),
+        );
+
+        final compiled = rgComp.rebuildStandardPipeline();
+        expect(compiled.culledPassNames, ['UnusedHeatmap']);
+        expect(compiled.executionOrderNames, [
+          'DepthPrePass',
+          'OpaqueLighting',
+          'BloomExtract',
+          'ToneMapPresent',
+        ]);
+        expect(compiled.barrierCount, greaterThanOrEqualTo(5));
+        expect(rgComp.aliasingPlan, isNotNull);
+        expect(rgComp.aliasingPlan!.slots.length, lessThanOrEqualTo(3));
+
+        // Test RenderGraphInspectorUI: click Post: On/Off toggle (x=150, y=159)
+        final ui = VoxUiContext();
+        final uiState = RenderGraphInspectorUiState();
+        ui.beginFrame(
+          VoxInput(mouseX: 150.0, mouseY: 159.0, isMouseDown: true, wasMouseClicked: true),
+        );
+        RenderGraphInspectorUI.render(ui, rgComp, state: uiState);
+        ui.endFrame();
+        ui.beginFrame(
+          VoxInput(mouseX: 150.0, mouseY: 159.0, isMouseDown: false, wasMouseReleased: true),
+        );
+        RenderGraphInspectorUI.render(ui, rgComp, state: uiState);
+        final dl = ui.endFrame();
+        expect(rgComp.includePostProcessPass, isFalse);
+        expect(rgComp.compiled.executionOrderNames.last, 'DirectPresent');
+        expect(dl.commands.any((c) => c.text == 'Render Graph DAG'), isTrue);
+
+        // Verify ComponentRegistry serialization
+        final reg = ComponentRegistry.defaults();
+        expect(reg.specByName('RenderGraphComponent'), isNotNull);
+        final json = reg.specFor(rgComp)!.toJson(rgComp);
+        expect(json['includePostProcessPass'], isFalse);
+        expect(json['viewportWidth'], 1280);
+      },
+    );
+  });
 }
 
 final class _PointerSpy extends Behaviour {

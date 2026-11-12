@@ -76,6 +76,8 @@ enum MotifKind {
   lensDolly, // 6-blade optical lens ring + curved camera dolly track (voxlens)
   broadSweep, // Spatial hash bounds + sweeping TOI arrow (voxbroad)
   ribbonSwirl, // Curl turbulence swirling double-ribbon stroke (voxribbon)
+  steerWedge, // Wedge formation chevrons + vector heading arc (voxsteer)
+  dagNodes, // Directed acyclic render-pass pipeline nodes + barrier edges (voxgraph)
 }
 
 final class LogoSpec {
@@ -792,6 +794,16 @@ String renderApertureSvg(LogoSpec spec) {
     case MotifKind.ribbonSwirl:
       overLayer.add('<path d="M 55 83 C 58 70 70 82 73 69" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round"/>');
       overLayer.add('<path d="M 55 76 C 58 63 70 75 73 62" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round" opacity="0.88"/>');
+    case MotifKind.steerWedge:
+      overLayer.add('<polygon points="64,67.5 68.5,75.5 64,73.5 59.5,75.5" fill="#34D399"/>');
+      overLayer.add('<polygon points="56.5,77.5 60.5,83.5 56.5,81.8 52.5,83.5" fill="#10B981"/>');
+      overLayer.add('<polygon points="71.5,77.5 75.5,83.5 71.5,81.8 67.5,83.5" fill="#2DD4BF"/>');
+    case MotifKind.dagNodes:
+      overLayer.add('<line x1="56.5" y1="71.5" x2="64" y2="81.5" stroke="#38BDF8" stroke-width="1.8"/>');
+      overLayer.add('<line x1="71.5" y1="71.5" x2="64" y2="81.5" stroke="#818CF8" stroke-width="1.8"/>');
+      overLayer.add('<circle cx="56.5" cy="71.5" r="2.7" fill="#38BDF8"/>');
+      overLayer.add('<circle cx="71.5" cy="71.5" r="2.7" fill="#818CF8"/>');
+      overLayer.add('<circle cx="64.0" cy="81.5" r="3.0" fill="#F59E0B"/>');
     default:
       break;
   }
@@ -1106,6 +1118,30 @@ const List<LogoSpec> allLogoSpecs = [
     gap: 4.2,
     cornerFillet: 8.5,
     colors: ['#F43F5E', '#FB7185', '#EC4899'],
+  ),
+  LogoSpec(
+    name: 'voxsteer',
+    category: 'AI & Logic',
+    motif: MotifKind.steerWedge,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 7.0,
+    colors: ['#10B981', '#2DD4BF', '#059669'],
+  ),
+  LogoSpec(
+    name: 'voxgraph',
+    category: 'Rendering',
+    motif: MotifKind.dagNodes,
+    blades: 3,
+    outerR: 56,
+    innerR: 22.0,
+    twistDeg: 60,
+    gap: 4.2,
+    cornerFillet: 6.0,
+    colors: ['#38BDF8', '#6366F1', '#0284C7'],
   ),
   LogoSpec(
     name: 'voxsky',

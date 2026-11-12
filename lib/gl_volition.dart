@@ -63,5 +63,7 @@ export 'package:voxatlas/voxatlas.dart';
 export 'package:voxlens/voxlens.dart';
 export 'package:voxbroad/voxbroad.dart';
 export 'package:voxribbon/voxribbon.dart';
+export 'package:voxsteer/voxsteer.dart';
+export 'package:voxgraph/voxgraph.dart';
 
 export 'src/engine.dart';

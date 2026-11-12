@@ -67,6 +67,8 @@ import 'package:voxatlas/voxatlas.dart' as atlas;
 import 'package:voxlens/voxlens.dart' as lens;
 import 'package:voxbroad/voxbroad.dart' as broad;
 import 'package:voxribbon/voxribbon.dart' as ribbon;
+import 'package:voxsteer/voxsteer.dart' as steer;
+import 'package:voxgraph/voxgraph.dart' as graph;
 
 part 'engine/host.dart';
 part 'engine/headless.dart';
@@ -168,3 +170,5 @@ part 'engine/components/texture_atlas.dart';
 part 'engine/components/camera_lens_rig.dart';
 part 'engine/components/broadphase_world.dart';
 part 'engine/components/particle_ribbon.dart';
+part 'engine/components/steering_agent.dart';
+part 'engine/components/render_graph.dart';

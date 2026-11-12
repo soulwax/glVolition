@@ -1230,11 +1230,11 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E82: Reynolds Steering, Dynamic Flocking & Formation Slots (`voxsteer`)
 
-- [ ] **E82-1. `voxsteer` Submodule: Seek/Arrive/Pursuit/Evade, Boid Separation-Alignment-Cohesion & Obstacle Whiskers.**
+- [x] **E82-1. `voxsteer` Submodule: Seek/Arrive/Pursuit/Evade, Boid Separation-Alignment-Cohesion & Obstacle Whiskers.**
   - _Location:_ `./vendor/voxsteer` (`https://github.com/soulwax/voxsteer`).
-  - _APIs:_ `SteeringAgent` (velocity-clamped force accumulator & damped turn rate), `SteeringBehaviors` (`seek`, `flee`, `arrive`, `pursue`, `evade`, `wander`, `wallAvoidance`), `FormationSlotPlanner` (`wedge`, `line`, `circle` slot offsets relative to leader heading).
+  - _APIs:_ `SteeringAgent` (velocity/force clamped accumulator & damped turn rate), `SteeringBehaviors` (`seek`, `flee`, `arrive`, `pursue`, `evade`, `wander`, `wallAvoidance`, `separation`, `alignment`, `cohesion`, `flock`), `FormationSlotPlanner` (`wedge`, `line`, `circle`, `box` slot offsets relative to leader heading).
   - _Verify:_ `vendor/voxsteer/test/voxsteer_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E82-2. `SteeringAgentComponent` & `SteeringInspectorUI` Engine Integration.**
+- [x] **E82-2. `SteeringAgentComponent` & `SteeringInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/steering_agent.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
 
@@ -1242,10 +1242,34 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ## E83: Render/Compute Pass DAG, Resource Barriers & Frame Memory Aliasing (`voxgraph`)
 
-- [ ] **E83-1. `voxgraph` Submodule: Acyclic Render-Pass Topological Compile, Dead-Pass Culling & Transient Pool Lifetime.**
+- [x] **E83-1. `voxgraph` Submodule: Acyclic Render-Pass Topological Compile, Dead-Pass Culling & Transient Pool Lifetime.**
   - _Location:_ `./vendor/voxgraph` (`https://github.com/soulwax/voxgraph`).
-  - _APIs:_ `RenderGraphBuilder` (pass read/write virtual texture declarations), `RenderGraphCompiler` (topological sort, unused-pass culling & barrier inference), `TransientResourceAliaser` (interval coloring & memory reuse efficiency).
+  - _APIs:_ `RenderGraphBuilder` (pass read/write virtual texture & storage declarations), `RenderGraphCompiler` (topological sort, unused-pass culling & barrier inference), `TransientResourceAliaser` (interval coloring & memory reuse efficiency).
   - _Verify:_ `vendor/voxgraph/test/voxgraph_test.dart` & `test/subsystems_test.dart`.
-- [ ] **E83-2. `RenderGraphComponent` & `RenderGraphInspectorUI` Engine Integration.**
+- [x] **E83-2. `RenderGraphComponent` & `RenderGraphInspectorUI` Engine Integration.**
   - _Touches:_ `lib/src/engine/components/render_graph.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E84: Sprite-Sheet State Machines, 2D Blendspaces & Root-Motion Clips (`voxblend`)
+
+- [ ] **E84-1. `voxblend` Submodule: 1D/2D Parameterized Blend Trees, Locomotion Crossfades & Root-Motion Deltas.**
+  - _Location:_ `./vendor/voxblend` (`https://github.com/soulwax/voxblend`).
+  - _APIs:_ `BlendSpace1D` / `BlendSpace2D` (Barycentric / bilinear motion sample weight blending), `MotionClipSampler` (looping frame & root-motion velocity delta extraction), `StateBlendMachine` (transition rules, exit-time normalization & crossfade weights).
+  - _Verify:_ `vendor/voxblend/test/voxblend_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E84-2. `BlendTreeControllerComponent` & `BlendTreeInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/blend_tree_controller.dart`.
+  - _Verify:_ `test/subsystems_test.dart`.
+
+---
+
+## E85: Cascaded Shadow Splits, Texel Snapping & Penumbra Kernels (`voxshadow`)
+
+- [ ] **E85-1. `voxshadow` Submodule: Practical Split CSM Frusta, Light-Space Ortho Fitting & Stabilized Shadow Matrices.**
+  - _Location:_ `./vendor/voxshadow` (`https://github.com/soulwax/voxshadow`).
+  - _APIs:_ `CascadeSplitCalculator` (logarithmic/uniform hybrid cascade plane partition), `LightOrthoFitter` (bounding sphere frustum fit & shadow-texel grid snapping), `PcssKernelTable` (Poisson disk blocker search & soft PCF tap weights).
+  - _Verify:_ `vendor/voxshadow/test/voxshadow_test.dart` & `test/subsystems_test.dart`.
+- [ ] **E85-2. `CascadedShadowRigComponent` & `ShadowCascadeInspectorUI` Engine Integration.**
+  - _Touches:_ `lib/src/engine/components/cascaded_shadow_rig.dart`.
   - _Verify:_ `test/subsystems_test.dart`.
