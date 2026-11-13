@@ -19,7 +19,11 @@ final class BlueprintPieceComponent extends Component {
     BlueprintPieceComponent.new,
     [
       Field.text('defId', (b) => b.defId, (b, v) => b.defId = v),
-      Field.integer('pieceInstanceId', (b) => b.pieceInstanceId, (b, v) => b.pieceInstanceId = v),
+      Field.integer(
+        'pieceInstanceId',
+        (b) => b.pieceInstanceId,
+        (b, v) => b.pieceInstanceId = v,
+      ),
       Field.integer('yawSteps', (b) => b.yawSteps, (b, v) => b.yawSteps = v),
       Field.boolean('supported', (b) => b.supported, (b, v) => b.supported = v),
     ],
@@ -67,11 +71,31 @@ final class ConstructionPlannerComponent extends Behaviour {
     ConstructionPlannerComponent.new,
     [
       Field.number('gridSize', (c) => c.gridSize, (c, v) => c.gridSize = v),
-      Field.number('heightStep', (c) => c.heightStep, (c, v) => c.heightStep = v),
-      Field.number('socketSnapRadius', (c) => c.socketSnapRadius, (c, v) => c.socketSnapRadius = v),
-      Field.number('clearanceMargin', (c) => c.clearanceMargin, (c, v) => c.clearanceMargin = v),
-      Field.number('groundHeight', (c) => c.groundHeight, (c, v) => c.groundHeight = v),
-      Field.boolean('showGhostPreview', (c) => c.showGhostPreview, (c, v) => c.showGhostPreview = v),
+      Field.number(
+        'heightStep',
+        (c) => c.heightStep,
+        (c, v) => c.heightStep = v,
+      ),
+      Field.number(
+        'socketSnapRadius',
+        (c) => c.socketSnapRadius,
+        (c, v) => c.socketSnapRadius = v,
+      ),
+      Field.number(
+        'clearanceMargin',
+        (c) => c.clearanceMargin,
+        (c, v) => c.clearanceMargin = v,
+      ),
+      Field.number(
+        'groundHeight',
+        (c) => c.groundHeight,
+        (c, v) => c.groundHeight = v,
+      ),
+      Field.boolean(
+        'showGhostPreview',
+        (c) => c.showGhostPreview,
+        (c, v) => c.showGhostPreview = v,
+      ),
     ],
   );
 
@@ -136,7 +160,11 @@ final class ConstructionPlannerComponent extends Behaviour {
     final yaw = yawSteps ?? activeYawSteps;
     final cand = _ensureSolver().evaluatePlacement(
       defId: targetId,
-      cursorWorld: vbuild.BuildVec3(worldCursor.x, worldCursor.y, worldCursor.z),
+      cursorWorld: vbuild.BuildVec3(
+        worldCursor.x,
+        worldCursor.y,
+        worldCursor.z,
+      ),
       yawSteps: yaw,
       groundHeight: groundHeight,
     );
@@ -177,7 +205,11 @@ final class ConstructionPlannerComponent extends Behaviour {
       mr?.setTint(ghostTint);
       _ghostObject!.setActive(true);
     }
-    _ghostObject!.transform.position = Vec3(cand.position.x, cand.position.y, cand.position.z);
+    _ghostObject!.transform.position = Vec3(
+      cand.position.x,
+      cand.position.y,
+      cand.position.z,
+    );
     _ghostObject!.transform.rotation = Quat(
       cand.rotation.x,
       cand.rotation.y,
@@ -194,17 +226,17 @@ final class ConstructionPlannerComponent extends Behaviour {
   }
 
   /// Validates and commits a piece at [worldCursor], spawning its scene [GameObject].
-  GameObject? placeAt(
-    Vec3 worldCursor, {
-    String? defId,
-    int? yawSteps,
-  }) {
+  GameObject? placeAt(Vec3 worldCursor, {String? defId, int? yawSteps}) {
     cursorWorld = worldCursor;
     final targetId = defId ?? activeDefId;
     final yaw = yawSteps ?? activeYawSteps;
     final placed = _ensureSolver().place(
       defId: targetId,
-      cursorWorld: vbuild.BuildVec3(worldCursor.x, worldCursor.y, worldCursor.z),
+      cursorWorld: vbuild.BuildVec3(
+        worldCursor.x,
+        worldCursor.y,
+        worldCursor.z,
+      ),
       yawSteps: yaw,
       groundHeight: groundHeight,
     );
@@ -216,7 +248,9 @@ final class ConstructionPlannerComponent extends Behaviour {
 
   GameObject _spawnGameObjectForPlaced(vbuild.PlacedBuildPiece placed) {
     if (!isAttached) {
-      throw StateError('ConstructionPlannerComponent must be attached to a Scene.');
+      throw StateError(
+        'ConstructionPlannerComponent must be attached to a Scene.',
+      );
     }
     final def = _ensureSolver().definitions[placed.defId]!;
     final meshData = _pieceMeshes[def.id] ?? Primitives.cube(size: 1.0);
@@ -224,11 +258,20 @@ final class ConstructionPlannerComponent extends Behaviour {
     final go = scene.createGameObject(
       'Build_${placed.defId}_${placed.instanceId}',
       position: Vec3(placed.position.x, placed.position.y, placed.position.z),
-      rotation: Quat(placed.rotation.x, placed.rotation.y, placed.rotation.z, placed.rotation.w),
+      rotation: Quat(
+        placed.rotation.x,
+        placed.rotation.y,
+        placed.rotation.z,
+        placed.rotation.w,
+      ),
       components: [
         MeshRenderer(meshData: meshData, tintColor: tint),
         BoxCollider(
-          size: Vec3(def.halfExtents.x * 2.0, def.halfExtents.y * 2.0, def.halfExtents.z * 2.0),
+          size: Vec3(
+            def.halfExtents.x * 2.0,
+            def.halfExtents.y * 2.0,
+            def.halfExtents.z * 2.0,
+          ),
         ),
         BlueprintPieceComponent(
           defId: placed.defId,
@@ -251,7 +294,10 @@ final class ConstructionPlannerComponent extends Behaviour {
   }
 
   /// Removes a placed piece and returns any now-unsupported floating piece [GameObject]s.
-  List<GameObject> demolishPiece(int pieceInstanceId, {bool destroyOrphans = false}) {
+  List<GameObject> demolishPiece(
+    int pieceInstanceId, {
+    bool destroyOrphans = false,
+  }) {
     final removed = _ensureSolver().removePiece(pieceInstanceId);
     if (!removed) return const [];
     _history.remove(pieceInstanceId);
@@ -290,7 +336,9 @@ final class ConstructionPlannerComponent extends Behaviour {
       name: name,
       pieces: _ensureSolver().placedPieces.values,
       definitions: _ensureSolver().definitions,
-      origin: origin != null ? vbuild.BuildVec3(origin.x, origin.y, origin.z) : null,
+      origin: origin != null
+          ? vbuild.BuildVec3(origin.x, origin.y, origin.z)
+          : null,
     );
     savedBlueprints.add(bp);
     return bp;
@@ -303,7 +351,11 @@ final class ConstructionPlannerComponent extends Behaviour {
   }) {
     final placed = bp.stamp(
       _ensureSolver(),
-      worldOrigin: vbuild.BuildVec3(worldOrigin.x, worldOrigin.y, worldOrigin.z),
+      worldOrigin: vbuild.BuildVec3(
+        worldOrigin.x,
+        worldOrigin.y,
+        worldOrigin.z,
+      ),
       yawSteps: yawSteps,
       groundHeight: groundHeight,
     );
@@ -349,14 +401,31 @@ final class BuilderInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

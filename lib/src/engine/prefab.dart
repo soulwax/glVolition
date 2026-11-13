@@ -66,7 +66,9 @@ final class Prefab {
     }
     if (materials.isEmpty) {
       materials.add(
-        engine.graphics.createMaterial(MaterialDefinition(key: '$name/default')),
+        engine.graphics.createMaterial(
+          MaterialDefinition(key: '$name/default'),
+        ),
       );
     }
 
@@ -90,7 +92,9 @@ final class Prefab {
         final data = srcNode.meshData;
         if (data != null) {
           final meshHandle = meshes[data]!;
-          final matIdx = result.materialOf(srcNode).clamp(0, materials.length - 1);
+          final matIdx = result
+              .materialOf(srcNode)
+              .clamp(0, materials.length - 1);
           targetGo.addComponent(
             MeshRenderer(
               mesh: meshHandle,
@@ -122,15 +126,14 @@ final class Prefab {
     MaterialOverride? materialOverride,
     bool castShadows = true,
     bool receiveShadows = true,
-  }) =>
-      Prefab.fromGlbResult(
-        name,
-        GlbDecoder.decode(glbBytes),
-        engine,
-        materialOverride: materialOverride,
-        castShadows: castShadows,
-        receiveShadows: receiveShadows,
-      );
+  }) => Prefab.fromGlbResult(
+    name,
+    GlbDecoder.decode(glbBytes),
+    engine,
+    materialOverride: materialOverride,
+    castShadows: castShadows,
+    receiveShadows: receiveShadows,
+  );
 
   /// Creates a [Prefab] from a validated [ValidatedModelPackage] by decoding
   /// its `.qmesh` part payloads at [lod] via [ModelCache] and registering
@@ -175,12 +178,15 @@ final class Prefab {
     }
 
     final meshCache = cache ?? ModelCache();
-    final parts = <({
-      ModelPackagePart part,
-      MeshHandle mesh,
-      MeshData meshData,
-      MaterialHandle material,
-    })>[];
+    final parts =
+        <
+          ({
+            ModelPackagePart part,
+            MeshHandle mesh,
+            MeshData meshData,
+            MaterialHandle material,
+          })
+        >[];
     for (final part in package.manifest.parts) {
       final path = part.lodFiles[lod];
       if (path == null) {
@@ -208,10 +214,7 @@ final class Prefab {
 
     return Prefab.builder(assetName, (root) {
       for (final entry in parts) {
-        final child = root.scene.createGameObject(
-          entry.part.id,
-          parent: root,
-        );
+        final child = root.scene.createGameObject(entry.part.id, parent: root);
         child.addComponent(
           MeshRenderer(
             mesh: entry.mesh,
@@ -332,7 +335,9 @@ final class ObjectPool<T extends Component> {
   /// Acquires an instance from the pool (or instantiates a new one if empty),
   /// activates its [GameObject], and invokes [Poolable.onSpawned].
   T acquire({Vec3? position, Quat? rotation, double? scale}) {
-    final item = _available.isNotEmpty ? _available.removeLast() : _createInactive();
+    final item = _available.isNotEmpty
+        ? _available.removeLast()
+        : _createInactive();
     final go = item.gameObject;
     if (position != null) go.transform.localPosition = position;
     if (rotation != null) go.transform.localRotation = rotation;

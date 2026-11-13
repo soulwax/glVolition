@@ -50,7 +50,8 @@ final class SphereCollider extends Collider {
   }
 
   @override
-  double? _raycast(Ray ray) => ray.intersectSphere(BoundingSphere(worldCenter, worldRadius));
+  double? _raycast(Ray ray) =>
+      ray.intersectSphere(BoundingSphere(worldCenter, worldRadius));
 }
 
 final class BoxCollider extends Collider {
@@ -66,7 +67,10 @@ final class BoxCollider extends Collider {
   @override
   Aabb get worldBounds {
     final half = size * 0.5;
-    return Aabb(center - half, center + half).transformed(transform.world.toMat4());
+    return Aabb(
+      center - half,
+      center + half,
+    ).transformed(transform.world.toMat4());
   }
 
   @override
@@ -94,12 +98,10 @@ final class CapsuleCollider extends Collider {
       math.max(0.0, (height * 0.5 - radius) * transform.lossyScale);
 
   /// Bottom hemisphere center in world space.
-  Vec3 get segmentStart =>
-      worldCenter - transform.up * halfSegmentLength;
+  Vec3 get segmentStart => worldCenter - transform.up * halfSegmentLength;
 
   /// Top hemisphere center in world space.
-  Vec3 get segmentEnd =>
-      worldCenter + transform.up * halfSegmentLength;
+  Vec3 get segmentEnd => worldCenter + transform.up * halfSegmentLength;
 
   /// Returns the point on the capsule's interior segment `[segmentStart, segmentEnd]`
   /// closest to [point].
@@ -154,7 +156,11 @@ final class PhysicsHit {
   final Vec3 point;
   final double distance;
 
-  const PhysicsHit({required this.collider, required this.point, required this.distance});
+  const PhysicsHit({
+    required this.collider,
+    required this.point,
+    required this.distance,
+  });
 
   GameObject get gameObject => collider.gameObject;
 }
@@ -202,20 +208,32 @@ final class RigidBody extends Component {
     this.freezeY = false,
   });
 
-  static final spec = ComponentSpec<RigidBody>(
-    'RigidBody',
-    RigidBody.new,
-    [
-      Field.vec3('velocity', (r) => r.velocity, (r, v) => r.velocity = v),
-      Field.number('mass', (r) => r.mass, (r, v) => r.mass = v),
-      Field.number('gravityScale', (r) => r.gravityScale, (r, v) => r.gravityScale = v),
-      Field.number('linearDrag', (r) => r.linearDrag, (r, v) => r.linearDrag = v),
-      Field.number('restitution', (r) => r.restitution, (r, v) => r.restitution = v),
-      Field.boolean('isKinematic', (r) => r.isKinematic, (r, v) => r.isKinematic = v),
-      Field.boolean('useGravity', (r) => r.useGravity, (r, v) => r.useGravity = v),
-      Field.boolean('freezeY', (r) => r.freezeY, (r, v) => r.freezeY = v),
-    ],
-  );
+  static final spec = ComponentSpec<RigidBody>('RigidBody', RigidBody.new, [
+    Field.vec3('velocity', (r) => r.velocity, (r, v) => r.velocity = v),
+    Field.number('mass', (r) => r.mass, (r, v) => r.mass = v),
+    Field.number(
+      'gravityScale',
+      (r) => r.gravityScale,
+      (r, v) => r.gravityScale = v,
+    ),
+    Field.number('linearDrag', (r) => r.linearDrag, (r, v) => r.linearDrag = v),
+    Field.number(
+      'restitution',
+      (r) => r.restitution,
+      (r, v) => r.restitution = v,
+    ),
+    Field.boolean(
+      'isKinematic',
+      (r) => r.isKinematic,
+      (r, v) => r.isKinematic = v,
+    ),
+    Field.boolean(
+      'useGravity',
+      (r) => r.useGravity,
+      (r, v) => r.useGravity = v,
+    ),
+    Field.boolean('freezeY', (r) => r.freezeY, (r, v) => r.freezeY = v),
+  ]);
 
   double get inverseMass => (isKinematic || mass <= 0) ? 0.0 : 1.0 / mass;
 
@@ -424,7 +442,9 @@ final class PhysicsWorld {
         best = c;
       }
     }
-    return best == null ? null : PhysicsHit(collider: best, point: ray.at(bestT), distance: bestT);
+    return best == null
+        ? null
+        : PhysicsHit(collider: best, point: ray.at(bestT), distance: bestT);
   }
 
   /// Returns all colliders intersected by [ray] within [maxDistance], sorted by
@@ -468,21 +488,23 @@ final class PhysicsWorld {
       if ((layerMask & (1 << c.gameObject.layer)) == 0) continue;
       final double? t = switch (c) {
         SphereCollider s => ray.intersectSphere(
-            BoundingSphere(s.worldCenter, s.worldRadius + r),
-          ),
+          BoundingSphere(s.worldCenter, s.worldRadius + r),
+        ),
         BoxCollider b => ray.intersectAabb(
-            Aabb(b.worldBounds.min - pad, b.worldBounds.max + pad),
-          ),
+          Aabb(b.worldBounds.min - pad, b.worldBounds.max + pad),
+        ),
         CapsuleCollider cap => ray.intersectAabb(
-            Aabb(cap.worldBounds.min - pad, cap.worldBounds.max + pad),
-          ),
+          Aabb(cap.worldBounds.min - pad, cap.worldBounds.max + pad),
+        ),
       };
       if (t != null && t <= bestT) {
         bestT = t;
         best = c;
       }
     }
-    return best == null ? null : PhysicsHit(collider: best, point: ray.at(bestT), distance: bestT);
+    return best == null
+        ? null
+        : PhysicsHit(collider: best, point: ray.at(bestT), distance: bestT);
   }
 
   void _step() {
@@ -493,7 +515,9 @@ final class PhysicsWorld {
       }
     }
 
-    final active = _colliders.where((c) => c._active && !c._destroyRequested).toList();
+    final active = _colliders
+        .where((c) => c._active && !c._destroyRequested)
+        .toList();
     final next = <(int, int)>{};
     final pairs = <(Collider, Collider)>[];
 
@@ -503,11 +527,18 @@ final class PhysicsWorld {
       for (var j = i + 1; j < active.length; j++) {
         final b = active[j];
         if (identical(a.gameObject, b.gameObject)) continue;
-        if (!getLayerCollision(a.gameObject.layer, b.gameObject.layer)) continue;
+        if (!getLayerCollision(a.gameObject.layer, b.gameObject.layer)) {
+          continue;
+        }
         final bBit = 1 << b.gameObject.layer;
-        if ((a.collidesWithMask & bBit) == 0 || (b.collidesWithMask & aBit) == 0) continue;
+        if ((a.collidesWithMask & bBit) == 0 ||
+            (b.collidesWithMask & aBit) == 0) {
+          continue;
+        }
         if (!_intersects(a, b)) continue;
-        final key = a.instanceId < b.instanceId ? (a.instanceId, b.instanceId) : (b.instanceId, a.instanceId);
+        final key = a.instanceId < b.instanceId
+            ? (a.instanceId, b.instanceId)
+            : (b.instanceId, a.instanceId);
         next.add(key);
         pairs.add((a, b));
       }
@@ -525,7 +556,9 @@ final class PhysicsWorld {
     }
 
     for (final (a, b) in pairs) {
-      final key = a.instanceId < b.instanceId ? (a.instanceId, b.instanceId) : (b.instanceId, a.instanceId);
+      final key = a.instanceId < b.instanceId
+          ? (a.instanceId, b.instanceId)
+          : (b.instanceId, a.instanceId);
       final isNew = !_overlaps.contains(key);
       final phase = isNew ? _Phase.enter : _Phase.stay;
       if (!a.isTrigger && !b.isTrigger) {
@@ -607,7 +640,8 @@ final class PhysicsWorld {
 
   /// Contact normal (pointing from [a] toward [b]) and penetration depth for
   /// two colliders, or null when separated. Exposed for gizmos/inspectors.
-  static (Vec3 normal, double depth)? debugManifold(Collider a, Collider b) => _computeManifold(a, b);
+  static (Vec3 normal, double depth)? debugManifold(Collider a, Collider b) =>
+      _computeManifold(a, b);
 
   static (Vec3 normal, double depth)? _computeManifold(Collider a, Collider b) {
     if (a is SphereCollider && b is SphereCollider) {
@@ -621,15 +655,23 @@ final class PhysicsWorld {
     // Capsule manifolds reduce to sphere-sphere between closest axis points
     // (E14-2), so capsule bodies slide and roll instead of snapping to AABBs.
     final capsulePoints = switch ((a, b)) {
-      (CapsuleCollider ca, SphereCollider sb) =>
-        (ca.closestPointOnAxis(sb.worldCenter), ca.worldRadius, sb.worldCenter, sb.worldRadius),
-      (SphereCollider sa, CapsuleCollider cb) =>
-        (sa.worldCenter, sa.worldRadius, cb.closestPointOnAxis(sa.worldCenter), cb.worldRadius),
+      (CapsuleCollider ca, SphereCollider sb) => (
+        ca.closestPointOnAxis(sb.worldCenter),
+        ca.worldRadius,
+        sb.worldCenter,
+        sb.worldRadius,
+      ),
+      (SphereCollider sa, CapsuleCollider cb) => (
+        sa.worldCenter,
+        sa.worldRadius,
+        cb.closestPointOnAxis(sa.worldCenter),
+        cb.worldRadius,
+      ),
       (CapsuleCollider ca, CapsuleCollider cb) => () {
-          final p2 = cb.closestPointOnAxis(ca.closestPointOnAxis(cb.worldCenter));
-          final p1 = ca.closestPointOnAxis(p2);
-          return (p1, ca.worldRadius, p2, cb.worldRadius);
-        }(),
+        final p2 = cb.closestPointOnAxis(ca.closestPointOnAxis(cb.worldCenter));
+        final p1 = ca.closestPointOnAxis(p2);
+        return (p1, ca.worldRadius, p2, cb.worldRadius);
+      }(),
       _ => null,
     };
     if (capsulePoints != null) {
@@ -649,9 +691,12 @@ final class PhysicsWorld {
     }
     final boxA = a.worldBounds;
     final boxB = b.worldBounds;
-    final ox = math.min(boxA.max.x, boxB.max.x) - math.max(boxA.min.x, boxB.min.x);
-    final oy = math.min(boxA.max.y, boxB.max.y) - math.max(boxA.min.y, boxB.min.y);
-    final oz = math.min(boxA.max.z, boxB.max.z) - math.max(boxA.min.z, boxB.min.z);
+    final ox =
+        math.min(boxA.max.x, boxB.max.x) - math.max(boxA.min.x, boxB.min.x);
+    final oy =
+        math.min(boxA.max.y, boxB.max.y) - math.max(boxA.min.y, boxB.min.y);
+    final oz =
+        math.min(boxA.max.z, boxB.max.z) - math.max(boxA.min.z, boxB.min.z);
     if (ox <= 0 || oy <= 0 || oz <= 0) return null;
     final centerDelta = boxB.center - boxA.center;
     if (ox <= oy && ox <= oz) {
@@ -664,7 +709,11 @@ final class PhysicsWorld {
   }
 
   /// Normal points from the capsule toward the box (or reversed when [flip]).
-  static (Vec3, double)? _capsuleBoxManifold(CapsuleCollider cap, Aabb box, {required bool flip}) {
+  static (Vec3, double)? _capsuleBoxManifold(
+    CapsuleCollider cap,
+    Aabb box, {
+    required bool flip,
+  }) {
     final axisPoint = cap.closestPointOnAxis(box.center);
     final closest = Vec3(
       axisPoint.x.clamp(box.min.x, box.max.x),
@@ -715,21 +764,35 @@ final class PhysicsWorld {
   }
 
   static bool _intersects(Collider a, Collider b) => switch ((a, b)) {
-        (SphereCollider s1, SphereCollider s2) => _sphereSphere(
-            s1.worldCenter,
-            s1.worldRadius,
-            s2.worldCenter,
-            s2.worldRadius,
-          ),
-        (SphereCollider s, BoxCollider box) || (BoxCollider box, SphereCollider s) =>
-          _sphereAabb(s.worldCenter, s.worldRadius, box.worldBounds),
-        (BoxCollider b1, BoxCollider b2) => _aabbAabb(b1.worldBounds, b2.worldBounds),
-        (CapsuleCollider cap, SphereCollider s) || (SphereCollider s, CapsuleCollider cap) =>
-          _sphereSphere(cap.closestPointOnAxis(s.worldCenter), cap.worldRadius, s.worldCenter, s.worldRadius),
-        (CapsuleCollider cap, BoxCollider box) || (BoxCollider box, CapsuleCollider cap) =>
-          _capsuleAabb(cap, box.worldBounds),
-        (CapsuleCollider c1, CapsuleCollider c2) => _capsuleCapsule(c1, c2),
-      };
+    (SphereCollider s1, SphereCollider s2) => _sphereSphere(
+      s1.worldCenter,
+      s1.worldRadius,
+      s2.worldCenter,
+      s2.worldRadius,
+    ),
+    (SphereCollider s, BoxCollider box) ||
+    (
+      BoxCollider box,
+      SphereCollider s,
+    ) => _sphereAabb(s.worldCenter, s.worldRadius, box.worldBounds),
+    (BoxCollider b1, BoxCollider b2) => _aabbAabb(
+      b1.worldBounds,
+      b2.worldBounds,
+    ),
+    (CapsuleCollider cap, SphereCollider s) ||
+    (SphereCollider s, CapsuleCollider cap) => _sphereSphere(
+      cap.closestPointOnAxis(s.worldCenter),
+      cap.worldRadius,
+      s.worldCenter,
+      s.worldRadius,
+    ),
+    (CapsuleCollider cap, BoxCollider box) ||
+    (
+      BoxCollider box,
+      CapsuleCollider cap,
+    ) => _capsuleAabb(cap, box.worldBounds),
+    (CapsuleCollider c1, CapsuleCollider c2) => _capsuleCapsule(c1, c2),
+  };
 
   static bool _aabbAabb(Aabb a, Aabb b) =>
       a.min.x <= b.max.x &&
@@ -739,10 +802,21 @@ final class PhysicsWorld {
       a.min.z <= b.max.z &&
       a.max.z >= b.min.z;
 
-  static bool _intersectsSphere(Collider c, Vec3 center, double radius) => switch (c) {
-        SphereCollider s => _sphereSphere(s.worldCenter, s.worldRadius, center, radius),
+  static bool _intersectsSphere(Collider c, Vec3 center, double radius) =>
+      switch (c) {
+        SphereCollider s => _sphereSphere(
+          s.worldCenter,
+          s.worldRadius,
+          center,
+          radius,
+        ),
         BoxCollider b => _sphereAabb(center, radius, b.worldBounds),
-        CapsuleCollider cap => _sphereSphere(cap.closestPointOnAxis(center), cap.worldRadius, center, radius),
+        CapsuleCollider cap => _sphereSphere(
+          cap.closestPointOnAxis(center),
+          cap.worldRadius,
+          center,
+          radius,
+        ),
       };
 
   static bool _capsuleAabb(CapsuleCollider cap, Aabb box) {

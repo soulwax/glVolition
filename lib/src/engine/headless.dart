@@ -73,7 +73,9 @@ final class ScriptedInput implements Input {
 
 final class HeadlessGraphics implements Graphics {
   @override
-  FrameEnvironment environment = const FrameEnvironment(clearColor: LinearColor(0, 0, 0));
+  FrameEnvironment environment = const FrameEnvironment(
+    clearColor: LinearColor(0, 0, 0),
+  );
   @override
   PostProcessState post = PostProcessState.off;
   @override
@@ -161,14 +163,11 @@ final class HeadlessGraphics implements Graphics {
   void removeEmitter(ParticleEmitter emitter) => emitters.remove(emitter);
 
   @override
-  void shakeCamera({double trauma = 0.5, double? rotation}) => shakeTrauma += trauma;
+  void shakeCamera({double trauma = 0.5, double? rotation}) =>
+      shakeTrauma += trauma;
 
   @override
-  void setShaderUniform(
-    ShaderTarget target,
-    String name,
-    ShaderUniform value,
-  ) {
+  void setShaderUniform(ShaderTarget target, String name, ShaderUniform value) {
     shaderUniforms.putIfAbsent(target, () => {})[name] = value;
   }
 
@@ -206,7 +205,10 @@ final class _NoAssets implements AssetLoader {
   const _NoAssets();
 
   @override
-  Future<ModelAsset> loadModel(String path, {MaterialOverride? materialOverride}) =>
+  Future<ModelAsset> loadModel(
+    String path, {
+    MaterialOverride? materialOverride,
+  }) =>
       Future.error(UnsupportedError('HeadlessHost cannot load models ($path)'));
 
   @override
@@ -230,7 +232,12 @@ final class _SilentChannel implements AudioChannel {
   bool _loop = false;
 
   @override
-  void play(AudioClip clip, {double volume = 1, double pitch = 1, bool loop = false}) {
+  void play(
+    AudioClip clip, {
+    double volume = 1,
+    double pitch = 1,
+    bool loop = false,
+  }) {
     _loop = loop;
     isPlaying = _loop;
   }
@@ -253,7 +260,8 @@ final class SilentAudio implements AudioDevice {
   final List<String> played = [];
 
   @override
-  AudioClip clip(String path, {double volume = 1, int voices = 3}) => _SilentClip(path);
+  AudioClip clip(String path, {double volume = 1, int voices = 3}) =>
+      _SilentClip(path);
 
   @override
   AudioChannel createChannel() => _SilentChannel();

@@ -12,15 +12,16 @@ final class SmoothFollowCamera extends Behaviour {
   double azimuthOffset;
   double elevationOffset;
 
-  late final SmoothFollowCameraController controller = SmoothFollowCameraController(
-    targetOffset: targetOffset,
-    distance: distance,
-    height: height,
-    positionDamping: positionDamping,
-    rotationDamping: rotationDamping,
-  )
-    ..azimuthOffset = azimuthOffset
-    ..elevationOffset = elevationOffset;
+  late final SmoothFollowCameraController controller =
+      SmoothFollowCameraController(
+          targetOffset: targetOffset,
+          distance: distance,
+          height: height,
+          positionDamping: positionDamping,
+          rotationDamping: rotationDamping,
+        )
+        ..azimuthOffset = azimuthOffset
+        ..elevationOffset = elevationOffset;
 
   SmoothFollowCamera({
     this.target,
@@ -37,13 +38,33 @@ final class SmoothFollowCamera extends Behaviour {
     'SmoothFollowCamera',
     SmoothFollowCamera.new,
     [
-      Field.vec3('targetOffset', (c) => c.targetOffset, (c, v) => c.targetOffset = v),
+      Field.vec3(
+        'targetOffset',
+        (c) => c.targetOffset,
+        (c, v) => c.targetOffset = v,
+      ),
       Field.number('distance', (c) => c.distance, (c, v) => c.distance = v),
       Field.number('height', (c) => c.height, (c, v) => c.height = v),
-      Field.number('positionDamping', (c) => c.positionDamping, (c, v) => c.positionDamping = v),
-      Field.number('rotationDamping', (c) => c.rotationDamping, (c, v) => c.rotationDamping = v),
-      Field.number('azimuthOffset', (c) => c.azimuthOffset, (c, v) => c.azimuthOffset = v),
-      Field.number('elevationOffset', (c) => c.elevationOffset, (c, v) => c.elevationOffset = v),
+      Field.number(
+        'positionDamping',
+        (c) => c.positionDamping,
+        (c, v) => c.positionDamping = v,
+      ),
+      Field.number(
+        'rotationDamping',
+        (c) => c.rotationDamping,
+        (c, v) => c.rotationDamping = v,
+      ),
+      Field.number(
+        'azimuthOffset',
+        (c) => c.azimuthOffset,
+        (c, v) => c.azimuthOffset = v,
+      ),
+      Field.number(
+        'elevationOffset',
+        (c) => c.elevationOffset,
+        (c, v) => c.elevationOffset = v,
+      ),
     ],
   );
 
@@ -94,12 +115,12 @@ final class CinematicTourCamera extends Behaviour {
     double breathingSpeed = 1.2,
     this.onCompleted,
   }) : controller = CinematicTourCameraController(
-          waypoints: waypoints,
-          duration: duration,
-          loop: loop,
-          breathingAmplitude: breathingAmplitude,
-          breathingSpeed: breathingSpeed,
-        );
+         waypoints: waypoints,
+         duration: duration,
+         loop: loop,
+         breathingAmplitude: breathingAmplitude,
+         breathingSpeed: breathingSpeed,
+       );
 
   static final spec = ComponentSpec<CinematicTourCamera>(
     'CinematicTourCamera',
@@ -142,7 +163,10 @@ final class CinematicTourCamera extends Behaviour {
     }
     controller.update(time.deltaTime);
     transform.position = controller.eye;
-    if (!controller.loop && !controller.isPlaying && controller.progress >= 1.0 && !_completedFired) {
+    if (!controller.loop &&
+        !controller.isPlaying &&
+        controller.progress >= 1.0 &&
+        !_completedFired) {
       _completedFired = true;
       onCompleted?.call();
     }

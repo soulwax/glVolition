@@ -208,8 +208,7 @@ final class _WebGraphics implements Graphics {
     required String key,
     LinearColor color = const LinearColor(1, 1, 1),
     double glow = 2,
-  }) =>
-      _app.createParticleMaterial(key: key, color: color, glow: glow);
+  }) => _app.createParticleMaterial(key: key, color: color, glow: glow);
 
   @override
   TextureHandle createTexture({
@@ -262,11 +261,7 @@ final class _WebGraphics implements Graphics {
       _app.shakeCamera(trauma: trauma, rotation: rotation);
 
   @override
-  void setShaderUniform(
-    ShaderTarget target,
-    String name,
-    ShaderUniform value,
-  ) {
+  void setShaderUniform(ShaderTarget target, String name, ShaderUniform value) {
     _guardShaderOp(() => _app.setShaderUniform(target, name, value));
   }
 
@@ -322,14 +317,16 @@ final class _WebGraphics implements Graphics {
       postEffects: nextEffects,
     );
     try {
-      _app.renderer.configure(nextConfig).then<void>(
-        (_) {},
-        onError: (Object error, StackTrace _) {
-          if (_app.renderer.state != RendererState.disposed) {
-            lastShaderError = error.toString();
-          }
-        },
-      );
+      _app.renderer
+          .configure(nextConfig)
+          .then<void>(
+            (_) {},
+            onError: (Object error, StackTrace _) {
+              if (_app.renderer.state != RendererState.disposed) {
+                lastShaderError = error.toString();
+              }
+            },
+          );
     } on Object catch (error) {
       if (_app.renderer.state != RendererState.disposed) {
         lastShaderError = error.toString();
@@ -352,8 +349,10 @@ final class _WebAssets implements AssetLoader {
   _WebAssets(this._app);
 
   @override
-  Future<ModelAsset> loadModel(String path, {MaterialOverride? materialOverride}) =>
-      _app.loadModel(path, materialOverride: materialOverride);
+  Future<ModelAsset> loadModel(
+    String path, {
+    MaterialOverride? materialOverride,
+  }) => _app.loadModel(path, materialOverride: materialOverride);
 
   @override
   Future<Uint8List> loadBytes(String path) async {
@@ -383,13 +382,13 @@ final class _WebAudioClip implements AudioClip {
   int next = 0;
 
   _WebAudioClip(this.path, this.baseVolume, int voices)
-      : pool = [
-          for (var i = 0; i < voices; i++)
-            web.HTMLAudioElement()
-              ..src = path
-              ..preload = 'auto'
-              ..volume = baseVolume.clamp(0.0, 1.0),
-        ];
+    : pool = [
+        for (var i = 0; i < voices; i++)
+          web.HTMLAudioElement()
+            ..src = path
+            ..preload = 'auto'
+            ..volume = baseVolume.clamp(0.0, 1.0),
+      ];
 }
 
 final class _WebAudioChannel implements AudioChannel {
@@ -406,7 +405,12 @@ final class _WebAudioChannel implements AudioChannel {
   bool get isPlaying => _playing && (_el != null && !_el!.paused);
 
   @override
-  void play(AudioClip clip, {double volume = 1, double pitch = 1, bool loop = false}) {
+  void play(
+    AudioClip clip, {
+    double volume = 1,
+    double pitch = 1,
+    bool loop = false,
+  }) {
     final base = clip is _WebAudioClip ? clip.baseVolume : 1.0;
     _baseVolume = base;
     _volume = volume;

@@ -176,7 +176,8 @@ final class ShaderOverrideInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }

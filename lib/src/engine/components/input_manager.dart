@@ -2,14 +2,57 @@ part of '../../engine.dart';
 
 /// Standard set of keyboard & mouse control codes scanned during interactive rebinding.
 const List<String> _kRebindScanControls = [
-  'Space', 'Enter', 'Escape', 'Tab', 'Backspace',
-  'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight',
-  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-  'KeyA', 'KeyB', 'KeyC', 'KeyD', 'KeyE', 'KeyF', 'KeyG', 'KeyH', 'KeyI', 'KeyJ',
-  'KeyK', 'KeyL', 'KeyM', 'KeyN', 'KeyO', 'KeyP', 'KeyQ', 'KeyR', 'KeyS', 'KeyT',
-  'KeyU', 'KeyV', 'KeyW', 'KeyX', 'KeyY', 'KeyZ',
-  'Digit0', 'Digit1', 'Digit2', 'Digit3', 'Digit4',
-  'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9',
+  'Space',
+  'Enter',
+  'Escape',
+  'Tab',
+  'Backspace',
+  'ShiftLeft',
+  'ShiftRight',
+  'ControlLeft',
+  'ControlRight',
+  'AltLeft',
+  'AltRight',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'KeyA',
+  'KeyB',
+  'KeyC',
+  'KeyD',
+  'KeyE',
+  'KeyF',
+  'KeyG',
+  'KeyH',
+  'KeyI',
+  'KeyJ',
+  'KeyK',
+  'KeyL',
+  'KeyM',
+  'KeyN',
+  'KeyO',
+  'KeyP',
+  'KeyQ',
+  'KeyR',
+  'KeyS',
+  'KeyT',
+  'KeyU',
+  'KeyV',
+  'KeyW',
+  'KeyX',
+  'KeyY',
+  'KeyZ',
+  'Digit0',
+  'Digit1',
+  'Digit2',
+  'Digit3',
+  'Digit4',
+  'Digit5',
+  'Digit6',
+  'Digit7',
+  'Digit8',
+  'Digit9',
 ];
 
 /// Component hosting contextual [pad.InputActionAsset] maps, deadzone pipelines,
@@ -30,9 +73,9 @@ final class InputManagerComponent extends Behaviour {
     pad.InputStateSnapshot? snapshot,
     pad.InputRebinder? rebinder,
     this.virtualGamepad,
-  })  : actions = actions ?? pad.InputActionAsset(),
-        snapshot = snapshot ?? pad.InputStateSnapshot(),
-        rebinder = rebinder ?? pad.InputRebinder();
+  }) : actions = actions ?? pad.InputActionAsset(),
+       snapshot = snapshot ?? pad.InputStateSnapshot(),
+       rebinder = rebinder ?? pad.InputRebinder();
 
   /// Evaluates input actions before regular gameplay scripts run.
   @override
@@ -48,7 +91,8 @@ final class InputManagerComponent extends Behaviour {
   bool wasPressed(String query) => action(query)?.wasPressedThisFrame ?? false;
 
   /// True on the exact frame the action transitioned to inactive.
-  bool wasReleased(String query) => action(query)?.wasReleasedThisFrame ?? false;
+  bool wasReleased(String query) =>
+      action(query)?.wasReleasedThisFrame ?? false;
 
   /// Returns 1D axis value in [-1.0, 1.0].
   double getAxis(String query) => action(query)?.value ?? 0.0;
@@ -60,7 +104,8 @@ final class InputManagerComponent extends Behaviour {
   }
 
   /// Registers additional physical control names (e.g. `'MouseLeft'`, `'GamepadA'`) to poll from raw [Input].
-  void watchControls(Iterable<String> controls) => _watchedControls.addAll(controls);
+  void watchControls(Iterable<String> controls) =>
+      _watchedControls.addAll(controls);
 
   /// Queues multi-touch pointers for [virtualGamepad] to evaluate during the next frame update.
   void feedVirtualPointers(List<pad.VirtualTouchPointer> pointers) {
@@ -128,7 +173,8 @@ final class InputManagerComponent extends Behaviour {
 
     final vpad = virtualGamepad;
     if (vpad != null && vpad.enabled) {
-      final ptrs = _queuedVirtualPointers ??
+      final ptrs =
+          _queuedVirtualPointers ??
           [
             pad.VirtualTouchPointer(
               id: 0,
@@ -164,7 +210,12 @@ final class VirtualGamepadUI {
           : const VoxColor(220, 230, 245, 120);
 
       dl.addCircleFilled(stick.originX, stick.originY, stick.radius, baseColor);
-      dl.addCircleFilled(stick.knobX, stick.knobY, stick.radius * 0.42, knobColor);
+      dl.addCircleFilled(
+        stick.knobX,
+        stick.knobY,
+        stick.radius * 0.42,
+        knobColor,
+      );
     }
 
     for (final btn in gamepad.buttons) {

@@ -26,10 +26,10 @@ final class ProgressionStatsComponent extends Behaviour {
     this.toastDisplayDuration = 3.0,
     this.onAchievementUnlocked,
   }) : combo = stat.ComboTracker(
-          decayDuration: comboDecayDuration,
-          multiplierStep: comboMultiplierStep,
-          maxMultiplier: comboMaxMultiplier,
-        ) {
+         decayDuration: comboDecayDuration,
+         multiplierStep: comboMultiplierStep,
+         maxMultiplier: comboMaxMultiplier,
+       ) {
     achievements = stat.AchievementTracker(
       metrics: metrics,
       telemetry: telemetry,
@@ -51,16 +51,15 @@ final class ProgressionStatsComponent extends Behaviour {
     bool higherIsBetter = true,
     int maxEntries = 100,
     bool keepBestPerPlayer = true,
-  }) =>
-      leaderboards.putIfAbsent(
-        boardId,
-        () => stat.Leaderboard(
-          boardId: boardId,
-          higherIsBetter: higherIsBetter,
-          maxEntries: maxEntries,
-          keepBestPerPlayer: keepBestPerPlayer,
-        ),
-      );
+  }) => leaderboards.putIfAbsent(
+    boardId,
+    () => stat.Leaderboard(
+      boardId: boardId,
+      higherIsBetter: higherIsBetter,
+      maxEntries: maxEntries,
+      keepBestPerPlayer: keepBestPerPlayer,
+    ),
+  );
 
   List<stat.AchievementDef> recordMetric(
     String id,
@@ -89,10 +88,7 @@ final class ProgressionStatsComponent extends Behaviour {
     return const [];
   }
 
-  double registerComboHit({
-    double basePoints = 100.0,
-    double bonusTime = 0.0,
-  }) {
+  double registerComboHit({double basePoints = 100.0, double bonusTime = 0.0}) {
     final pts = combo.registerHit(basePoints: basePoints, bonusTime: bonusTime);
     metrics.record(
       'best_combo',
@@ -115,15 +111,18 @@ final class ProgressionStatsComponent extends Behaviour {
     Map<String, Object?> metadata = const {},
   }) {
     final board = leaderboard(boardId);
-    final ts = timestampMs ??
+    final ts =
+        timestampMs ??
         (isAttached ? (engine.time.unscaledTime * 1000).round() : 0);
-    return board.submit(stat.LeaderboardEntry(
-      playerId: playerId,
-      displayName: displayName,
-      score: score,
-      timestampMs: ts,
-      metadata: metadata,
-    ));
+    return board.submit(
+      stat.LeaderboardEntry(
+        playerId: playerId,
+        displayName: displayName,
+        score: score,
+        timestampMs: ts,
+        metadata: metadata,
+      ),
+    );
   }
 
   void saveToStorage([String key = 'voxstat_profile']) {
@@ -132,7 +131,8 @@ final class ProgressionStatsComponent extends Behaviour {
       'metrics': metrics.toJson(),
       'achievements': achievements.toJson(),
       'leaderboards': {
-        for (final entry in leaderboards.entries) entry.key: entry.value.toJson(),
+        for (final entry in leaderboards.entries)
+          entry.key: entry.value.toJson(),
       },
     };
     engine.host.storage.write(key, jsonEncode(payload));
@@ -157,8 +157,9 @@ final class ProgressionStatsComponent extends Behaviour {
     if (boardsMap is Map) {
       for (final entry in boardsMap.entries) {
         if (entry.value is Map) {
-          leaderboards[entry.key.toString()] =
-              stat.Leaderboard.fromJson((entry.value as Map).cast<String, Object?>());
+          leaderboards[entry.key.toString()] = stat.Leaderboard.fromJson(
+            (entry.value as Map).cast<String, Object?>(),
+          );
         }
       }
     }
@@ -227,7 +228,11 @@ final class AchievementsHudUI {
       );
       ui.style.sliderGrab = prevGrab;
     } else {
-      ui.labelValue('Total Score', '${combo.totalScore.round()}', valueColor: VoxColor.lightGray);
+      ui.labelValue(
+        'Total Score',
+        '${combo.totalScore.round()}',
+        valueColor: VoxColor.lightGray,
+      );
     }
 
     ui.separator();

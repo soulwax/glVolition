@@ -10,7 +10,9 @@ final class SpatialGrid2D<T> {
   final Map<T, Set<int>> _itemBuckets = {};
 
   SpatialGrid2D({this.cellSize = 64.0}) {
-    if (cellSize <= 0) throw ArgumentError.value(cellSize, 'cellSize', 'must be > 0');
+    if (cellSize <= 0) {
+      throw ArgumentError.value(cellSize, 'cellSize', 'must be > 0');
+    }
   }
 
   /// Total number of unique items currently tracked in this grid.

@@ -55,7 +55,9 @@ Future<void> main() async {
 
   runner.dispose();
   if (device.liveObjectCount != 0) {
-    stderr.writeln('Expected 0 live GPU objects after dispose, got ${device.liveObjectCount}');
+    stderr.writeln(
+      'Expected 0 live GPU objects after dispose, got ${device.liveObjectCount}',
+    );
     exit(1);
   }
   stdout.writeln('[native_smoke] Clean shutdown (liveObjectCount = 0).');

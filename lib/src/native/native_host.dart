@@ -7,6 +7,7 @@ import 'package:pixeldart/rendering/webgl/device_api.dart';
 import 'package:pixeldart/rendering/webgl/state_cache.dart';
 
 import '../../gl_volition.dart';
+import 'native_bindings.dart';
 
 /// Optional callback invoked by [GlesDevice] for each low-level GPU operation,
 /// allowing an FFI OpenGL ES 3.0 / ANGLE host to forward validated commands
@@ -81,7 +82,7 @@ final class GlesDevice implements GpuDevice, GpuContextGeneration {
   final List<String> drawLog = [];
   final List<({String name, UniformValue value})> uniformLog = [];
   final List<({ClearMask mask, double r, double g, double b, double a})>
-      clearLog = [];
+  clearLog = [];
 
   GpuObject? _boundTarget;
   GpuObject? _boundProgram;
@@ -117,19 +118,19 @@ final class GlesDevice implements GpuDevice, GpuContextGeneration {
 
   @override
   RenderCapabilities queryCapabilities() => RenderCapabilities(
-        webglVersion: 'gles-3.0-native',
-        rendererString: 'GlesDevice (glVolition Native)',
-        maxTextureSize: 4096,
-        maxTextureArrayLayers: 8,
-        maxSamples: maxSamples,
-        maxVertexAttributes: 16,
-        maxColorAttachments: 4,
-        anisotropicFiltering: anisotropicFiltering,
-        maxAnisotropy: maxAnisotropy,
-        floatRenderTarget: true,
-        contextLossExtension: true,
-        disjointTimerQuery: timerQueries,
-      );
+    webglVersion: 'gles-3.0-native',
+    rendererString: 'GlesDevice (glVolition Native)',
+    maxTextureSize: 4096,
+    maxTextureArrayLayers: 8,
+    maxSamples: maxSamples,
+    maxVertexAttributes: 16,
+    maxColorAttachments: 4,
+    anisotropicFiltering: anisotropicFiltering,
+    maxAnisotropy: maxAnisotropy,
+    floatRenderTarget: true,
+    contextLossExtension: true,
+    disjointTimerQuery: timerQueries,
+  );
 
   GpuObject _create(String kind) {
     final obj = _NativeGpuObject(_nextId++);
@@ -217,10 +218,11 @@ final class GlesDevice implements GpuDevice, GpuContextGeneration {
   void uploadTextureLayer(GpuObject texture, int layer, Uint8List pixels) {
     _requireReady();
     _requireLive(texture);
-    onCommand?.call(
-      'uploadTextureLayer',
-      [(texture as _NativeGpuObject).id, layer, pixels.length],
-    );
+    onCommand?.call('uploadTextureLayer', [
+      (texture as _NativeGpuObject).id,
+      layer,
+      pixels.length,
+    ]);
   }
 
   @override
@@ -415,7 +417,9 @@ final class GlesDevice implements GpuDevice, GpuContextGeneration {
       _requireLive(target);
     }
     _boundTarget = target;
-    final label = target == null ? 'canvas' : '${(target as _NativeGpuObject).id}';
+    final label = target == null
+        ? 'canvas'
+        : '${(target as _NativeGpuObject).id}';
     drawLog.add('bindTarget($label)');
     onCommand?.call('bindTarget', [label]);
   }
@@ -510,10 +514,13 @@ final class GlesDevice implements GpuDevice, GpuContextGeneration {
     drawLog.add(
       'vertexAttribPointer($location, $componentCount, $strideBytes, $offsetBytes$suffix)',
     );
-    onCommand?.call(
-      'vertexAttribPointer',
-      [location, componentCount, strideBytes, offsetBytes, format.name],
-    );
+    onCommand?.call('vertexAttribPointer', [
+      location,
+      componentCount,
+      strideBytes,
+      offsetBytes,
+      format.name,
+    ]);
   }
 
   @override
@@ -637,10 +644,12 @@ final class GlesDevice implements GpuDevice, GpuContextGeneration {
       'drawElementsInstanced($count, $offsetBytes, $instanceCount, '
       'index32=$index32)',
     );
-    onCommand?.call(
-      'drawElementsInstanced',
-      [count, offsetBytes, instanceCount, index32],
-    );
+    onCommand?.call('drawElementsInstanced', [
+      count,
+      offsetBytes,
+      instanceCount,
+      index32,
+    ]);
   }
 
   @override
@@ -714,10 +723,12 @@ final class NativeEngineHost implements EngineHost {
   final AssetLoader assets;
 
   @override
-  final SilentAudio audio = SilentAudio();
+  final AudioDevice audio;
 
   @override
   final KeyValueStore storage;
+
+  final NativeWindowBackend? windowBackend;
 
   final List<Object> errors = [];
   bool rethrowErrors;
@@ -733,7 +744,9 @@ final class NativeEngineHost implements EngineHost {
     required this.sequencer,
     required this._surface,
     required this.assets,
+    required this.audio,
     required this.storage,
+    this.windowBackend,
     this.rethrowErrors = true,
   });
 
@@ -742,6 +755,8 @@ final class NativeEngineHost implements EngineHost {
   /// ladder, and binds a new [Engine] with [initialScene].
   static Future<NativeEngineRunner> boot({
     GpuDevice? device,
+    AudioDevice? audio,
+    NativeWindowBackend? windowBackend,
     int width = 1280,
     int height = 720,
     double devicePixelRatio = 1.0,
@@ -786,9 +801,9 @@ final class NativeEngineHost implements EngineHost {
         resources: renderer.resources,
         rootDirectory: assetsDirectory ?? Directory.current,
       ),
-      storage: storageFile != null
-          ? JsonFileStore(storageFile)
-          : MemoryStore(),
+      audio: audio ?? SilentAudio(),
+      storage: storageFile != null ? JsonFileStore(storageFile) : MemoryStore(),
+      windowBackend: windowBackend,
       rethrowErrors: rethrowErrors,
     );
 
@@ -896,9 +911,13 @@ final class NativeEngineHost implements EngineHost {
     _disposed = true;
     _engine?.dispose();
     _engine = null;
+    if (audio case final DisposableNativeAudioDevice disposableAudio) {
+      disposableAudio.dispose();
+    }
     sceneRoot.removeFromWorld(world);
     world.dispose();
     renderer.dispose();
+    windowBackend?.dispose();
   }
 }
 
@@ -1006,15 +1025,14 @@ final class NativeGraphics implements Graphics {
     required String key,
     LinearColor color = const LinearColor(1, 1, 1),
     double glow = 2,
-  }) =>
-      createMaterial(
-        ParticleMaterials.softDefinition(
-          resources,
-          key: key,
-          color: color,
-          glow: glow,
-        ),
-      );
+  }) => createMaterial(
+    ParticleMaterials.softDefinition(
+      resources,
+      key: key,
+      color: color,
+      glow: glow,
+    ),
+  );
 
   @override
   TextureHandle createTexture({
@@ -1076,11 +1094,7 @@ final class NativeGraphics implements Graphics {
   }
 
   @override
-  void setShaderUniform(
-    ShaderTarget target,
-    String name,
-    ShaderUniform value,
-  ) {
+  void setShaderUniform(ShaderTarget target, String name, ShaderUniform value) {
     _shaderUniforms.putIfAbsent(target, () => {})[name] = value;
     _guardShaderOp(() => _host.renderer.setShaderUniform(target, name, value));
   }
@@ -1146,14 +1160,16 @@ final class NativeGraphics implements Graphics {
       postEffects: nextEffects,
     );
     try {
-      _host.renderer.configure(nextConfig).then<void>(
-        (_) {},
-        onError: (Object error, StackTrace _) {
-          if (!_host._disposed) {
-            _lastShaderError = error.toString();
-          }
-        },
-      );
+      _host.renderer
+          .configure(nextConfig)
+          .then<void>(
+            (_) {},
+            onError: (Object error, StackTrace _) {
+              if (!_host._disposed) {
+                _lastShaderError = error.toString();
+              }
+            },
+          );
     } on Object catch (error) {
       if (!_host._disposed) {
         _lastShaderError = error.toString();
@@ -1166,7 +1182,8 @@ final class NativeGraphics implements Graphics {
     final w = viewportWidth;
     final h = viewportHeight;
     if (x < 0 || x > w || y < 0 || y > h) return null;
-    final cam = _lastCameraView ??
+    final cam =
+        _lastCameraView ??
         (camera != null
             ? camera!.toCameraView(aspect)
             : CameraView.look(
@@ -1186,10 +1203,7 @@ final class FileAssetLoader implements AssetLoader {
   final ResourceLibrary resources;
   final Directory rootDirectory;
 
-  const FileAssetLoader({
-    required this.resources,
-    required this.rootDirectory,
-  });
+  const FileAssetLoader({required this.resources, required this.rootDirectory});
 
   File _resolve(String path) {
     final clean = path.replaceAll('\\', '/');

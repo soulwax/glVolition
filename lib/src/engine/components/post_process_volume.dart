@@ -51,16 +51,15 @@ final class PostProcessVolume extends Behaviour {
     double vignette = 0.35,
     double dither = 0.5,
     double chromaticAberration = 0.3,
-  }) =>
-      PostProcessVolume(
-        isGlobal: isGlobal,
-        weight: weight,
-        grain: grain,
-        vignette: vignette,
-        ditherStrength: dither,
-        chromaticAberration: chromaticAberration,
-        bloomStrength: 0.3,
-      );
+  }) => PostProcessVolume(
+    isGlobal: isGlobal,
+    weight: weight,
+    grain: grain,
+    vignette: vignette,
+    ditherStrength: dither,
+    chromaticAberration: chromaticAberration,
+    bloomStrength: 0.3,
+  );
 
   /// Factory creating a cinematic high-contrast dramatic volume (E22-2).
   factory PostProcessVolume.cinematic({
@@ -70,35 +69,70 @@ final class PostProcessVolume extends Behaviour {
     double bloomStrength = 0.45,
     double ssaoStrength = 0.6,
     double vignette = 0.2,
-  }) =>
-      PostProcessVolume(
-        isGlobal: isGlobal,
-        weight: weight,
-        exposure: exposure,
-        bloomStrength: bloomStrength,
-        ssaoStrength: ssaoStrength,
-        vignette: vignette,
-        toneMapping: ToneMappingMode.aces,
-      );
+  }) => PostProcessVolume(
+    isGlobal: isGlobal,
+    weight: weight,
+    exposure: exposure,
+    bloomStrength: bloomStrength,
+    ssaoStrength: ssaoStrength,
+    vignette: vignette,
+    toneMapping: ToneMappingMode.aces,
+  );
 
   static final spec = ComponentSpec<PostProcessVolume>(
     'PostProcessVolume',
     PostProcessVolume.new,
     [
-      Field.boolean('isGlobal', (v) => v.isGlobal, (v, val) => v.isGlobal = val),
+      Field.boolean(
+        'isGlobal',
+        (v) => v.isGlobal,
+        (v, val) => v.isGlobal = val,
+      ),
       Field.number('radius', (v) => v.radius, (v, val) => v.radius = val),
-      Field.number('blendDistance', (v) => v.blendDistance, (v, val) => v.blendDistance = val),
+      Field.number(
+        'blendDistance',
+        (v) => v.blendDistance,
+        (v, val) => v.blendDistance = val,
+      ),
       Field.number('weight', (v) => v.weight, (v, val) => v.weight = val),
-      Field.integer('priority', (v) => v.priority, (v, val) => v.priority = val),
+      Field.integer(
+        'priority',
+        (v) => v.priority,
+        (v, val) => v.priority = val,
+      ),
       Field.number('exposure', (v) => v.exposure, (v, val) => v.exposure = val),
-      Field.number('bloomStrength', (v) => v.bloomStrength, (v, val) => v.bloomStrength = val),
-      Field.number('ssaoStrength', (v) => v.ssaoStrength, (v, val) => v.ssaoStrength = val),
+      Field.number(
+        'bloomStrength',
+        (v) => v.bloomStrength,
+        (v, val) => v.bloomStrength = val,
+      ),
+      Field.number(
+        'ssaoStrength',
+        (v) => v.ssaoStrength,
+        (v, val) => v.ssaoStrength = val,
+      ),
       Field.number('vignette', (v) => v.vignette, (v, val) => v.vignette = val),
       Field.number('grain', (v) => v.grain, (v, val) => v.grain = val),
-      Field.number('depthOfFieldStrength', (v) => v.depthOfFieldStrength, (v, val) => v.depthOfFieldStrength = val),
-      Field.number('ditherStrength', (v) => v.ditherStrength, (v, val) => v.ditherStrength = val),
-      Field.number('colorGradeStrength', (v) => v.colorGradeStrength, (v, val) => v.colorGradeStrength = val),
-      Field.number('chromaticAberration', (v) => v.chromaticAberration, (v, val) => v.chromaticAberration = val),
+      Field.number(
+        'depthOfFieldStrength',
+        (v) => v.depthOfFieldStrength,
+        (v, val) => v.depthOfFieldStrength = val,
+      ),
+      Field.number(
+        'ditherStrength',
+        (v) => v.ditherStrength,
+        (v, val) => v.ditherStrength = val,
+      ),
+      Field.number(
+        'colorGradeStrength',
+        (v) => v.colorGradeStrength,
+        (v, val) => v.colorGradeStrength = val,
+      ),
+      Field.number(
+        'chromaticAberration',
+        (v) => v.chromaticAberration,
+        (v, val) => v.chromaticAberration = val,
+      ),
       Field.enumValue<PostProcessVolume, ToneMappingMode>(
         'toneMapping',
         ToneMappingMode.values,
@@ -133,7 +167,10 @@ final class PostProcessVolume extends Behaviour {
       ssaoStrength: mix(current.ssaoStrength, ssaoStrength),
       vignette: mix(current.vignette, vignette),
       grain: mix(current.grain, grain),
-      depthOfFieldStrength: mix(current.depthOfFieldStrength, depthOfFieldStrength),
+      depthOfFieldStrength: mix(
+        current.depthOfFieldStrength,
+        depthOfFieldStrength,
+      ),
       ditherStrength: mix(current.ditherStrength, ditherStrength),
       colorGradeStrength: mix(current.colorGradeStrength, colorGradeStrength),
       vhsChromaWeight: mix(current.vhsChromaWeight, chromaticAberration),

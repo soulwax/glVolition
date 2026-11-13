@@ -66,13 +66,21 @@ final class SteeringAgentComponent extends Behaviour {
       ),
       Field.number('maxSpeed', (c) => c.maxSpeed, (c, v) => c.maxSpeed = v),
       Field.number('maxForce', (c) => c.maxForce, (c, v) => c.maxForce = v),
-      Field.number('slowingRadius', (c) => c.slowingRadius, (c, v) => c.slowingRadius = v),
+      Field.number(
+        'slowingRadius',
+        (c) => c.slowingRadius,
+        (c, v) => c.slowingRadius = v,
+      ),
       Field.number(
         'wallAvoidanceWeight',
         (c) => c.wallAvoidanceWeight,
         (c, v) => c.wallAvoidanceWeight = v,
       ),
-      Field.number('feelerLength', (c) => c.feelerLength, (c, v) => c.feelerLength = v),
+      Field.number(
+        'feelerLength',
+        (c) => c.feelerLength,
+        (c, v) => c.feelerLength = v,
+      ),
       Field.enumValue<SteeringAgentComponent, steer.FormationShape>(
         'formationShape',
         steer.FormationShape.values,
@@ -99,9 +107,13 @@ final class SteeringAgentComponent extends Behaviour {
   );
 
   double get currentSpeed => agent.speed;
-  Vec3 get currentVelocity => Vec3(agent.velocity.x, agent.velocity.y, agent.velocity.z);
-  Vec3 get lastAppliedForce =>
-      Vec3(agent.lastAppliedForce.x, agent.lastAppliedForce.y, agent.lastAppliedForce.z);
+  Vec3 get currentVelocity =>
+      Vec3(agent.velocity.x, agent.velocity.y, agent.velocity.z);
+  Vec3 get lastAppliedForce => Vec3(
+    agent.lastAppliedForce.x,
+    agent.lastAppliedForce.y,
+    agent.lastAppliedForce.z,
+  );
 
   void cycleNextMode() {
     final vals = SteeringBehaviorMode.values;
@@ -183,7 +195,10 @@ final class SteeringAgentComponent extends Behaviour {
       case SteeringBehaviorMode.flock:
         agent.addForce(steer.SteeringBehaviors.flock(agent, peers));
         if (tgtGo != null) {
-          agent.addForce(steer.SteeringBehaviors.seek(agent, sTargetPos), weight: 0.65);
+          agent.addForce(
+            steer.SteeringBehaviors.seek(agent, sTargetPos),
+            weight: 0.65,
+          );
         }
       case SteeringBehaviorMode.formation:
         final planner = steer.FormationSlotPlanner(
@@ -220,7 +235,11 @@ final class SteeringAgentComponent extends Behaviour {
     agent.step(dt);
 
     if (isAttached) {
-      transform.position = Vec3(agent.position.x, agent.position.y, agent.position.z);
+      transform.position = Vec3(
+        agent.position.x,
+        agent.position.y,
+        agent.position.z,
+      );
       final fwd = Vec3(agent.forward.x, agent.forward.y, agent.forward.z);
       if (fwd.lengthSquared > 1e-6) {
         transform.lookAt(transform.position + fwd);
@@ -254,7 +273,8 @@ final class SteeringInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -329,7 +349,13 @@ final class SteeringInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'st_pause', steerComp.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'st_pause',
+      steerComp.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       steerComp.paused = !steerComp.paused;
     }
 

@@ -11,7 +11,9 @@ enum AcousticMaterialPreset {
   acousticFoam,
 }
 
-reverb.AcousticSurfaceMaterial _materialFromPreset(AcousticMaterialPreset preset) {
+reverb.AcousticSurfaceMaterial _materialFromPreset(
+  AcousticMaterialPreset preset,
+) {
   switch (preset) {
     case AcousticMaterialPreset.concrete:
       return reverb.AcousticSurfaceMaterial.concrete;
@@ -76,8 +78,9 @@ final class AcousticRoomComponent extends Behaviour {
     ],
   );
 
-  String get effectiveRoomId =>
-      roomId.isNotEmpty ? roomId : (isAttached ? gameObject.name : 'room_$instanceId');
+  String get effectiveRoomId => roomId.isNotEmpty
+      ? roomId
+      : (isAttached ? gameObject.name : 'room_$instanceId');
 
   reverb.AcousticPathResult? get lastSolvedPath => _lastSolvedPath;
 
@@ -85,8 +88,16 @@ final class AcousticRoomComponent extends Behaviour {
     final center = isAttached ? transform.position : Vec3.zero;
     final half = size * 0.5;
     final bounds = reverb.ReverbAabb(
-      reverb.ReverbVec3(center.x - half.x, center.y - half.y, center.z - half.z),
-      reverb.ReverbVec3(center.x + half.x, center.y + half.y, center.z + half.z),
+      reverb.ReverbVec3(
+        center.x - half.x,
+        center.y - half.y,
+        center.z - half.z,
+      ),
+      reverb.ReverbVec3(
+        center.x + half.x,
+        center.y + half.y,
+        center.z + half.z,
+      ),
     );
     return reverb.AcousticRoomVolume(
       id: effectiveRoomId,
@@ -126,12 +137,14 @@ final class AcousticRoomComponent extends Behaviour {
         ? buildSolver(scene)
         : (reverb.AcousticPropagationSolver()..addRoom(toRoomVolume()));
 
-    final emit = emitterPosition ?? (isAttached ? transform.position : Vec3.zero);
-    final listener = listenerPosition ??
+    final emit =
+        emitterPosition ?? (isAttached ? transform.position : Vec3.zero);
+    final listener =
+        listenerPosition ??
         (isAttached
             ? (AudioListener.of(scene)?.transform.position ??
-                Camera.of(scene)?.transform.position ??
-                Vec3.zero)
+                  Camera.of(scene)?.transform.position ??
+                  Vec3.zero)
             : Vec3.zero);
 
     final res = solver.solve(
@@ -143,7 +156,9 @@ final class AcousticRoomComponent extends Behaviour {
   }
 
   void syncReverbZone() {
-    final zone = boundReverbZone ?? (isAttached ? getComponent<AudioReverbZone>() : null);
+    final zone =
+        boundReverbZone ??
+        (isAttached ? getComponent<AudioReverbZone>() : null);
     if (zone == null) return;
     final vol = toRoomVolume();
     final rt = vol.computeEyringRt60();
@@ -189,8 +204,16 @@ final class AcousticPortalComponent extends Behaviour {
       Field.text('portalId', (p) => p.portalId, (p, v) => p.portalId = v),
       Field.text('roomAId', (p) => p.roomAId, (p, v) => p.roomAId = v),
       Field.text('roomBId', (p) => p.roomBId, (p, v) => p.roomBId = v),
-      Field.number('areaSqMeters', (p) => p.areaSqMeters, (p, v) => p.areaSqMeters = v),
-      Field.number('openFactor', (p) => p.openFactor, (p, v) => p.openFactor = v),
+      Field.number(
+        'areaSqMeters',
+        (p) => p.areaSqMeters,
+        (p, v) => p.areaSqMeters = v,
+      ),
+      Field.number(
+        'openFactor',
+        (p) => p.openFactor,
+        (p, v) => p.openFactor = v,
+      ),
       Field.number(
         'closedTransmissionGain',
         (p) => p.closedTransmissionGain,
@@ -199,8 +222,9 @@ final class AcousticPortalComponent extends Behaviour {
     ],
   );
 
-  String get effectivePortalId =>
-      portalId.isNotEmpty ? portalId : (isAttached ? gameObject.name : 'portal_$instanceId');
+  String get effectivePortalId => portalId.isNotEmpty
+      ? portalId
+      : (isAttached ? gameObject.name : 'portal_$instanceId');
 
   reverb.AcousticAperture toAperture() {
     final pos = isAttached ? transform.position : Vec3.zero;
@@ -218,7 +242,9 @@ final class AcousticPortalComponent extends Behaviour {
 
   void setOpen(double factor) {
     openFactor = factor.clamp(0.0, 1.0).toDouble();
-    final lpf = boundLowPassFilter ?? (isAttached ? getComponent<AudioLowPassFilterComponent>() : null);
+    final lpf =
+        boundLowPassFilter ??
+        (isAttached ? getComponent<AudioLowPassFilterComponent>() : null);
     if (lpf != null) {
       lpf.cutoffFrequency = toAperture().lowPassCutoffHz;
     }
@@ -244,14 +270,31 @@ final class AcousticsInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

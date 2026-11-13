@@ -71,9 +71,7 @@ final class DebugController extends Behaviour {
   static final spec = ComponentSpec<DebugController>(
     'DebugController',
     DebugController.new,
-    [
-      Field.boolean('isOpen', (d) => d.isOpen, (d, v) => d.isOpen = v),
-    ],
+    [Field.boolean('isOpen', (d) => d.isOpen, (d, v) => d.isOpen = v)],
   );
 
   bool get isPaused => _paused;
@@ -160,7 +158,9 @@ final class DebugController extends Behaviour {
       p95FrameMs: p95,
       fixedStepsLastFrame: time._fixedStepsLastFrame,
       gameObjectCount: scene._allObjects(includeInactive: false).length,
-      activeBehaviourCount: scene._behaviours.where((b) => b._active && !b._destroyRequested).length,
+      activeBehaviourCount: scene._behaviours
+          .where((b) => b._active && !b._destroyRequested)
+          .length,
       colliderCount: scene.physics.colliders.length,
       particleSystemCount: scene._particles.length,
       activeLightCount: scene._lights.where((l) => l._active).length,
@@ -173,7 +173,13 @@ final class DebugController extends Behaviour {
   void renderDebugUi(VoxUiContext ui, [RingBufferSink? logSink]) {
     if (!isOpen) return;
     final m = metrics();
-    if (ui.beginWindow('Engine Diagnostics', x: 20, y: 20, width: 280, height: 260)) {
+    if (ui.beginWindow(
+      'Engine Diagnostics',
+      x: 20,
+      y: 20,
+      width: 280,
+      height: 260,
+    )) {
       ui.labelValue('FPS', m.fps.toStringAsFixed(0));
       ui.labelValue('Frame p50', '${m.p50FrameMs.toStringAsFixed(1)} ms');
       ui.labelValue('Frame p95', '${m.p95FrameMs.toStringAsFixed(1)} ms');
@@ -193,19 +199,27 @@ final class DebugController extends Behaviour {
         stepSingleFrame();
       }
 
-      final newScale = ui.sliderDouble('Time Scale', time.timeScale, min: 0.1, max: 2.0);
+      final newScale = ui.sliderDouble(
+        'Time Scale',
+        time.timeScale,
+        min: 0.1,
+        max: 2.0,
+      );
       if ((newScale - time.timeScale).abs() > 0.01) {
         setTimeScale(newScale);
       }
 
-      if (logSink != null && ui.collapsingHeader('Logs (${logSink.length})', defaultOpen: true)) {
+      if (logSink != null &&
+          ui.collapsingHeader('Logs (${logSink.length})', defaultOpen: true)) {
         for (final rec in logSink.records.toList().reversed.take(6)) {
           final prefix = '[${rec.level.label}]';
           ui.text(
             '$prefix ${rec.message}',
             color: rec.level >= LogLevel.error
                 ? VoxColor.red
-                : (rec.level >= LogLevel.warn ? VoxColor.yellow : VoxColor.white),
+                : (rec.level >= LogLevel.warn
+                      ? VoxColor.yellow
+                      : VoxColor.white),
           );
         }
       }

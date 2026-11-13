@@ -85,7 +85,11 @@ abstract interface class Graphics {
   void setShaderUniform(ShaderTarget target, String name, ShaderUniform value);
 
   /// Binds a texture sampler on an active shader target.
-  void setShaderTexture(ShaderTarget target, String name, TextureHandle texture);
+  void setShaderTexture(
+    ShaderTarget target,
+    String name,
+    TextureHandle texture,
+  );
 
   /// Applies active shader slot overrides and custom post-effect stages.
   void applyShaderConfiguration({
@@ -192,7 +196,10 @@ String shaderConfigurationSignature(
 }
 
 abstract interface class AssetLoader {
-  Future<ModelAsset> loadModel(String path, {MaterialOverride? materialOverride});
+  Future<ModelAsset> loadModel(
+    String path, {
+    MaterialOverride? materialOverride,
+  });
   Future<Uint8List> loadBytes(String path);
   Future<String> loadText(String path);
 }
@@ -204,7 +211,12 @@ abstract interface class AudioClip {
 
 /// One voice that plays one clip at a time.
 abstract interface class AudioChannel {
-  void play(AudioClip clip, {double volume = 1, double pitch = 1, bool loop = false});
+  void play(
+    AudioClip clip, {
+    double volume = 1,
+    double pitch = 1,
+    bool loop = false,
+  });
   void stop();
   bool get isPlaying;
   set volume(double value);

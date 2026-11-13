@@ -40,16 +40,48 @@ final class AtmosphereVolume extends Behaviour {
     'AtmosphereVolume',
     AtmosphereVolume.new,
     [
-      Field.number('timeOfDayHours', (a) => a.timeOfDayHours, (a, v) => a.timeOfDayHours = v),
-      Field.number('hoursPerSecond', (a) => a.hoursPerSecond, (a, v) => a.hoursPerSecond = v),
-      Field.number('latitudeRadians', (a) => a.latitudeRadians, (a, v) => a.latitudeRadians = v),
-      Field.number('solarDeclinationRadians', (a) => a.solarDeclinationRadians, (a, v) => a.solarDeclinationRadians = v),
-      Field.number('cloudCoverage', (a) => a.cloudCoverage, (a, v) => a.cloudCoverage = v),
-      Field.number('cloudDensity', (a) => a.cloudDensity, (a, v) => a.cloudDensity = v),
-      Field.number('aerosolTurbidity', (a) => a.aerosolTurbidity, (a, v) => a.aerosolTurbidity = v),
+      Field.number(
+        'timeOfDayHours',
+        (a) => a.timeOfDayHours,
+        (a, v) => a.timeOfDayHours = v,
+      ),
+      Field.number(
+        'hoursPerSecond',
+        (a) => a.hoursPerSecond,
+        (a, v) => a.hoursPerSecond = v,
+      ),
+      Field.number(
+        'latitudeRadians',
+        (a) => a.latitudeRadians,
+        (a, v) => a.latitudeRadians = v,
+      ),
+      Field.number(
+        'solarDeclinationRadians',
+        (a) => a.solarDeclinationRadians,
+        (a, v) => a.solarDeclinationRadians = v,
+      ),
+      Field.number(
+        'cloudCoverage',
+        (a) => a.cloudCoverage,
+        (a, v) => a.cloudCoverage = v,
+      ),
+      Field.number(
+        'cloudDensity',
+        (a) => a.cloudDensity,
+        (a, v) => a.cloudDensity = v,
+      ),
+      Field.number(
+        'aerosolTurbidity',
+        (a) => a.aerosolTurbidity,
+        (a, v) => a.aerosolTurbidity = v,
+      ),
       Field.number('fogStart', (a) => a.fogStart, (a, v) => a.fogStart = v),
       Field.number('fogEnd', (a) => a.fogEnd, (a, v) => a.fogEnd = v),
-      Field.boolean('coherentHorizon', (a) => a.coherentHorizon, (a, v) => a.coherentHorizon = v),
+      Field.boolean(
+        'coherentHorizon',
+        (a) => a.coherentHorizon,
+        (a, v) => a.coherentHorizon = v,
+      ),
     ],
   );
 
@@ -69,7 +101,8 @@ final class AtmosphereVolume extends Behaviour {
   @override
   void update() {
     if (hoursPerSecond != 0) {
-      timeOfDayHours = ((timeOfDayHours + hoursPerSecond * time.deltaTime) % 24 + 24) % 24;
+      timeOfDayHours =
+          ((timeOfDayHours + hoursPerSecond * time.deltaTime) % 24 + 24) % 24;
     }
     _applySolar();
   }
@@ -162,20 +195,32 @@ final class VolumetricLightSource extends Component {
     VolumetricLightSource.new,
     [
       Field.color('color', (v) => v.color, (v, c) => v.color = c),
-      Field.number('luminousIntensity', (v) => v.luminousIntensity, (v, n) => v.luminousIntensity = n),
-      Field.number('referenceDistance', (v) => v.referenceDistance, (v, n) => v.referenceDistance = n),
-      Field.number('cutoffDistance', (v) => v.cutoffDistance, (v, n) => v.cutoffDistance = n),
+      Field.number(
+        'luminousIntensity',
+        (v) => v.luminousIntensity,
+        (v, n) => v.luminousIntensity = n,
+      ),
+      Field.number(
+        'referenceDistance',
+        (v) => v.referenceDistance,
+        (v, n) => v.referenceDistance = n,
+      ),
+      Field.number(
+        'cutoffDistance',
+        (v) => v.cutoffDistance,
+        (v, n) => v.cutoffDistance = n,
+      ),
     ],
   );
 
   VolumetricSource toVolumetricSource() => VolumetricSource(
-        id: 'vol_${gameObject.name}_$instanceId',
-        position: transform.position,
-        color: Vec3(color.r, color.g, color.b),
-        luminousIntensity: math.max(0.0, luminousIntensity),
-        referenceDistance: math.max(0.01, referenceDistance),
-        cutoffDistance: math.max(0.1, cutoffDistance),
-      );
+    id: 'vol_${gameObject.name}_$instanceId',
+    position: transform.position,
+    color: Vec3(color.r, color.g, color.b),
+    luminousIntensity: math.max(0.0, luminousIntensity),
+    referenceDistance: math.max(0.01, referenceDistance),
+    cutoffDistance: math.max(0.1, cutoffDistance),
+  );
 
   @override
   void _onEnableInternal() => scene._volumetricSources.add(this);
@@ -191,26 +236,31 @@ final class ThermalSourceComponent extends Component {
   double radiusMeters;
   double dissolution01;
 
-  ThermalSourceComponent({
-    this.radiusMeters = 4.0,
-    this.dissolution01 = 1.0,
-  });
+  ThermalSourceComponent({this.radiusMeters = 4.0, this.dissolution01 = 1.0});
 
   static final spec = ComponentSpec<ThermalSourceComponent>(
     'ThermalSourceComponent',
     ThermalSourceComponent.new,
     [
-      Field.number('radiusMeters', (t) => t.radiusMeters, (t, v) => t.radiusMeters = v),
-      Field.number('dissolution01', (t) => t.dissolution01, (t, v) => t.dissolution01 = v),
+      Field.number(
+        'radiusMeters',
+        (t) => t.radiusMeters,
+        (t, v) => t.radiusMeters = v,
+      ),
+      Field.number(
+        'dissolution01',
+        (t) => t.dissolution01,
+        (t, v) => t.dissolution01 = v,
+      ),
     ],
   );
 
   ThermalSource toThermalSource() => ThermalSource(
-        id: 'therm_${gameObject.name}_$instanceId',
-        position: transform.position,
-        radiusMeters: math.max(0.05, radiusMeters),
-        dissolution01: dissolution01.clamp(0.0, 1.0),
-      );
+    id: 'therm_${gameObject.name}_$instanceId',
+    position: transform.position,
+    radiusMeters: math.max(0.05, radiusMeters),
+    dissolution01: dissolution01.clamp(0.0, 1.0),
+  );
 
   @override
   void _onEnableInternal() => scene._thermalSources.add(this);

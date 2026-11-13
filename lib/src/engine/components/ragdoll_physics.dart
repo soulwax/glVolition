@@ -45,7 +45,11 @@ final class ArticulatedRagdollComponent extends Behaviour {
       ),
       Field.boolean('isLimp', (r) => r.isLimp, (r, v) => r.isLimp = v),
       Field.integer('substeps', (r) => r.substeps, (r, v) => r.substeps = v),
-      Field.number('floorFriction', (r) => r.floorFriction, (r, v) => r.floorFriction = v),
+      Field.number(
+        'floorFriction',
+        (r) => r.floorFriction,
+        (r, v) => r.floorFriction = v,
+      ),
     ],
   );
 
@@ -56,7 +60,11 @@ final class ArticulatedRagdollComponent extends Behaviour {
     final s = _solver ??= ragdoll.RagdollSolver(
       skeleton: skeleton,
       rootOrigin: isAttached
-          ? ragdoll.RagdollVec3(transform.position.x, transform.position.y, transform.position.z)
+          ? ragdoll.RagdollVec3(
+              transform.position.x,
+              transform.position.y,
+              transform.position.z,
+            )
           : ragdoll.RagdollVec3.zero,
       gravity: ragdoll.RagdollVec3(0.0, gravityY, 0.0),
       floorY: floorY,
@@ -73,7 +81,9 @@ final class ArticulatedRagdollComponent extends Behaviour {
 
   ragdoll.RagdollPoseMatcher _ensureMatcher() {
     final m = _matcher ??= ragdoll.RagdollPoseMatcher(
-      mode: isLimp ? ragdoll.RagdollMode.fullLimp : ragdoll.RagdollMode.activeBalanced,
+      mode: isLimp
+          ? ragdoll.RagdollMode.fullLimp
+          : ragdoll.RagdollMode.activeBalanced,
       activeBalanceStrength: activeBalanceStrength,
       flinchRecoveryRate: flinchRecoveryRate,
     );
@@ -119,16 +129,24 @@ final class ArticulatedRagdollComponent extends Behaviour {
         '${gameObject.name}_${def.id}',
         position: Vec3(body.position.x, body.position.y, body.position.z),
         components: [
-          MeshRenderer(meshData: Primitives.cube(size: 1.0), tintColor: limbTint),
+          MeshRenderer(
+            meshData: Primitives.cube(size: 1.0),
+            tintColor: limbTint,
+          ),
         ],
       );
-      go.transform.localStretch = Vec3(def.radius * 2.0, def.length, def.radius * 2.0);
+      go.transform.localStretch = Vec3(
+        def.radius * 2.0,
+        def.length,
+        def.radius * 2.0,
+      );
       _limbBindings[def.id] = go;
     }
     return Map.unmodifiable(_limbBindings);
   }
 
-  void pinLimb(String limbId, bool pinned) => _ensureSolver().pinLimb(limbId, pinned);
+  void pinLimb(String limbId, bool pinned) =>
+      _ensureSolver().pinLimb(limbId, pinned);
 
   void goLimp() {
     isLimp = true;
@@ -141,7 +159,8 @@ final class ArticulatedRagdollComponent extends Behaviour {
   }
 
   void resetPose({Vec3? rootPosition}) {
-    final origin = rootPosition ?? (isAttached ? transform.position : Vec3.zero);
+    final origin =
+        rootPosition ?? (isAttached ? transform.position : Vec3.zero);
     _ensureSolver().resetPose(
       rootOrigin: ragdoll.RagdollVec3(origin.x, origin.y, origin.z),
     );
@@ -159,7 +178,11 @@ final class ArticulatedRagdollComponent extends Behaviour {
     final s = _ensureSolver();
     final imp = ragdoll.RagdollVec3(impulse.x, impulse.y, impulse.z);
     final off = localHitOffset != null
-        ? ragdoll.RagdollVec3(localHitOffset.x, localHitOffset.y, localHitOffset.z)
+        ? ragdoll.RagdollVec3(
+            localHitOffset.x,
+            localHitOffset.y,
+            localHitOffset.z,
+          )
         : null;
     if (triggerFlinch && !isLimp) {
       _ensureMatcher().triggerHitReaction(
@@ -180,7 +203,9 @@ final class ArticulatedRagdollComponent extends Behaviour {
     _ensureMatcher().step(
       _ensureSolver(),
       dt,
-      targetLocalRotations: targetLocalRotations.isEmpty ? null : targetLocalRotations,
+      targetLocalRotations: targetLocalRotations.isEmpty
+          ? null
+          : targetLocalRotations,
     );
     _syncBindings();
   }
@@ -190,7 +215,11 @@ final class ArticulatedRagdollComponent extends Behaviour {
     for (final entry in _limbBindings.entries) {
       final b = s.body(entry.key);
       if (b == null) continue;
-      entry.value.transform.position = Vec3(b.position.x, b.position.y, b.position.z);
+      entry.value.transform.position = Vec3(
+        b.position.x,
+        b.position.y,
+        b.position.z,
+      );
       entry.value.transform.rotation = Quat(
         b.rotation.x,
         b.rotation.y,
@@ -225,14 +254,31 @@ final class RagdollInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

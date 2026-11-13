@@ -34,12 +34,24 @@ final class PulseCraftBehaviour extends Behaviour {
     PulseCraftBehaviour.new,
     [
       Field.number('moveSpeed', (c) => c.moveSpeed, (c, v) => c.moveSpeed = v),
-      Field.number('arenaRadius', (c) => c.arenaRadius, (c, v) => c.arenaRadius = v),
-      Field.number('fireCooldown', (c) => c.fireCooldown, (c, v) => c.fireCooldown = v),
+      Field.number(
+        'arenaRadius',
+        (c) => c.arenaRadius,
+        (c, v) => c.arenaRadius = v,
+      ),
+      Field.number(
+        'fireCooldown',
+        (c) => c.fireCooldown,
+        (c, v) => c.fireCooldown = v,
+      ),
       Field.number('shield', (c) => c.shield, (c, v) => c.shield = v),
       Field.number('aimX', (c) => c.aimX, (c, v) => c.aimX = v),
       Field.number('aimZ', (c) => c.aimZ, (c, v) => c.aimZ = v),
-      Field.number('invulnTimer', (c) => c.invulnTimer, (c, v) => c.invulnTimer = v),
+      Field.number(
+        'invulnTimer',
+        (c) => c.invulnTimer,
+        (c, v) => c.invulnTimer = v,
+      ),
     ],
   );
 
@@ -49,7 +61,10 @@ final class PulseCraftBehaviour extends Behaviour {
     invulnTimer = 0.85;
     if (scene.isLoaded) {
       engine.graphics.shakeCamera(trauma: 0.45);
-      scene.findObjectOfType<PrismArenaDirector>()?.spawnBurst(transform.position, isGold: false);
+      scene.findObjectOfType<PrismArenaDirector>()?.spawnBurst(
+        transform.position,
+        isGold: false,
+      );
       if (shield <= 0.0) {
         scene.findObjectOfType<PrismArenaDirector>()?.markGameOver();
       }
@@ -77,7 +92,11 @@ final class PulseCraftBehaviour extends Behaviour {
       final next = transform.position + move * (moveSpeed * dt);
       final flatLen = math.sqrt(next.x * next.x + next.z * next.z);
       final clamped = flatLen > arenaRadius
-          ? Vec3(next.x * arenaRadius / flatLen, 0.7, next.z * arenaRadius / flatLen)
+          ? Vec3(
+              next.x * arenaRadius / flatLen,
+              0.7,
+              next.z * arenaRadius / flatLen,
+            )
           : Vec3(next.x, 0.7, next.z);
       transform.position = clamped;
       _heading = math.atan2(-move.x, -move.z);
@@ -87,7 +106,11 @@ final class PulseCraftBehaviour extends Behaviour {
 
     // Hover bobbing + velocity banking roll
     final hoverY = 0.7 + math.sin(time.time * 4.5) * 0.12;
-    transform.position = Vec3(transform.position.x, hoverY, transform.position.z);
+    transform.position = Vec3(
+      transform.position.x,
+      hoverY,
+      transform.position.z,
+    );
     final bank = -hx * 0.24;
     transform.rotation =
         Quat.axisAngle(kUp, _heading) * Quat.axisAngle(Vec3.unitZ, bank);
@@ -97,7 +120,11 @@ final class PulseCraftBehaviour extends Behaviour {
     final raw = input.raw;
     var wantsFire = raw.isDown('Space') || input.isDown('Submit');
     if (cam != null && (raw.pointerPressed || raw.pointerDown)) {
-      final groundHit = cam.screenToGroundPlane(raw.pointerX, raw.pointerY, 0.7);
+      final groundHit = cam.screenToGroundPlane(
+        raw.pointerX,
+        raw.pointerY,
+        0.7,
+      );
       if (groundHit != null) {
         final dir = groundHit - transform.position;
         final flat = Vec3(dir.x, 0.0, dir.z);
@@ -122,7 +149,9 @@ final class PulseCraftBehaviour extends Behaviour {
     final shieldOrb = gameObject.find('ShieldAura');
     if (shieldOrb != null) {
       final pulse = 1.0 + math.sin(time.time * 6.0) * 0.04;
-      shieldOrb.transform.localScale = shield > 0 ? pulse * (0.9 + shield * 0.35) : 0.01;
+      shieldOrb.transform.localScale = shield > 0
+          ? pulse * (0.9 + shield * 0.35)
+          : 0.01;
     }
   }
 }
@@ -162,7 +191,9 @@ final class PulseBoltBehaviour extends Behaviour {
       gameObject.destroy();
       return;
     }
-    final dirNorm = direction.lengthSquared > 1e-6 ? direction.normalized : Vec3.unitZ * -1;
+    final dirNorm = direction.lengthSquared > 1e-6
+        ? direction.normalized
+        : Vec3.unitZ * -1;
     transform.translate(dirNorm * (speed * dt), relativeTo: Space.world);
 
     // Check hits against active Void Sentinels
@@ -198,11 +229,31 @@ final class PrismCoreBehaviour extends Behaviour {
     'PrismCoreBehaviour',
     PrismCoreBehaviour.new,
     [
-      Field.number('orbitAngle', (p) => p.orbitAngle, (p, v) => p.orbitAngle = v),
-      Field.number('orbitRadius', (p) => p.orbitRadius, (p, v) => p.orbitRadius = v),
-      Field.number('orbitSpeed', (p) => p.orbitSpeed, (p, v) => p.orbitSpeed = v),
-      Field.number('pickupRadius', (p) => p.pickupRadius, (p, v) => p.pickupRadius = v),
-      Field.integer('pointValue', (p) => p.pointValue, (p, v) => p.pointValue = v),
+      Field.number(
+        'orbitAngle',
+        (p) => p.orbitAngle,
+        (p, v) => p.orbitAngle = v,
+      ),
+      Field.number(
+        'orbitRadius',
+        (p) => p.orbitRadius,
+        (p, v) => p.orbitRadius = v,
+      ),
+      Field.number(
+        'orbitSpeed',
+        (p) => p.orbitSpeed,
+        (p, v) => p.orbitSpeed = v,
+      ),
+      Field.number(
+        'pickupRadius',
+        (p) => p.pickupRadius,
+        (p, v) => p.pickupRadius = v,
+      ),
+      Field.integer(
+        'pointValue',
+        (p) => p.pointValue,
+        (p, v) => p.pointValue = v,
+      ),
     ],
   );
 
@@ -223,7 +274,10 @@ final class PrismCoreBehaviour extends Behaviour {
       final flat = player.transform.position - transform.position;
       final flatDist = math.sqrt(flat.x * flat.x + flat.z * flat.z);
       if (flatDist <= pickupRadius) {
-        scene.findObjectOfType<PrismArenaDirector>()?.onPrismCollected(this, player);
+        scene.findObjectOfType<PrismArenaDirector>()?.onPrismCollected(
+          this,
+          player,
+        );
       }
     }
   }
@@ -246,7 +300,11 @@ final class SentinelBehaviour extends Behaviour {
     SentinelBehaviour.new,
     [
       Field.number('speed', (s) => s.speed, (s, v) => s.speed = v),
-      Field.number('contactRadius', (s) => s.contactRadius, (s, v) => s.contactRadius = v),
+      Field.number(
+        'contactRadius',
+        (s) => s.contactRadius,
+        (s, v) => s.contactRadius = v,
+      ),
       Field.boolean('destroyed', (s) => s.destroyed, (s, v) => s.destroyed = v),
     ],
   );
@@ -254,7 +312,9 @@ final class SentinelBehaviour extends Behaviour {
   void shatter() {
     if (destroyed) return;
     destroyed = true;
-    scene.findObjectOfType<PrismArenaDirector>()?.onSentinelShattered(transform.position);
+    scene.findObjectOfType<PrismArenaDirector>()?.onSentinelShattered(
+      transform.position,
+    );
     gameObject.destroy();
   }
 
@@ -298,7 +358,11 @@ final class BeaconSweepBehaviour extends Behaviour {
     'BeaconSweepBehaviour',
     BeaconSweepBehaviour.new,
     [
-      Field.number('sweepSpeed', (b) => b.sweepSpeed, (b, v) => b.sweepSpeed = v),
+      Field.number(
+        'sweepSpeed',
+        (b) => b.sweepSpeed,
+        (b, v) => b.sweepSpeed = v,
+      ),
     ],
   );
 
@@ -368,9 +432,21 @@ final class PrismArenaDirector extends Behaviour {
       Field.integer('score', (d) => d.score, (d, v) => d.score = v),
       Field.integer('wave', (d) => d.wave, (d, v) => d.wave = v),
       Field.integer('combo', (d) => d.combo, (d, v) => d.combo = v),
-      Field.integer('prismsCollected', (d) => d.prismsCollected, (d, v) => d.prismsCollected = v),
-      Field.integer('sentinelsDestroyed', (d) => d.sentinelsDestroyed, (d, v) => d.sentinelsDestroyed = v),
-      Field.number('comboTimer', (d) => d.comboTimer, (d, v) => d.comboTimer = v),
+      Field.integer(
+        'prismsCollected',
+        (d) => d.prismsCollected,
+        (d, v) => d.prismsCollected = v,
+      ),
+      Field.integer(
+        'sentinelsDestroyed',
+        (d) => d.sentinelsDestroyed,
+        (d, v) => d.sentinelsDestroyed = v,
+      ),
+      Field.number(
+        'comboTimer',
+        (d) => d.comboTimer,
+        (d, v) => d.comboTimer = v,
+      ),
       Field.boolean('gameOver', (d) => d.gameOver, (d, v) => d.gameOver = v),
       Field.enumValue<PrismArenaDirector, PrismPostPreset>(
         'postPreset',
@@ -378,7 +454,11 @@ final class PrismArenaDirector extends Behaviour {
         (d) => d.postPreset,
         (d, v) => d.postPreset = v,
       ),
-      Field.integer('skyPresetIndex', (d) => d.skyPresetIndex, (d, v) => d.skyPresetIndex = v),
+      Field.integer(
+        'skyPresetIndex',
+        (d) => d.skyPresetIndex,
+        (d, v) => d.skyPresetIndex = v,
+      ),
     ],
   );
 
@@ -428,13 +508,22 @@ final class PrismArenaDirector extends Behaviour {
       debugLabel: 'prism_plinth_checker',
     );
 
-    _cubeMesh = g.createMesh(Primitives.cube(size: 1.0), debugLabel: 'prism_cube');
-    _sphereMesh = g.createMesh(Primitives.sphere(radius: 0.5), debugLabel: 'prism_sphere');
+    _cubeMesh = g.createMesh(
+      Primitives.cube(size: 1.0),
+      debugLabel: 'prism_cube',
+    );
+    _sphereMesh = g.createMesh(
+      Primitives.sphere(radius: 0.5),
+      debugLabel: 'prism_sphere',
+    );
     _cylinderMesh = g.createMesh(
       Primitives.cylinder(radius: 0.5, height: 1.0),
       debugLabel: 'prism_cylinder',
     );
-    _quadMesh = g.createMesh(Primitives.quad(width: 0.45, height: 0.45), debugLabel: 'prism_quad');
+    _quadMesh = g.createMesh(
+      Primitives.quad(width: 0.45, height: 0.45),
+      debugLabel: 'prism_quad',
+    );
 
     _plazaMat = g.createMaterial(
       MaterialDefinition(
@@ -458,8 +547,12 @@ final class PrismArenaDirector extends Behaviour {
         uvScaleV: 4.0,
       ),
     );
-    _goldMat = g.createMaterial(MaterialDefinition.gold(key: 'prism_gold', roughness: 0.16));
-    _chromeMat = g.createMaterial(MaterialDefinition.chrome(key: 'prism_chrome', roughness: 0.08));
+    _goldMat = g.createMaterial(
+      MaterialDefinition.gold(key: 'prism_gold', roughness: 0.16),
+    );
+    _chromeMat = g.createMaterial(
+      MaterialDefinition.chrome(key: 'prism_chrome', roughness: 0.08),
+    );
     _ceramicMat = g.createMaterial(
       MaterialDefinition.ceramic(
         key: 'prism_craft_ceramic',
@@ -602,24 +695,31 @@ final class PrismArenaDirector extends Behaviour {
 
   void firePulseBolt(Vec3 origin, Vec3 direction) {
     _ensureGpuAssets();
-    scene.createGameObject(
-      'PulseBolt_${time.frameCount}',
-      position: origin,
-      rotation: lookRotation(direction),
-      components: [
-        MeshRenderer(
-          mesh: _sphereMesh,
-          material: _boltEmissiveMat,
-          castsShadow: false,
-        ),
-        Light.point(
-          color: const LinearColor(0.35, 0.95, 1.0),
-          intensity: 2.2,
-          range: 7.0,
-        ),
-        PulseBoltBehaviour(direction: direction),
-      ],
-    ).transform.localStretch = const Vec3(0.32, 0.32, 0.85);
+    scene
+        .createGameObject(
+          'PulseBolt_${time.frameCount}',
+          position: origin,
+          rotation: lookRotation(direction),
+          components: [
+            MeshRenderer(
+              mesh: _sphereMesh,
+              material: _boltEmissiveMat,
+              castsShadow: false,
+            ),
+            Light.point(
+              color: const LinearColor(0.35, 0.95, 1.0),
+              intensity: 2.2,
+              range: 7.0,
+            ),
+            PulseBoltBehaviour(direction: direction),
+          ],
+        )
+        .transform
+        .localStretch = const Vec3(
+      0.32,
+      0.32,
+      0.85,
+    );
   }
 
   void spawnBurst(Vec3 position, {required bool isGold}) {
@@ -655,7 +755,8 @@ final class PrismArenaDirector extends Behaviour {
     // Relocate collectible onto a new orbit radius & angle
     prism
       ..orbitRadius = 5.5 + _rng.nextDouble() * 8.0
-      ..orbitAngle = prism.orbitAngle + math.pi * (0.7 + _rng.nextDouble() * 0.6);
+      ..orbitAngle =
+          prism.orbitAngle + math.pi * (0.7 + _rng.nextDouble() * 0.6);
   }
 
   void onSentinelShattered(Vec3 position) {
@@ -791,10 +892,10 @@ final class PrismArenaDirector extends Behaviour {
   }
 
   String get skyLabel => switch (skyPresetIndex) {
-        0 => 'Dusk',
-        1 => 'Night',
-        _ => 'Noon',
-      };
+    0 => 'Dusk',
+    1 => 'Night',
+    _ => 'Noon',
+  };
 
   void restartArena() {
     if (scene.isLoaded) {
@@ -901,7 +1002,8 @@ final class PrismHudController extends Behaviour {
         height: 26,
         normalColor: 0x10182AD8,
         hoverColor: 0x1E2944EE,
-        onPressed: () => scene.findObjectOfType<PrismArenaDirector>()?.cyclePostPreset(),
+        onPressed: () =>
+            scene.findObjectOfType<PrismArenaDirector>()?.cyclePostPreset(),
       ),
       _skyButton = UIButton(
         label: 'SKY: Dusk',
@@ -912,7 +1014,8 @@ final class PrismHudController extends Behaviour {
         height: 26,
         normalColor: 0x10182AD8,
         hoverColor: 0x1E2944EE,
-        onPressed: () => scene.findObjectOfType<PrismArenaDirector>()?.cycleTimeOfDay(),
+        onPressed: () =>
+            scene.findObjectOfType<PrismArenaDirector>()?.cycleTimeOfDay(),
       ),
     ]);
 
@@ -954,7 +1057,8 @@ final class PrismHudController extends Behaviour {
       normalColor: 0x0EA5E9EE,
       hoverColor: 0x38BDF8FF,
       visible: false,
-      onPressed: () => scene.findObjectOfType<PrismArenaDirector>()?.restartArena(),
+      onPressed: () =>
+          scene.findObjectOfType<PrismArenaDirector>()?.restartArena(),
     );
     canvas.elements.addAll([_gameOverPanel, _gameOverLabel, _restartButton]);
   }
@@ -966,7 +1070,8 @@ final class PrismHudController extends Behaviour {
     if (director == null) return;
 
     _scoreLabel.text = 'SCORE ${director.score}   x${director.combo}';
-    _waveLabel.text = 'WAVE ${director.wave} | PRISMS ${director.prismsCollected}';
+    _waveLabel.text =
+        'WAVE ${director.wave} | PRISMS ${director.prismsCollected}';
     _shieldBar.value = player?.shield ?? 0.0;
     _postButton.label = 'FX: ${director.postPreset.name.toUpperCase()}';
     _skyButton.label = 'SKY: ${director.skyLabel}';
@@ -1034,29 +1139,43 @@ Scene buildPrismPulseScene() {
   );
 
   // 3. Textured Clearcoated PBR Sanctuary Courtyard & Stepped Beacon Plinth
-  scene.createGameObject(
-    'ArenaPlaza',
-    position: const Vec3(0, -0.25, 0),
-    components: [
-      MeshRenderer(
-        meshData: Primitives.cylinder(radius: 0.5, height: 1.0),
-        castsShadow: false,
-        receivesShadow: true,
-      ),
-    ],
-  ).transform.localStretch = const Vec3(36.0, 0.5, 36.0);
+  scene
+      .createGameObject(
+        'ArenaPlaza',
+        position: const Vec3(0, -0.25, 0),
+        components: [
+          MeshRenderer(
+            meshData: Primitives.cylinder(radius: 0.5, height: 1.0),
+            castsShadow: false,
+            receivesShadow: true,
+          ),
+        ],
+      )
+      .transform
+      .localStretch = const Vec3(
+    36.0,
+    0.5,
+    36.0,
+  );
 
-  scene.createGameObject(
-    'BeaconPlinth',
-    position: const Vec3(0, 0.9, 0),
-    components: [
-      MeshRenderer(
-        meshData: Primitives.cylinder(radius: 0.5, height: 1.0),
-        castsShadow: true,
-        receivesShadow: true,
-      ),
-    ],
-  ).transform.localStretch = const Vec3(3.4, 1.8, 3.4);
+  scene
+      .createGameObject(
+        'BeaconPlinth',
+        position: const Vec3(0, 0.9, 0),
+        components: [
+          MeshRenderer(
+            meshData: Primitives.cylinder(radius: 0.5, height: 1.0),
+            castsShadow: true,
+            receivesShadow: true,
+          ),
+        ],
+      )
+      .transform
+      .localStretch = const Vec3(
+    3.4,
+    1.8,
+    3.4,
+  );
 
   scene.createGameObject(
     'BeaconCap',
@@ -1123,17 +1242,24 @@ Scene buildPrismPulseScene() {
       PulseCraftBehaviour(),
     ],
   )..transform.localStretch = const Vec3(1.2, 0.55, 1.45);
-  scene.createGameObject(
-    'ShieldAura',
-    parent: player,
-    components: [
-      MeshRenderer(
-        meshData: Primitives.sphere(radius: 0.5),
-        drawMode: DrawMode.blended,
-        castsShadow: false,
-      ),
-    ],
-  ).transform.localStretch = const Vec3(1.45, 1.7, 1.3);
+  scene
+      .createGameObject(
+        'ShieldAura',
+        parent: player,
+        components: [
+          MeshRenderer(
+            meshData: Primitives.sphere(radius: 0.5),
+            drawMode: DrawMode.blended,
+            castsShadow: false,
+          ),
+        ],
+      )
+      .transform
+      .localStretch = const Vec3(
+    1.45,
+    1.7,
+    1.3,
+  );
 
   // 6. Three Orbiting Emissive Energy Prisms
   for (var i = 0; i < 3; i++) {
@@ -1153,13 +1279,22 @@ Scene buildPrismPulseScene() {
         PrismCoreBehaviour(orbitAngle: a, orbitRadius: r),
       ],
     );
-    scene.createGameObject(
-      'PrismRing',
-      parent: pGo,
-      components: [
-        MeshRenderer(meshData: Primitives.cylinder(radius: 0.5, height: 1.0)),
-      ],
-    ).transform.localStretch = const Vec3(1.45, 0.18, 1.45);
+    scene
+        .createGameObject(
+          'PrismRing',
+          parent: pGo,
+          components: [
+            MeshRenderer(
+              meshData: Primitives.cylinder(radius: 0.5, height: 1.0),
+            ),
+          ],
+        )
+        .transform
+        .localStretch = const Vec3(
+      1.45,
+      0.18,
+      1.45,
+    );
   }
 
   // 7. Initial Void Sentinels

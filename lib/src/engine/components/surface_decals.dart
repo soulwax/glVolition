@@ -29,8 +29,16 @@ MeshData decalMeshToMeshData(
     vertices[base + 13] = 0.0;
   }
 
-  final minP = Vec3(mesh.boundsMin.x - 1e-4, mesh.boundsMin.y - 1e-4, mesh.boundsMin.z - 1e-4);
-  final maxP = Vec3(mesh.boundsMax.x + 1e-4, mesh.boundsMax.y + 1e-4, mesh.boundsMax.z + 1e-4);
+  final minP = Vec3(
+    mesh.boundsMin.x - 1e-4,
+    mesh.boundsMin.y - 1e-4,
+    mesh.boundsMin.z - 1e-4,
+  );
+  final maxP = Vec3(
+    mesh.boundsMax.x + 1e-4,
+    mesh.boundsMax.y + 1e-4,
+    mesh.boundsMax.z + 1e-4,
+  );
   final List<int> typedIndices = vCount <= 65535
       ? Uint16List.fromList(mesh.indices)
       : Uint32List.fromList(mesh.indices);
@@ -56,7 +64,9 @@ decal.DecalSourceMesh decalSourceFromMeshRenderer(
   }
   final layout = data.layout;
   final stride = layout.strideFloats;
-  final posSlot = layout.attributes.firstWhere((a) => a.kind == VertexAttributeKind.position);
+  final posSlot = layout.attributes.firstWhere(
+    (a) => a.kind == VertexAttributeKind.position,
+  );
   final normSlot = layout.attributes
       .where((a) => a.kind == VertexAttributeKind.normal)
       .firstOrNull;
@@ -128,7 +138,11 @@ final class DecalPoolComponent extends Behaviour {
     'DecalPoolComponent',
     DecalPoolComponent.new,
     [
-      Field.integer('maxCapacity', (p) => p.maxCapacity, (p, v) => p.maxCapacity = v),
+      Field.integer(
+        'maxCapacity',
+        (p) => p.maxCapacity,
+        (p, v) => p.maxCapacity = v,
+      ),
       Field.number(
         'mergeCullRadius',
         (p) => p.mergeCullRadius,
@@ -188,7 +202,11 @@ final class DecalPoolComponent extends Behaviour {
       decal.DecalVec3(-worldNormal.x, -worldNormal.y, -worldNormal.z),
     );
     final spec = decal.DecalBoxSpec(
-      center: decal.DecalVec3(worldPosition.x, worldPosition.y, worldPosition.z),
+      center: decal.DecalVec3(
+        worldPosition.x,
+        worldPosition.y,
+        worldPosition.z,
+      ),
       rotation: rot,
       size: decal.DecalVec3(size.x, size.y, size.z),
     );
@@ -211,14 +229,22 @@ final class DecalPoolComponent extends Behaviour {
       final surf = decal.DecalSourceMesh.plane(
         width: size.x * 2.0,
         depth: size.y * 2.0,
-        center: decal.DecalVec3(worldPosition.x, worldPosition.y, worldPosition.z),
+        center: decal.DecalVec3(
+          worldPosition.x,
+          worldPosition.y,
+          worldPosition.z,
+        ),
       );
       projected = decal.DecalBoxProjector.project(target: surf, box: spec);
     }
 
     final entry = pool.spawn(
       tag: tag,
-      position: decal.DecalVec3(worldPosition.x, worldPosition.y, worldPosition.z),
+      position: decal.DecalVec3(
+        worldPosition.x,
+        worldPosition.y,
+        worldPosition.z,
+      ),
       normal: decal.DecalVec3(worldNormal.x, worldNormal.y, worldNormal.z),
       rotation: rot,
       size: decal.DecalVec3(size.x, size.y, size.z),
@@ -286,14 +312,20 @@ final class DecalPoolComponent extends Behaviour {
     }
     if (idx.isEmpty) return decal.DecalMesh.empty;
     return decal.DecalBoxProjector.project(
-      target: decal.DecalSourceMesh(positions: pos, normals: norm, indices: idx),
+      target: decal.DecalSourceMesh(
+        positions: pos,
+        normals: norm,
+        indices: idx,
+      ),
       box: spec,
     );
   }
 
   void _syncEvictedOrExpiredVisuals() {
     final activeIds = {for (final e in _ensurePool().entries) e.id};
-    final staleIds = _visuals.keys.where((id) => !activeIds.contains(id)).toList();
+    final staleIds = _visuals.keys
+        .where((id) => !activeIds.contains(id))
+        .toList();
     for (final id in staleIds) {
       final vis = _visuals.remove(id);
       if (vis != null) {
@@ -374,7 +406,11 @@ final class DecalProjectorComponent extends Component {
         (d) => d.maxNormalAngleDegrees,
         (d, v) => d.maxNormalAngleDegrees = v,
       ),
-      Field.number('surfaceOffset', (d) => d.surfaceOffset, (d, v) => d.surfaceOffset = v),
+      Field.number(
+        'surfaceOffset',
+        (d) => d.surfaceOffset,
+        (d, v) => d.surfaceOffset = v,
+      ),
       Field.color('tintColor', (d) => d.tintColor, (d, v) => d.tintColor = v),
       Field.number('opacity', (d) => d.opacity, (d, v) => d.opacity = v),
       Field.boolean(
@@ -463,7 +499,8 @@ final class DecalProjectorComponent extends Component {
     final oldHandle = _meshHandle;
     _meshHandle = nextHandle;
 
-    final mat = material ??
+    final mat =
+        material ??
         engine.graphics.createMaterial(
           MaterialDefinition.dielectric(
             key: '${gameObject.name}#decalMat',
@@ -539,7 +576,11 @@ final class SurfaceSkidTrailComponent extends Behaviour {
     'SurfaceSkidTrailComponent',
     SurfaceSkidTrailComponent.new,
     [
-      Field.number('ribbonWidth', (s) => s.ribbonWidth, (s, v) => s.ribbonWidth = v),
+      Field.number(
+        'ribbonWidth',
+        (s) => s.ribbonWidth,
+        (s, v) => s.ribbonWidth = v,
+      ),
       Field.number(
         'minSegmentDistance',
         (s) => s.minSegmentDistance,
@@ -560,7 +601,8 @@ final class SurfaceSkidTrailComponent extends Behaviour {
     ],
   );
 
-  decal.SkidRibbonBuilder _ensureBuilder() => _builder ??= decal.SkidRibbonBuilder(
+  decal.SkidRibbonBuilder _ensureBuilder() =>
+      _builder ??= decal.SkidRibbonBuilder(
         defaultWidth: ribbonWidth,
         minSegmentDistance: minSegmentDistance,
         lifetimeSeconds: lifetimeSeconds,
@@ -569,11 +611,20 @@ final class SurfaceSkidTrailComponent extends Behaviour {
 
   int get sampleCount => _ensureBuilder().sampleCount;
   MeshData? get currentMeshData => _lastMeshData;
-  int get triangleCount => _lastMeshData?.indices != null ? _lastMeshData!.indices!.length ~/ 3 : 0;
+  int get triangleCount =>
+      _lastMeshData?.indices != null ? _lastMeshData!.indices!.length ~/ 3 : 0;
 
-  bool addStamp(Vec3 worldPosition, {Vec3 normal = Vec3.unitY, double intensity = 1.0}) {
+  bool addStamp(
+    Vec3 worldPosition, {
+    Vec3 normal = Vec3.unitY,
+    double intensity = 1.0,
+  }) {
     final added = _ensureBuilder().addSample(
-      position: decal.DecalVec3(worldPosition.x, worldPosition.y, worldPosition.z),
+      position: decal.DecalVec3(
+        worldPosition.x,
+        worldPosition.y,
+        worldPosition.z,
+      ),
       normal: decal.DecalVec3(normal.x, normal.y, normal.z),
       intensity: intensity,
       width: ribbonWidth,
@@ -607,7 +658,8 @@ final class SurfaceSkidTrailComponent extends Behaviour {
     );
     final oldHandle = _meshHandle;
     _meshHandle = nextHandle;
-    final mat = material ??
+    final mat =
+        material ??
         engine.graphics.createMaterial(
           MaterialDefinition.dielectric(
             key: '${gameObject.name}#skidMat',
@@ -680,14 +732,31 @@ final class DecalPoolInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

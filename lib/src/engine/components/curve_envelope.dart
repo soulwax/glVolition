@@ -26,13 +26,16 @@ final class CurveEnvelopeComponent extends Behaviour {
     curve.AdsrEnvelope? adsr,
     curve.CriticalSpringDamper? spring,
   }) {
-    this.keyframeCurve = keyframeCurve ??
-        curve.KeyframeCurve.smooth(
-          const [(0.0, 0.0), (0.5, 1.0), (1.0, 0.2)],
-          wrapMode: wrapMode,
-        );
+    this.keyframeCurve =
+        keyframeCurve ??
+        curve.KeyframeCurve.smooth(const [
+          (0.0, 0.0),
+          (0.5, 1.0),
+          (1.0, 0.2),
+        ], wrapMode: wrapMode);
     this.adsr = adsr ?? curve.AdsrEnvelope();
-    this.spring = spring ?? curve.CriticalSpringDamper(smoothTime: springSmoothTime);
+    this.spring =
+        spring ?? curve.CriticalSpringDamper(smoothTime: springSmoothTime);
     _currentCurveValue = this.keyframeCurve.evaluate(playbackTime);
   }
 
@@ -40,7 +43,11 @@ final class CurveEnvelopeComponent extends Behaviour {
     'CurveEnvelopeComponent',
     CurveEnvelopeComponent.new,
     [
-      Field.number('playbackTime', (c) => c.playbackTime, (c, v) => c.playbackTime = v),
+      Field.number(
+        'playbackTime',
+        (c) => c.playbackTime,
+        (c, v) => c.playbackTime = v,
+      ),
       Field.number('timeScale', (c) => c.timeScale, (c, v) => c.timeScale = v),
       Field.enumValue<CurveEnvelopeComponent, curve.CurveWrapMode>(
         'wrapMode',
@@ -48,7 +55,11 @@ final class CurveEnvelopeComponent extends Behaviour {
         (c) => c.wrapMode,
         (c, v) => c.wrapMode = v,
       ),
-      Field.number('springTarget', (c) => c.springTarget, (c, v) => c.springTarget = v),
+      Field.number(
+        'springTarget',
+        (c) => c.springTarget,
+        (c, v) => c.springTarget = v,
+      ),
       Field.number(
         'springSmoothTime',
         (c) => c.springSmoothTime,
@@ -63,7 +74,8 @@ final class CurveEnvelopeComponent extends Behaviour {
   curve.AdsrPhase get adsrPhase => adsr.phase;
   double get currentSpringValue => spring.value;
 
-  void triggerEnvelope({double velocity = 1.0}) => adsr.trigger(velocity: velocity);
+  void triggerEnvelope({double velocity = 1.0}) =>
+      adsr.trigger(velocity: velocity);
   void releaseEnvelope() => adsr.release();
 
   void cycleWrapMode() {
@@ -77,7 +89,10 @@ final class CurveEnvelopeComponent extends Behaviour {
     final scaledDt = math.max(0.0, dt * timeScale);
     playbackTime += scaledDt;
     if (keyframeCurve.wrapMode != wrapMode) {
-      keyframeCurve = curve.KeyframeCurve(keyframeCurve.keys, wrapMode: wrapMode);
+      keyframeCurve = curve.KeyframeCurve(
+        keyframeCurve.keys,
+        wrapMode: wrapMode,
+      );
     }
     _currentCurveValue = keyframeCurve.evaluate(playbackTime);
     adsr.step(scaledDt);
@@ -111,7 +126,8 @@ final class CurveEditorInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -186,7 +202,13 @@ final class CurveEditorInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'ce_pause', env.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'ce_pause',
+      env.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       env.paused = !env.paused;
     }
 

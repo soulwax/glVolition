@@ -61,21 +61,53 @@ final class FloorplanGeneratorComponent extends Behaviour {
     'FloorplanGeneratorComponent',
     FloorplanGeneratorComponent.new,
     [
-      Field.number('boundsWidth', (f) => f.boundsWidth, (f, v) => f.boundsWidth = v),
-      Field.number('boundsDepth', (f) => f.boundsDepth, (f, v) => f.boundsDepth = v),
-      Field.number('wallHeight', (f) => f.wallHeight, (f, v) => f.wallHeight = v),
-      Field.number('wallThickness', (f) => f.wallThickness, (f, v) => f.wallThickness = v),
-      Field.number('minRoomExtent', (f) => f.minRoomExtent, (f, v) => f.minRoomExtent = v),
+      Field.number(
+        'boundsWidth',
+        (f) => f.boundsWidth,
+        (f, v) => f.boundsWidth = v,
+      ),
+      Field.number(
+        'boundsDepth',
+        (f) => f.boundsDepth,
+        (f, v) => f.boundsDepth = v,
+      ),
+      Field.number(
+        'wallHeight',
+        (f) => f.wallHeight,
+        (f, v) => f.wallHeight = v,
+      ),
+      Field.number(
+        'wallThickness',
+        (f) => f.wallThickness,
+        (f, v) => f.wallThickness = v,
+      ),
+      Field.number(
+        'minRoomExtent',
+        (f) => f.minRoomExtent,
+        (f, v) => f.minRoomExtent = v,
+      ),
       Field.number('doorWidth', (f) => f.doorWidth, (f, v) => f.doorWidth = v),
-      Field.number('corridorWidth', (f) => f.corridorWidth, (f, v) => f.corridorWidth = v),
-      Field.number('windowWidth', (f) => f.windowWidth, (f, v) => f.windowWidth = v),
+      Field.number(
+        'corridorWidth',
+        (f) => f.corridorWidth,
+        (f, v) => f.corridorWidth = v,
+      ),
+      Field.number(
+        'windowWidth',
+        (f) => f.windowWidth,
+        (f, v) => f.windowWidth = v,
+      ),
       Field.integer('seed', (f) => f.seed, (f, v) => f.seed = v),
       Field.boolean(
         'carveCentralCorridor',
         (f) => f.carveCentralCorridor,
         (f, v) => f.carveCentralCorridor = v,
       ),
-      Field.boolean('spawnGeometry', (f) => f.spawnGeometry, (f, v) => f.spawnGeometry = v),
+      Field.boolean(
+        'spawnGeometry',
+        (f) => f.spawnGeometry,
+        (f, v) => f.spawnGeometry = v,
+      ),
       Field.boolean(
         'autoGenerateOnEnable',
         (f) => f.autoGenerateOnEnable,
@@ -167,7 +199,11 @@ final class FloorplanGeneratorComponent extends Behaviour {
           : const LinearColor(0.68, 0.64, 0.56);
       _spawnBox(
         name: 'ArchFloor_${r.id}',
-        worldPos: Vec3(origin.x + r.centerX - halfW, origin.y - 0.05, origin.z + r.centerY - halfD),
+        worldPos: Vec3(
+          origin.x + r.centerX - halfW,
+          origin.y - 0.05,
+          origin.z + r.centerY - halfD,
+        ),
         dimensions: Vec3(r.width, 0.1, r.height),
         tint: tint,
         collider: true,
@@ -192,7 +228,8 @@ final class FloorplanGeneratorComponent extends Behaviour {
       final key = '${alongX ? "X" : "Z"}_${qCoord}_${qStart}_$qEnd';
       if (!emittedWallKeys.add(key)) return;
 
-      final sortedCuts = List<(double, double)>.from(cutouts)..sort((a, b) => a.$1.compareTo(b.$1));
+      final sortedCuts = List<(double, double)>.from(cutouts)
+        ..sort((a, b) => a.$1.compareTo(b.$1));
       var cursor = start;
       final spans = <(double, double)>[];
       for (final cut in sortedCuts) {
@@ -252,7 +289,8 @@ final class FloorplanGeneratorComponent extends Behaviour {
     // Exterior perimeter walls with exterior entrance cutouts
     for (final r in res.rooms) {
       for (final side in r.exteriorSides) {
-        final alongX = side == arch.ArchWallSide.north || side == arch.ArchWallSide.south;
+        final alongX =
+            side == arch.ArchWallSide.north || side == arch.ArchWallSide.south;
         final fixedCoord = switch (side) {
           arch.ArchWallSide.north => r.top,
           arch.ArchWallSide.south => r.bottom,
@@ -263,7 +301,9 @@ final class FloorplanGeneratorComponent extends Behaviour {
         final end = alongX ? r.right : r.bottom;
         final cuts = <(double, double)>[];
         for (final d in res.doorways) {
-          if (d.isExteriorEntrance && d.roomAId == r.id && d.wallSideOnA == side) {
+          if (d.isExteriorEntrance &&
+              d.roomAId == r.id &&
+              d.wallSideOnA == side) {
             final c = alongX ? d.centerX : d.centerY;
             cuts.add((c - d.width * 0.5, c + d.width * 0.5));
           }
@@ -294,7 +334,8 @@ final class FloorplanGeneratorComponent extends Behaviour {
       final wy = (gy + 0.5) * step;
       for (var gx = 0; gx < cols; gx++) {
         final wx = (gx + 0.5) * step;
-        final onOuterBorder = wx < step * 0.6 ||
+        final onOuterBorder =
+            wx < step * 0.6 ||
             wx > res.boundsWidth - step * 0.6 ||
             wy < step * 0.6 ||
             wy > res.boundsDepth - step * 0.6;
@@ -345,14 +386,31 @@ final class FloorplanInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -385,7 +443,9 @@ final class FloorplanInspectorUI {
 
     ui.labelValue(
       'Rooms / Doors',
-      res == null ? 'Not built' : '${res.rooms.length} rms / ${res.doorways.length} doors',
+      res == null
+          ? 'Not built'
+          : '${res.rooms.length} rms / ${res.doorways.length} doors',
       valueColor: VoxColor.cyan,
     );
     ui.labelValue(
@@ -397,8 +457,12 @@ final class FloorplanInspectorUI {
     );
     ui.labelValue(
       'Graph Status',
-      res == null ? 'IDLE' : (res.isFullyConnected ? 'CONNECTED' : 'DISCONNECTED'),
-      valueColor: (res?.isFullyConnected ?? true) ? VoxColor.green : VoxColor.red,
+      res == null
+          ? 'IDLE'
+          : (res.isFullyConnected ? 'CONNECTED' : 'DISCONNECTED'),
+      valueColor: (res?.isFullyConnected ?? true)
+          ? VoxColor.green
+          : VoxColor.red,
     );
     ui.labelValue(
       'Seed / Geom',

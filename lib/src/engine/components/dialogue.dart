@@ -59,7 +59,7 @@ class QuestManagerComponent extends Component {
   final talk.QuestTracker tracker;
 
   QuestManagerComponent({talk.VariableStore? variables})
-      : tracker = talk.QuestTracker(variables: variables);
+    : tracker = talk.QuestTracker(variables: variables);
 
   talk.VariableStore get variables => tracker.variables;
   List<talk.Quest> get activeQuests => tracker.activeQuests;

@@ -65,7 +65,11 @@ final class CharacterController extends Component {
       pos = pos + stepDelta;
       for (var pass = 0; pass < 3; pass++) {
         for (final other in scene.physics._colliders) {
-          if (!other._active || other.isTrigger || other.gameObject == gameObject) continue;
+          if (!other._active ||
+              other.isTrigger ||
+              other.gameObject == gameObject) {
+            continue;
+          }
           if ((other.collidesWithMask & (1 << gameObject.layer)) == 0) continue;
 
           for (final offset in offsets) {
@@ -92,7 +96,8 @@ final class CharacterController extends Component {
       final groundY = terrain.sampleHeight(pos.x, pos.z);
       final bottomY = pos.y + center.y - math.max(radius, height * 0.5);
       if (bottomY <= groundY + skinWidth) {
-        final lift = (groundY + math.max(radius, height * 0.5) - center.y) - pos.y;
+        final lift =
+            (groundY + math.max(radius, height * 0.5) - center.y) - pos.y;
         if (lift >= -skinWidth) {
           pos = Vec3(pos.x, pos.y + lift, pos.z);
           grounded = true;
@@ -122,7 +127,11 @@ final class CharacterController extends Component {
     if (useGravity) {
       _verticalSpeed += gravity.y * dt;
     }
-    final motion = Vec3(speed.x * dt, (speed.y + _verticalSpeed) * dt, speed.z * dt);
+    final motion = Vec3(
+      speed.x * dt,
+      (speed.y + _verticalSpeed) * dt,
+      speed.z * dt,
+    );
     move(motion);
     if (_isGrounded && _verticalSpeed < 0) {
       _verticalSpeed = 0.0;

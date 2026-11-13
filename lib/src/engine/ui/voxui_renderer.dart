@@ -82,13 +82,14 @@ final class VoxUiRenderer {
   double designHeight;
   BitmapFont? font;
 
-  late Camera2D _camera = Camera2D(
-    designWidth: designWidth > 0.0 ? designWidth : 1280.0,
-    designHeight: designHeight > 0.0 ? designHeight : 720.0,
-    fit: ViewFit.contain,
-  )
-    ..x = designWidth * 0.5
-    ..y = designHeight * 0.5;
+  late Camera2D _camera =
+      Camera2D(
+          designWidth: designWidth > 0.0 ? designWidth : 1280.0,
+          designHeight: designHeight > 0.0 ? designHeight : 720.0,
+          fit: ViewFit.contain,
+        )
+        ..x = designWidth * 0.5
+        ..y = designHeight * 0.5;
 
   final SpriteBatch _batch = SpriteBatch(
     initialCapacity: 1024,
@@ -186,13 +187,7 @@ final class VoxUiRenderer {
 
         case DrawCmdType.line:
           final clip = _effectiveClip(clipStack, cmd.clipRect);
-          final seg = _clipLine(
-            cmd.rect.x,
-            cmd.rect.y,
-            cmd.x2,
-            cmd.y2,
-            clip,
-          );
+          final seg = _clipLine(cmd.rect.x, cmd.rect.y, cmd.x2, cmd.y2, clip);
           if (seg != null && cmd.thickness > 0.0) {
             final (x0, y0, x1, y1) = seg;
             final dx = x1 - x0;
@@ -331,12 +326,7 @@ final class VoxUiRenderer {
     if (!clipEdge(-dy, y0 - ymin)) return null;
     if (!clipEdge(dy, ymax - y0)) return null;
 
-    return (
-      x0 + t0 * dx,
-      y0 + t0 * dy,
-      x0 + t1 * dx,
-      y0 + t1 * dy,
-    );
+    return (x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy);
   }
 
   void _emitClippedRect(
@@ -428,7 +418,9 @@ final class VoxUiRenderer {
       }
 
       if (clip != null) {
-        if (penY >= clip.bottom || penY + px * 5.0 <= clip.y || penX >= clip.right) {
+        if (penY >= clip.bottom ||
+            penY + px * 5.0 <= clip.y ||
+            penX >= clip.right) {
           penX += stepX;
           continue;
         }

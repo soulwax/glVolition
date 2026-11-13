@@ -9,10 +9,8 @@ final class VoxelTerrainComponent extends Component {
 
   final Map<vworld.ChunkCoord, vworld.VoxelMesh> _cachedMeshes = {};
 
-  VoxelTerrainComponent({
-    vworld.VoxelWorld? world,
-    this.voxelScale = 1.0,
-  }) : world = world ?? vworld.VoxelWorld() {
+  VoxelTerrainComponent({vworld.VoxelWorld? world, this.voxelScale = 1.0})
+    : world = world ?? vworld.VoxelWorld() {
     _mesher = vworld.GreedyMesher(this.world.palette);
     _raycaster = vworld.VoxelRaycaster(this.world);
   }
@@ -28,7 +26,11 @@ final class VoxelTerrainComponent extends Component {
   }
 
   /// Carves a spherical cavity out of the terrain at [center] with [radius].
-  int carveSphere(vworld.VoxelCoord center, double radius, [int replaceWith = 0]) {
+  int carveSphere(
+    vworld.VoxelCoord center,
+    double radius, [
+    int replaceWith = 0,
+  ]) {
     final modified = vworld.VoxelBrush.sphereCarve(
       world,
       center: center,
@@ -65,9 +67,17 @@ final class VoxelTerrainComponent extends Component {
     final rootPos = isAttached ? transform.position : Vec3.zero;
     final invScale = 1.0 / voxelScale;
     final diff = origin - rootPos;
-    final localOrigin = Vec3(diff.x * invScale, diff.y * invScale, diff.z * invScale);
+    final localOrigin = Vec3(
+      diff.x * invScale,
+      diff.y * invScale,
+      diff.z * invScale,
+    );
 
-    final vOrigin = vworld.VoxelVec3(localOrigin.x, localOrigin.y, localOrigin.z);
+    final vOrigin = vworld.VoxelVec3(
+      localOrigin.x,
+      localOrigin.y,
+      localOrigin.z,
+    );
     final vDir = vworld.VoxelVec3(direction.x, direction.y, direction.z);
 
     return _raycaster.raycast(
@@ -79,7 +89,10 @@ final class VoxelTerrainComponent extends Component {
 
   /// Generates or returns the cached greedy mesh for a given chunk.
   vworld.VoxelMesh getChunkMesh(vworld.ChunkCoord coord) {
-    return _cachedMeshes.putIfAbsent(coord, () => _mesher.meshWorldChunk(world, coord));
+    return _cachedMeshes.putIfAbsent(
+      coord,
+      () => _mesher.meshWorldChunk(world, coord),
+    );
   }
 
   /// Rebuilds greedy meshes for all non-empty chunks.

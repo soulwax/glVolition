@@ -5,7 +5,7 @@ final class StatsComponent extends Component {
   final items.StatBlock stats;
 
   StatsComponent([Map<String, double>? initialBaseStats])
-      : stats = items.StatBlock(initialBaseStats);
+    : stats = items.StatBlock(initialBaseStats);
 
   double getValue(String statName, {double fallback = 0.0}) =>
       stats.getValue(statName, fallback: fallback);
@@ -55,17 +55,22 @@ final class InventoryComponent extends Component {
       'Accessory',
     ],
     items.StatBlock? stats,
-  })  : grid = items.GridInventory(
-          width: gridWidth,
-          height: gridHeight,
-          maxWeight: maxWeight,
-        ),
-        _explicitStats = stats;
+  }) : grid = items.GridInventory(
+         width: gridWidth,
+         height: gridHeight,
+         maxWeight: maxWeight,
+       ),
+       _explicitStats = stats;
 
   items.EquipmentSlots get equipment {
     if (_equipment != null) return _equipment!;
-    final resolvedStats = _explicitStats ?? (isAttached ? getComponent<StatsComponent>()?.stats : null);
-    _equipment = items.EquipmentSlots(slotNames: slotNames, stats: resolvedStats);
+    final resolvedStats =
+        _explicitStats ??
+        (isAttached ? getComponent<StatsComponent>()?.stats : null);
+    _equipment = items.EquipmentSlots(
+      slotNames: slotNames,
+      stats: resolvedStats,
+    );
     return _equipment!;
   }
 
@@ -73,10 +78,14 @@ final class InventoryComponent extends Component {
   void awake() {
     // Re-bind equipment slots with sibling StatsComponent if available and previously unbound
     if (_equipment == null || _equipment!.stats == null) {
-      final resolvedStats = _explicitStats ?? getComponent<StatsComponent>()?.stats;
+      final resolvedStats =
+          _explicitStats ?? getComponent<StatsComponent>()?.stats;
       if (resolvedStats != null) {
         final prev = _equipment;
-        final next = items.EquipmentSlots(slotNames: slotNames, stats: resolvedStats);
+        final next = items.EquipmentSlots(
+          slotNames: slotNames,
+          stats: resolvedStats,
+        );
         if (prev != null) {
           for (final s in slotNames) {
             final item = prev.getEquipped(s);
@@ -96,9 +105,9 @@ final class InventoryComponent extends Component {
     if (!equipment.canEquip(slotName, stack)) return false;
 
     final existingEntry = grid.items.cast<items.PlacedItem?>().firstWhere(
-          (e) => identical(e!.stack, stack),
-          orElse: () => null,
-        );
+      (e) => identical(e!.stack, stack),
+      orElse: () => null,
+    );
     if (existingEntry == null) return false;
 
     final origX = existingEntry.x;
@@ -144,7 +153,10 @@ final class InventoryComponent extends Component {
   }
 
   /// Loads spatial grid contents from host storage.
-  bool loadFromStorage(items.ItemRegistry registry, [String key = 'voxitem_inventory']) {
+  bool loadFromStorage(
+    items.ItemRegistry registry, [
+    String key = 'voxitem_inventory',
+  ]) {
     if (!isAttached) return false;
     final raw = engine.host.storage.read(key);
     if (raw == null || raw.isEmpty) return false;
@@ -199,8 +211,20 @@ final class InventoryUI {
       for (int gx = 0; gx < grid.width; gx++) {
         final cx = originX + gx * cellSize;
         final cy = originY + gy * cellSize;
-        dl.addRectFilled(cx + 1, cy + 1, cellSize - 2, cellSize - 2, const VoxColor(26, 28, 34, 240));
-        dl.addRectOutline(cx + 1, cy + 1, cellSize - 2, cellSize - 2, const VoxColor(55, 60, 72, 255));
+        dl.addRectFilled(
+          cx + 1,
+          cy + 1,
+          cellSize - 2,
+          cellSize - 2,
+          const VoxColor(26, 28, 34, 240),
+        );
+        dl.addRectOutline(
+          cx + 1,
+          cy + 1,
+          cellSize - 2,
+          cellSize - 2,
+          const VoxColor(55, 60, 72, 255),
+        );
       }
     }
 
@@ -213,7 +237,14 @@ final class InventoryUI {
 
       final tint = _rarityColor(entry.stack.definition.rarity);
       dl.addRectFilled(ix, iy, iw, ih, tint, cornerRadius: 3.0);
-      dl.addRectOutline(ix, iy, iw, ih, VoxColor.white.withAlpha(140), cornerRadius: 3.0);
+      dl.addRectOutline(
+        ix,
+        iy,
+        iw,
+        ih,
+        VoxColor.white.withAlpha(140),
+        cornerRadius: 3.0,
+      );
 
       dl.addText(
         entry.stack.definition.name,

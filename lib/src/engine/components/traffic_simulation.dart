@@ -38,9 +38,21 @@ final class TrafficSignalComponent extends Behaviour {
         (s) => s.activeGroupName,
         (s, v) => s.activeGroupName = v,
       ),
-      Field.number('greenDuration', (s) => s.greenDuration, (s, v) => s.greenDuration = v),
-      Field.number('yellowDuration', (s) => s.yellowDuration, (s, v) => s.yellowDuration = v),
-      Field.number('allRedDuration', (s) => s.allRedDuration, (s, v) => s.allRedDuration = v),
+      Field.number(
+        'greenDuration',
+        (s) => s.greenDuration,
+        (s, v) => s.greenDuration = v,
+      ),
+      Field.number(
+        'yellowDuration',
+        (s) => s.yellowDuration,
+        (s, v) => s.yellowDuration = v,
+      ),
+      Field.number(
+        'allRedDuration',
+        (s) => s.allRedDuration,
+        (s, v) => s.allRedDuration = v,
+      ),
       Field.boolean('paused', (s) => s.paused, (s, v) => s.paused = v),
     ],
   );
@@ -131,8 +143,7 @@ final class TrafficNetworkComponent extends Behaviour {
 
   int get vehicleCount => solver.vehicles.length;
 
-  int get stoppedCount =>
-      solver.vehicles.where((v) => v.speedMps < 0.4).length;
+  int get stoppedCount => solver.vehicles.where((v) => v.speedMps < 0.4).length;
 
   double get averageSpeedMps {
     if (solver.vehicles.isEmpty) return 0.0;
@@ -171,13 +182,24 @@ final class TrafficNetworkComponent extends Behaviour {
     if (spawnVisualVehicles && isAttached && !_vehicleObjects.containsKey(id)) {
       final go = scene.createGameObject(
         'TrafficCar_$id',
-        position: Vec3(agent.worldPosition.x, agent.worldPosition.y + 0.5, agent.worldPosition.z),
+        position: Vec3(
+          agent.worldPosition.x,
+          agent.worldPosition.y + 0.5,
+          agent.worldPosition.z,
+        ),
         rotation: lookRotation(
-          Vec3(agent.worldForward.x, agent.worldForward.y, agent.worldForward.z),
+          Vec3(
+            agent.worldForward.x,
+            agent.worldForward.y,
+            agent.worldForward.z,
+          ),
           Vec3.unitY,
         ),
         components: [
-          MeshRenderer(meshData: Primitives.cube(size: 1.0), tintColor: tintColor),
+          MeshRenderer(
+            meshData: Primitives.cube(size: 1.0),
+            tintColor: tintColor,
+          ),
           BoxCollider(size: Vec3(1.8, 1.0, agent.spec.lengthMeters)),
         ],
       );
@@ -217,7 +239,11 @@ final class TrafficNetworkComponent extends Behaviour {
     for (final v in solver.vehicles) {
       final go = _vehicleObjects[v.id];
       if (go == null) continue;
-      go.transform.position = Vec3(v.worldPosition.x, v.worldPosition.y + 0.5, v.worldPosition.z);
+      go.transform.position = Vec3(
+        v.worldPosition.x,
+        v.worldPosition.y + 0.5,
+        v.worldPosition.z,
+      );
       final fwd = Vec3(v.worldForward.x, v.worldForward.y, v.worldForward.z);
       if (fwd.lengthSquared > 1e-6) {
         go.transform.rotation = lookRotation(fwd.normalized, Vec3.unitY);
@@ -270,14 +296,31 @@ final class TrafficMonitorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -307,13 +350,15 @@ final class TrafficMonitorUI {
     }
 
     final pad = ui.style.windowPadding;
-    final sigCtrl = signal?.controller ??
+    final sigCtrl =
+        signal?.controller ??
         (network.solver.signals.isNotEmpty
             ? network.solver.signals.values.first
             : null);
     final phaseLabel = sigCtrl?.currentPhase?.name ?? 'None';
     final sigGroup = signal?.activeGroupName ?? 'ns';
-    final lamp = sigCtrl?.colorForGroup(sigGroup) ?? traffic.TrafficSignalColor.green;
+    final lamp =
+        sigCtrl?.colorForGroup(sigGroup) ?? traffic.TrafficSignalColor.green;
 
     ui.labelValue(
       'Vehicles / Stopped',
@@ -330,7 +375,9 @@ final class TrafficMonitorUI {
       '$phaseLabel (${lamp.name.toUpperCase()})',
       valueColor: lamp == traffic.TrafficSignalColor.green
           ? VoxColor.green
-          : (lamp == traffic.TrafficSignalColor.yellow ? VoxColor.yellow : VoxColor.red),
+          : (lamp == traffic.TrafficSignalColor.yellow
+                ? VoxColor.yellow
+                : VoxColor.red),
     );
     ui.labelValue(
       'Cycles / State',

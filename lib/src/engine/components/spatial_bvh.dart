@@ -18,33 +18,49 @@ final class SpatialIndexComponent extends Behaviour {
     this.indexColliders = true,
     this.indexRenderers = true,
     this.autoSyncOnLateUpdate = true,
-  })  : colliderBvh = vgrid.DynamicBvh<Collider>(fatMargin: fatMargin),
-        rendererBvh = vgrid.DynamicBvh<MeshRenderer>(fatMargin: fatMargin);
+  }) : colliderBvh = vgrid.DynamicBvh<Collider>(fatMargin: fatMargin),
+       rendererBvh = vgrid.DynamicBvh<MeshRenderer>(fatMargin: fatMargin);
 
   static final spec = ComponentSpec<SpatialIndexComponent>(
     'SpatialIndexComponent',
     SpatialIndexComponent.new,
     [
-      Field.boolean('indexColliders', (s) => s.indexColliders, (s, v) => s.indexColliders = v),
-      Field.boolean('indexRenderers', (s) => s.indexRenderers, (s, v) => s.indexRenderers = v),
-      Field.boolean('autoSyncOnLateUpdate', (s) => s.autoSyncOnLateUpdate, (s, v) => s.autoSyncOnLateUpdate = v),
+      Field.boolean(
+        'indexColliders',
+        (s) => s.indexColliders,
+        (s, v) => s.indexColliders = v,
+      ),
+      Field.boolean(
+        'indexRenderers',
+        (s) => s.indexRenderers,
+        (s, v) => s.indexRenderers = v,
+      ),
+      Field.boolean(
+        'autoSyncOnLateUpdate',
+        (s) => s.autoSyncOnLateUpdate,
+        (s, v) => s.autoSyncOnLateUpdate = v,
+      ),
     ],
   );
 
   static vgrid.GridAabb _toGridAabb(Aabb box) => vgrid.GridAabb(
-        vgrid.GridVec3(box.min.x, box.min.y, box.min.z),
-        vgrid.GridVec3(box.max.x, box.max.y, box.max.z),
-      );
+    vgrid.GridVec3(box.min.x, box.min.y, box.min.z),
+    vgrid.GridVec3(box.max.x, box.max.y, box.max.z),
+  );
 
   static vgrid.GridAabb _toGridAabb3(Aabb3 box) => vgrid.GridAabb(
-        vgrid.GridVec3(box.min.x, box.min.y, box.min.z),
-        vgrid.GridVec3(box.max.x, box.max.y, box.max.z),
-      );
+    vgrid.GridVec3(box.min.x, box.min.y, box.min.z),
+    vgrid.GridVec3(box.max.x, box.max.y, box.max.z),
+  );
 
   static vgrid.GridRay _toGridRay(Ray ray) => vgrid.GridRay(
-        origin: vgrid.GridVec3(ray.origin.x, ray.origin.y, ray.origin.z),
-        direction: vgrid.GridVec3(ray.direction.x, ray.direction.y, ray.direction.z),
-      );
+    origin: vgrid.GridVec3(ray.origin.x, ray.origin.y, ray.origin.z),
+    direction: vgrid.GridVec3(
+      ray.direction.x,
+      ray.direction.y,
+      ray.direction.z,
+    ),
+  );
 
   /// Synchronizes tracked scene [Collider]s and [MeshRenderer]s incrementally.
   void syncNow() {
@@ -56,7 +72,9 @@ final class SpatialIndexComponent extends Behaviour {
         _trackedColliders.add(col);
         colliderBvh.upsert(col, _toGridAabb(col.worldBounds));
       }
-      final removed = _trackedColliders.where((c) => !active.contains(c) || c.isDestroyed).toList();
+      final removed = _trackedColliders
+          .where((c) => !active.contains(c) || c.isDestroyed)
+          .toList();
       for (final col in removed) {
         _trackedColliders.remove(col);
         colliderBvh.removeItem(col);
@@ -69,7 +87,9 @@ final class SpatialIndexComponent extends Behaviour {
         _trackedRenderers.add(rend);
         rendererBvh.upsert(rend, _toGridAabb3(rend.worldAabb));
       }
-      final removed = _trackedRenderers.where((r) => !active.contains(r) || r.isDestroyed).toList();
+      final removed = _trackedRenderers
+          .where((r) => !active.contains(r) || r.isDestroyed)
+          .toList();
       for (final rend in removed) {
         _trackedRenderers.remove(rend);
         rendererBvh.removeItem(rend);
@@ -81,29 +101,27 @@ final class SpatialIndexComponent extends Behaviour {
     Aabb bounds, {
     int layerMask = -1,
     bool includeTriggers = true,
-  }) =>
-      colliderBvh.queryAabb(
-        _toGridAabb(bounds),
-        filter: (c) =>
-            c._active &&
-            (includeTriggers || !c.isTrigger) &&
-            (layerMask & (1 << c.gameObject.layer)) != 0,
-      );
+  }) => colliderBvh.queryAabb(
+    _toGridAabb(bounds),
+    filter: (c) =>
+        c._active &&
+        (includeTriggers || !c.isTrigger) &&
+        (layerMask & (1 << c.gameObject.layer)) != 0,
+  );
 
   List<Collider> querySphere(
     Vec3 center,
     double radius, {
     int layerMask = -1,
     bool includeTriggers = true,
-  }) =>
-      colliderBvh.querySphere(
-        vgrid.GridVec3(center.x, center.y, center.z),
-        radius,
-        filter: (c) =>
-            c._active &&
-            (includeTriggers || !c.isTrigger) &&
-            (layerMask & (1 << c.gameObject.layer)) != 0,
-      );
+  }) => colliderBvh.querySphere(
+    vgrid.GridVec3(center.x, center.y, center.z),
+    radius,
+    filter: (c) =>
+        c._active &&
+        (includeTriggers || !c.isTrigger) &&
+        (layerMask & (1 << c.gameObject.layer)) != 0,
+  );
 
   List<Collider> queryFrustum(
     Camera camera, {
@@ -199,8 +217,16 @@ final class SpatialBroadphaseUI {
     final cb = index.colliderBvh;
     final rb = index.rendererBvh;
 
-    ui.labelValue('Collider Proxies', '${cb.count} (nodes ${cb.nodeCount})', valueColor: VoxColor.cyan);
-    ui.labelValue('Collider Tree Height', '${cb.height}', valueColor: VoxColor.lightGray);
+    ui.labelValue(
+      'Collider Proxies',
+      '${cb.count} (nodes ${cb.nodeCount})',
+      valueColor: VoxColor.cyan,
+    );
+    ui.labelValue(
+      'Collider Tree Height',
+      '${cb.height}',
+      valueColor: VoxColor.lightGray,
+    );
     ui.labelValue(
       'Move / Reinsert',
       '${cb.moveCallCount} / ${cb.reinsertionCount}',
@@ -212,8 +238,16 @@ final class SpatialBroadphaseUI {
       valueColor: VoxColor.yellow,
     );
     ui.separator();
-    ui.labelValue('Renderer Proxies', '${rb.count} (nodes ${rb.nodeCount})', valueColor: VoxColor.cyan);
-    ui.labelValue('Renderer Tree Height', '${rb.height}', valueColor: VoxColor.lightGray);
+    ui.labelValue(
+      'Renderer Proxies',
+      '${rb.count} (nodes ${rb.nodeCount})',
+      valueColor: VoxColor.cyan,
+    );
+    ui.labelValue(
+      'Renderer Tree Height',
+      '${rb.height}',
+      valueColor: VoxColor.lightGray,
+    );
 
     if (ui.button('Rebuild / Sync Now', height: 22.0)) {
       index.syncNow();

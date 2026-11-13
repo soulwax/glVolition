@@ -159,7 +159,8 @@ final class ProceduralGaitComponent extends Behaviour {
   int get steppingFootCount => _lastSnapshot?.steppingCount ?? 0;
   double get pelvisVerticalOffset => _lastSnapshot?.pelvisVerticalOffset ?? 0.0;
 
-  gait.GaitFootTarget? footTarget(String legId) => _lastSnapshot?.footById(legId);
+  gait.GaitFootTarget? footTarget(String legId) =>
+      _lastSnapshot?.footById(legId);
 
   gait.GaitTerrainSample _defaultTerrainSample(double worldX, double worldZ) {
     final custom = terrainSampler;
@@ -187,7 +188,9 @@ final class ProceduralGaitComponent extends Behaviour {
       solver.setCycle(_buildCycleForPreset(preset));
     }
 
-    solver.cycle.stanceDutyFactor = stanceDutyFactor.clamp(0.15, 0.92).toDouble();
+    solver.cycle.stanceDutyFactor = stanceDutyFactor
+        .clamp(0.15, 0.92)
+        .toDouble();
     solver.cycle.baseStepFrequencyHz = math.max(0.1, baseStepFrequencyHz);
     solver.stepHeightScale = math.max(0.0, stepHeightScale);
     solver.pelvisBobAmplitude = math.max(0.0, pelvisBobAmplitude);
@@ -248,7 +251,8 @@ final class ProceduralGaitComponent extends Behaviour {
     }
 
     if (autoApplySlopeTilt && isAttached) {
-      final tiltRot = Quat.axisAngle(kRight, snap.bodyPitchRad) *
+      final tiltRot =
+          Quat.axisAngle(kRight, snap.bodyPitchRad) *
           Quat.axisAngle(kForward, snap.bodyRollRad);
       transform.localRotation = tiltRot.normalized;
     }
@@ -282,7 +286,8 @@ final class GaitDebuggerUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -353,14 +358,20 @@ final class GaitDebuggerUI {
     final legSummary = snap == null
         ? 'No step sampled yet'
         : snap.feet
-            .take(3)
-            .map((f) => '${f.legId}:${f.isGrounded ? 'STN' : 'SWG'}')
-            .join(' | ');
+              .take(3)
+              .map((f) => '${f.legId}:${f.isGrounded ? 'STN' : 'SWG'}')
+              .join(' | ');
     ui.labelValue('Legs', legSummary, valueColor: VoxColor.lightGray);
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'gait_pause', gaitComp.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'gait_pause',
+      gaitComp.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       gaitComp.paused = !gaitComp.paused;
     }
 
@@ -376,7 +387,9 @@ final class GaitDebuggerUI {
 
     final liftRect = VoxRect(presetRect.right + 8.0, barY, 82.0, 22.0);
     if (_drawButton(ui, uiState, 'gait_lift', 'Lift +0.2', liftRect)) {
-      gaitComp.stepHeightScale = (gaitComp.stepHeightScale + 0.2).clamp(0.2, 2.5).toDouble();
+      gaitComp.stepHeightScale = (gaitComp.stepHeightScale + 0.2)
+          .clamp(0.2, 2.5)
+          .toDouble();
     }
 
     ui.endWindow();

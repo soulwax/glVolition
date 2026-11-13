@@ -224,7 +224,8 @@ final class GreedyMesherInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -324,7 +325,13 @@ final class GreedyMesherInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'gv_pause', comp.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'gv_pause',
+      comp.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       comp.paused = !comp.paused;
     }
 

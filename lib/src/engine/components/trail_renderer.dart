@@ -164,16 +164,16 @@ final class LineRenderer extends Component {
   }
 
   MaterialHandle _createDefaultMaterial() => engine.graphics.createMaterial(
-        MaterialDefinition(
-          key: 'line_${gameObject.name}_${identityHashCode(this)}',
-          tintR: _color.r,
-          tintG: _color.g,
-          tintB: _color.b,
-          emissiveStrength: 1.5,
-          roughness: 0.9,
-          metallic: 0.0,
-        ),
-      );
+    MaterialDefinition(
+      key: 'line_${gameObject.name}_${identityHashCode(this)}',
+      tintR: _color.r,
+      tintG: _color.g,
+      tintB: _color.b,
+      emissiveStrength: 1.5,
+      roughness: 0.9,
+      metallic: 0.0,
+    ),
+  );
 
   void _syncRibbon() {
     final n = _node;
@@ -280,18 +280,27 @@ final class TrailRenderer extends Behaviour {
     this.material,
   });
 
-  static final spec = ComponentSpec<TrailRenderer>(
-    'TrailRenderer',
-    TrailRenderer.new,
-    [
-      Field.number('timeLength', (t) => t.timeLength, (t, v) => t.timeLength = v),
-      Field.number('minVertexDistance', (t) => t.minVertexDistance, (t, v) => t.minVertexDistance = v),
-      Field.number('startWidth', (t) => t.startWidth, (t, v) => t.startWidth = v),
-      Field.number('endWidth', (t) => t.endWidth, (t, v) => t.endWidth = v),
-      Field.color('color', (t) => t.color, (t, v) => t.color = v),
-      Field.boolean('emitting', (t) => t.emitting, (t, v) => t.emitting = v),
-    ],
-  );
+  static final spec =
+      ComponentSpec<TrailRenderer>('TrailRenderer', TrailRenderer.new, [
+        Field.number(
+          'timeLength',
+          (t) => t.timeLength,
+          (t, v) => t.timeLength = v,
+        ),
+        Field.number(
+          'minVertexDistance',
+          (t) => t.minVertexDistance,
+          (t, v) => t.minVertexDistance = v,
+        ),
+        Field.number(
+          'startWidth',
+          (t) => t.startWidth,
+          (t, v) => t.startWidth = v,
+        ),
+        Field.number('endWidth', (t) => t.endWidth, (t, v) => t.endWidth = v),
+        Field.color('color', (t) => t.color, (t, v) => t.color = v),
+        Field.boolean('emitting', (t) => t.emitting, (t, v) => t.emitting = v),
+      ]);
 
   int get sampleCount => _samples.length;
   MeshData? get meshData => _meshData;
@@ -337,8 +346,7 @@ final class TrailRenderer extends Behaviour {
     // Build ribbon from newest (head = startWidth) to oldest (tail = endWidth)
     // in the GameObject's local coordinate space.
     final localPts = <Vec3>[
-      for (var i = _samples.length - 1; i >= 0; i--)
-        _samples[i].position - pos,
+      for (var i = _samples.length - 1; i >= 0; i--) _samples[i].position - pos,
     ];
 
     final data = _buildRibbonMeshData(

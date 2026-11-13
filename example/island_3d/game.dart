@@ -19,7 +19,11 @@ final class LighthouseBehaviour extends Behaviour {
     LighthouseBehaviour.new,
     [
       Field.vec3('aimPoint', (l) => l.aimPoint, (l, v) => l.aimPoint = v),
-      Field.number('beamRadius', (l) => l.beamRadius, (l, v) => l.beamRadius = v),
+      Field.number(
+        'beamRadius',
+        (l) => l.beamRadius,
+        (l, v) => l.beamRadius = v,
+      ),
     ],
   );
 
@@ -59,14 +63,15 @@ final class FlareBehaviour extends Behaviour {
 
   FlareBehaviour({this.verticalSpeed = 9.0, this.lifetime = 3.0});
 
-  static final spec = ComponentSpec<FlareBehaviour>(
-    'FlareBehaviour',
-    FlareBehaviour.new,
-    [
-      Field.number('verticalSpeed', (f) => f.verticalSpeed, (f, v) => f.verticalSpeed = v),
-      Field.number('lifetime', (f) => f.lifetime, (f, v) => f.lifetime = v),
-    ],
-  );
+  static final spec =
+      ComponentSpec<FlareBehaviour>('FlareBehaviour', FlareBehaviour.new, [
+        Field.number(
+          'verticalSpeed',
+          (f) => f.verticalSpeed,
+          (f, v) => f.verticalSpeed = v,
+        ),
+        Field.number('lifetime', (f) => f.lifetime, (f, v) => f.lifetime = v),
+      ]);
 
   @override
   void update() {
@@ -75,7 +80,10 @@ final class FlareBehaviour extends Behaviour {
       gameObject.destroy();
       return;
     }
-    transform.translate(Vec3(0, verticalSpeed * time.deltaTime, 0), relativeTo: Space.world);
+    transform.translate(
+      Vec3(0, verticalSpeed * time.deltaTime, 0),
+      relativeTo: Space.world,
+    );
   }
 }
 
@@ -96,18 +104,32 @@ final class ShipAgentBehaviour extends Behaviour {
     this.reefCenter = const Vec3(10, 0, 0),
     this.reefRadius = 4.5,
     this.speed = 8.0,
-  }) : route = route ?? SplinePath.fromPoints(const [Vec3(14, 0.5, 10), Vec3(8, 0.5, -10)]);
+  }) : route =
+           route ??
+           SplinePath.fromPoints(const [Vec3(14, 0.5, 10), Vec3(8, 0.5, -10)]);
 
   static final spec = ComponentSpec<ShipAgentBehaviour>(
     'ShipAgentBehaviour',
     ShipAgentBehaviour.new,
     [
       Field.vec3('reefCenter', (s) => s.reefCenter, (s, v) => s.reefCenter = v),
-      Field.number('reefRadius', (s) => s.reefRadius, (s, v) => s.reefRadius = v),
+      Field.number(
+        'reefRadius',
+        (s) => s.reefRadius,
+        (s, v) => s.reefRadius = v,
+      ),
       Field.number('speed', (s) => s.speed, (s, v) => s.speed = v),
       Field.number('distance', (s) => s.distance, (s, v) => s.distance = v),
-      Field.boolean('dockedSafely', (s) => s.dockedSafely, (s, v) => s.dockedSafely = v),
-      Field.boolean('wreckedOnReef', (s) => s.wreckedOnReef, (s, v) => s.wreckedOnReef = v),
+      Field.boolean(
+        'dockedSafely',
+        (s) => s.dockedSafely,
+        (s, v) => s.dockedSafely = v,
+      ),
+      Field.boolean(
+        'wreckedOnReef',
+        (s) => s.wreckedOnReef,
+        (s, v) => s.wreckedOnReef = v,
+      ),
     ],
   );
 
@@ -118,7 +140,8 @@ final class ShipAgentBehaviour extends Behaviour {
     final lighthouse = scene.findObjectOfType<LighthouseBehaviour>();
     final hasFlare = scene.findObjectsOfType<FlareBehaviour>().isNotEmpty;
     final pos = transform.localPosition;
-    final guided = (lighthouse != null && lighthouse.illuminates(pos)) || hasFlare;
+    final guided =
+        (lighthouse != null && lighthouse.illuminates(pos)) || hasFlare;
 
     if (guided) {
       distance += speed * time.deltaTime;
@@ -147,13 +170,14 @@ final class ShipAgentBehaviour extends Behaviour {
 final class HarbourDirector extends Behaviour {
   int flaresLaunched = 0;
 
-  static final spec = ComponentSpec<HarbourDirector>(
-    'HarbourDirector',
-    HarbourDirector.new,
-    [
-      Field.integer('flaresLaunched', (h) => h.flaresLaunched, (h, v) => h.flaresLaunched = v),
-    ],
-  );
+  static final spec =
+      ComponentSpec<HarbourDirector>('HarbourDirector', HarbourDirector.new, [
+        Field.integer(
+          'flaresLaunched',
+          (h) => h.flaresLaunched,
+          (h, v) => h.flaresLaunched = v,
+        ),
+      ]);
 
   GameObject launchFlareAt(Vec3 worldPos) {
     flaresLaunched++;
@@ -161,7 +185,11 @@ final class HarbourDirector extends Behaviour {
       'Flare_$flaresLaunched',
       position: worldPos + const Vec3(0, 1.0, 0),
       components: [
-        Light.point(color: const LinearColor(1.0, 0.35, 0.15), intensity: 3.0, range: 18.0),
+        Light.point(
+          color: const LinearColor(1.0, 0.35, 0.15),
+          intensity: 3.0,
+          range: 18.0,
+        ),
         FlareBehaviour(),
       ],
     );
@@ -285,15 +313,12 @@ Scene buildIsland3DScene() {
   beacon.addComponent(Animator(initialClips: [spinClip], defaultClip: 'spin'));
 
   // Spline camera rail orbiting the island
-  final rail = SplinePath.fromPoints(
-    const [
-      Vec3(0, 8, 28),
-      Vec3(28, 9, 0),
-      Vec3(0, 8, -28),
-      Vec3(-28, 9, 0),
-    ],
-    closed: true,
-  );
+  final rail = SplinePath.fromPoints(const [
+    Vec3(0, 8, 28),
+    Vec3(28, 9, 0),
+    Vec3(0, 8, -28),
+    Vec3(-28, 9, 0),
+  ], closed: true);
   scene.createGameObject(
     'TourCamera',
     position: const Vec3(0, 8, 28),

@@ -14,11 +14,7 @@ class AudioReverbZone extends Component {
     double roomSize = 0.7,
     double damp = 0.3,
     double wet = 0.5,
-  }) : reverb = dsp.SchroederReverb(
-          roomSize: roomSize,
-          damp: damp,
-          wet: wet,
-        );
+  }) : reverb = dsp.SchroederReverb(roomSize: roomSize, damp: damp, wet: wet);
 
   double get roomSize => reverb.roomSize;
   set roomSize(double val) => reverb.roomSize = val;
@@ -54,9 +50,9 @@ class AudioLowPassFilterComponent extends Component {
     double cutoffFrequency = 1000.0,
     double q = 0.70710678,
   }) : filter = dsp.BiquadFilter.lowpass(
-          cutoffFrequency: cutoffFrequency,
-          q: q,
-        );
+         cutoffFrequency: cutoffFrequency,
+         q: q,
+       );
 
   double get cutoffFrequency => filter.cutoffFrequency;
   set cutoffFrequency(double val) => filter.cutoffFrequency = val;
@@ -79,7 +75,9 @@ extension SpatialAudioDspExt on AudioSource {
     Vec3 listenerVelocity = Vec3.zero,
     double dopplerIntensity = 1.0,
   }) {
-    final activeListener = listener ?? (isAttached && scene.isLoaded ? AudioListener.of(scene) : null);
+    final activeListener =
+        listener ??
+        (isAttached && scene.isLoaded ? AudioListener.of(scene) : null);
     final listenerPos = activeListener?.transform.position ?? Vec3.zero;
     final listenerForward = activeListener?.transform.forward ?? kForward;
     final listenerRight = activeListener?.transform.right ?? kRight;

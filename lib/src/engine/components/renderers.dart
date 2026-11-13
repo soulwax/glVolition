@@ -1,14 +1,7 @@
 part of '../../engine.dart';
 
 /// Supported primitive types for [Scene.createPrimitive] (E23-1).
-enum PrimitiveType {
-  cube,
-  sphere,
-  capsule,
-  cylinder,
-  plane,
-  quad,
-}
+enum PrimitiveType { cube, sphere, capsule, cylinder, plane, quad }
 
 /// Draws a single mesh with a material on its [GameObject]'s scene node, or
 /// on an offset child node when [localOffset] is given (handy when a primitive's
@@ -78,8 +71,15 @@ final class MeshRenderer extends Component {
     if (value != null && isAttached && scene.isLoaded) {
       material = engine.graphics.createMaterial(
         _materialOverride != null
-            ? _materialOverride!.copyWith(tintR: value.r, tintG: value.g, tintB: value.b)
-            : MaterialDefinition.dielectric(key: '${gameObject.name}#tint', color: value),
+            ? _materialOverride!.copyWith(
+                tintR: value.r,
+                tintG: value.g,
+                tintB: value.b,
+              )
+            : MaterialDefinition.dielectric(
+                key: '${gameObject.name}#tint',
+                color: value,
+              ),
       );
     }
   }
@@ -131,32 +131,41 @@ final class MeshRenderer extends Component {
     return Aabb3.fromCenterExtents(center, halfExtents);
   }
 
-  static final spec = ComponentSpec<MeshRenderer>(
-    'MeshRenderer',
-    MeshRenderer.new,
-    [
-      Field.color('tintColor', (m) => m.tintColor ?? LinearColor.white, (m, v) => m.tintColor = v),
-      Field.boolean('castsShadow', (m) => m.castsShadow, (m, v) => m.castsShadow = v),
-      Field.boolean('receivesShadow', (m) => m.receivesShadow, (m, v) => m.receivesShadow = v),
-      Field.enumValue<MeshRenderer, DrawMode>(
-        'drawMode',
-        DrawMode.values,
-        (m) => m.drawMode,
-        (m, v) => m.drawMode = v,
-      ),
-      Field.enumValue<MeshRenderer, BlendMode>(
-        'blendMode',
-        BlendMode.values,
-        (m) => m.blendMode,
-        (m, v) => m.blendMode = v,
-      ),
-      Field.vec3(
-        'localOffsetPos',
-        (m) => m.localOffset.translation,
-        (m, v) => m.localOffset = m.localOffset.copyWith(translation: v),
-      ),
-    ],
-  );
+  static final spec =
+      ComponentSpec<MeshRenderer>('MeshRenderer', MeshRenderer.new, [
+        Field.color(
+          'tintColor',
+          (m) => m.tintColor ?? LinearColor.white,
+          (m, v) => m.tintColor = v,
+        ),
+        Field.boolean(
+          'castsShadow',
+          (m) => m.castsShadow,
+          (m, v) => m.castsShadow = v,
+        ),
+        Field.boolean(
+          'receivesShadow',
+          (m) => m.receivesShadow,
+          (m, v) => m.receivesShadow = v,
+        ),
+        Field.enumValue<MeshRenderer, DrawMode>(
+          'drawMode',
+          DrawMode.values,
+          (m) => m.drawMode,
+          (m, v) => m.drawMode = v,
+        ),
+        Field.enumValue<MeshRenderer, BlendMode>(
+          'blendMode',
+          BlendMode.values,
+          (m) => m.blendMode,
+          (m, v) => m.blendMode = v,
+        ),
+        Field.vec3(
+          'localOffsetPos',
+          (m) => m.localOffset.translation,
+          (m, v) => m.localOffset = m.localOffset.copyWith(translation: v),
+        ),
+      ]);
 
   @override
   void _onAttach() {
@@ -164,7 +173,10 @@ final class MeshRenderer extends Component {
       _material = engine.graphics.createMaterial(_materialOverride!);
     } else if (_tintColor != null && _material == null && scene.isLoaded) {
       _material = engine.graphics.createMaterial(
-        MaterialDefinition.dielectric(key: '${gameObject.name}#tint', color: _tintColor!),
+        MaterialDefinition.dielectric(
+          key: '${gameObject.name}#tint',
+          color: _tintColor!,
+        ),
       );
     }
     final leaf = SceneNode(
@@ -219,11 +231,14 @@ final class ModelRenderer extends Component {
   });
 
   /// Half-diagonal of the model's authored bounding box, before scaling.
-  double get boundingRadius => (model.bounds.max - model.bounds.min).length * 0.5;
+  double get boundingRadius =>
+      (model.bounds.max - model.bounds.min).length * 0.5;
 
   @override
   void _onAttach() {
-    final shift = centerOrigin ? Transform.at(-(model.bounds.min + model.bounds.max) * 0.5) : Transform.identity;
+    final shift = centerOrigin
+        ? Transform.at(-(model.bounds.min + model.bounds.max) * 0.5)
+        : Transform.identity;
     final instance = model.instantiate(
       name: '${gameObject.name}#model',
       transform: localOffset * shift,
@@ -295,8 +310,9 @@ final class InstancedMeshRenderer extends Component {
   List<Transform> get instanceTransforms =>
       _node?.instanceTransforms ?? List.unmodifiable(_initialTransforms);
 
-  Transform getInstanceTransform(int index) =>
-      _node != null ? _node!.getInstanceTransform(index) : _initialTransforms[index];
+  Transform getInstanceTransform(int index) => _node != null
+      ? _node!.getInstanceTransform(index)
+      : _initialTransforms[index];
 
   void addInstance(Transform instanceTransform) {
     final n = _node;

@@ -348,7 +348,8 @@ final class Scene {
   );
 
   List<Light2DComponent> get lights2D => List.unmodifiable(_lights2D);
-  List<ShadowCaster2DComponent> get shadowCasters2D => List.unmodifiable(_shadowCasters2D);
+  List<ShadowCaster2DComponent> get shadowCasters2D =>
+      List.unmodifiable(_shadowCasters2D);
 
   void _registerLight2D(Light2DComponent light) {
     if (!_lights2D.contains(light)) _lights2D.add(light);
@@ -390,7 +391,10 @@ final class Scene {
   }
 
   /// Computes the 2D visibility polygon from [origin] against all active 2D shadow casters (E35).
-  vlight.VisibilityPolygon computeVisibility2D(Vec2 origin, {double maxRadius = 50.0}) {
+  vlight.VisibilityPolygon computeVisibility2D(
+    Vec2 origin, {
+    double maxRadius = 50.0,
+  }) {
     final occluders = gatherShadowSegments2D();
     return vlight.VisibilityPolygon.compute(
       origin: _toLightVec2(origin),

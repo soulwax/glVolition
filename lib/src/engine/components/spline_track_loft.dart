@@ -31,15 +31,31 @@ final class SplineTrackLoftComponent extends Component {
     'SplineTrackLoftComponent',
     SplineTrackLoftComponent.new,
     [
-      Field.number('trackWidth', (c) => c.trackWidth, (c, v) => c.trackWidth = v),
-      Field.number('curbHeight', (c) => c.curbHeight, (c, v) => c.curbHeight = v),
-      Field.integer('sampleCount', (c) => c.sampleCount, (c, v) => c.sampleCount = v),
+      Field.number(
+        'trackWidth',
+        (c) => c.trackWidth,
+        (c, v) => c.trackWidth = v,
+      ),
+      Field.number(
+        'curbHeight',
+        (c) => c.curbHeight,
+        (c, v) => c.curbHeight = v,
+      ),
+      Field.integer(
+        'sampleCount',
+        (c) => c.sampleCount,
+        (c, v) => c.sampleCount = v,
+      ),
       Field.number(
         'vTilesPerMeter',
         (c) => c.vTilesPerMeter,
         (c, v) => c.vTilesPerMeter = v,
       ),
-      Field.boolean('closedLoop', (c) => c.closedLoop, (c, v) => c.closedLoop = v),
+      Field.boolean(
+        'closedLoop',
+        (c) => c.closedLoop,
+        (c, v) => c.closedLoop = v,
+      ),
       Field.boolean(
         'autoCreateMeshRenderer',
         (c) => c.autoCreateMeshRenderer,
@@ -88,8 +104,12 @@ final class SplineTrackLoftComponent extends Component {
     if (loft.vertexCount > 0 && loft.indices.isNotEmpty) {
       const stride = 14;
       final vertices = Float32List(loft.vertexCount * stride);
-      var minX = double.infinity, minY = double.infinity, minZ = double.infinity;
-      var maxX = -double.infinity, maxY = -double.infinity, maxZ = -double.infinity;
+      var minX = double.infinity,
+          minY = double.infinity,
+          minZ = double.infinity;
+      var maxX = -double.infinity,
+          maxY = -double.infinity,
+          maxZ = -double.infinity;
 
       for (var i = 0; i < loft.vertexCount; i++) {
         final v = loft.vertices[i];
@@ -139,11 +159,7 @@ final class SplineTrackLoftComponent extends Component {
         _dynamicMeshHandle = handle;
         if (mr == null && autoCreateMeshRenderer) {
           mr = gameObject.addComponent(
-            MeshRenderer(
-              mesh: handle,
-              meshData: meshData,
-              material: material,
-            ),
+            MeshRenderer(mesh: handle, meshData: meshData, material: material),
           );
         } else if (mr != null) {
           mr.mesh = handle;
@@ -192,7 +208,8 @@ final class SplineTrackInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -267,7 +284,13 @@ final class SplineTrackInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final loopRect = VoxRect(x + pad, barY, 78.0, 22.0);
-    if (_drawButton(ui, uiState, 'stl_loop', loft.closedLoop ? 'Loop: On' : 'Loop: Off', loopRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'stl_loop',
+      loft.closedLoop ? 'Loop: On' : 'Loop: Off',
+      loopRect,
+    )) {
       loft.closedLoop = !loft.closedLoop;
       loft.rebuildTrackMesh();
     }

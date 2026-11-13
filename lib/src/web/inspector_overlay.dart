@@ -164,9 +164,9 @@ final class InspectorOverlay {
     exportBtn.addEventListener(
       'click',
       ((web.Event _) {
-        final json = const JsonEncoder.withIndent('  ').convert(
-          engine.scene.toJson(registry: engine.registry),
-        );
+        final json = const JsonEncoder.withIndent(
+          '  ',
+        ).convert(engine.scene.toJson(registry: engine.registry));
         web.console.log(json.toJS);
         web.window
             .fetch(
@@ -285,7 +285,8 @@ final class InspectorOverlay {
     container.textContent = '';
 
     void addNode(GameObject go, int depth) {
-      final matches = _filter.isEmpty ||
+      final matches =
+          _filter.isEmpty ||
           go.name.toLowerCase().contains(_filter) ||
           go.tag.toLowerCase().contains(_filter);
       if (matches) {
@@ -310,7 +311,8 @@ final class InspectorOverlay {
         );
 
         final label = web.document.createElement('span') as web.HTMLSpanElement
-          ..textContent = '${go.name} ${go.tag != "Untagged" ? "[${go.tag}]" : ""}';
+          ..textContent =
+              '${go.name} ${go.tag != "Untagged" ? "[${go.tag}]" : ""}';
         if (!go.activeInHierarchy) {
           label.style.opacity = '0.45';
         }
@@ -394,13 +396,15 @@ final class InspectorOverlay {
         'display:flex;gap:6px;margin-top:12px;padding-top:8px;'
         'border-top:1px solid #2b2742;align-items:center;';
 
-    final addSelect = web.document.createElement('select') as web.HTMLSelectElement;
+    final addSelect =
+        web.document.createElement('select') as web.HTMLSelectElement;
     addSelect.style.cssText =
         'flex:1;background:#18152b;color:#ece9f8;border:1px solid #3c365c;'
         'border-radius:4px;padding:3px 6px;font:inherit;';
-    final placeholder = web.document.createElement('option') as web.HTMLOptionElement
-      ..value = ''
-      ..textContent = '+ Add Component...';
+    final placeholder =
+        web.document.createElement('option') as web.HTMLOptionElement
+          ..value = ''
+          ..textContent = '+ Add Component...';
     addSelect.append(placeholder);
     for (final spec in engine.registry.registeredSpecs) {
       final opt = web.document.createElement('option') as web.HTMLOptionElement
@@ -421,11 +425,12 @@ final class InspectorOverlay {
       }).toJS,
     );
 
-    final copyBtn = web.document.createElement('button') as web.HTMLButtonElement
-      ..textContent = 'Copy'
-      ..style.cssText =
-          'background:#242038;color:#ece9f8;border:1px solid #4e4675;'
-          'border-radius:4px;padding:3px 8px;cursor:pointer;font:inherit;';
+    final copyBtn =
+        web.document.createElement('button') as web.HTMLButtonElement
+          ..textContent = 'Copy'
+          ..style.cssText =
+              'background:#242038;color:#ece9f8;border:1px solid #4e4675;'
+              'border-radius:4px;padding:3px 8px;cursor:pointer;font:inherit;';
     copyBtn.addEventListener(
       'click',
       ((web.Event _) {
@@ -437,11 +442,12 @@ final class InspectorOverlay {
       }).toJS,
     );
 
-    final deleteBtn = web.document.createElement('button') as web.HTMLButtonElement
-      ..textContent = 'Delete'
-      ..style.cssText =
-          'background:#541f2d;color:#ffd2d8;border:1px solid #8a344c;'
-          'border-radius:4px;padding:3px 8px;cursor:pointer;font:inherit;';
+    final deleteBtn =
+        web.document.createElement('button') as web.HTMLButtonElement
+          ..textContent = 'Delete'
+          ..style.cssText =
+              'background:#541f2d;color:#ffd2d8;border:1px solid #8a344c;'
+              'border-radius:4px;padding:3px 8px;cursor:pointer;font:inherit;';
     deleteBtn.addEventListener(
       'click',
       ((web.Event _) {
@@ -464,8 +470,10 @@ final class InspectorOverlay {
     void Function(double) set,
   ) {
     final row = web.document.createElement('div') as web.HTMLDivElement;
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:2px 0;';
-    final span = web.document.createElement('span') as web.HTMLSpanElement..textContent = label;
+    row.style.cssText =
+        'display:flex;justify-content:space-between;align-items:center;margin:2px 0;';
+    final span = web.document.createElement('span') as web.HTMLSpanElement
+      ..textContent = label;
     final input = web.document.createElement('input') as web.HTMLInputElement
       ..type = 'number'
       ..step = '0.1'
@@ -492,8 +500,10 @@ final class InspectorOverlay {
     void Function(Vec3) set,
   ) {
     final row = web.document.createElement('div') as web.HTMLDivElement;
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:2px 0;gap:4px;';
-    final span = web.document.createElement('span') as web.HTMLSpanElement..textContent = label;
+    row.style.cssText =
+        'display:flex;justify-content:space-between;align-items:center;margin:2px 0;gap:4px;';
+    final span = web.document.createElement('span') as web.HTMLSpanElement
+      ..textContent = label;
     final inputs = web.document.createElement('div') as web.HTMLDivElement;
     inputs.style.cssText = 'display:flex;gap:3px;';
 
@@ -555,8 +565,10 @@ final class InspectorOverlay {
         );
       case FieldKind.boolean:
         final row = web.document.createElement('div') as web.HTMLDivElement;
-        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:2px 0;';
-        final span = web.document.createElement('span') as web.HTMLSpanElement..textContent = field.name;
+        row.style.cssText =
+            'display:flex;justify-content:space-between;align-items:center;margin:2px 0;';
+        final span = web.document.createElement('span') as web.HTMLSpanElement
+          ..textContent = field.name;
         final cb = web.document.createElement('input') as web.HTMLInputElement
           ..type = 'checkbox'
           ..checked = raw == true;
@@ -570,11 +582,14 @@ final class InspectorOverlay {
       case FieldKind.text:
       case FieldKind.enumeration:
         final row = web.document.createElement('div') as web.HTMLDivElement;
-        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:2px 0;';
-        final span = web.document.createElement('span') as web.HTMLSpanElement..textContent = field.name;
-        final input = web.document.createElement('input') as web.HTMLInputElement
-          ..type = 'text'
-          ..value = raw?.toString() ?? '';
+        row.style.cssText =
+            'display:flex;justify-content:space-between;align-items:center;margin:2px 0;';
+        final span = web.document.createElement('span') as web.HTMLSpanElement
+          ..textContent = field.name;
+        final input =
+            web.document.createElement('input') as web.HTMLInputElement
+              ..type = 'text'
+              ..value = raw?.toString() ?? '';
         input.style.cssText =
             'width:110px;background:#121020;color:#fff;border:1px solid #3c365c;'
             'border-radius:3px;padding:1px 4px;font:inherit;';
@@ -587,19 +602,14 @@ final class InspectorOverlay {
         parent.append(row);
       case FieldKind.vec3:
       case FieldKind.color:
-        _appendVec3Editor(
-          parent,
-          field.name,
-          () {
-            final list = field.readJson(comp) as List<Object?>;
-            return Vec3(
-              (list[0] as num).toDouble(),
-              (list[1] as num).toDouble(),
-              (list[2] as num).toDouble(),
-            );
-          },
-          (v) => field.writeJson(comp, [v.x, v.y, v.z]),
-        );
+        _appendVec3Editor(parent, field.name, () {
+          final list = field.readJson(comp) as List<Object?>;
+          return Vec3(
+            (list[0] as num).toDouble(),
+            (list[1] as num).toDouble(),
+            (list[2] as num).toDouble(),
+          );
+        }, (v) => field.writeJson(comp, [v.x, v.y, v.z]));
       case FieldKind.quat:
         break;
     }

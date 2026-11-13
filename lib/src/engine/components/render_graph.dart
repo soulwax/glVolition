@@ -24,8 +24,16 @@ final class RenderGraphComponent extends Component {
     'RenderGraphComponent',
     RenderGraphComponent.new,
     [
-      Field.integer('viewportWidth', (c) => c.viewportWidth, (c, v) => c.viewportWidth = v),
-      Field.integer('viewportHeight', (c) => c.viewportHeight, (c, v) => c.viewportHeight = v),
+      Field.integer(
+        'viewportWidth',
+        (c) => c.viewportWidth,
+        (c, v) => c.viewportWidth = v,
+      ),
+      Field.integer(
+        'viewportHeight',
+        (c) => c.viewportHeight,
+        (c, v) => c.viewportHeight = v,
+      ),
       Field.boolean(
         'enableTransientAliasing',
         (c) => c.enableTransientAliasing,
@@ -45,7 +53,8 @@ final class RenderGraphComponent extends Component {
   );
 
   int get compileCount => _compileCount;
-  graph.CompiledRenderGraph get compiled => _lastCompiled ?? rebuildStandardPipeline();
+  graph.CompiledRenderGraph get compiled =>
+      _lastCompiled ?? rebuildStandardPipeline();
   graph.TransientAliasingPlan? get aliasingPlan => _lastAliasingPlan;
 
   /// Compiles any user-authored [graph.RenderGraphBuilder] DAG and evaluates transient aliasing.
@@ -92,7 +101,11 @@ final class RenderGraphComponent extends Component {
     );
 
     if (includeUnusedDebugPass) {
-      final deadDebug = b.createTexture('unused_heatmap', width: 256, height: 256);
+      final deadDebug = b.createTexture(
+        'unused_heatmap',
+        width: 256,
+        height: 256,
+      );
       b.addPass('UnusedHeatmap', (s) => s.write(deadDebug));
     }
 
@@ -145,7 +158,8 @@ final class RenderGraphInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -229,7 +243,13 @@ final class RenderGraphInspectorUI {
     }
 
     final postRect = VoxRect(rebuildRect.right + 8.0, barY, 88.0, 22.0);
-    if (_drawButton(ui, uiState, 'rg_post', rgComp.includePostProcessPass ? 'Post: On' : 'Post: Off', postRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'rg_post',
+      rgComp.includePostProcessPass ? 'Post: On' : 'Post: Off',
+      postRect,
+    )) {
       rgComp.includePostProcessPass = !rgComp.includePostProcessPass;
       rgComp.rebuildStandardPipeline();
     }

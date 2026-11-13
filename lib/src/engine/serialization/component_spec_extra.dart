@@ -4,27 +4,78 @@ final class _EmptySpecResources implements ResourceLibrary {
   const _EmptySpecResources();
 
   @override
-  MaterialHandle registerMaterial(MaterialDefinition definition) =>
-      MaterialHandle.invalid;
-
-  @override
   MeshHandle registerMesh(MeshData data, {String? debugLabel}) =>
       MeshHandle.invalid;
 
   @override
-  dynamic noSuchMethod(Object invocation) =>
-      super.noSuchMethod(invocation as dynamic);
+  void releaseMesh(MeshHandle handle) {}
+
+  @override
+  MaterialHandle registerMaterial(MaterialDefinition definition) =>
+      MaterialHandle.invalid;
+
+  @override
+  void releaseMaterial(MaterialHandle handle) {}
+
+  @override
+  ModelBinding bindModel(ModelDefinition definition) =>
+      ModelBinding(definition, const []);
+
+  @override
+  TextureHandle registerTexture({
+    required int width,
+    required int height,
+    int layers = 1,
+    bool hasMips = false,
+    GpuTextureFilter minFilter = GpuTextureFilter.linear,
+    GpuTextureFilter magFilter = GpuTextureFilter.linear,
+    GpuTextureWrap wrap = GpuTextureWrap.clampToEdge,
+    double anisotropy = 1,
+    Uint8List? pixels,
+    String? debugLabel,
+  }) => TextureHandle.invalid;
+
+  @override
+  void updateTexturePixels(TextureHandle handle, Uint8List pixels) {}
+
+  @override
+  void finalizeTextureMips(TextureHandle handle) {}
+
+  @override
+  AnisotropyDecision anisotropyOf(TextureHandle handle) =>
+      const AnisotropyDecision(
+        requested: 1,
+        effective: 1,
+        maxSupported: 1,
+        extensionAvailable: false,
+      );
+
+  @override
+  void releaseTexture(TextureHandle handle) {}
+
+  @override
+  get textureResidency => throw UnsupportedError(
+    '_EmptySpecResources does not provide texture residency management.',
+  );
+
+  @override
+  get materialResidency => throw UnsupportedError(
+    '_EmptySpecResources does not provide material residency management.',
+  );
+
+  @override
+  void dispose() {}
 }
 
 ModelAsset _defaultEmptyModelAsset() => ModelAsset.fromGlb(
-      GlbResult(
-        rootNode: SceneNode.group(name: 'empty'),
-        meshes: const [],
-        materials: const [],
-      ),
-      const _EmptySpecResources(),
-      name: 'empty',
-    );
+  GlbResult(
+    rootNode: SceneNode.group(name: 'empty'),
+    meshes: const [],
+    materials: const [],
+  ),
+  const _EmptySpecResources(),
+  name: 'empty',
+);
 
 /// Registers [ComponentSpec] descriptors for all extended engine components
 /// beyond the core built-ins in `component_spec.dart` (E103).
@@ -34,9 +85,7 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
     ComponentSpec<StateMachine<dynamic>>(
       'StateMachine',
       () => StateMachine<dynamic>('idle'),
-      [
-        Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
-      ],
+      [Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v)],
     ),
   );
 
@@ -85,7 +134,11 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
           (c) => c.followTransform,
           (c, v) => c.followTransform = v,
         ),
-        Field.number('rate', (c) => c.emitter.rate, (c, v) => c.emitter.rate = v),
+        Field.number(
+          'rate',
+          (c) => c.emitter.rate,
+          (c, v) => c.emitter.rate = v,
+        ),
         Field.number(
           'duration',
           (c) => c.emitter.duration,
@@ -218,11 +271,7 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
           (c) => c.startWidth,
           (c, v) => c.startWidth = v,
         ),
-        Field.number(
-          'endWidth',
-          (c) => c.endWidth,
-          (c, v) => c.endWidth = v,
-        ),
+        Field.number('endWidth', (c) => c.endWidth, (c, v) => c.endWidth = v),
         Field.color('color', (c) => c.color, (c, v) => c.color = v),
       ],
     ),
@@ -271,125 +320,121 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
 
   // 11. RigidBody2D
   registry.register<RigidBody2D>(
-    ComponentSpec<RigidBody2D>(
-      'RigidBody2D',
-      RigidBody2D.new,
-      [
-        Field.enumValue<RigidBody2D, phys.BodyType>(
-          'bodyType',
-          phys.BodyType.values,
-          (c) => c.bodyType,
-          (c, v) => c.bodyType = v,
-        ),
-        Field.number(
-          'linearVelocityX',
-          (c) => c.linearVelocity.x,
-          (c, v) => c.linearVelocity = Vec2(v, c.linearVelocity.y),
-        ),
-        Field.number(
-          'linearVelocityY',
-          (c) => c.linearVelocity.y,
-          (c, v) => c.linearVelocity = Vec2(c.linearVelocity.x, v),
-        ),
-        Field.number(
-          'angularVelocity',
-          (c) => c.angularVelocity,
-          (c, v) => c.angularVelocity = v,
-        ),
-        Field.number(
-          'linearDamping',
-          (c) => c.linearDamping,
-          (c, v) => c.linearDamping = v,
-        ),
-        Field.number(
-          'angularDamping',
-          (c) => c.angularDamping,
-          (c, v) => c.angularDamping = v,
-        ),
-        Field.number(
-          'gravityScale',
-          (c) => c.gravityScale,
-          (c, v) => c.gravityScale = v,
-        ),
-        Field.boolean(
-          'fixedRotation',
-          (c) => c.fixedRotation,
-          (c, v) => c.fixedRotation = v,
-        ),
-        Field.boolean('bullet', (c) => c.bullet, (c, v) => c.bullet = v),
-      ],
-    ),
+    ComponentSpec<RigidBody2D>('RigidBody2D', RigidBody2D.new, [
+      Field.enumValue<RigidBody2D, phys.BodyType>(
+        'bodyType',
+        phys.BodyType.values,
+        (c) => c.bodyType,
+        (c, v) => c.bodyType = v,
+      ),
+      Field.number(
+        'linearVelocityX',
+        (c) => c.linearVelocity.x,
+        (c, v) => c.linearVelocity = Vec2(v, c.linearVelocity.y),
+      ),
+      Field.number(
+        'linearVelocityY',
+        (c) => c.linearVelocity.y,
+        (c, v) => c.linearVelocity = Vec2(c.linearVelocity.x, v),
+      ),
+      Field.number(
+        'angularVelocity',
+        (c) => c.angularVelocity,
+        (c, v) => c.angularVelocity = v,
+      ),
+      Field.number(
+        'linearDamping',
+        (c) => c.linearDamping,
+        (c, v) => c.linearDamping = v,
+      ),
+      Field.number(
+        'angularDamping',
+        (c) => c.angularDamping,
+        (c, v) => c.angularDamping = v,
+      ),
+      Field.number(
+        'gravityScale',
+        (c) => c.gravityScale,
+        (c, v) => c.gravityScale = v,
+      ),
+      Field.boolean(
+        'fixedRotation',
+        (c) => c.fixedRotation,
+        (c, v) => c.fixedRotation = v,
+      ),
+      Field.boolean('bullet', (c) => c.bullet, (c, v) => c.bullet = v),
+    ]),
   );
 
   // 12. BoxCollider2D
   registry.register<BoxCollider2D>(
-    ComponentSpec<BoxCollider2D>(
-      'BoxCollider2D',
-      BoxCollider2D.new,
-      [
-        Field.number('sizeX', (c) => c.size.x, (c, v) => c.size = Vec2(v, c.size.y)),
-        Field.number('sizeY', (c) => c.size.y, (c, v) => c.size = Vec2(c.size.x, v)),
-        Field.number(
-          'offsetX',
-          (c) => c.offset.x,
-          (c, v) => c.offset = Vec2(v, c.offset.y),
-        ),
-        Field.number(
-          'offsetY',
-          (c) => c.offset.y,
-          (c, v) => c.offset = Vec2(c.offset.x, v),
-        ),
-        Field.number('density', (c) => c.density, (c, v) => c.density = v),
-        Field.number('friction', (c) => c.friction, (c, v) => c.friction = v),
-        Field.number(
-          'restitution',
-          (c) => c.restitution,
-          (c, v) => c.restitution = v,
-        ),
-        Field.boolean('isTrigger', (c) => c.isTrigger, (c, v) => c.isTrigger = v),
-        Field.integer(
-          'categoryBits',
-          (c) => c.categoryBits,
-          (c, v) => c.categoryBits = v,
-        ),
-        Field.integer('maskBits', (c) => c.maskBits, (c, v) => c.maskBits = v),
-      ],
-    ),
+    ComponentSpec<BoxCollider2D>('BoxCollider2D', BoxCollider2D.new, [
+      Field.number(
+        'sizeX',
+        (c) => c.size.x,
+        (c, v) => c.size = Vec2(v, c.size.y),
+      ),
+      Field.number(
+        'sizeY',
+        (c) => c.size.y,
+        (c, v) => c.size = Vec2(c.size.x, v),
+      ),
+      Field.number(
+        'offsetX',
+        (c) => c.offset.x,
+        (c, v) => c.offset = Vec2(v, c.offset.y),
+      ),
+      Field.number(
+        'offsetY',
+        (c) => c.offset.y,
+        (c, v) => c.offset = Vec2(c.offset.x, v),
+      ),
+      Field.number('density', (c) => c.density, (c, v) => c.density = v),
+      Field.number('friction', (c) => c.friction, (c, v) => c.friction = v),
+      Field.number(
+        'restitution',
+        (c) => c.restitution,
+        (c, v) => c.restitution = v,
+      ),
+      Field.boolean('isTrigger', (c) => c.isTrigger, (c, v) => c.isTrigger = v),
+      Field.integer(
+        'categoryBits',
+        (c) => c.categoryBits,
+        (c, v) => c.categoryBits = v,
+      ),
+      Field.integer('maskBits', (c) => c.maskBits, (c, v) => c.maskBits = v),
+    ]),
   );
 
   // 13. CircleCollider2D
   registry.register<CircleCollider2D>(
-    ComponentSpec<CircleCollider2D>(
-      'CircleCollider2D',
-      CircleCollider2D.new,
-      [
-        Field.number('radius', (c) => c.radius, (c, v) => c.radius = v),
-        Field.number(
-          'offsetX',
-          (c) => c.offset.x,
-          (c, v) => c.offset = Vec2(v, c.offset.y),
-        ),
-        Field.number(
-          'offsetY',
-          (c) => c.offset.y,
-          (c, v) => c.offset = Vec2(c.offset.x, v),
-        ),
-        Field.number('density', (c) => c.density, (c, v) => c.density = v),
-        Field.number('friction', (c) => c.friction, (c, v) => c.friction = v),
-        Field.number(
-          'restitution',
-          (c) => c.restitution,
-          (c, v) => c.restitution = v,
-        ),
-        Field.boolean('isTrigger', (c) => c.isTrigger, (c, v) => c.isTrigger = v),
-        Field.integer(
-          'categoryBits',
-          (c) => c.categoryBits,
-          (c, v) => c.categoryBits = v,
-        ),
-        Field.integer('maskBits', (c) => c.maskBits, (c, v) => c.maskBits = v),
-      ],
-    ),
+    ComponentSpec<CircleCollider2D>('CircleCollider2D', CircleCollider2D.new, [
+      Field.number('radius', (c) => c.radius, (c, v) => c.radius = v),
+      Field.number(
+        'offsetX',
+        (c) => c.offset.x,
+        (c, v) => c.offset = Vec2(v, c.offset.y),
+      ),
+      Field.number(
+        'offsetY',
+        (c) => c.offset.y,
+        (c, v) => c.offset = Vec2(c.offset.x, v),
+      ),
+      Field.number('density', (c) => c.density, (c, v) => c.density = v),
+      Field.number('friction', (c) => c.friction, (c, v) => c.friction = v),
+      Field.number(
+        'restitution',
+        (c) => c.restitution,
+        (c, v) => c.restitution = v,
+      ),
+      Field.boolean('isTrigger', (c) => c.isTrigger, (c, v) => c.isTrigger = v),
+      Field.integer(
+        'categoryBits',
+        (c) => c.categoryBits,
+        (c, v) => c.categoryBits = v,
+      ),
+      Field.integer('maskBits', (c) => c.maskBits, (c, v) => c.maskBits = v),
+    ]),
   );
 
   // 14. PolygonCollider2D
@@ -422,7 +467,11 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
           (c) => c.restitution,
           (c, v) => c.restitution = v,
         ),
-        Field.boolean('isTrigger', (c) => c.isTrigger, (c, v) => c.isTrigger = v),
+        Field.boolean(
+          'isTrigger',
+          (c) => c.isTrigger,
+          (c, v) => c.isTrigger = v,
+        ),
         Field.integer(
           'categoryBits',
           (c) => c.categoryBits,
@@ -435,222 +484,206 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
 
   // 15. DistanceJoint2D
   registry.register<DistanceJoint2D>(
-    ComponentSpec<DistanceJoint2D>(
-      'DistanceJoint2D',
-      DistanceJoint2D.new,
-      [
-        Field.number(
-          'anchorX',
-          (c) => c.anchor.x,
-          (c, v) => c.anchor = Vec2(v, c.anchor.y),
-        ),
-        Field.number(
-          'anchorY',
-          (c) => c.anchor.y,
-          (c, v) => c.anchor = Vec2(c.anchor.x, v),
-        ),
-        Field.number(
-          'connectedAnchorX',
-          (c) => c.connectedAnchor.x,
-          (c, v) => c.connectedAnchor = Vec2(v, c.connectedAnchor.y),
-        ),
-        Field.number(
-          'connectedAnchorY',
-          (c) => c.connectedAnchor.y,
-          (c, v) => c.connectedAnchor = Vec2(c.connectedAnchor.x, v),
-        ),
-        Field.number(
-          'frequencyHz',
-          (c) => c.frequencyHz,
-          (c, v) => c.frequencyHz = v,
-        ),
-        Field.number(
-          'dampingRatio',
-          (c) => c.dampingRatio,
-          (c, v) => c.dampingRatio = v,
-        ),
-        Field.boolean(
-          'collideConnected',
-          (c) => c.collideConnected,
-          (c, v) => c.collideConnected = v,
-        ),
-      ],
-    ),
+    ComponentSpec<DistanceJoint2D>('DistanceJoint2D', DistanceJoint2D.new, [
+      Field.number(
+        'anchorX',
+        (c) => c.anchor.x,
+        (c, v) => c.anchor = Vec2(v, c.anchor.y),
+      ),
+      Field.number(
+        'anchorY',
+        (c) => c.anchor.y,
+        (c, v) => c.anchor = Vec2(c.anchor.x, v),
+      ),
+      Field.number(
+        'connectedAnchorX',
+        (c) => c.connectedAnchor.x,
+        (c, v) => c.connectedAnchor = Vec2(v, c.connectedAnchor.y),
+      ),
+      Field.number(
+        'connectedAnchorY',
+        (c) => c.connectedAnchor.y,
+        (c, v) => c.connectedAnchor = Vec2(c.connectedAnchor.x, v),
+      ),
+      Field.number(
+        'frequencyHz',
+        (c) => c.frequencyHz,
+        (c, v) => c.frequencyHz = v,
+      ),
+      Field.number(
+        'dampingRatio',
+        (c) => c.dampingRatio,
+        (c, v) => c.dampingRatio = v,
+      ),
+      Field.boolean(
+        'collideConnected',
+        (c) => c.collideConnected,
+        (c, v) => c.collideConnected = v,
+      ),
+    ]),
   );
 
   // 16. RevoluteJoint2D
   registry.register<RevoluteJoint2D>(
-    ComponentSpec<RevoluteJoint2D>(
-      'RevoluteJoint2D',
-      RevoluteJoint2D.new,
-      [
-        Field.number(
-          'anchorX',
-          (c) => c.anchor.x,
-          (c, v) => c.anchor = Vec2(v, c.anchor.y),
-        ),
-        Field.number(
-          'anchorY',
-          (c) => c.anchor.y,
-          (c, v) => c.anchor = Vec2(c.anchor.x, v),
-        ),
-        Field.number(
-          'connectedAnchorX',
-          (c) => c.connectedAnchor.x,
-          (c, v) => c.connectedAnchor = Vec2(v, c.connectedAnchor.y),
-        ),
-        Field.number(
-          'connectedAnchorY',
-          (c) => c.connectedAnchor.y,
-          (c, v) => c.connectedAnchor = Vec2(c.connectedAnchor.x, v),
-        ),
-        Field.boolean(
-          'enableMotor',
-          (c) => c.enableMotor,
-          (c, v) => c.enableMotor = v,
-        ),
-        Field.number(
-          'motorSpeed',
-          (c) => c.motorSpeed,
-          (c, v) => c.motorSpeed = v,
-        ),
-        Field.number(
-          'maxMotorTorque',
-          (c) => c.maxMotorTorque,
-          (c, v) => c.maxMotorTorque = v,
-        ),
-        Field.boolean(
-          'enableLimit',
-          (c) => c.enableLimit,
-          (c, v) => c.enableLimit = v,
-        ),
-        Field.number(
-          'lowerAngle',
-          (c) => c.lowerAngle,
-          (c, v) => c.lowerAngle = v,
-        ),
-        Field.number(
-          'upperAngle',
-          (c) => c.upperAngle,
-          (c, v) => c.upperAngle = v,
-        ),
-        Field.boolean(
-          'collideConnected',
-          (c) => c.collideConnected,
-          (c, v) => c.collideConnected = v,
-        ),
-      ],
-    ),
+    ComponentSpec<RevoluteJoint2D>('RevoluteJoint2D', RevoluteJoint2D.new, [
+      Field.number(
+        'anchorX',
+        (c) => c.anchor.x,
+        (c, v) => c.anchor = Vec2(v, c.anchor.y),
+      ),
+      Field.number(
+        'anchorY',
+        (c) => c.anchor.y,
+        (c, v) => c.anchor = Vec2(c.anchor.x, v),
+      ),
+      Field.number(
+        'connectedAnchorX',
+        (c) => c.connectedAnchor.x,
+        (c, v) => c.connectedAnchor = Vec2(v, c.connectedAnchor.y),
+      ),
+      Field.number(
+        'connectedAnchorY',
+        (c) => c.connectedAnchor.y,
+        (c, v) => c.connectedAnchor = Vec2(c.connectedAnchor.x, v),
+      ),
+      Field.boolean(
+        'enableMotor',
+        (c) => c.enableMotor,
+        (c, v) => c.enableMotor = v,
+      ),
+      Field.number(
+        'motorSpeed',
+        (c) => c.motorSpeed,
+        (c, v) => c.motorSpeed = v,
+      ),
+      Field.number(
+        'maxMotorTorque',
+        (c) => c.maxMotorTorque,
+        (c, v) => c.maxMotorTorque = v,
+      ),
+      Field.boolean(
+        'enableLimit',
+        (c) => c.enableLimit,
+        (c, v) => c.enableLimit = v,
+      ),
+      Field.number(
+        'lowerAngle',
+        (c) => c.lowerAngle,
+        (c, v) => c.lowerAngle = v,
+      ),
+      Field.number(
+        'upperAngle',
+        (c) => c.upperAngle,
+        (c, v) => c.upperAngle = v,
+      ),
+      Field.boolean(
+        'collideConnected',
+        (c) => c.collideConnected,
+        (c, v) => c.collideConnected = v,
+      ),
+    ]),
   );
 
   // 17. PrismaticJoint2D
   registry.register<PrismaticJoint2D>(
-    ComponentSpec<PrismaticJoint2D>(
-      'PrismaticJoint2D',
-      PrismaticJoint2D.new,
-      [
-        Field.number(
-          'anchorX',
-          (c) => c.anchor.x,
-          (c, v) => c.anchor = Vec2(v, c.anchor.y),
-        ),
-        Field.number(
-          'anchorY',
-          (c) => c.anchor.y,
-          (c, v) => c.anchor = Vec2(c.anchor.x, v),
-        ),
-        Field.number(
-          'connectedAnchorX',
-          (c) => c.connectedAnchor.x,
-          (c, v) => c.connectedAnchor = Vec2(v, c.connectedAnchor.y),
-        ),
-        Field.number(
-          'connectedAnchorY',
-          (c) => c.connectedAnchor.y,
-          (c, v) => c.connectedAnchor = Vec2(c.connectedAnchor.x, v),
-        ),
-        Field.number(
-          'axisX',
-          (c) => c.axis.x,
-          (c, v) => c.axis = Vec2(v, c.axis.y),
-        ),
-        Field.number(
-          'axisY',
-          (c) => c.axis.y,
-          (c, v) => c.axis = Vec2(c.axis.x, v),
-        ),
-        Field.boolean(
-          'enableMotor',
-          (c) => c.enableMotor,
-          (c, v) => c.enableMotor = v,
-        ),
-        Field.number(
-          'motorSpeed',
-          (c) => c.motorSpeed,
-          (c, v) => c.motorSpeed = v,
-        ),
-        Field.number(
-          'maxMotorForce',
-          (c) => c.maxMotorForce,
-          (c, v) => c.maxMotorForce = v,
-        ),
-        Field.boolean(
-          'enableLimit',
-          (c) => c.enableLimit,
-          (c, v) => c.enableLimit = v,
-        ),
-        Field.number(
-          'lowerTranslation',
-          (c) => c.lowerTranslation,
-          (c, v) => c.lowerTranslation = v,
-        ),
-        Field.number(
-          'upperTranslation',
-          (c) => c.upperTranslation,
-          (c, v) => c.upperTranslation = v,
-        ),
-        Field.boolean(
-          'collideConnected',
-          (c) => c.collideConnected,
-          (c, v) => c.collideConnected = v,
-        ),
-      ],
-    ),
+    ComponentSpec<PrismaticJoint2D>('PrismaticJoint2D', PrismaticJoint2D.new, [
+      Field.number(
+        'anchorX',
+        (c) => c.anchor.x,
+        (c, v) => c.anchor = Vec2(v, c.anchor.y),
+      ),
+      Field.number(
+        'anchorY',
+        (c) => c.anchor.y,
+        (c, v) => c.anchor = Vec2(c.anchor.x, v),
+      ),
+      Field.number(
+        'connectedAnchorX',
+        (c) => c.connectedAnchor.x,
+        (c, v) => c.connectedAnchor = Vec2(v, c.connectedAnchor.y),
+      ),
+      Field.number(
+        'connectedAnchorY',
+        (c) => c.connectedAnchor.y,
+        (c, v) => c.connectedAnchor = Vec2(c.connectedAnchor.x, v),
+      ),
+      Field.number(
+        'axisX',
+        (c) => c.axis.x,
+        (c, v) => c.axis = Vec2(v, c.axis.y),
+      ),
+      Field.number(
+        'axisY',
+        (c) => c.axis.y,
+        (c, v) => c.axis = Vec2(c.axis.x, v),
+      ),
+      Field.boolean(
+        'enableMotor',
+        (c) => c.enableMotor,
+        (c, v) => c.enableMotor = v,
+      ),
+      Field.number(
+        'motorSpeed',
+        (c) => c.motorSpeed,
+        (c, v) => c.motorSpeed = v,
+      ),
+      Field.number(
+        'maxMotorForce',
+        (c) => c.maxMotorForce,
+        (c, v) => c.maxMotorForce = v,
+      ),
+      Field.boolean(
+        'enableLimit',
+        (c) => c.enableLimit,
+        (c, v) => c.enableLimit = v,
+      ),
+      Field.number(
+        'lowerTranslation',
+        (c) => c.lowerTranslation,
+        (c, v) => c.lowerTranslation = v,
+      ),
+      Field.number(
+        'upperTranslation',
+        (c) => c.upperTranslation,
+        (c, v) => c.upperTranslation = v,
+      ),
+      Field.boolean(
+        'collideConnected',
+        (c) => c.collideConnected,
+        (c, v) => c.collideConnected = v,
+      ),
+    ]),
   );
 
   // 18. Light2DComponent
   registry.register<Light2DComponent>(
-    ComponentSpec<Light2DComponent>(
-      'Light2DComponent',
-      Light2DComponent.new,
-      [
-        Field.enumValue<Light2DComponent, vlight.Light2DType>(
-          'lightType',
-          vlight.Light2DType.values,
-          (c) => c.type,
-          (c, v) => c.type = v,
-        ),
-        Field.color('color', (c) => c.color, (c, v) => c.color = v),
-        Field.number('intensity', (c) => c.intensity, (c, v) => c.intensity = v),
-        Field.number('radius', (c) => c.radius, (c, v) => c.radius = v),
-        Field.number(
-          'innerRadius',
-          (c) => c.innerRadius,
-          (c, v) => c.innerRadius = v,
-        ),
-        Field.number('spotAngle', (c) => c.spotAngle, (c, v) => c.spotAngle = v),
-        Field.number(
-          'innerSpotAngle',
-          (c) => c.innerSpotAngle,
-          (c, v) => c.innerSpotAngle = v,
-        ),
-        Field.boolean(
-          'castsShadows',
-          (c) => c.castsShadows,
-          (c, v) => c.castsShadows = v,
-        ),
-      ],
-    ),
+    ComponentSpec<Light2DComponent>('Light2DComponent', Light2DComponent.new, [
+      Field.enumValue<Light2DComponent, vlight.Light2DType>(
+        'lightType',
+        vlight.Light2DType.values,
+        (c) => c.type,
+        (c, v) => c.type = v,
+      ),
+      Field.color('color', (c) => c.color, (c, v) => c.color = v),
+      Field.number('intensity', (c) => c.intensity, (c, v) => c.intensity = v),
+      Field.number('radius', (c) => c.radius, (c, v) => c.radius = v),
+      Field.number(
+        'innerRadius',
+        (c) => c.innerRadius,
+        (c, v) => c.innerRadius = v,
+      ),
+      Field.number('spotAngle', (c) => c.spotAngle, (c, v) => c.spotAngle = v),
+      Field.number(
+        'innerSpotAngle',
+        (c) => c.innerSpotAngle,
+        (c, v) => c.innerSpotAngle = v,
+      ),
+      Field.boolean(
+        'castsShadows',
+        (c) => c.castsShadows,
+        (c, v) => c.castsShadows = v,
+      ),
+    ]),
   );
 
   // 19. ShadowCaster2DComponent
@@ -679,29 +712,25 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
 
   // 21. NavAgent2D
   registry.register<NavAgent2D>(
-    ComponentSpec<NavAgent2D>(
-      'NavAgent2D',
-      NavAgent2D.new,
-      [
-        Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
-        Field.number('speed', (c) => c.speed, (c, v) => c.speed = v),
-        Field.number(
-          'stoppingDistance',
-          (c) => c.stoppingDistance,
-          (c, v) => c.stoppingDistance = v,
-        ),
-        Field.number(
-          'acceleration',
-          (c) => c.acceleration,
-          (c, v) => c.acceleration = v,
-        ),
-        Field.boolean(
-          'rotateTowardsTarget',
-          (c) => c.rotateTowardsTarget,
-          (c, v) => c.rotateTowardsTarget = v,
-        ),
-      ],
-    ),
+    ComponentSpec<NavAgent2D>('NavAgent2D', NavAgent2D.new, [
+      Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
+      Field.number('speed', (c) => c.speed, (c, v) => c.speed = v),
+      Field.number(
+        'stoppingDistance',
+        (c) => c.stoppingDistance,
+        (c, v) => c.stoppingDistance = v,
+      ),
+      Field.number(
+        'acceleration',
+        (c) => c.acceleration,
+        (c, v) => c.acceleration = v,
+      ),
+      Field.boolean(
+        'rotateTowardsTarget',
+        (c) => c.rotateTowardsTarget,
+        (c, v) => c.rotateTowardsTarget = v,
+      ),
+    ]),
   );
 
   // 22. FlowField2DComponent
@@ -715,25 +744,21 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
 
   // 23. AudioReverbZone
   registry.register<AudioReverbZone>(
-    ComponentSpec<AudioReverbZone>(
-      'AudioReverbZone',
-      AudioReverbZone.new,
-      [
-        Field.number(
-          'minDistance',
-          (c) => c.minDistance,
-          (c, v) => c.minDistance = v,
-        ),
-        Field.number(
-          'maxDistance',
-          (c) => c.maxDistance,
-          (c, v) => c.maxDistance = v,
-        ),
-        Field.number('roomSize', (c) => c.roomSize, (c, v) => c.roomSize = v),
-        Field.number('damp', (c) => c.damp, (c, v) => c.damp = v),
-        Field.number('wet', (c) => c.wet, (c, v) => c.wet = v),
-      ],
-    ),
+    ComponentSpec<AudioReverbZone>('AudioReverbZone', AudioReverbZone.new, [
+      Field.number(
+        'minDistance',
+        (c) => c.minDistance,
+        (c, v) => c.minDistance = v,
+      ),
+      Field.number(
+        'maxDistance',
+        (c) => c.maxDistance,
+        (c, v) => c.maxDistance = v,
+      ),
+      Field.number('roomSize', (c) => c.roomSize, (c, v) => c.roomSize = v),
+      Field.number('damp', (c) => c.damp, (c, v) => c.damp = v),
+      Field.number('wet', (c) => c.wet, (c, v) => c.wet = v),
+    ]),
   );
 
   // 24. AudioLowPassFilterComponent
@@ -775,9 +800,7 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
     ComponentSpec<AiFsmComponent<dynamic>>(
       'AiFsmComponent',
       AiFsmComponent<dynamic>.new,
-      [
-        Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
-      ],
+      [Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v)],
     ),
   );
 
@@ -789,7 +812,11 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
       [
         Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
         Field.number('maxHp', (c) => c.maxHp, (c, v) => c.maxHp = v),
-        Field.number('currentHp', (c) => c.currentHp, (c, v) => c.currentHp = v),
+        Field.number(
+          'currentHp',
+          (c) => c.currentHp,
+          (c, v) => c.currentHp = v,
+        ),
         Field.number(
           'armor',
           (c) => c.defense.armor,
@@ -890,7 +917,11 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
       () => FlowGraphComponent(flow.FlowGraph()),
       [
         Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
-        Field.boolean('autoStart', (c) => c.autoStart, (c, v) => c.autoStart = v),
+        Field.boolean(
+          'autoStart',
+          (c) => c.autoStart,
+          (c, v) => c.autoStart = v,
+        ),
         Field.boolean(
           'autoUpdate',
           (c) => c.autoUpdate,
@@ -923,24 +954,20 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
 
   // 35. AimIkComponent
   registry.register<AimIkComponent>(
-    ComponentSpec<AimIkComponent>(
-      'AimIkComponent',
-      AimIkComponent.new,
-      [
-        Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
-        Field.vec3(
-          'localAimAxis',
-          (c) => c.localAimAxis,
-          (c, v) => c.localAimAxis = v,
-        ),
-        Field.number(
-          'maxAngleRadians',
-          (c) => c.maxAngleRadians,
-          (c, v) => c.maxAngleRadians = v,
-        ),
-        Field.number('weight', (c) => c.weight, (c, v) => c.weight = v),
-      ],
-    ),
+    ComponentSpec<AimIkComponent>('AimIkComponent', AimIkComponent.new, [
+      Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
+      Field.vec3(
+        'localAimAxis',
+        (c) => c.localAimAxis,
+        (c, v) => c.localAimAxis = v,
+      ),
+      Field.number(
+        'maxAngleRadians',
+        (c) => c.maxAngleRadians,
+        (c, v) => c.maxAngleRadians = v,
+      ),
+      Field.number('weight', (c) => c.weight, (c, v) => c.weight = v),
+    ]),
   );
 
   // 36. BlendTreeComponent
@@ -948,9 +975,7 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
     ComponentSpec<BlendTreeComponent>(
       'BlendTreeComponent',
       BlendTreeComponent.new,
-      [
-        Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
-      ],
+      [Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v)],
     ),
   );
 
@@ -959,9 +984,7 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
     ComponentSpec<InputManagerComponent>(
       'InputManagerComponent',
       InputManagerComponent.new,
-      [
-        Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v),
-      ],
+      [Field.boolean('enabled', (c) => c.enabled, (c, v) => c.enabled = v)],
     ),
   );
 
@@ -1012,7 +1035,11 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
       'PoissonScatterComponent',
       PoissonScatterComponent.new,
       [
-        Field.number('areaWidth', (c) => c.areaWidth, (c, v) => c.areaWidth = v),
+        Field.number(
+          'areaWidth',
+          (c) => c.areaWidth,
+          (c, v) => c.areaWidth = v,
+        ),
         Field.number(
           'areaHeight',
           (c) => c.areaHeight,
@@ -1140,31 +1167,27 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
 
   // 48. NetworkTransform
   registry.register<NetworkTransform>(
-    ComponentSpec<NetworkTransform>(
-      'NetworkTransform',
-      NetworkTransform.new,
-      [
-        Field.number(
-          'interpolationDelaySeconds',
-          (c) => c.interpolationDelaySeconds,
-          (c, v) => c.interpolationDelaySeconds = v,
-        ),
-        Field.boolean(
-          'synchronizePosition',
-          (c) => c.synchronizePosition,
-          (c, v) => c.synchronizePosition = v,
-        ),
-        Field.boolean(
-          'synchronizeRotation',
-          (c) => c.synchronizeRotation,
-          (c, v) => c.synchronizeRotation = v,
-        ),
-        Field.boolean(
-          'enablePrediction',
-          (c) => c.enablePrediction,
-          (c, v) => c.enablePrediction = v,
-        ),
-      ],
-    ),
+    ComponentSpec<NetworkTransform>('NetworkTransform', NetworkTransform.new, [
+      Field.number(
+        'interpolationDelaySeconds',
+        (c) => c.interpolationDelaySeconds,
+        (c, v) => c.interpolationDelaySeconds = v,
+      ),
+      Field.boolean(
+        'synchronizePosition',
+        (c) => c.synchronizePosition,
+        (c, v) => c.synchronizePosition = v,
+      ),
+      Field.boolean(
+        'synchronizeRotation',
+        (c) => c.synchronizeRotation,
+        (c, v) => c.synchronizeRotation = v,
+      ),
+      Field.boolean(
+        'enablePrediction',
+        (c) => c.enablePrediction,
+        (c, v) => c.enablePrediction = v,
+      ),
+    ]),
   );
 }

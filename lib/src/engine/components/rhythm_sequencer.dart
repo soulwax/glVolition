@@ -45,8 +45,16 @@ final class RhythmSequencerComponent extends Behaviour {
     RhythmSequencerComponent.new,
     [
       Field.number('bpm', (r) => r.bpm, (r, v) => r.setBpm(v)),
-      Field.integer('beatsPerBar', (r) => r.beatsPerBar, (r, v) => r.beatsPerBar = v),
-      Field.integer('subdivision', (r) => r.subdivision, (r, v) => r.subdivision = v),
+      Field.integer(
+        'beatsPerBar',
+        (r) => r.beatsPerBar,
+        (r, v) => r.beatsPerBar = v,
+      ),
+      Field.integer(
+        'subdivision',
+        (r) => r.subdivision,
+        (r, v) => r.subdivision = v,
+      ),
       Field.number(
         'audioOffsetSeconds',
         (r) => r.audioOffsetSeconds,
@@ -157,10 +165,7 @@ final class RhythmSequencerComponent extends Behaviour {
   }
 
   rhythm.NoteJudgment? releaseLaneHold(int lane) {
-    final judgment = tracker.releaseHold(
-      lane: lane,
-      songSeconds: songSeconds,
-    );
+    final judgment = tracker.releaseHold(lane: lane, songSeconds: songSeconds);
     if (judgment != null) {
       onJudgment?.call(judgment);
     }
@@ -261,7 +266,8 @@ final class RhythmJudgeUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -344,7 +350,13 @@ final class RhythmJudgeUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final playRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'rhy_play', seq.paused ? 'Play' : 'Pause', playRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'rhy_play',
+      seq.paused ? 'Play' : 'Pause',
+      playRect,
+    )) {
       seq.paused = !seq.paused;
     }
 

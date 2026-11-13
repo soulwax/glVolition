@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository (with recursive submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install root dependencies
+        run: dart pub get
+
+      - name: Install vendor/pixeldart dependencies
+        working-directory: vendor/pixeldart
+        run: dart pub get
+
+      - name: Install vendor/voxnet dependencies
+        working-directory: vendor/voxnet
+        run: dart pub get
+
+      - name: Check formatting (root directories only, leaving vendor submodules untouched)
+        run: dart format --output=none --set-exit-if-changed bin lib test tool example
+
+      - name: Run unified verification suite
+        run: dart run tool/verify_all.dart

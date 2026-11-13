@@ -6,11 +6,7 @@ final class LookAtConstraint extends Behaviour {
   Vec3 upAxis;
   double weight;
 
-  LookAtConstraint({
-    this.target,
-    this.upAxis = kUp,
-    this.weight = 1.0,
-  });
+  LookAtConstraint({this.target, this.upAxis = kUp, this.weight = 1.0});
 
   static final spec = ComponentSpec<LookAtConstraint>(
     'LookAtConstraint',

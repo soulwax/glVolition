@@ -1,10 +1,151 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
+import 'dart:io';
 import 'dart:typed_data';
 
 import '../../gl_volition.dart';
+import 'native_bindings.dart';
 import 'native_host.dart';
+
+typedef _CallocNative = ffi.Pointer<ffi.Uint8> Function(ffi.Size, ffi.Size);
+typedef _CallocDart = ffi.Pointer<ffi.Uint8> Function(int, int);
+typedef _FreeNative = ffi.Void Function(ffi.Pointer<ffi.Void>);
+typedef _FreeDart = void Function(ffi.Pointer<ffi.Void>);
+
+/// Minimal zero-dependency native C heap helper (`calloc`/`free` via CRT) so
+/// native FFI modules avoid adding external packages while staying leak-free.
+final class NativeCAllocator {
+  final _CallocDart? _calloc;
+  final _FreeDart? _free;
+
+  NativeCAllocator._(this._calloc, this._free);
+
+  static final NativeCAllocator instance = _openDefault();
+
+  /// Whether native CRT `calloc` and `free` symbols are available.
+  bool get isAvailable => _calloc != null && _free != null;
+
+  static NativeCAllocator _openDefault() {
+    final libs = <ffi.DynamicLibrary>[];
+    if (Platform.isWindows) {
+      for (final name in const ['ucrtbase.dll', 'msvcrt.dll']) {
+        try {
+          libs.add(ffi.DynamicLibrary.open(name));
+        } on Object {
+          // Probe next CRT DLL.
+        }
+      }
+    } else {
+      try {
+        libs.add(ffi.DynamicLibrary.process());
+      } on Object {
+        // Ignore if process symbol lookup is unavailable.
+      }
+    }
+
+    for (final lib in libs) {
+      try {
+        if (lib.providesSymbol('calloc') && lib.providesSymbol('free')) {
+          final callocFn = lib.lookupFunction<_CallocNative, _CallocDart>(
+            'calloc',
+          );
+          final freeFn = lib.lookupFunction<_FreeNative, _FreeDart>('free');
+          return NativeCAllocator._(callocFn, freeFn);
+        }
+      } on Object {
+        // Probe next CRT candidate.
+      }
+    }
+    return NativeCAllocator._(null, null);
+  }
+
+  /// Allocates [byteCount] zero-initialized native bytes (minimum 1 byte).
+  ffi.Pointer<ffi.Uint8> allocateBytes(int byteCount) {
+    final callocFn = _calloc;
+    if (callocFn == null) {
+      throw StateError('Native C calloc is unavailable on this host');
+    }
+    final count = byteCount <= 0 ? 1 : byteCount;
+    final ptr = callocFn(count, 1);
+    if (ptr == ffi.nullptr) {
+      throw StateError('Native calloc($count) returned nullptr');
+    }
+    return ptr;
+  }
+
+  /// Allocates a NUL-terminated UTF-8 C string in native memory.
+  ffi.Pointer<ffi.Uint8> allocUtf8(String value) {
+    final encoded = utf8.encode(value);
+    final ptr = allocateBytes(encoded.length + 1);
+    final view = ptr.asTypedList(encoded.length + 1);
+    view.setRange(0, encoded.length, encoded);
+    view[encoded.length] = 0;
+    return ptr;
+  }
+
+  /// Allocates a temporary NUL-terminated UTF-8 string, runs [action], and
+  /// always frees the native buffer in a `finally` block.
+  R withUtf8<R>(String value, R Function(ffi.Pointer<ffi.Uint8> ptr) action) {
+    final ptr = allocUtf8(value);
+    try {
+      return action(ptr);
+    } finally {
+      free(ptr);
+    }
+  }
+
+  /// Reads a NUL-terminated UTF-8 C string from [ptr].
+  String readCString(ffi.Pointer<ffi.Uint8> ptr, {int maxBytes = 16384}) {
+    if (ptr == ffi.nullptr) return '';
+    final bytes = <int>[];
+    for (var i = 0; i < maxBytes; i++) {
+      final b = (ptr + i).value;
+      if (b == 0) break;
+      bytes.add(b);
+    }
+    return utf8.decode(bytes, allowMalformed: true);
+  }
+
+  /// Releases a pointer previously allocated by [allocateBytes] or [allocUtf8].
+  void free(ffi.Pointer<ffi.NativeType> ptr) {
+    if (ptr == ffi.nullptr) return;
+    _free?.call(ptr.cast<ffi.Void>());
+  }
+}
+
+/// Probes shared-library candidates safely, including executable-adjacent files.
+({ffi.DynamicLibrary? library, String? name, String? error})
+openDynamicLibraryCandidates(List<String> candidates) {
+  final expanded = <String>[];
+  final exeDir = File(Platform.resolvedExecutable).parent.path;
+  final sep = Platform.pathSeparator;
+  for (final candidate in candidates) {
+    if (candidate.isEmpty) continue;
+    expanded.add(candidate);
+    if (!candidate.contains('/') && !candidate.contains('\\')) {
+      expanded.add('$exeDir$sep$candidate');
+    }
+  }
+
+  Object? lastErr;
+  for (final candidate in expanded) {
+    try {
+      return (
+        library: ffi.DynamicLibrary.open(candidate),
+        name: candidate,
+        error: null,
+      );
+    } on Object catch (e) {
+      lastErr = e;
+    }
+  }
+  return (
+    library: null,
+    name: null,
+    error: lastErr?.toString() ?? 'No candidate library loaded',
+  );
+}
 
 /// Immutable record of a single low-level GL command forwarded from
 /// [GlesDevice] through [NativeGlTransport].
@@ -49,14 +190,17 @@ abstract interface class NativeGlProcLoader {
 /// Probes [candidateLibraries] in order and wraps every `DynamicLibrary.open`
 /// call safely so environments without native GL/SDL3 shared libraries report
 /// [isAvailable] as `false` instead of throwing.
-final class DynamicLibraryGlLoader implements NativeGlProcLoader {
+final class DynamicLibraryGlLoader
+    implements NativeGlProcLoader, GlProcBindings {
   /// Default shared-library candidates probed for desktop GLES3 / SDL3 hosts.
   static const List<String> defaultCandidateLibraries = <String>[
     'libGLESv2.dll',
     'libGLESv2.so.2',
+    'libGLESv2.dylib',
     'libEGL.so.1',
     'SDL3.dll',
     'libSDL3.so.0',
+    'libSDL3.dylib',
   ];
 
   /// Ordered list of shared-library names probed during construction.
@@ -64,29 +208,30 @@ final class DynamicLibraryGlLoader implements NativeGlProcLoader {
 
   ffi.DynamicLibrary? _library;
   String? _libraryName;
+  String? _loadError;
 
   /// Probes [candidateLibraries] until one opens cleanly.
   DynamicLibraryGlLoader({
     List<String> candidateLibraries = defaultCandidateLibraries,
   }) : candidateLibraries = List<String>.unmodifiable(candidateLibraries) {
-    for (final candidate in this.candidateLibraries) {
-      try {
-        final opened = ffi.DynamicLibrary.open(candidate);
-        _library = opened;
-        _libraryName = candidate;
-        break;
-      } on Object {
-        // Shared library unavailable on this host; try the next candidate.
-      }
-    }
+    final result = openDynamicLibraryCandidates(this.candidateLibraries);
+    _library = result.library;
+    _libraryName = result.name;
+    _loadError = result.error;
   }
 
   /// The opened native library, or `null` if none of [candidateLibraries]
   /// could be loaded.
   ffi.DynamicLibrary? get library => _library;
 
+  /// Diagnostic error message from the last failed library load attempt.
+  String? get loadError => _loadError;
+
   @override
   bool get isAvailable => _library != null;
+
+  @override
+  bool get isLoaded => isAvailable;
 
   @override
   String? get libraryName => _libraryName;
@@ -104,13 +249,27 @@ final class DynamicLibraryGlLoader implements NativeGlProcLoader {
 
   @override
   bool hasSymbol(String name) => providesSymbol(name);
+
+  @override
+  int lookupAddress(String name) {
+    final lib = _library;
+    if (lib == null || !providesSymbol(name)) return 0;
+    try {
+      return lib.lookup<ffi.NativeFunction<ffi.Void Function()>>(name).address;
+    } on Object {
+      return 0;
+    }
+  }
 }
 
-/// Software/mock [NativeGlProcLoader] for deterministic VM unit tests without
-/// native shared libraries installed.
-final class StubGlProcLoader implements NativeGlProcLoader {
+/// Software/mock [NativeGlProcLoader] and [GlProcBindings] for deterministic VM
+/// unit tests without native shared libraries installed.
+final class StubGlProcLoader implements NativeGlProcLoader, GlProcBindings {
   /// Set of GL entrypoint names advertised as supported by this stub.
   final Set<String> supportedSymbols;
+
+  /// Optional explicit fake native pointer addresses keyed by symbol name.
+  final Map<String, int> symbolAddresses;
 
   @override
   final String? libraryName;
@@ -119,14 +278,28 @@ final class StubGlProcLoader implements NativeGlProcLoader {
   /// resolving symbols against [supportedSymbols].
   StubGlProcLoader({
     Set<String> supportedSymbols = const <String>{},
+    Map<String, int> symbolAddresses = const <String, int>{},
     this.libraryName = 'stub-gles3',
-  }) : supportedSymbols = Set<String>.unmodifiable(supportedSymbols);
+  }) : supportedSymbols = Set<String>.unmodifiable(supportedSymbols),
+       symbolAddresses = Map<String, int>.unmodifiable(symbolAddresses);
 
   @override
   bool get isAvailable => true;
 
   @override
-  bool hasSymbol(String name) => supportedSymbols.contains(name);
+  bool get isLoaded => true;
+
+  @override
+  bool hasSymbol(String name) =>
+      supportedSymbols.contains(name) || symbolAddresses.containsKey(name);
+
+  @override
+  int lookupAddress(String name) {
+    final explicit = symbolAddresses[name];
+    if (explicit != null) return explicit;
+    if (!supportedSymbols.contains(name)) return 0;
+    return 0x1000 + (name.hashCode.abs() & 0xFFFF);
+  }
 }
 
 /// Native FFI command transport that receives [GlesDispatchHook] calls from

@@ -34,8 +34,8 @@ final class HexGridComponent extends Component {
     double hexSize = 1.0,
     this.useXZPlane = true,
     hex.HexMap<HexCellData>? map,
-  })  : layout = hex.HexLayout(orientation: orientation, size: hexSize),
-        map = map ?? hex.HexMap<HexCellData>();
+  }) : layout = hex.HexLayout(orientation: orientation, size: hexSize),
+       map = map ?? hex.HexMap<HexCellData>();
 
   factory HexGridComponent.radial({
     int radius = 4,
@@ -86,29 +86,31 @@ final class HexGridComponent extends Component {
     hex.HexCoord origin,
     double budget, {
     bool Function(hex.HexCoord coord)? stopsMovement,
-  }) =>
-      hex.HexPathfinder.reachable(
-        origin,
-        budget: budget,
-        isPassable: (c) => map[c]?.passable ?? false,
-        moveCost: (_, to) => map[to]?.moveCost ?? 1.0,
-        stopsMovement: stopsMovement,
-      );
+  }) => hex.HexPathfinder.reachable(
+    origin,
+    budget: budget,
+    isPassable: (c) => map[c]?.passable ?? false,
+    moveCost: (_, to) => map[to]?.moveCost ?? 1.0,
+    stopsMovement: stopsMovement,
+  );
 
-  Set<hex.HexCoord> computeVisible(hex.HexCoord origin, {required int radius}) =>
-      hex.HexFov.computeVisible(
-        origin,
-        radius: radius,
-        blocksSight: (c) => map[c]?.blocksSight ?? true,
-        inBounds: (c) => map.contains(c),
-      );
+  Set<hex.HexCoord> computeVisible(
+    hex.HexCoord origin, {
+    required int radius,
+  }) => hex.HexFov.computeVisible(
+    origin,
+    radius: radius,
+    blocksSight: (c) => map[c]?.blocksSight ?? true,
+    inBounds: (c) => map.contains(c),
+  );
 
   /// Generates terrain biomes across all cells currently present in [map] using Wave-Function Collapse.
   bool generateWfcBiomes({
     required hex.WfcRuleSet<String> rules,
     int? seed,
     Map<hex.HexCoord, String>? preplaced,
-    Map<String, ({double moveCost, bool passable, bool blocksSight})>? terrainCatalog,
+    Map<String, ({double moveCost, bool passable, bool blocksSight})>?
+    terrainCatalog,
   }) {
     final solved = hex.WfcHexGrid.solve<String>(
       coords: map.coords,
@@ -180,7 +182,8 @@ final class HexGridUI {
     }
 
     final originX = x + width * 0.5;
-    final originY = y + ui.style.titleBarHeight + (height - ui.style.titleBarHeight) * 0.5;
+    final originY =
+        y + ui.style.titleBarHeight + (height - ui.style.titleBarHeight) * 0.5;
     final uiLayout = hex.HexLayout(
       orientation: grid.layout.orientation,
       size: uiScale,
@@ -189,7 +192,12 @@ final class HexGridUI {
     );
 
     final dl = ui.drawList;
-    final bodyRect = VoxRect(x, y + ui.style.titleBarHeight, width, height - ui.style.titleBarHeight);
+    final bodyRect = VoxRect(
+      x,
+      y + ui.style.titleBarHeight,
+      width,
+      height - ui.style.titleBarHeight,
+    );
     hex.HexCoord? hovered;
     if (bodyRect.contains(ui.input.mouseX, ui.input.mouseY)) {
       final candidate = uiLayout.fromPixel(ui.input.mouseX, ui.input.mouseY);
@@ -225,16 +233,33 @@ final class HexGridUI {
       }
 
       if (inReach) {
-        dl.addCircleFilled(center.x, center.y, uiScale * 0.4, const VoxColor(60, 190, 230, 90));
+        dl.addCircleFilled(
+          center.x,
+          center.y,
+          uiScale * 0.4,
+          const VoxColor(60, 190, 230, 90),
+        );
       }
       if (!cell.passable) {
-        dl.addCircleFilled(center.x, center.y, uiScale * 0.35, const VoxColor(170, 55, 55, 140));
+        dl.addCircleFilled(
+          center.x,
+          center.y,
+          uiScale * 0.35,
+          const VoxColor(170, 55, 55, 140),
+        );
       }
 
       for (int i = 0; i < 6; i++) {
         final p1 = corners[i];
         final p2 = corners[(i + 1) % 6];
-        dl.addLine(p1.x, p1.y, p2.x, p2.y, outlineCol, thickness: isSelected ? 2.2 : 1.2);
+        dl.addLine(
+          p1.x,
+          p1.y,
+          p2.x,
+          p2.y,
+          outlineCol,
+          thickness: isSelected ? 2.2 : 1.2,
+        );
       }
     }
 

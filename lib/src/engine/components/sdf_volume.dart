@@ -45,14 +45,26 @@ final class SdfVolumeComponent extends Behaviour {
       Field.integer('nz', (s) => s.nz, (s, v) => s.nz = v),
       Field.number('voxelSize', (s) => s.voxelSize, (s, v) => s.voxelSize = v),
       Field.number('isoLevel', (s) => s.isoLevel, (s, v) => s.isoLevel = v),
-      Field.number('brushRadius', (s) => s.brushRadius, (s, v) => s.brushRadius = v),
-      Field.number('brushSmoothness', (s) => s.brushSmoothness, (s, v) => s.brushSmoothness = v),
+      Field.number(
+        'brushRadius',
+        (s) => s.brushRadius,
+        (s, v) => s.brushRadius = v,
+      ),
+      Field.number(
+        'brushSmoothness',
+        (s) => s.brushSmoothness,
+        (s, v) => s.brushSmoothness = v,
+      ),
       Field.boolean(
         'autoCreateMeshRenderer',
         (s) => s.autoCreateMeshRenderer,
         (s, v) => s.autoCreateMeshRenderer = v,
       ),
-      Field.color('surfaceColor', (s) => s.surfaceColor, (s, v) => s.surfaceColor = v),
+      Field.color(
+        'surfaceColor',
+        (s) => s.surfaceColor,
+        (s, v) => s.surfaceColor = v,
+      ),
     ],
   );
 
@@ -239,7 +251,11 @@ final class SdfVolumeComponent extends Behaviour {
       var mr = getComponent<MeshRenderer>();
       if (mr == null && autoCreateMeshRenderer) {
         mr = gameObject.addComponent(
-          MeshRenderer(mesh: nextMesh, meshData: data, material: _materialHandle),
+          MeshRenderer(
+            mesh: nextMesh,
+            meshData: data,
+            material: _materialHandle,
+          ),
         );
       } else if (mr != null) {
         mr.mesh = nextMesh;
@@ -309,14 +325,31 @@ final class SdfSculptInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -374,7 +407,10 @@ final class SdfSculptInspectorUI {
 
     final carveRect = VoxRect(addRect.right + 8.0, barY, 70.0, 22.0);
     if (_drawButton(ui, uiState, 'sdf_carve', 'Carve', carveRect)) {
-      vol.carveSphere(Vec3(vol.brushRadius * 0.45, vol.brushRadius * 0.45, 0.0), vol.brushRadius * 0.7);
+      vol.carveSphere(
+        Vec3(vol.brushRadius * 0.45, vol.brushRadius * 0.45, 0.0),
+        vol.brushRadius * 0.7,
+      );
     }
 
     final remeshRect = VoxRect(carveRect.right + 8.0, barY, 76.0, 22.0);

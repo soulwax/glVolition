@@ -95,9 +95,21 @@ final class BlendTreeControllerComponent extends Behaviour {
     'BlendTreeControllerComponent',
     BlendTreeControllerComponent.new,
     [
-      Field.number('parameterX', (c) => c.parameterX, (c, v) => c.parameterX = v),
-      Field.number('parameterY', (c) => c.parameterY, (c, v) => c.parameterY = v),
-      Field.number('speedScale', (c) => c.speedScale, (c, v) => c.speedScale = v),
+      Field.number(
+        'parameterX',
+        (c) => c.parameterX,
+        (c, v) => c.parameterX = v,
+      ),
+      Field.number(
+        'parameterY',
+        (c) => c.parameterY,
+        (c, v) => c.parameterY = v,
+      ),
+      Field.number(
+        'speedScale',
+        (c) => c.speedScale,
+        (c, v) => c.speedScale = v,
+      ),
       Field.boolean(
         'applyRootMotion',
         (c) => c.applyRootMotion,
@@ -115,17 +127,23 @@ final class BlendTreeControllerComponent extends Behaviour {
   blend.BlendSpaceResult? get lastBlendResult => _lastBlendResult;
   blend.StateBlendSnapshot? get lastSnapshot => _lastSnapshot;
 
-  void setFloat(String name, double value) => stateMachine.setFloat(name, value);
+  void setFloat(String name, double value) =>
+      stateMachine.setFloat(name, value);
   void trigger(String name) => stateMachine.setTrigger(name);
 
   void transitionTo(String stateName, {double crossfadeDuration = 0.2}) {
-    stateMachine.forceTransition(stateName, crossfadeDuration: crossfadeDuration);
+    stateMachine.forceTransition(
+      stateName,
+      crossfadeDuration: crossfadeDuration,
+    );
   }
 
   /// Evaluates blendspaces, steps the animation state machine, and applies root motion to Transform.
   blend.StateBlendSnapshot stepController(double dt) {
     final scaledDt = math.max(0.0, dt * speedScale);
-    final scalarSpeed = math.sqrt(parameterX * parameterX + parameterY * parameterY);
+    final scalarSpeed = math.sqrt(
+      parameterX * parameterX + parameterY * parameterY,
+    );
     stateMachine.setFloat('speed', scalarSpeed);
 
     if (blendSpace2D != null) {
@@ -142,7 +160,9 @@ final class BlendTreeControllerComponent extends Behaviour {
       snap.rootMotionDelta.z,
     );
 
-    if (applyRootMotion && isAttached && _lastRootMotionDelta.lengthSquared > 1e-12) {
+    if (applyRootMotion &&
+        isAttached &&
+        _lastRootMotionDelta.lengthSquared > 1e-12) {
       transform.position = transform.position + _lastRootMotionDelta;
     }
     return snap;
@@ -174,7 +194,8 @@ final class BlendTreeInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -253,7 +274,13 @@ final class BlendTreeInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'bt_pause', ctrl.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'bt_pause',
+      ctrl.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       ctrl.paused = !ctrl.paused;
     }
 

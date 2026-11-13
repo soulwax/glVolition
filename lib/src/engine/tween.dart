@@ -15,38 +15,37 @@ extension BehaviourTweenExt on Behaviour {
     int loops = 1,
     bool unscaledTime = false,
     void Function()? onComplete,
-  }) =>
-      startCoroutine(() sync* {
-        if (delay > 0) {
-          yield unscaledTime ? WaitForRealtime(delay) : WaitForSeconds(delay);
+  }) => startCoroutine(() sync* {
+    if (delay > 0) {
+      yield unscaledTime ? WaitForRealtime(delay) : WaitForSeconds(delay);
+    }
+    final dur = math.max(1e-6, duration);
+    var loopIndex = 0;
+    while (loops <= 0 || loopIndex < loops) {
+      var elapsed = 0.0;
+      while (elapsed < dur) {
+        yield const NextFrame();
+        final dt = unscaledTime ? time.unscaledDeltaTime : time.deltaTime;
+        elapsed = math.min(dur, elapsed + dt);
+        final rawT = elapsed / dur;
+        final eased = curve.transform(rawT);
+        onUpdate(from + (to - from) * eased);
+      }
+      if (pingPong) {
+        var backElapsed = 0.0;
+        while (backElapsed < dur) {
+          yield const NextFrame();
+          final dt = unscaledTime ? time.unscaledDeltaTime : time.deltaTime;
+          backElapsed = math.min(dur, backElapsed + dt);
+          final rawT = 1.0 - (backElapsed / dur);
+          final eased = curve.transform(rawT);
+          onUpdate(from + (to - from) * eased);
         }
-        final dur = math.max(1e-6, duration);
-        var loopIndex = 0;
-        while (loops <= 0 || loopIndex < loops) {
-          var elapsed = 0.0;
-          while (elapsed < dur) {
-            yield const NextFrame();
-            final dt = unscaledTime ? time.unscaledDeltaTime : time.deltaTime;
-            elapsed = math.min(dur, elapsed + dt);
-            final rawT = elapsed / dur;
-            final eased = curve.transform(rawT);
-            onUpdate(from + (to - from) * eased);
-          }
-          if (pingPong) {
-            var backElapsed = 0.0;
-            while (backElapsed < dur) {
-              yield const NextFrame();
-              final dt = unscaledTime ? time.unscaledDeltaTime : time.deltaTime;
-              backElapsed = math.min(dur, backElapsed + dt);
-              final rawT = 1.0 - (backElapsed / dur);
-              final eased = curve.transform(rawT);
-              onUpdate(from + (to - from) * eased);
-            }
-          }
-          loopIndex++;
-        }
-        onComplete?.call();
-      });
+      }
+      loopIndex++;
+    }
+    onComplete?.call();
+  });
 
   /// Tweens a [Vec3] from [from] to [to] over [duration] seconds.
   Coroutine tweenVec3(
@@ -60,19 +59,18 @@ extension BehaviourTweenExt on Behaviour {
     int loops = 1,
     bool unscaledTime = false,
     void Function()? onComplete,
-  }) =>
-      tween(
-        0.0,
-        1.0,
-        duration: duration,
-        curve: curve,
-        delay: delay,
-        pingPong: pingPong,
-        loops: loops,
-        unscaledTime: unscaledTime,
-        onUpdate: (t) => onUpdate(Vec3.lerp(from, to, t)),
-        onComplete: onComplete,
-      );
+  }) => tween(
+    0.0,
+    1.0,
+    duration: duration,
+    curve: curve,
+    delay: delay,
+    pingPong: pingPong,
+    loops: loops,
+    unscaledTime: unscaledTime,
+    onUpdate: (t) => onUpdate(Vec3.lerp(from, to, t)),
+    onComplete: onComplete,
+  );
 
   /// Tweens this [GameObject]'s `transform.localPosition` to [targetLocalPos].
   Coroutine tweenPosition(

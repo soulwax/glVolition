@@ -5,10 +5,7 @@ final class BehaviorTreeComponent extends Behaviour {
   BehaviorTree tree;
   bool fixedStep;
 
-  BehaviorTreeComponent({
-    required this.tree,
-    this.fixedStep = false,
-  });
+  BehaviorTreeComponent({required this.tree, this.fixedStep = false});
 
   Blackboard get blackboard => tree.blackboard;
 
@@ -52,7 +49,8 @@ final class AiFsmComponent<TStateId> extends Behaviour {
 
   TStateId? get currentStateId => fsm.currentStateId;
 
-  void addState(TStateId id, State<GameObject> state) => fsm.addState(id, state);
+  void addState(TStateId id, State<GameObject> state) =>
+      fsm.addState(id, state);
 
   void addTransition(
     TStateId from,

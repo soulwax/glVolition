@@ -67,9 +67,9 @@ final class SpriteSheet {
     required this.rows,
     double? textureWidth,
     double? textureHeight,
-  })  : textureWidth = textureWidth ?? (columns * cellWidth).toDouble(),
-        textureHeight = textureHeight ?? (rows * cellHeight).toDouble(),
-        _regions = [] {
+  }) : textureWidth = textureWidth ?? (columns * cellWidth).toDouble(),
+       textureHeight = textureHeight ?? (rows * cellHeight).toDouble(),
+       _regions = [] {
     final tw = this.textureWidth;
     final th = this.textureHeight;
     for (var r = 0; r < rows; r++) {
@@ -105,8 +105,12 @@ final class SpriteSheet {
   }
 
   /// Returns an immutable sublist of regions representing an animation clip.
-  List<SpriteRegion> slice(int start, int end) =>
-      List.unmodifiable(_regions.sublist(start.clamp(0, _regions.length), end.clamp(0, _regions.length)));
+  List<SpriteRegion> slice(int start, int end) => List.unmodifiable(
+    _regions.sublist(
+      start.clamp(0, _regions.length),
+      end.clamp(0, _regions.length),
+    ),
+  );
 
   /// All generated [SpriteRegion]s.
   List<SpriteRegion> get all => List.unmodifiable(_regions);
@@ -197,36 +201,73 @@ final class AssetCatalog {
   }
 
   ModelAsset model(String key) =>
-      _models[key] ?? (throw ArgumentError.value(key, 'key', 'ModelAsset not found in catalog'));
+      _models[key] ??
+      (throw ArgumentError.value(
+        key,
+        'key',
+        'ModelAsset not found in catalog',
+      ));
 
   AudioClip clip(String key) =>
-      _clips[key] ?? (throw ArgumentError.value(key, 'key', 'AudioClip not found in catalog'));
+      _clips[key] ??
+      (throw ArgumentError.value(key, 'key', 'AudioClip not found in catalog'));
 
   TextureHandle texture(String key) =>
-      _textures[key] ?? (throw ArgumentError.value(key, 'key', 'TextureHandle not found in catalog'));
+      _textures[key] ??
+      (throw ArgumentError.value(
+        key,
+        'key',
+        'TextureHandle not found in catalog',
+      ));
 
   MeshHandle mesh(String key) =>
-      _meshes[key] ?? (throw ArgumentError.value(key, 'key', 'MeshHandle not found in catalog'));
+      _meshes[key] ??
+      (throw ArgumentError.value(
+        key,
+        'key',
+        'MeshHandle not found in catalog',
+      ));
 
   MeshData? meshData(String key) => _meshData[key];
 
   MaterialHandle material(String key) =>
-      _materials[key] ?? (throw ArgumentError.value(key, 'key', 'MaterialHandle not found in catalog'));
+      _materials[key] ??
+      (throw ArgumentError.value(
+        key,
+        'key',
+        'MaterialHandle not found in catalog',
+      ));
 
   String text(String key) =>
-      _texts[key] ?? (throw ArgumentError.value(key, 'key', 'Text asset not found in catalog'));
+      _texts[key] ??
+      (throw ArgumentError.value(
+        key,
+        'key',
+        'Text asset not found in catalog',
+      ));
 
   Uint8List bytes(String key) =>
-      _bytes[key] ?? (throw ArgumentError.value(key, 'key', 'Bytes asset not found in catalog'));
+      _bytes[key] ??
+      (throw ArgumentError.value(
+        key,
+        'key',
+        'Bytes asset not found in catalog',
+      ));
 
   void putPrefab(String key, Prefab prefab) => _prefabs[key] = prefab;
 
-  bool hasPrefab(String key) => _prefabs.containsKey(key) || _models.containsKey(key);
+  bool hasPrefab(String key) =>
+      _prefabs.containsKey(key) || _models.containsKey(key);
 
   void putSpriteSheet(String key, SpriteSheet sheet) => _sheets[key] = sheet;
 
   SpriteSheet spriteSheet(String key) =>
-      _sheets[key] ?? (throw ArgumentError.value(key, 'key', 'SpriteSheet not found in catalog'));
+      _sheets[key] ??
+      (throw ArgumentError.value(
+        key,
+        'key',
+        'SpriteSheet not found in catalog',
+      ));
 
   SpriteSheet registerSpriteSheet(
     String key, {
@@ -260,7 +301,11 @@ final class AssetCatalog {
     if (cached != null) return cached;
     final asset = _models[key];
     if (asset == null) {
-      throw ArgumentError.value(key, 'key', 'Prefab/ModelAsset not found in catalog');
+      throw ArgumentError.value(
+        key,
+        'key',
+        'Prefab/ModelAsset not found in catalog',
+      );
     }
     return _prefabs[key] = Prefab.fromModelAsset(asset, name: key);
   }
@@ -275,15 +320,14 @@ final class AssetCatalog {
     Quat? rotation,
     double? scale,
     String? name,
-  }) =>
-      (scene ?? _engine.scene).instantiate(
-        prefab(key),
-        parent: parent,
-        position: position,
-        rotation: rotation,
-        scale: scale,
-        name: name,
-      );
+  }) => (scene ?? _engine.scene).instantiate(
+    prefab(key),
+    parent: parent,
+    position: position,
+    rotation: rotation,
+    scale: scale,
+    name: name,
+  );
 
   /// Releases all GPU meshes, materials, and textures owned by this catalog.
   void clear() {

@@ -36,22 +36,27 @@ final class SceneStreamZone extends Behaviour {
     this.registry,
   });
 
-  static final spec = ComponentSpec<SceneStreamZone>(
-    'SceneStreamZone',
-    SceneStreamZone.new,
-    [
-      Field.text('zoneId', (c) => c.zoneId, (c, v) => c.zoneId = v),
-      Field.number('loadRadius', (c) => c.loadRadius, (c, v) => c.loadRadius = v),
-      Field.number(
-        'unloadRadius',
-        (c) => c.unloadRadius,
-        (c, v) => c.unloadRadius = v,
-      ),
-      Field.text('targetTag', (c) => c.targetTag, (c, v) => c.targetTag = v),
-      Field.boolean('autoStream', (c) => c.autoStream, (c, v) => c.autoStream = v),
-      Field.boolean('paused', (c) => c.paused, (c, v) => c.paused = v),
-    ],
-  );
+  static final spec =
+      ComponentSpec<SceneStreamZone>('SceneStreamZone', SceneStreamZone.new, [
+        Field.text('zoneId', (c) => c.zoneId, (c, v) => c.zoneId = v),
+        Field.number(
+          'loadRadius',
+          (c) => c.loadRadius,
+          (c, v) => c.loadRadius = v,
+        ),
+        Field.number(
+          'unloadRadius',
+          (c) => c.unloadRadius,
+          (c, v) => c.unloadRadius = v,
+        ),
+        Field.text('targetTag', (c) => c.targetTag, (c, v) => c.targetTag = v),
+        Field.boolean(
+          'autoStream',
+          (c) => c.autoStream,
+          (c, v) => c.autoStream = v,
+        ),
+        Field.boolean('paused', (c) => c.paused, (c, v) => c.paused = v),
+      ]);
 
   /// Count of non-destroyed root [GameObject]s currently owned by this zone.
   int get loadedObjectCount => spawnedRoots.where((g) => !g.isDestroyed).length;
@@ -110,7 +115,8 @@ final class SceneStreamZone extends Behaviour {
       final rawObjects = jsonMap['objects'];
       if (rawObjects is List) {
         final reg =
-            registry ?? (s.isLoaded ? s.engine.registry : ComponentRegistry.defaults());
+            registry ??
+            (s.isLoaded ? s.engine.registry : ComponentRegistry.defaults());
         for (final raw in rawObjects) {
           if (raw is Map) {
             final data = raw is Map<String, Object?>
@@ -135,8 +141,8 @@ final class SceneStreamZone extends Behaviour {
   /// Destroys all non-destroyed [spawnedRoots], clears tracking, and transitions
   /// to [StreamZoneState.unloaded].
   void unloadZone() => _unloadZone(
-        forceImmediate: !isAttached || !scene.isLoaded || !scene.engine._stepping,
-      );
+    forceImmediate: !isAttached || !scene.isLoaded || !scene.engine._stepping,
+  );
 
   void _unloadZone({required bool forceImmediate}) {
     if (isAttached) {
@@ -204,7 +210,8 @@ final class SceneStreamZoneInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -283,7 +290,13 @@ final class SceneStreamZoneInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'ssz_pause', zone.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'ssz_pause',
+      zone.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       zone.paused = !zone.paused;
     }
 

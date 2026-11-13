@@ -45,9 +45,18 @@ extension LinearColorExt on LinearColor {
 
   /// Converts this color to a `#RRGGBB` hex string.
   String toHex() {
-    final ir = (r.clamp(0.0, 1.0) * 255.0).round().toRadixString(16).padLeft(2, '0');
-    final ig = (g.clamp(0.0, 1.0) * 255.0).round().toRadixString(16).padLeft(2, '0');
-    final ib = (b.clamp(0.0, 1.0) * 255.0).round().toRadixString(16).padLeft(2, '0');
+    final ir = (r.clamp(0.0, 1.0) * 255.0)
+        .round()
+        .toRadixString(16)
+        .padLeft(2, '0');
+    final ig = (g.clamp(0.0, 1.0) * 255.0)
+        .round()
+        .toRadixString(16)
+        .padLeft(2, '0');
+    final ib = (b.clamp(0.0, 1.0) * 255.0)
+        .round()
+        .toRadixString(16)
+        .padLeft(2, '0');
     return '#$ir$ig$ib'.toUpperCase();
   }
 
@@ -82,7 +91,8 @@ extension LinearColorExt on LinearColor {
 LinearColor linearColorFromHex(String hex) {
   var clean = hex.trim().replaceFirst('#', '').replaceFirst('0x', '');
   if (clean.length == 3) {
-    clean = '${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}';
+    clean =
+        '${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}';
   }
   if (clean.length >= 6) {
     final r = int.parse(clean.substring(0, 2), radix: 16) / 255.0;

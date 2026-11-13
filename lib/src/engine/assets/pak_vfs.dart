@@ -6,10 +6,8 @@ final class VfsAssetLoader implements AssetLoader {
   final pack.VirtualFileSystem vfs;
   final AssetLoader? fallback;
 
-  VfsAssetLoader({
-    pack.VirtualFileSystem? vfs,
-    this.fallback,
-  }) : vfs = vfs ?? pack.VirtualFileSystem();
+  VfsAssetLoader({pack.VirtualFileSystem? vfs, this.fallback})
+    : vfs = vfs ?? pack.VirtualFileSystem();
 
   pack.PakMount mountPakBytes(
     String id,
@@ -52,11 +50,16 @@ final class VfsAssetLoader implements AssetLoader {
   }
 
   @override
-  Future<ModelAsset> loadModel(String path, {MaterialOverride? materialOverride}) {
+  Future<ModelAsset> loadModel(
+    String path, {
+    MaterialOverride? materialOverride,
+  }) {
     if (fallback != null) {
       return fallback!.loadModel(path, materialOverride: materialOverride);
     }
-    throw UnimplementedError('VfsAssetLoader requires fallback AssetLoader for ModelAsset.');
+    throw UnimplementedError(
+      'VfsAssetLoader requires fallback AssetLoader for ModelAsset.',
+    );
   }
 }
 
@@ -65,10 +68,7 @@ final class MigratedSaveStore {
   final KeyValueStore storage;
   final pack.SaveMigrator migrator;
 
-  MigratedSaveStore({
-    required this.storage,
-    required this.migrator,
-  });
+  MigratedSaveStore({required this.storage, required this.migrator});
 
   void save(String key, Map<String, Object?> data) {
     final stamped = <String, Object?>{

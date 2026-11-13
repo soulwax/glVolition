@@ -27,7 +27,11 @@ final class SoftBodyXpbdComponent extends Behaviour {
     'SoftBodyXpbdComponent',
     SoftBodyXpbdComponent.new,
     [
-      Field.number('compliance', (c) => c.compliance, (c, v) => c.compliance = v),
+      Field.number(
+        'compliance',
+        (c) => c.compliance,
+        (c, v) => c.compliance = v,
+      ),
       Field.number(
         'volumeCompliance',
         (c) => c.volumeCompliance,
@@ -36,7 +40,11 @@ final class SoftBodyXpbdComponent extends Behaviour {
       Field.number('floorY', (c) => c.floorY, (c, v) => c.floorY = v),
       Field.integer('substeps', (c) => c.substeps, (c, v) => c.substeps = v),
       Field.boolean('paused', (c) => c.paused, (c, v) => c.paused = v),
-      Field.number('halfExtent', (c) => c.halfExtent, (c, v) => c.halfExtent = v),
+      Field.number(
+        'halfExtent',
+        (c) => c.halfExtent,
+        (c, v) => c.halfExtent = v,
+      ),
     ],
   );
 
@@ -116,7 +124,8 @@ final class XpbdSolverInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -192,7 +201,13 @@ final class XpbdSolverInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'xpbd_pause', comp.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'xpbd_pause',
+      comp.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       comp.paused = !comp.paused;
     }
 

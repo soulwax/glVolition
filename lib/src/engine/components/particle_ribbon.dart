@@ -53,7 +53,11 @@ final class ParticleRibbonComponent extends Behaviour {
     'ParticleRibbonComponent',
     ParticleRibbonComponent.new,
     [
-      Field.number('startWidth', (c) => c.startWidth, (c, v) => c.startWidth = v),
+      Field.number(
+        'startWidth',
+        (c) => c.startWidth,
+        (c, v) => c.startWidth = v,
+      ),
       Field.number('endWidth', (c) => c.endWidth, (c, v) => c.endWidth = v),
       Field.number(
         'trailLifetimeSeconds',
@@ -65,11 +69,27 @@ final class ParticleRibbonComponent extends Behaviour {
         (c) => c.minVertexDistance,
         (c, v) => c.minVertexDistance = v,
       ),
-      Field.number('emissionRate', (c) => c.emissionRate, (c, v) => c.emissionRate = v),
-      Field.number('curlAmplitude', (c) => c.curlAmplitude, (c, v) => c.curlAmplitude = v),
-      Field.number('curlFrequency', (c) => c.curlFrequency, (c, v) => c.curlFrequency = v),
+      Field.number(
+        'emissionRate',
+        (c) => c.emissionRate,
+        (c, v) => c.emissionRate = v,
+      ),
+      Field.number(
+        'curlAmplitude',
+        (c) => c.curlAmplitude,
+        (c, v) => c.curlAmplitude = v,
+      ),
+      Field.number(
+        'curlFrequency',
+        (c) => c.curlFrequency,
+        (c, v) => c.curlFrequency = v,
+      ),
       Field.boolean('emitting', (c) => c.emitting, (c, v) => c.emitting = v),
-      Field.boolean('syncRibbonMesh', (c) => c.syncRibbonMesh, (c, v) => c.syncRibbonMesh = v),
+      Field.boolean(
+        'syncRibbonMesh',
+        (c) => c.syncRibbonMesh,
+        (c, v) => c.syncRibbonMesh = v,
+      ),
     ],
   );
 
@@ -183,7 +203,10 @@ final class ParticleRibbonComponent extends Behaviour {
         if (_meshHandle != null) {
           engine.graphics.releaseMesh(_meshHandle!);
         }
-        _meshHandle = engine.graphics.createMesh(data, debugLabel: 'voxribbon_mesh');
+        _meshHandle = engine.graphics.createMesh(
+          data,
+          debugLabel: 'voxribbon_mesh',
+        );
         mr.mesh = _meshHandle;
       }
     }
@@ -215,7 +238,8 @@ final class RibbonInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -290,7 +314,13 @@ final class RibbonInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final emitRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'rib_emit', ribbonComp.emitting ? 'Pause' : 'Emit', emitRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'rib_emit',
+      ribbonComp.emitting ? 'Pause' : 'Emit',
+      emitRect,
+    )) {
       ribbonComp.emitting = !ribbonComp.emitting;
     }
 

@@ -26,8 +26,16 @@ MeshData fractureMeshToMeshData(frac.FractureMesh mesh) {
   }
 
   final bounds = mesh.computeBounds();
-  final minP = Vec3(bounds.min.x - 1e-4, bounds.min.y - 1e-4, bounds.min.z - 1e-4);
-  final maxP = Vec3(bounds.max.x + 1e-4, bounds.max.y + 1e-4, bounds.max.z + 1e-4);
+  final minP = Vec3(
+    bounds.min.x - 1e-4,
+    bounds.min.y - 1e-4,
+    bounds.min.z - 1e-4,
+  );
+  final maxP = Vec3(
+    bounds.max.x + 1e-4,
+    bounds.max.y + 1e-4,
+    bounds.max.z + 1e-4,
+  );
   final List<int> typedIndices = vCount <= 65535
       ? Uint16List.fromList(mesh.indices)
       : Uint32List.fromList(mesh.indices);
@@ -46,7 +54,9 @@ MeshData fractureMeshToMeshData(frac.FractureMesh mesh) {
 frac.FractureMesh meshDataToFractureMesh(MeshData data) {
   final layout = data.layout;
   final stride = layout.strideFloats;
-  final posSlot = layout.attributes.firstWhere((a) => a.kind == VertexAttributeKind.position);
+  final posSlot = layout.attributes.firstWhere(
+    (a) => a.kind == VertexAttributeKind.position,
+  );
   final normSlot = layout.attributes
       .where((a) => a.kind == VertexAttributeKind.normal)
       .firstOrNull;
@@ -61,12 +71,20 @@ frac.FractureMesh meshDataToFractureMesh(MeshData data) {
     final py = data.vertices[base + posSlot.floatOffset + 1];
     final pz = data.vertices[base + posSlot.floatOffset + 2];
 
-    final nx = normSlot != null ? data.vertices[base + normSlot.floatOffset] : 0.0;
-    final ny = normSlot != null ? data.vertices[base + normSlot.floatOffset + 1] : 1.0;
-    final nz = normSlot != null ? data.vertices[base + normSlot.floatOffset + 2] : 0.0;
+    final nx = normSlot != null
+        ? data.vertices[base + normSlot.floatOffset]
+        : 0.0;
+    final ny = normSlot != null
+        ? data.vertices[base + normSlot.floatOffset + 1]
+        : 1.0;
+    final nz = normSlot != null
+        ? data.vertices[base + normSlot.floatOffset + 2]
+        : 0.0;
 
     final u = uvSlot != null ? data.vertices[base + uvSlot.floatOffset] : 0.0;
-    final v = uvSlot != null ? data.vertices[base + uvSlot.floatOffset + 1] : 0.0;
+    final v = uvSlot != null
+        ? data.vertices[base + uvSlot.floatOffset + 1]
+        : 0.0;
 
     return frac.FractureVertex(
       position: frac.FracVec3(px, py, pz),
@@ -126,9 +144,21 @@ final class FracturableMeshComponent extends Component {
         (f, v) => f.voronoiCellCount = v,
       ),
       Field.integer('seed', (f) => f.seed, (f, v) => f.seed = v),
-      Field.number('clusterBias', (f) => f.clusterBias, (f, v) => f.clusterBias = v),
-      Field.number('debrisImpulse', (f) => f.debrisImpulse, (f, v) => f.debrisImpulse = v),
-      Field.number('debrisMass', (f) => f.debrisMass, (f, v) => f.debrisMass = v),
+      Field.number(
+        'clusterBias',
+        (f) => f.clusterBias,
+        (f, v) => f.clusterBias = v,
+      ),
+      Field.number(
+        'debrisImpulse',
+        (f) => f.debrisImpulse,
+        (f, v) => f.debrisImpulse = v,
+      ),
+      Field.number(
+        'debrisMass',
+        (f) => f.debrisMass,
+        (f, v) => f.debrisMass = v,
+      ),
       Field.boolean(
         'hideOriginalOnFracture',
         (f) => f.hideOriginalOnFracture,
@@ -182,7 +212,9 @@ final class FracturableMeshComponent extends Component {
       MeshRenderer(mesh: handle, meshData: meshData, material: mat),
     ];
     if (autoAddRigidBodies) {
-      components.add(RigidBody(mass: math.max(0.2, pieceMass), velocity: initialVelocity));
+      components.add(
+        RigidBody(mass: math.max(0.2, pieceMass), velocity: initialVelocity),
+      );
     }
 
     final go = scene.createGameObject(
@@ -315,7 +347,11 @@ final class FracturableMeshComponent extends Component {
     for (final shard in shards) {
       volSum += shard.volume;
       final centered = shard.mesh.translated(-shard.centroid);
-      final worldCentroid = pos + rot.rotate(Vec3(shard.centroid.x, shard.centroid.y, shard.centroid.z));
+      final worldCentroid =
+          pos +
+          rot.rotate(
+            Vec3(shard.centroid.x, shard.centroid.y, shard.centroid.z),
+          );
       final away = worldCentroid - blastOrigin;
       final dir = away.lengthSquared > 1e-6 ? away.normalized : Vec3.unitY;
       _spawnMeshPiece(
@@ -489,14 +525,31 @@ final class DestructionInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -527,8 +580,12 @@ final class DestructionInspectorUI {
 
     final pad = ui.style.windowPadding;
     final statusStr = fracturable.isFractured ? 'SHATTERED' : 'INTACT';
-    final stabilityPct = support != null ? '${(support.stabilityRatio * 100).round()}%' : '100%';
-    final intactLabel = support != null ? '${support.intactCount}/${support.totalPieceCount}' : 'N/A';
+    final stabilityPct = support != null
+        ? '${(support.stabilityRatio * 100).round()}%'
+        : '100%';
+    final intactLabel = support != null
+        ? '${support.intactCount}/${support.totalPieceCount}'
+        : 'N/A';
 
     ui.labelValue(
       'State / Shards',
@@ -554,7 +611,9 @@ final class DestructionInspectorUI {
     final barY = y + ui.style.titleBarHeight + pad + 90.0;
     final sliceRect = VoxRect(x + pad, barY, 84.0, 22.0);
     if (_drawButton(ui, uiState, 'frac_slice', 'Slice Y', sliceRect)) {
-      final pos = fracturable.isAttached ? fracturable.transform.position : Vec3.zero;
+      final pos = fracturable.isAttached
+          ? fracturable.transform.position
+          : Vec3.zero;
       fracturable.sliceAlongPlane(pos, Vec3.unitY);
     }
 

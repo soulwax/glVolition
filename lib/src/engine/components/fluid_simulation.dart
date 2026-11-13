@@ -42,11 +42,23 @@ final class FluidSurfaceComponent extends Behaviour {
       Field.number('cellSize', (f) => f.cellSize, (f, v) => f.cellSize = v),
       Field.number('timeScale', (f) => f.timeScale, (f, v) => f.timeScale = v),
       Field.boolean('paused', (f) => f.paused, (f, v) => f.paused = v),
-      Field.boolean('autoSyncTerrain', (f) => f.autoSyncTerrain, (f, v) => f.autoSyncTerrain = v),
-      Field.number('waterEvaporation', (f) => f.waterEvaporation, (f, v) => f.waterEvaporation = v),
+      Field.boolean(
+        'autoSyncTerrain',
+        (f) => f.autoSyncTerrain,
+        (f, v) => f.autoSyncTerrain = v,
+      ),
+      Field.number(
+        'waterEvaporation',
+        (f) => f.waterEvaporation,
+        (f, v) => f.waterEvaporation = v,
+      ),
       Field.number('windX', (f) => f.windX, (f, v) => f.windX = v),
       Field.number('windZ', (f) => f.windZ, (f, v) => f.windZ = v),
-      Field.boolean('generateMesh', (f) => f.generateMesh, (f, v) => f.generateMesh = v),
+      Field.boolean(
+        'generateMesh',
+        (f) => f.generateMesh,
+        (f, v) => f.generateMesh = v,
+      ),
     ],
   );
 
@@ -117,7 +129,12 @@ final class FluidSurfaceComponent extends Behaviour {
     fire.ignite(x, z, heat: heat);
   }
 
-  void extinguishRadius(int cx, int cz, double radiusCells, {double waterStrength = 1.5}) {
+  void extinguishRadius(
+    int cx,
+    int cz,
+    double radiusCells, {
+    double waterStrength = 1.5,
+  }) {
     fire.extinguishRadius(cx, cz, radiusCells, waterStrength: waterStrength);
   }
 
@@ -290,14 +307,31 @@ final class FluidInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -350,12 +384,20 @@ final class FluidInspectorUI {
     final barY = y + ui.style.titleBarHeight + pad + 90.0;
     final rainRect = VoxRect(x + pad, barY, 84.0, 22.0);
     if (_drawButton(ui, uiState, 'fld_rain', 'Rain +2m3', rainRect)) {
-      fluidSim.addWaterVolume(fluidSim.gridWidth ~/ 2, fluidSim.gridDepth ~/ 2, 2.0);
+      fluidSim.addWaterVolume(
+        fluidSim.gridWidth ~/ 2,
+        fluidSim.gridDepth ~/ 2,
+        2.0,
+      );
     }
 
     final fireRect = VoxRect(rainRect.right + 8.0, barY, 72.0, 22.0);
     if (_drawButton(ui, uiState, 'fld_fire', 'Ignite', fireRect)) {
-      fluidSim.igniteFire(fluidSim.gridWidth ~/ 2, fluidSim.gridDepth ~/ 2, heat: 2.4);
+      fluidSim.igniteFire(
+        fluidSim.gridWidth ~/ 2,
+        fluidSim.gridDepth ~/ 2,
+        heat: 2.4,
+      );
     }
 
     final pauseRect = VoxRect(fireRect.right + 8.0, barY, 76.0, 22.0);

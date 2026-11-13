@@ -25,8 +25,8 @@ final class NavGrid2D {
     this.originX = 0.0,
     this.originY = 0.0,
     this.allowDiagonal = true,
-  })  : _walkable = Uint8List(columns * rows)..fillRange(0, columns * rows, 1),
-        _costs = Float32List(columns * rows)..fillRange(0, columns * rows, 1.0);
+  }) : _walkable = Uint8List(columns * rows)..fillRange(0, columns * rows, 1),
+       _costs = Float32List(columns * rows)..fillRange(0, columns * rows, 1.0);
 
   /// Builds a [NavGrid2D] mirroring the solid/walkable cells of [tilemap].
   factory NavGrid2D.fromTilemap(
@@ -73,15 +73,15 @@ final class NavGrid2D {
 
   /// Converts world `(x, y)` into grid cell `(col, row)`.
   (int, int) worldToCell(double worldX, double worldY) => (
-        ((worldX - originX) / cellWidth).floor().clamp(0, columns - 1),
-        ((worldY - originY) / cellHeight).floor().clamp(0, rows - 1),
-      );
+    ((worldX - originX) / cellWidth).floor().clamp(0, columns - 1),
+    ((worldY - originY) / cellHeight).floor().clamp(0, rows - 1),
+  );
 
   /// Returns the world-space center of `(col, row)`.
   Vec2 cellCenterWorld(int col, int row) => Vec2(
-        originX + (col + 0.5) * cellWidth,
-        originY + (row + 0.5) * cellHeight,
-      );
+    originX + (col + 0.5) * cellWidth,
+    originY + (row + 0.5) * cellHeight,
+  );
 
   /// Traces a 2D line from [startWorld] to [endWorld] on the grid.
   /// Returns `true` if every cell intersected by the segment is walkable (E20-3).
@@ -116,7 +116,10 @@ final class NavGrid2D {
 
   /// Traces a 2D ray from [startWorld] towards [endWorld].
   /// Returns the first non-walkable cell hit, or `null` if the path is entirely walkable (E20-3).
-  ({int column, int row, Vec2 point, double distance})? raycast(Vec2 startWorld, Vec2 endWorld) {
+  ({int column, int row, Vec2 point, double distance})? raycast(
+    Vec2 startWorld,
+    Vec2 endWorld,
+  ) {
     final dx = endWorld.x - startWorld.x;
     final dy = endWorld.y - startWorld.y;
     final totalDist = math.sqrt(dx * dx + dy * dy);
@@ -144,7 +147,12 @@ final class NavGrid2D {
       lastRow = row;
 
       if (!isWalkable(col, row)) {
-        return (column: col, row: row, point: Vec2(px, py), distance: t * totalDist);
+        return (
+          column: col,
+          row: row,
+          point: Vec2(px, py),
+          distance: t * totalDist,
+        );
       }
     }
     return null;
@@ -279,21 +287,34 @@ final class NavAgent extends Behaviour {
     this.useXZPlane = false,
   });
 
-  static final spec = ComponentSpec<NavAgent>(
-    'NavAgent',
-    NavAgent.new,
-    [
-      Field.number('speed', (a) => a.speed, (a, v) => a.speed = v),
-      Field.number('stoppingDistance', (a) => a.stoppingDistance, (a, v) => a.stoppingDistance = v),
-      Field.number('avoidanceRadius', (a) => a.avoidanceRadius, (a, v) => a.avoidanceRadius = v),
-      Field.number('avoidanceWeight', (a) => a.avoidanceWeight, (a, v) => a.avoidanceWeight = v),
-      Field.boolean('useXZPlane', (a) => a.useXZPlane, (a, v) => a.useXZPlane = v),
-    ],
-  );
+  static final spec = ComponentSpec<NavAgent>('NavAgent', NavAgent.new, [
+    Field.number('speed', (a) => a.speed, (a, v) => a.speed = v),
+    Field.number(
+      'stoppingDistance',
+      (a) => a.stoppingDistance,
+      (a, v) => a.stoppingDistance = v,
+    ),
+    Field.number(
+      'avoidanceRadius',
+      (a) => a.avoidanceRadius,
+      (a, v) => a.avoidanceRadius = v,
+    ),
+    Field.number(
+      'avoidanceWeight',
+      (a) => a.avoidanceWeight,
+      (a, v) => a.avoidanceWeight = v,
+    ),
+    Field.boolean(
+      'useXZPlane',
+      (a) => a.useXZPlane,
+      (a, v) => a.useXZPlane = v,
+    ),
+  ]);
 
   bool get hasPath => _waypointIndex < _waypoints.length;
-  List<Vec2> get remainingWaypoints =>
-      hasPath ? List.unmodifiable(_waypoints.sublist(_waypointIndex)) : const [];
+  List<Vec2> get remainingWaypoints => hasPath
+      ? List.unmodifiable(_waypoints.sublist(_waypointIndex))
+      : const [];
 
   Vec2 _pos2D(Vec3 p) => useXZPlane ? Vec2(p.x, p.z) : Vec2(p.x, p.y);
 

@@ -1,10 +1,7 @@
 part of '../../engine.dart';
 
 /// Solver preset mode for [CharacterIk2DComponent].
-enum IkSolver2DMode {
-  twoBone,
-  fabrik,
-}
+enum IkSolver2DMode { twoBone, fabrik }
 
 /// Analytic 2-bone limb IK, multi-link FABRIK chain & spring-bone secondary motion component (`voxik2d`) (E89-2).
 final class CharacterIk2DComponent extends Behaviour {
@@ -91,7 +88,9 @@ final class CharacterIk2DComponent extends Behaviour {
   );
 
   void toggleMode() {
-    mode = mode == IkSolver2DMode.twoBone ? IkSolver2DMode.fabrik : IkSolver2DMode.twoBone;
+    mode = mode == IkSolver2DMode.twoBone
+        ? IkSolver2DMode.fabrik
+        : IkSolver2DMode.twoBone;
   }
 
   void flipBend() {
@@ -103,7 +102,10 @@ final class CharacterIk2DComponent extends Behaviour {
     final rootVec = isAttached ? transform.position : Vec3.zero;
     final root2 = ik2d.IkVec2(rootVec.x, rootVec.y);
     final tgt = targetObject != null
-        ? ik2d.IkVec2(targetObject!.transform.position.x, targetObject!.transform.position.y)
+        ? ik2d.IkVec2(
+            targetObject!.transform.position.x,
+            targetObject!.transform.position.y,
+          )
         : ik2d.IkVec2(targetX, targetY);
 
     if (mode == IkSolver2DMode.twoBone) {
@@ -158,7 +160,8 @@ final class IkSolverInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -248,7 +251,13 @@ final class IkSolverInspectorUI {
     }
 
     final pauseRect = VoxRect(bendRect.right + 8.0, barY, 76.0, 22.0);
-    if (_drawButton(ui, uiState, 'ik_pause', ik.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'ik_pause',
+      ik.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       ik.paused = !ik.paused;
     }
 

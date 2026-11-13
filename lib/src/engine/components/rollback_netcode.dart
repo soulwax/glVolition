@@ -5,10 +5,7 @@ final class EngineRollbackSnapshot {
   final Map<int, ({Vec3 pos, Quat rot, double scale})> transforms;
   final Map<String, Object?>? customState;
 
-  const EngineRollbackSnapshot({
-    required this.transforms,
-    this.customState,
-  });
+  const EngineRollbackSnapshot({required this.transforms, this.customState});
 }
 
 /// Deterministic rollback netcode session coordinator binding `voxrollback` onto scene
@@ -22,7 +19,8 @@ final class RollbackSessionComponent extends Behaviour {
   bool autoStepInFixedUpdate;
   bool paused;
 
-  void Function(int frame, List<rollback.RollbackFrameInput> inputs)? onSimulateFrame;
+  void Function(int frame, List<rollback.RollbackFrameInput> inputs)?
+  onSimulateFrame;
   Map<String, Object?> Function()? onCaptureCustomState;
   void Function(Map<String, Object?> state)? onRestoreCustomState;
   void Function(rollback.StateChecksum builder)? onHashCustomState;
@@ -49,8 +47,16 @@ final class RollbackSessionComponent extends Behaviour {
     'RollbackSessionComponent',
     RollbackSessionComponent.new,
     [
-      Field.integer('playerCount', (r) => r.playerCount, (r, v) => r.playerCount = v),
-      Field.integer('localPlayerId', (r) => r.localPlayerId, (r, v) => r.localPlayerId = v),
+      Field.integer(
+        'playerCount',
+        (r) => r.playerCount,
+        (r, v) => r.playerCount = v,
+      ),
+      Field.integer(
+        'localPlayerId',
+        (r) => r.localPlayerId,
+        (r, v) => r.localPlayerId = v,
+      ),
       Field.integer(
         'maxRollbackFrames',
         (r) => r.maxRollbackFrames,
@@ -75,22 +81,25 @@ final class RollbackSessionComponent extends Behaviour {
     ],
   );
 
-  rollback.DeterministicRollbackSession<EngineRollbackSnapshot> _ensureSession() {
-    final s = _session ??= rollback.DeterministicRollbackSession<EngineRollbackSnapshot>(
-      playerCount: math.max(1, playerCount),
-      localPlayerId: localPlayerId.clamp(0, math.max(0, playerCount - 1)),
-      maxRollbackFrames: math.max(2, maxRollbackFrames),
-      inputDelayFrames: math.max(0, inputDelayFrames),
-      captureState: _captureSnapshot,
-      restoreState: _restoreSnapshot,
-      stepSimulation: _stepFrame,
-      computeChecksum: _computeSnapshotChecksum,
-    );
+  rollback.DeterministicRollbackSession<EngineRollbackSnapshot>
+  _ensureSession() {
+    final s = _session ??=
+        rollback.DeterministicRollbackSession<EngineRollbackSnapshot>(
+          playerCount: math.max(1, playerCount),
+          localPlayerId: localPlayerId.clamp(0, math.max(0, playerCount - 1)),
+          maxRollbackFrames: math.max(2, maxRollbackFrames),
+          inputDelayFrames: math.max(0, inputDelayFrames),
+          captureState: _captureSnapshot,
+          restoreState: _restoreSnapshot,
+          stepSimulation: _stepFrame,
+          computeChecksum: _computeSnapshotChecksum,
+        );
     s.inputDelayFrames = math.max(0, inputDelayFrames);
     return s;
   }
 
-  rollback.DeterministicRollbackSession<EngineRollbackSnapshot> get session => _ensureSession();
+  rollback.DeterministicRollbackSession<EngineRollbackSnapshot> get session =>
+      _ensureSession();
   int get currentFrame => _ensureSession().currentFrame;
   int get confirmedFrame => _ensureSession().confirmedFrame;
   int get totalRollbacks => _ensureSession().totalRollbacks;
@@ -104,7 +113,8 @@ final class RollbackSessionComponent extends Behaviour {
     final s = _ensureSession();
     final f = s.currentFrame - 1;
     if (f < 0) return _computeSnapshotChecksum(_captureSnapshot());
-    return s.checksumForFrame(f) ?? _computeSnapshotChecksum(_captureSnapshot());
+    return s.checksumForFrame(f) ??
+        _computeSnapshotChecksum(_captureSnapshot());
   }
 
   void trackGameObject(GameObject go) {
@@ -161,7 +171,11 @@ final class RollbackSessionComponent extends Behaviour {
       final go = _trackedObjects[i];
       if (go.isDestroyed) continue;
       final inp = inputs[i];
-      go.transform.position += Vec3(inp.moveX * 5.0 * dt, 0.0, inp.moveY * 5.0 * dt);
+      go.transform.position += Vec3(
+        inp.moveX * 5.0 * dt,
+        0.0,
+        inp.moveY * 5.0 * dt,
+      );
     }
   }
 
@@ -200,8 +214,14 @@ final class RollbackSessionComponent extends Behaviour {
     return c.finalize();
   }
 
-  void submitLocalInput(rollback.RollbackFrameInput input, {int? overrideTargetFrame}) {
-    _ensureSession().submitLocalInput(input, overrideTargetFrame: overrideTargetFrame);
+  void submitLocalInput(
+    rollback.RollbackFrameInput input, {
+    int? overrideTargetFrame,
+  }) {
+    _ensureSession().submitLocalInput(
+      input,
+      overrideTargetFrame: overrideTargetFrame,
+    );
   }
 
   void submitLocalRawAxes({
@@ -213,7 +233,8 @@ final class RollbackSessionComponent extends Behaviour {
     int? overrideTargetFrame,
   }) {
     final s = _ensureSession();
-    final f = overrideTargetFrame ?? (s.currentFrame + math.max(0, inputDelayFrames));
+    final f =
+        overrideTargetFrame ?? (s.currentFrame + math.max(0, inputDelayFrames));
     s.submitLocalInput(
       rollback.RollbackFrameInput.fromAxes(
         frame: f,
@@ -277,14 +298,31 @@ final class RollbackDiagnosticsUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -314,7 +352,10 @@ final class RollbackDiagnosticsUI {
 
     final pad = ui.style.windowPadding;
     final sess = comp.session;
-    final hexHash = comp.latestChecksum.toRadixString(16).padLeft(8, '0').toUpperCase();
+    final hexHash = comp.latestChecksum
+        .toRadixString(16)
+        .padLeft(8, '0')
+        .toUpperCase();
 
     ui.labelValue(
       'Frame / Conf',
@@ -354,7 +395,13 @@ final class RollbackDiagnosticsUI {
     }
 
     final pauseRect = VoxRect(delayRect.right + 8.0, barY, 76.0, 22.0);
-    if (_drawButton(ui, uiState, 'rb_pause', comp.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'rb_pause',
+      comp.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       comp.paused = !comp.paused;
     }
 

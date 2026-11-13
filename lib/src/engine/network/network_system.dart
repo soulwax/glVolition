@@ -35,7 +35,8 @@ class NetworkTransform extends Component {
 
   final net.SnapshotBuffer<Vec3> positionBuffer = net.SnapshotBuffer<Vec3>();
   final net.SnapshotBuffer<Quat> rotationBuffer = net.SnapshotBuffer<Quat>();
-  final net.PredictionHistory<Vec3, Vec3> prediction = net.PredictionHistory<Vec3, Vec3>();
+  final net.PredictionHistory<Vec3, Vec3> prediction =
+      net.PredictionHistory<Vec3, Vec3>();
 
   NetworkTransform({
     this.interpolationDelaySeconds = 0.05,
@@ -53,8 +54,12 @@ class NetworkTransform extends Component {
     required Quat rotation,
     Vec3? velocity,
   }) {
-    positionBuffer.add(net.Snapshot(tick: tick, timestampMs: timestampMs, state: position));
-    rotationBuffer.add(net.Snapshot(tick: tick, timestampMs: timestampMs, state: rotation));
+    positionBuffer.add(
+      net.Snapshot(tick: tick, timestampMs: timestampMs, state: position),
+    );
+    rotationBuffer.add(
+      net.Snapshot(tick: tick, timestampMs: timestampMs, state: rotation),
+    );
 
     final id = identity;
     if (id != null && id.isOwner && !id.isServer && enablePrediction) {
@@ -62,8 +67,10 @@ class NetworkTransform extends Component {
       prediction.reconcile(
         serverTick: tick,
         authoritativeState: position,
-        hasDiverged: (pred, auth) => (pred - auth).lengthSquared > 0.04, // >20cm drift
-        simulateStep: (cur, vel, t) => cur + vel * (scene.engine.time.fixedDeltaTime),
+        hasDiverged: (pred, auth) =>
+            (pred - auth).lengthSquared > 0.04, // >20cm drift
+        simulateStep: (cur, vel, t) =>
+            cur + vel * (scene.engine.time.fixedDeltaTime),
       );
     }
   }
@@ -73,17 +80,24 @@ class NetworkTransform extends Component {
     // Server or local owner predicts locally; remote proxies interpolate
     if (id != null && (id.isServer || id.isOwner)) return;
 
-    final targetTimeMs = currentNetworkTimeMs - (interpolationDelaySeconds * 1000).round();
+    final targetTimeMs =
+        currentNetworkTimeMs - (interpolationDelaySeconds * 1000).round();
 
     if (synchronizePosition && positionBuffer.isNotEmpty) {
-      final interpPos = positionBuffer.sample(targetTimeMs, (from, to, alpha) => Vec3.lerp(from, to, alpha));
+      final interpPos = positionBuffer.sample(
+        targetTimeMs,
+        (from, to, alpha) => Vec3.lerp(from, to, alpha),
+      );
       if (interpPos != null) {
         transform.position = interpPos;
       }
     }
 
     if (synchronizeRotation && rotationBuffer.isNotEmpty) {
-      final interpRot = rotationBuffer.sample(targetTimeMs, (from, to, alpha) => Mathfx.slerp(from, to, alpha));
+      final interpRot = rotationBuffer.sample(
+        targetTimeMs,
+        (from, to, alpha) => Mathfx.slerp(from, to, alpha),
+      );
       if (interpRot != null) {
         transform.rotation = interpRot;
       }
@@ -110,8 +124,14 @@ class NetworkManager {
     // Register standard packet handlers in voxnet
     net.MessageRegistry.register(net.PingMsg.kTypeId, net.PingMsg.deserialize);
     net.MessageRegistry.register(net.PongMsg.kTypeId, net.PongMsg.deserialize);
-    net.MessageRegistry.register(net.InputMsg.kTypeId, net.InputMsg.deserialize);
-    net.MessageRegistry.register(net.EntitySnapshotMsg.kTypeId, net.EntitySnapshotMsg.deserialize);
+    net.MessageRegistry.register(
+      net.InputMsg.kTypeId,
+      net.InputMsg.deserialize,
+    );
+    net.MessageRegistry.register(
+      net.EntitySnapshotMsg.kTypeId,
+      net.EntitySnapshotMsg.deserialize,
+    );
     net.MessageRegistry.register(net.RpcMsg.kTypeId, net.RpcMsg.deserialize);
   }
 
@@ -148,7 +168,11 @@ class NetworkManager {
     final t = transport;
     if (t == null) return;
 
-    final msg = net.RpcMsg(netId: netId, methodName: methodName, payload: payload);
+    final msg = net.RpcMsg(
+      netId: netId,
+      methodName: methodName,
+      payload: payload,
+    );
     final bytes = net.MessageRegistry.serialize(msg);
 
     if (recipientId == -1) {

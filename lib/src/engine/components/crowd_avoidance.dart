@@ -25,20 +25,20 @@ final class CrowdAgentComponent extends Component {
     this.alignToVelocity = true,
     this.syncPositionToTransform = true,
     this.autoRegisterWithManager = true,
-  })  : _goal = goal,
-        agent = crowd.CrowdAgent(
-          id: id ?? 'agent',
-          position: crowd.CrowdVec2.zero,
-          radius: radius,
-          maxSpeed: maxSpeed,
-          maxAcceleration: maxAcceleration,
-          neighborDist: neighborDist,
-          timeHorizon: timeHorizon,
-          timeHorizonObstacles: timeHorizonObstacles,
-          avoidanceWeight: avoidanceWeight,
-          layerMask: layerMask,
-          goal: goal != null ? crowd.CrowdVec2(goal.x, goal.z) : null,
-        );
+  }) : _goal = goal,
+       agent = crowd.CrowdAgent(
+         id: id ?? 'agent',
+         position: crowd.CrowdVec2.zero,
+         radius: radius,
+         maxSpeed: maxSpeed,
+         maxAcceleration: maxAcceleration,
+         neighborDist: neighborDist,
+         timeHorizon: timeHorizon,
+         timeHorizonObstacles: timeHorizonObstacles,
+         avoidanceWeight: avoidanceWeight,
+         layerMask: layerMask,
+         goal: goal != null ? crowd.CrowdVec2(goal.x, goal.z) : null,
+       );
 
   static final spec = ComponentSpec<CrowdAgentComponent>(
     'CrowdAgentComponent',
@@ -46,11 +46,31 @@ final class CrowdAgentComponent extends Component {
     [
       Field.number('radius', (a) => a.radius, (a, v) => a.radius = v),
       Field.number('maxSpeed', (a) => a.maxSpeed, (a, v) => a.maxSpeed = v),
-      Field.number('maxAcceleration', (a) => a.maxAcceleration, (a, v) => a.maxAcceleration = v),
-      Field.number('neighborDist', (a) => a.neighborDist, (a, v) => a.neighborDist = v),
-      Field.number('timeHorizon', (a) => a.timeHorizon, (a, v) => a.timeHorizon = v),
-      Field.number('avoidanceWeight', (a) => a.avoidanceWeight, (a, v) => a.avoidanceWeight = v),
-      Field.boolean('alignToVelocity', (a) => a.alignToVelocity, (a, v) => a.alignToVelocity = v),
+      Field.number(
+        'maxAcceleration',
+        (a) => a.maxAcceleration,
+        (a, v) => a.maxAcceleration = v,
+      ),
+      Field.number(
+        'neighborDist',
+        (a) => a.neighborDist,
+        (a, v) => a.neighborDist = v,
+      ),
+      Field.number(
+        'timeHorizon',
+        (a) => a.timeHorizon,
+        (a, v) => a.timeHorizon = v,
+      ),
+      Field.number(
+        'avoidanceWeight',
+        (a) => a.avoidanceWeight,
+        (a, v) => a.avoidanceWeight = v,
+      ),
+      Field.boolean(
+        'alignToVelocity',
+        (a) => a.alignToVelocity,
+        (a, v) => a.alignToVelocity = v,
+      ),
     ],
   );
 
@@ -79,7 +99,8 @@ final class CrowdAgentComponent extends Component {
   }
 
   Vec3 get velocity => Vec3(agent.velocity.x, 0.0, agent.velocity.z);
-  set velocity(Vec3 value) => agent.velocity = crowd.CrowdVec2(value.x, value.z);
+  set velocity(Vec3 value) =>
+      agent.velocity = crowd.CrowdVec2(value.x, value.z);
 
   void _pullFromTransform() {
     if (!isAttached) return;
@@ -160,8 +181,16 @@ final class CrowdManagerComponent extends Behaviour {
     'CrowdManagerComponent',
     CrowdManagerComponent.new,
     [
-      Field.boolean('useFlocking', (c) => c.useFlocking, (c, v) => c.useFlocking = v),
-      Field.boolean('autoDiscoverAgents', (c) => c.autoDiscoverAgents, (c, v) => c.autoDiscoverAgents = v),
+      Field.boolean(
+        'useFlocking',
+        (c) => c.useFlocking,
+        (c, v) => c.useFlocking = v,
+      ),
+      Field.boolean(
+        'autoDiscoverAgents',
+        (c) => c.autoDiscoverAgents,
+        (c, v) => c.autoDiscoverAgents = v,
+      ),
       Field.boolean('fixedStep', (c) => c.fixedStep, (c, v) => c.fixedStep = v),
     ],
   );
@@ -175,7 +204,8 @@ final class CrowdManagerComponent extends Behaviour {
     }
   }
 
-  void unregisterAgent(CrowdAgentComponent agentComp) => _agents.remove(agentComp);
+  void unregisterAgent(CrowdAgentComponent agentComp) =>
+      _agents.remove(agentComp);
 
   void addCircleObstacle(Vec3 center, double radius, {String? id}) {
     circleObstacles.add(
@@ -292,8 +322,16 @@ final class FormationLeaderComponent extends Behaviour {
         (f, v) => f.pattern = v,
       ),
       Field.number('spacing', (f) => f.spacing, (f, v) => f.spacing = v),
-      Field.number('offsetBehind', (f) => f.offsetBehind, (f, v) => f.offsetBehind = v),
-      Field.boolean('updateEveryFrame', (f) => f.updateEveryFrame, (f, v) => f.updateEveryFrame = v),
+      Field.number(
+        'offsetBehind',
+        (f) => f.offsetBehind,
+        (f, v) => f.offsetBehind = v,
+      ),
+      Field.boolean(
+        'updateEveryFrame',
+        (f) => f.updateEveryFrame,
+        (f, v) => f.updateEveryFrame = v,
+      ),
     ],
   );
 
@@ -336,9 +374,7 @@ final class FormationLeaderComponent extends Behaviour {
       }
     }
 
-    _lastSlots = [
-      for (final s in rawSlots) Vec3(s.x, leaderPos.y, s.z),
-    ];
+    _lastSlots = [for (final s in rawSlots) Vec3(s.x, leaderPos.y, s.z)];
     return _lastSlots;
   }
 
@@ -370,14 +406,31 @@ final class CrowdInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -420,7 +473,9 @@ final class CrowdInspectorUI {
     ui.labelValue(
       'Avg Speed / Clearance',
       '${stats.averageSpeed.toStringAsFixed(2)} m/s / $clearanceStr',
-      valueColor: stats.minPairwiseClearance >= -0.05 ? VoxColor.green : VoxColor.yellow,
+      valueColor: stats.minPairwiseClearance >= -0.05
+          ? VoxColor.green
+          : VoxColor.yellow,
     );
     ui.labelValue(
       'Obstacles (C/W)',
@@ -448,7 +503,8 @@ final class CrowdInspectorUI {
       final fmtRect = VoxRect(stepRect.right + 8.0, barY, 96.0, 22.0);
       if (_drawButton(ui, uiState, 'crowd_fmt', 'Cycle Form', fmtRect)) {
         final values = crowd.FormationKind.values;
-        formation.pattern = values[(formation.pattern.index + 1) % values.length];
+        formation.pattern =
+            values[(formation.pattern.index + 1) % values.length];
         formation.assignSlots();
       }
     }

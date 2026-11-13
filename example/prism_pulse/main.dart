@@ -4,7 +4,8 @@ import 'package:web/web.dart' as web;
 import 'game.dart';
 
 Future<void> main() async {
-  final canvas = web.document.getElementById('viewport') as web.HTMLCanvasElement;
+  final canvas =
+      web.document.getElementById('viewport') as web.HTMLCanvasElement;
   final runner = await WebEngineHost.mount(
     canvas,
     enableHotState: true,

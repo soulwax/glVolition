@@ -61,16 +61,15 @@ final class ShadowCasterLodComponent extends Behaviour {
 
   /// Validated [ShadowCasterLodPolicy] built from the current thresholds.
   ShadowCasterLodPolicy get policy {
-    final safeFull =
-        fullToReduced.isFinite && fullToReduced > 0.0 ? fullToReduced : 0.01;
-    final safeReduced =
-        reducedToCulled.isFinite && reducedToCulled > safeFull
-            ? reducedToCulled
-            : safeFull + 0.01;
-    final safeHyst =
-        hysteresisDistance.isFinite && hysteresisDistance >= 0.0
-            ? hysteresisDistance
-            : 0.0;
+    final safeFull = fullToReduced.isFinite && fullToReduced > 0.0
+        ? fullToReduced
+        : 0.01;
+    final safeReduced = reducedToCulled.isFinite && reducedToCulled > safeFull
+        ? reducedToCulled
+        : safeFull + 0.01;
+    final safeHyst = hysteresisDistance.isFinite && hysteresisDistance >= 0.0
+        ? hysteresisDistance
+        : 0.0;
     return ShadowCasterLodPolicy(
       fullToReduced: safeFull,
       reducedToCulled: safeReduced,
@@ -211,7 +210,8 @@ final class ShadowCasterLodInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }

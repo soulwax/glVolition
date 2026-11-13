@@ -20,9 +20,9 @@ final class AdaptiveMusicComponent extends Behaviour {
     this.intensitySmoothingPerSecond = 2.5,
     this.paused = false,
   }) : conductor = score.InteractiveScoreConductor(
-          initialIntensity: initialIntensity,
-          intensitySmoothingPerSecond: intensitySmoothingPerSecond,
-        ) {
+         initialIntensity: initialIntensity,
+         intensitySmoothingPerSecond: intensitySmoothingPerSecond,
+       ) {
     conductor.targetIntensity = targetIntensity.clamp(0.0, 1.0).toDouble();
   }
 
@@ -73,8 +73,7 @@ final class AdaptiveMusicComponent extends Behaviour {
   bool requestSection(
     String sectionId, {
     score.MusicQuantization quantization = score.MusicQuantization.nextBar,
-  }) =>
-      conductor.requestSection(sectionId, quantization: quantization);
+  }) => conductor.requestSection(sectionId, quantization: quantization);
 
   bool queueStinger(String stingerId) => conductor.queueStinger(stingerId);
 
@@ -83,7 +82,9 @@ final class AdaptiveMusicComponent extends Behaviour {
     score.MusicQuantization quantization = score.MusicQuantization.nextBar,
   }) {
     if (_sectionOrder.isEmpty) return false;
-    final currIdx = activeSectionId == null ? -1 : _sectionOrder.indexOf(activeSectionId!);
+    final currIdx = activeSectionId == null
+        ? -1
+        : _sectionOrder.indexOf(activeSectionId!);
     final nextId = _sectionOrder[(currIdx + 1) % _sectionOrder.length];
     return requestSection(nextId, quantization: quantization);
   }
@@ -98,7 +99,10 @@ final class AdaptiveMusicComponent extends Behaviour {
     for (final entry in _stemSources.entries) {
       final gain = snap.stemGains[entry.key] ?? 0.0;
       entry.value.volume = gain;
-      if (gain > 1e-3 && !entry.value.isPlaying && entry.value.clip != null && entry.value.isAttached) {
+      if (gain > 1e-3 &&
+          !entry.value.isPlaying &&
+          entry.value.clip != null &&
+          entry.value.isAttached) {
         entry.value.play();
       }
     }
@@ -143,14 +147,31 @@ final class MusicScoreInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -213,7 +234,9 @@ final class MusicScoreInspectorUI {
 
     final stingerRect = VoxRect(intRect.right + 8.0, barY, 78.0, 22.0);
     if (_drawButton(ui, uiState, 'msc_sting', 'Stinger', stingerRect)) {
-      final sid = stingerId ?? (music._stingerOrder.isNotEmpty ? music._stingerOrder.first : null);
+      final sid =
+          stingerId ??
+          (music._stingerOrder.isNotEmpty ? music._stingerOrder.first : null);
       if (sid != null) {
         music.queueStinger(sid);
       }

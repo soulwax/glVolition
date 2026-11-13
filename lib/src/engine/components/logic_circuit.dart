@@ -7,7 +7,16 @@ final class LogicCircuitComponent extends Behaviour {
   bool autoSyncLinkedVisuals;
 
   final circuit.CircuitGraphSolver solver = circuit.CircuitGraphSolver();
-  final Map<String, ({GameObject target, LinearColor onColor, LinearColor offColor, double onIntensity})> _lampBindings = {};
+  final Map<
+    String,
+    ({
+      GameObject target,
+      LinearColor onColor,
+      LinearColor offColor,
+      double onIntensity,
+    })
+  >
+  _lampBindings = {};
   double _tickAccumulator = 0.0;
 
   LogicCircuitComponent({
@@ -146,14 +155,31 @@ final class CircuitDebuggerUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

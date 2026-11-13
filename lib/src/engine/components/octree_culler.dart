@@ -96,10 +96,18 @@ final class OctreeCullerComponent extends Behaviour {
         final pos = mr.transform.position;
         final localB = mr.meshData?.bounds;
         final minV = localB != null
-            ? oct.OctreeVec3(pos.x + localB.min.x, pos.y + localB.min.y, pos.z + localB.min.z)
+            ? oct.OctreeVec3(
+                pos.x + localB.min.x,
+                pos.y + localB.min.y,
+                pos.z + localB.min.z,
+              )
             : oct.OctreeVec3(pos.x - 0.5, pos.y - 0.5, pos.z - 0.5);
         final maxV = localB != null
-            ? oct.OctreeVec3(pos.x + localB.max.x, pos.y + localB.max.y, pos.z + localB.max.z)
+            ? oct.OctreeVec3(
+                pos.x + localB.max.x,
+                pos.y + localB.max.y,
+                pos.z + localB.max.z,
+              )
             : oct.OctreeVec3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5);
         octree.insertOrUpdate(
           mr.instanceId,
@@ -110,7 +118,9 @@ final class OctreeCullerComponent extends Behaviour {
     }
     _totalTracked = tracked;
 
-    final cam = targetCamera ?? (isAttached && scene.isLoaded ? Camera.of(scene) : null);
+    final cam =
+        targetCamera ??
+        (isAttached && scene.isLoaded ? Camera.of(scene) : null);
     if (cam != null && cam.isAttached) {
       var aspect = 16.0 / 9.0;
       if (isAttached && scene.isLoaded) {
@@ -167,13 +177,12 @@ final class OctreeCullerComponent extends Behaviour {
     Vec3 origin,
     Vec3 direction, {
     double maxDistance = 500.0,
-  }) =>
-      oct.OctreeRayQuery.raycastClosest(
-        octree,
-        origin: oct.OctreeVec3(origin.x, origin.y, origin.z),
-        direction: oct.OctreeVec3(direction.x, direction.y, direction.z),
-        maxDistance: maxDistance,
-      );
+  }) => oct.OctreeRayQuery.raycastClosest(
+    octree,
+    origin: oct.OctreeVec3(origin.x, origin.y, origin.z),
+    direction: oct.OctreeVec3(direction.x, direction.y, direction.z),
+    maxDistance: maxDistance,
+  );
 
   @override
   void update() {
@@ -211,7 +220,8 @@ final class OctreeStatsInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -286,7 +296,13 @@ final class OctreeStatsInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'oct_pause', culler.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'oct_pause',
+      culler.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       culler.paused = !culler.paused;
     }
 

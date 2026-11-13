@@ -32,22 +32,20 @@ final class Light extends Component {
   factory Light.directional({
     LinearColor color = LinearColor.white,
     double intensity = 1.0,
-  }) =>
-      Light(type: LightType.directional, color: color, intensity: intensity);
+  }) => Light(type: LightType.directional, color: color, intensity: intensity);
 
   factory Light.point({
     LinearColor color = LinearColor.white,
     double intensity = 1.0,
     double range = 8.0,
     bool castsShadow = false,
-  }) =>
-      Light(
-        type: LightType.point,
-        color: color,
-        intensity: intensity,
-        range: range,
-        castsShadow: castsShadow,
-      );
+  }) => Light(
+    type: LightType.point,
+    color: color,
+    intensity: intensity,
+    range: range,
+    castsShadow: castsShadow,
+  );
 
   factory Light.spot({
     LinearColor color = LinearColor.white,
@@ -56,16 +54,15 @@ final class Light extends Component {
     double innerSpotAngle = 0.3,
     double spotAngle = 0.5,
     bool castsShadow = false,
-  }) =>
-      Light(
-        type: LightType.spot,
-        color: color,
-        intensity: intensity,
-        range: range,
-        innerSpotAngle: innerSpotAngle,
-        spotAngle: spotAngle,
-        castsShadow: castsShadow,
-      );
+  }) => Light(
+    type: LightType.spot,
+    color: color,
+    intensity: intensity,
+    range: range,
+    innerSpotAngle: innerSpotAngle,
+    spotAngle: spotAngle,
+    castsShadow: castsShadow,
+  );
 
   @override
   void _onEnableInternal() => scene._lights.add(this);

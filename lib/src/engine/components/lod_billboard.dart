@@ -17,10 +17,8 @@ final class LodGroup extends Behaviour {
 
   int _activeLevelIndex = -1;
 
-  LodGroup({
-    List<LodLevel> levels = const [],
-    this.cullDistance,
-  }) : levels = List.of(levels);
+  LodGroup({List<LodLevel> levels = const [], this.cullDistance})
+    : levels = List.of(levels);
 
   static final spec = ComponentSpec<LodGroup>(
     'LodGroup',
@@ -80,13 +78,13 @@ final class Billboard extends Behaviour {
 
   Billboard({this.cylindrical = false});
 
-  static final spec = ComponentSpec<Billboard>(
-    'Billboard',
-    Billboard.new,
-    [
-      Field.boolean('cylindrical', (b) => b.cylindrical, (b, v) => b.cylindrical = v),
-    ],
-  );
+  static final spec = ComponentSpec<Billboard>('Billboard', Billboard.new, [
+    Field.boolean(
+      'cylindrical',
+      (b) => b.cylindrical,
+      (b, v) => b.cylindrical = v,
+    ),
+  ]);
 
   @override
   void lateUpdate() {

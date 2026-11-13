@@ -29,7 +29,8 @@ final class Camera extends Component {
   /// Deterministic trauma-based camera shake evaluator (E12-1).
   final CameraShakeEngine shakeEngine = CameraShakeEngine();
 
-  late final _TransformCameraController _transformController = _TransformCameraController(this);
+  late final _TransformCameraController _transformController =
+      _TransformCameraController(this);
 
   Camera({
     this.fovYRadians = 1.0,
@@ -51,17 +52,16 @@ final class Camera extends Component {
     int cullingMask = -1,
     Vec4 normalizedViewportRect = const Vec4(0, 0, 1, 1),
     int depth = 0,
-  }) =>
-      Camera(
-        orthographic: true,
-        orthoHeight: orthoHeight,
-        near: near,
-        far: far,
-        customController: customController,
-        cullingMask: cullingMask,
-        normalizedViewportRect: normalizedViewportRect,
-        depth: depth,
-      );
+  }) => Camera(
+    orthographic: true,
+    orthoHeight: orthoHeight,
+    near: near,
+    far: far,
+    customController: customController,
+    cullingMask: cullingMask,
+    normalizedViewportRect: normalizedViewportRect,
+    depth: depth,
+  );
 
   CameraController get controller => customController ?? _transformController;
 
@@ -123,9 +123,21 @@ final class Camera extends Component {
     final vh = engine.graphics.viewportHeight;
     if (vw <= 0 || vh <= 0) return null;
     final vp = toCameraView(vw / vh).viewProjection.m;
-    final cx = vp[0] * worldPoint.x + vp[4] * worldPoint.y + vp[8] * worldPoint.z + vp[12];
-    final cy = vp[1] * worldPoint.x + vp[5] * worldPoint.y + vp[9] * worldPoint.z + vp[13];
-    final cw = vp[3] * worldPoint.x + vp[7] * worldPoint.y + vp[11] * worldPoint.z + vp[15];
+    final cx =
+        vp[0] * worldPoint.x +
+        vp[4] * worldPoint.y +
+        vp[8] * worldPoint.z +
+        vp[12];
+    final cy =
+        vp[1] * worldPoint.x +
+        vp[5] * worldPoint.y +
+        vp[9] * worldPoint.z +
+        vp[13];
+    final cw =
+        vp[3] * worldPoint.x +
+        vp[7] * worldPoint.y +
+        vp[11] * worldPoint.z +
+        vp[15];
     if (cw <= 1e-5) return null;
     final ndcX = cx / cw;
     final ndcY = cy / cw;
@@ -142,9 +154,21 @@ final class Camera extends Component {
     final vh = engine.graphics.viewportHeight;
     final aspect = (vw > 0 && vh > 0) ? (vw / vh) : 1.0;
     final vp = toCameraView(aspect).viewProjection.m;
-    final cx = vp[0] * worldPoint.x + vp[4] * worldPoint.y + vp[8] * worldPoint.z + vp[12];
-    final cy = vp[1] * worldPoint.x + vp[5] * worldPoint.y + vp[9] * worldPoint.z + vp[13];
-    final cw = vp[3] * worldPoint.x + vp[7] * worldPoint.y + vp[11] * worldPoint.z + vp[15];
+    final cx =
+        vp[0] * worldPoint.x +
+        vp[4] * worldPoint.y +
+        vp[8] * worldPoint.z +
+        vp[12];
+    final cy =
+        vp[1] * worldPoint.x +
+        vp[5] * worldPoint.y +
+        vp[9] * worldPoint.z +
+        vp[13];
+    final cw =
+        vp[3] * worldPoint.x +
+        vp[7] * worldPoint.y +
+        vp[11] * worldPoint.z +
+        vp[15];
     if (cw <= 1e-5) return null;
     final ndcX = cx / cw;
     final ndcY = cy / cw;
@@ -186,7 +210,8 @@ final class Camera extends Component {
   bool isMeshVisible(MeshRenderer renderer, [double? aspect]) {
     if (!renderer.isActiveAndEnabled) return false;
     final frustum = calculateFrustum(aspect);
-    return frustum.intersectsAabb(renderer.worldAabb) != FrustumIntersection.outside;
+    return frustum.intersectsAabb(renderer.worldAabb) !=
+        FrustumIntersection.outside;
   }
 
   CameraView toCameraView([double? aspect]) {

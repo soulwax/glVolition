@@ -29,11 +29,7 @@ final class EditorSession {
     elevationRadians: 0.35,
   );
 
-  EditorSession(
-    this.engine, {
-    this.prefabs = const {},
-    this.maxUndoSteps = 32,
-  });
+  EditorSession(this.engine, {this.prefabs = const {}, this.maxUndoSteps = 32});
 
   bool get isPlaying => _inPlayMode;
   bool get isFreeLookEnabled => _freeLookEnabled;
@@ -78,10 +74,10 @@ final class EditorSession {
   }
 
   _EditorHistoryEntry _captureHistoryEntry(String label) => _EditorHistoryEntry(
-        label: label,
-        sceneJson: SceneSerializer.toJson(engine.scene, registry: engine.registry),
-        selectedName: selected?.name,
-      );
+    label: label,
+    sceneJson: SceneSerializer.toJson(engine.scene, registry: engine.registry),
+    selectedName: selected?.name,
+  );
 
   void _restoreHistoryEntry(_EditorHistoryEntry entry) {
     final restored = SceneSerializer.fromJson(
@@ -90,7 +86,9 @@ final class EditorSession {
       prefabs: prefabs,
     );
     engine.loadScene(restored);
-    selected = entry.selectedName != null ? engine.scene.find(entry.selectedName!) : null;
+    selected = entry.selectedName != null
+        ? engine.scene.find(entry.selectedName!)
+        : null;
   }
 
   /// Captures the current scene as the baseline snapshot that [stopPlayMode]

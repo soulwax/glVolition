@@ -38,12 +38,9 @@ final class Engine {
   Scene? _pendingScene;
   final List<Invocation> _invocations = [];
 
-  Engine(
-    this.host, {
-    Scene? initialScene,
-    ComponentRegistry? registry,
-  })  : _scene = initialScene ?? Scene(),
-        registry = registry ?? ComponentRegistry.defaults() {
+  Engine(this.host, {Scene? initialScene, ComponentRegistry? registry})
+    : _scene = initialScene ?? Scene(),
+      registry = registry ?? ComponentRegistry.defaults() {
     _scene._attach(this);
   }
 
@@ -84,7 +81,12 @@ final class Engine {
     double? repeatEvery,
     Object? owner,
   }) {
-    final inv = Invocation._(time._time + math.max(0, delaySeconds), action, repeatEvery, owner);
+    final inv = Invocation._(
+      time._time + math.max(0, delaySeconds),
+      action,
+      repeatEvery,
+      owner,
+    );
     _invocations.add(inv);
     return inv;
   }
@@ -130,7 +132,8 @@ final class Engine {
 
       time._inFixedStep = true;
       var steps = 0;
-      while (time._accumulator >= time._fixedDeltaTime && steps < time.maxFixedStepsPerFrame) {
+      while (time._accumulator >= time._fixedDeltaTime &&
+          steps < time.maxFixedStepsPerFrame) {
         time._accumulator -= time._fixedDeltaTime;
         time._fixedTime += time._fixedDeltaTime;
         _scene._fixedStep();

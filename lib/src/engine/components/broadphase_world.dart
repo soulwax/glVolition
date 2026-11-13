@@ -25,8 +25,8 @@ final class BroadphaseWorldComponent extends Behaviour {
     this.useSapBroadphase = false,
     this.autoSyncSceneColliders = true,
     this.ignoreStaticStatic = true,
-  })  : _builtCellSize = math.max(0.25, cellSize),
-        _builtSapAxis = sapAxis {
+  }) : _builtCellSize = math.max(0.25, cellSize),
+       _builtSapAxis = sapAxis {
     grid = broad.SpatialHashGrid3D(cellSize: _builtCellSize);
     sap = broad.SweepAndPrune1D(axis: _builtSapAxis);
   }
@@ -98,9 +98,9 @@ final class BroadphaseWorldComponent extends Behaviour {
   }
 
   static broad.BroadAabb _toBroadAabb(Aabb aabb) => broad.BroadAabb(
-        broad.BroadVec3(aabb.min.x, aabb.min.y, aabb.min.z),
-        broad.BroadVec3(aabb.max.x, aabb.max.y, aabb.max.z),
-      );
+    broad.BroadVec3(aabb.min.x, aabb.min.y, aabb.min.z),
+    broad.BroadVec3(aabb.max.x, aabb.max.y, aabb.max.z),
+  );
 
   void upsertEntry(broad.BroadEntry entry) {
     grid.insertOrUpdate(entry);
@@ -156,7 +156,11 @@ final class BroadphaseWorldComponent extends Behaviour {
 
   List<Collider> queryAabb(Aabb bounds, {int mask = -1, Collider? exclude}) {
     final exId = exclude == null ? null : _colliderToId[exclude];
-    final hits = grid.queryAabb(_toBroadAabb(bounds), mask: mask, excludeId: exId);
+    final hits = grid.queryAabb(
+      _toBroadAabb(bounds),
+      mask: mask,
+      excludeId: exId,
+    );
     final out = <Collider>[];
     for (final e in hits) {
       final col = _idToCollider[e.id];
@@ -226,7 +230,8 @@ final class BroadphaseStatsUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }

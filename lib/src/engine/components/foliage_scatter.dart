@@ -55,19 +55,47 @@ final class FoliageScatterComponent extends Behaviour {
       Field.number('originZ', (f) => f.originZ, (f, v) => f.originZ = v),
       Field.number('areaWidth', (f) => f.areaWidth, (f, v) => f.areaWidth = v),
       Field.number('areaDepth', (f) => f.areaDepth, (f, v) => f.areaDepth = v),
-      Field.number('clusterCellSize', (f) => f.clusterCellSize, (f, v) => f.clusterCellSize = v),
-      Field.number('lodFullDistance', (f) => f.lodFullDistance, (f, v) => f.lodFullDistance = v),
-      Field.number('lodMidDistance', (f) => f.lodMidDistance, (f, v) => f.lodMidDistance = v),
-      Field.number('maxDrawDistance', (f) => f.maxDrawDistance, (f, v) => f.maxDrawDistance = v),
+      Field.number(
+        'clusterCellSize',
+        (f) => f.clusterCellSize,
+        (f, v) => f.clusterCellSize = v,
+      ),
+      Field.number(
+        'lodFullDistance',
+        (f) => f.lodFullDistance,
+        (f, v) => f.lodFullDistance = v,
+      ),
+      Field.number(
+        'lodMidDistance',
+        (f) => f.lodMidDistance,
+        (f, v) => f.lodMidDistance = v,
+      ),
+      Field.number(
+        'maxDrawDistance',
+        (f) => f.maxDrawDistance,
+        (f, v) => f.maxDrawDistance = v,
+      ),
       Field.number('windSpeed', (f) => f.windSpeed, (f, v) => f.windSpeed = v),
-      Field.number('gustStrength', (f) => f.gustStrength, (f, v) => f.gustStrength = v),
-      Field.vec3('windDirection', (f) => f.windDirection, (f, v) => f.windDirection = v),
-      Field.boolean('animateWind', (f) => f.animateWind, (f, v) => f.animateWind = v),
+      Field.number(
+        'gustStrength',
+        (f) => f.gustStrength,
+        (f, v) => f.gustStrength = v,
+      ),
+      Field.vec3(
+        'windDirection',
+        (f) => f.windDirection,
+        (f, v) => f.windDirection = v,
+      ),
+      Field.boolean(
+        'animateWind',
+        (f) => f.animateWind,
+        (f, v) => f.animateWind = v,
+      ),
     ],
   );
 
-  foliage.FoliageClusterGrid _ensureGrid() =>
-      _clusterGrid ??= foliage.FoliageClusterGrid(cellSize: math.max(1.0, clusterCellSize));
+  foliage.FoliageClusterGrid _ensureGrid() => _clusterGrid ??=
+      foliage.FoliageClusterGrid(cellSize: math.max(1.0, clusterCellSize));
 
   foliage.WindSwayInstanceBuffer _ensureWindBuffer() {
     final wb = _windBuffer ??= foliage.WindSwayInstanceBuffer(
@@ -77,7 +105,10 @@ final class FoliageScatterComponent extends Behaviour {
     );
     wb.windSpeed = windSpeed;
     wb.gustStrength = gustStrength;
-    wb.windDirection = foliage.FoliageVec2(windDirection.x, windDirection.z).normalized;
+    wb.windDirection = foliage.FoliageVec2(
+      windDirection.x,
+      windDirection.z,
+    ).normalized;
     return wb;
   }
 
@@ -165,8 +196,9 @@ final class FoliageScatterComponent extends Behaviour {
       allInstances.addAll(generated);
     }
 
-    _clusterGrid = foliage.FoliageClusterGrid(cellSize: math.max(1.0, clusterCellSize))
-      ..rebuild(allInstances);
+    _clusterGrid = foliage.FoliageClusterGrid(
+      cellSize: math.max(1.0, clusterCellSize),
+    )..rebuild(allInstances);
 
     _ensureRenderer();
     updateVisibility(cameraPosition: cameraPosition, dt: 0.0);
@@ -177,9 +209,11 @@ final class FoliageScatterComponent extends Behaviour {
     if (!isAttached) return;
     _renderer ??= gameObject.getComponent<InstancedMeshRenderer>();
     if (_renderer == null) {
-      final mesh = foliageMeshData ??
+      final mesh =
+          foliageMeshData ??
           Primitives.cone(radius: 0.45, height: 1.5, radialSegments: 8);
-      final mat = foliageMaterialDefinition ??
+      final mat =
+          foliageMaterialDefinition ??
           MaterialDefinition.dielectric(
             key: '${gameObject.name}#foliageMat',
             color: const LinearColor(0.18, 0.48, 0.2),
@@ -199,8 +233,11 @@ final class FoliageScatterComponent extends Behaviour {
     Vec3? cameraPosition,
     double dt = 0.0,
   }) {
-    final camPos = cameraPosition ??
-        (isAttached ? scene.findObjectOfType<Camera>()?.transform.position : null) ??
+    final camPos =
+        cameraPosition ??
+        (isAttached
+            ? scene.findObjectOfType<Camera>()?.transform.position
+            : null) ??
         Vec3.zero;
     final batch = _ensureGrid().queryVisible(
       foliage.FoliageVec3(camPos.x, camPos.y, camPos.z),
@@ -221,12 +258,17 @@ final class FoliageScatterComponent extends Behaviour {
       final transforms = <Transform>[];
       for (final pose in poses) {
         final inst = pose.instance;
-        final rot = Quat.axisAngle(Vec3.unitY, pose.animatedYawRadians) *
+        final rot =
+            Quat.axisAngle(Vec3.unitY, pose.animatedYawRadians) *
             Quat.axisAngle(Vec3.unitX, pose.bendXRadians) *
             Quat.axisAngle(Vec3.unitZ, pose.bendZRadians);
         transforms.add(
           Transform(
-            translation: Vec3(inst.position.x, inst.position.y + inst.scale * 0.65, inst.position.z),
+            translation: Vec3(
+              inst.position.x,
+              inst.position.y + inst.scale * 0.65,
+              inst.position.z,
+            ),
             rotation: rot,
             scale: inst.scale,
           ),
@@ -270,14 +312,31 @@ final class FoliageInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

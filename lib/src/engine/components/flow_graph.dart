@@ -79,7 +79,12 @@ abstract final class EngineFlowNodes {
         isPure: false,
         inputs: const [
           flow.PinDef.execIn(),
-          flow.PinDef.input('radians', 'Radians', flow.PinType.floatVal, defaultValue: 0.0),
+          flow.PinDef.input(
+            'radians',
+            'Radians',
+            flow.PinType.floatVal,
+            defaultValue: 0.0,
+          ),
         ],
         outputs: const [flow.PinDef.execOut()],
         execute: (ctx, _) {
@@ -97,7 +102,12 @@ abstract final class EngineFlowNodes {
         isPure: false,
         inputs: const [
           flow.PinDef.execIn(),
-          flow.PinDef.input('active', 'Active', flow.PinType.boolVal, defaultValue: true),
+          flow.PinDef.input(
+            'active',
+            'Active',
+            flow.PinType.boolVal,
+            defaultValue: true,
+          ),
         ],
         outputs: const [flow.PinDef.execOut()],
         execute: (ctx, _) {
@@ -119,7 +129,8 @@ final class FlowGraphComponent extends Behaviour {
   bool autoUpdate;
 
   flow.FlowRunner? _runner;
-  final List<void Function(String signal, Object? payload)> _signalListeners = [];
+  final List<void Function(String signal, Object? payload)> _signalListeners =
+      [];
   void Function(String message)? onLog;
 
   FlowGraphComponent(
@@ -136,35 +147,45 @@ final class FlowGraphComponent extends Behaviour {
   }
 
   flow.FlowRunner get runner => _runner ??= flow.FlowRunner(
-        graph,
-        userContext: isAttached ? gameObject : null,
-        onLog: (msg) {
-          onLog?.call(msg);
-          voxlog.info('[FlowGraph:${graph.name}] $msg');
-        },
-        onSignal: (sig, payload) {
-          for (final l in List.of(_signalListeners)) {
-            l(sig, payload);
-          }
-        },
-      );
+    graph,
+    userContext: isAttached ? gameObject : null,
+    onLog: (msg) {
+      onLog?.call(msg);
+      voxlog.info('[FlowGraph:${graph.name}] $msg');
+    },
+    onSignal: (sig, payload) {
+      for (final l in List.of(_signalListeners)) {
+        l(sig, payload);
+      }
+    },
+  );
 
   flow.FlowBlackboard get blackboard => graph.blackboard;
 
-  void addSignalListener(void Function(String signal, Object? payload) listener) =>
-      _signalListeners.add(listener);
+  void addSignalListener(
+    void Function(String signal, Object? payload) listener,
+  ) => _signalListeners.add(listener);
 
-  void removeSignalListener(void Function(String signal, Object? payload) listener) =>
-      _signalListeners.remove(listener);
+  void removeSignalListener(
+    void Function(String signal, Object? payload) listener,
+  ) => _signalListeners.remove(listener);
 
-  void setVariable(String key, Object? value) => graph.blackboard.set(key, value);
+  void setVariable(String key, Object? value) =>
+      graph.blackboard.set(key, value);
   Object? getVariable(String key) => graph.blackboard.get(key);
 
   Object? evaluateOutput(String nodeId, String outputPinId) =>
-      runner.evaluateOutput(nodeId, outputPinId, dt: isAttached ? time.deltaTime : 0.0);
+      runner.evaluateOutput(
+        nodeId,
+        outputPinId,
+        dt: isAttached ? time.deltaTime : 0.0,
+      );
 
-  void triggerEvent(String eventName, {Object? payload}) =>
-      runner.triggerEvent(eventName, payload: payload, dt: isAttached ? time.deltaTime : 0.0);
+  void triggerEvent(String eventName, {Object? payload}) => runner.triggerEvent(
+    eventName,
+    payload: payload,
+    dt: isAttached ? time.deltaTime : 0.0,
+  );
 
   @override
   void awake() {
@@ -222,15 +243,15 @@ final class FlowGraphUI {
   static const double _pinRadius = 4.5;
 
   static VoxColor _pinColor(flow.PinType type) => switch (type) {
-        flow.PinType.exec => VoxColor.white,
-        flow.PinType.boolVal => VoxColor.red,
-        flow.PinType.intVal => VoxColor.cyan,
-        flow.PinType.floatVal => VoxColor.green,
-        flow.PinType.vec2Val || flow.PinType.vec3Val => VoxColor.yellow,
-        flow.PinType.stringVal => const VoxColor(225, 110, 235, 255),
-        flow.PinType.colorVal => const VoxColor(255, 155, 70, 255),
-        flow.PinType.any => VoxColor.lightGray,
-      };
+    flow.PinType.exec => VoxColor.white,
+    flow.PinType.boolVal => VoxColor.red,
+    flow.PinType.intVal => VoxColor.cyan,
+    flow.PinType.floatVal => VoxColor.green,
+    flow.PinType.vec2Val || flow.PinType.vec3Val => VoxColor.yellow,
+    flow.PinType.stringVal => const VoxColor(225, 110, 235, 255),
+    flow.PinType.colorVal => const VoxColor(255, 155, 70, 255),
+    flow.PinType.any => VoxColor.lightGray,
+  };
 
   static void render(
     VoxUiContext ui,
@@ -258,17 +279,39 @@ final class FlowGraphUI {
     final inp = ui.input;
 
     dl.pushClip(canvasRect);
-    dl.addRectFilled(canvasX, canvasY, canvasW, canvasH, const VoxColor(18, 20, 26, 245));
+    dl.addRectFilled(
+      canvasX,
+      canvasY,
+      canvasW,
+      canvasH,
+      const VoxColor(18, 20, 26, 245),
+    );
 
     // Subtle canvas grid lines
     const gridSpacing = 32.0;
     final offX = uiState.panX % gridSpacing;
     final offY = uiState.panY % gridSpacing;
     for (double gx = canvasX + offX; gx < canvasRect.right; gx += gridSpacing) {
-      dl.addLine(gx, canvasY, gx, canvasRect.bottom, const VoxColor(30, 34, 42, 200));
+      dl.addLine(
+        gx,
+        canvasY,
+        gx,
+        canvasRect.bottom,
+        const VoxColor(30, 34, 42, 200),
+      );
     }
-    for (double gy = canvasY + offY; gy < canvasRect.bottom; gy += gridSpacing) {
-      dl.addLine(canvasX, gy, canvasRect.right, gy, const VoxColor(30, 34, 42, 200));
+    for (
+      double gy = canvasY + offY;
+      gy < canvasRect.bottom;
+      gy += gridSpacing
+    ) {
+      dl.addLine(
+        canvasX,
+        gy,
+        canvasRect.right,
+        gy,
+        const VoxColor(30, 34, 42, 200),
+      );
     }
 
     // Precompute screen positions of pins and node rectangles
@@ -288,12 +331,20 @@ final class FlowGraphUI {
       for (int i = 0; i < def.inputs.length; i++) {
         final px = nx + 10.0;
         final py = ny + _headerHeight + 12.0 + i * _rowHeight;
-        pinPositions['${node.id}:in:${def.inputs[i].id}'] = (px, py, def.inputs[i]);
+        pinPositions['${node.id}:in:${def.inputs[i].id}'] = (
+          px,
+          py,
+          def.inputs[i],
+        );
       }
       for (int i = 0; i < def.outputs.length; i++) {
         final px = nx + _nodeWidth - 10.0;
         final py = ny + _headerHeight + 12.0 + i * _rowHeight;
-        pinPositions['${node.id}:out:${def.outputs[i].id}'] = (px, py, def.outputs[i]);
+        pinPositions['${node.id}:out:${def.outputs[i].id}'] = (
+          px,
+          py,
+          def.outputs[i],
+        );
       }
     }
 
@@ -343,8 +394,10 @@ final class FlowGraphUI {
         if (uiState.draggingNodeId != null) {
           final dragged = graph.getNode(uiState.draggingNodeId!);
           if (dragged != null) {
-            dragged.x = inp.mouseX - uiState.dragOffsetX - canvasX - uiState.panX;
-            dragged.y = inp.mouseY - uiState.dragOffsetY - canvasY - uiState.panY;
+            dragged.x =
+                inp.mouseX - uiState.dragOffsetX - canvasX - uiState.panX;
+            dragged.y =
+                inp.mouseY - uiState.dragOffsetY - canvasY - uiState.panY;
           }
         } else if (uiState.isPanning) {
           uiState.panX += inp.mouseDeltaX;
@@ -353,7 +406,8 @@ final class FlowGraphUI {
       }
 
       if (inp.wasMouseReleased) {
-        if (uiState.linkingFromNodeId != null && uiState.linkingFromPinId != null) {
+        if (uiState.linkingFromNodeId != null &&
+            uiState.linkingFromPinId != null) {
           for (final entry in pinPositions.entries) {
             final (px, py, pin) = entry.value;
             if (pin.direction == flow.PinDirection.input) {
@@ -385,14 +439,22 @@ final class FlowGraphUI {
       final toPos = pinPositions['${link.toNodeId}:in:${link.toPinId}'];
       if (fromPos != null && toPos != null) {
         final col = _pinColor(fromPos.$3.type).withAlpha(220);
-        _drawBezierWire(dl, fromPos.$1, fromPos.$2, toPos.$1, toPos.$2, col,
-            thickness: fromPos.$3.type == flow.PinType.exec ? 2.4 : 1.7);
+        _drawBezierWire(
+          dl,
+          fromPos.$1,
+          fromPos.$2,
+          toPos.$1,
+          toPos.$2,
+          col,
+          thickness: fromPos.$3.type == flow.PinType.exec ? 2.4 : 1.7,
+        );
       }
     }
 
     // Draw live dragged wire preview
     if (uiState.linkingFromNodeId != null && uiState.linkingFromPinId != null) {
-      final fromPos = pinPositions['${uiState.linkingFromNodeId}:out:${uiState.linkingFromPinId}'];
+      final fromPos =
+          pinPositions['${uiState.linkingFromNodeId}:out:${uiState.linkingFromPinId}'];
       if (fromPos != null) {
         _drawBezierWire(
           dl,
@@ -416,17 +478,41 @@ final class FlowGraphUI {
       final isSelected = uiState.selectedNodeId == node.id;
       final wasExecuted = activeSet.contains(node.id);
 
-      dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, const VoxColor(30, 34, 44, 240), cornerRadius: 5.0);
+      dl.addRectFilled(
+        rect.x,
+        rect.y,
+        rect.width,
+        rect.height,
+        const VoxColor(30, 34, 44, 240),
+        cornerRadius: 5.0,
+      );
 
       final headerCol = def.isEventEntry
           ? const VoxColor(150, 42, 42, 255)
-          : (def.isPure ? const VoxColor(38, 92, 68, 255) : const VoxColor(45, 76, 130, 255));
-      dl.addRectFilled(rect.x, rect.y, _nodeWidth, _headerHeight, headerCol, cornerRadius: 4.0);
+          : (def.isPure
+                ? const VoxColor(38, 92, 68, 255)
+                : const VoxColor(45, 76, 130, 255));
+      dl.addRectFilled(
+        rect.x,
+        rect.y,
+        _nodeWidth,
+        _headerHeight,
+        headerCol,
+        cornerRadius: 4.0,
+      );
 
       final borderCol = isSelected
           ? VoxColor.yellow
           : (wasExecuted ? VoxColor.cyan : const VoxColor(70, 78, 96, 255));
-      dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, borderCol, thickness: isSelected ? 2.0 : 1.0, cornerRadius: 5.0);
+      dl.addRectOutline(
+        rect.x,
+        rect.y,
+        rect.width,
+        rect.height,
+        borderCol,
+        thickness: isSelected ? 2.0 : 1.0,
+        cornerRadius: 5.0,
+      );
 
       dl.addText(
         node.titleOverride ?? def.title,
@@ -440,7 +526,13 @@ final class FlowGraphUI {
         final pos = pinPositions['${node.id}:in:${p.id}']!;
         final col = _pinColor(p.type);
         dl.addCircleFilled(pos.$1, pos.$2, _pinRadius, col);
-        dl.addText(p.label, pos.$1 + 8.0, pos.$2 - 6.0, color: VoxColor.lightGray, size: 11.0);
+        dl.addText(
+          p.label,
+          pos.$1 + 8.0,
+          pos.$2 - 6.0,
+          color: VoxColor.lightGray,
+          size: 11.0,
+        );
       }
 
       for (final p in def.outputs) {
@@ -448,8 +540,16 @@ final class FlowGraphUI {
         final col = _pinColor(p.type);
         dl.addCircleFilled(pos.$1, pos.$2, _pinRadius, col);
         final live = runner?.trace.lastPinValues['${node.id}.${p.id}'];
-        final labelStr = live != null && p.type != flow.PinType.exec ? '${p.label}: $live' : p.label;
-        dl.addText(labelStr, pos.$1 - 58.0, pos.$2 - 6.0, color: VoxColor.white, size: 11.0);
+        final labelStr = live != null && p.type != flow.PinType.exec
+            ? '${p.label}: $live'
+            : p.label;
+        dl.addText(
+          labelStr,
+          pos.$1 - 58.0,
+          pos.$2 - 6.0,
+          color: VoxColor.white,
+          size: 11.0,
+        );
       }
     }
 
@@ -478,11 +578,13 @@ final class FlowGraphUI {
     for (int i = 1; i <= segments; i++) {
       final t = i / segments;
       final inv = 1.0 - t;
-      final nx = inv * inv * inv * x1 +
+      final nx =
+          inv * inv * inv * x1 +
           3 * inv * inv * t * cx1 +
           3 * inv * t * t * cx2 +
           t * t * t * x2;
-      final ny = inv * inv * inv * y1 +
+      final ny =
+          inv * inv * inv * y1 +
           3 * inv * inv * t * cy1 +
           3 * inv * t * t * cy2 +
           t * t * t * y2;

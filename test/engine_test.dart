@@ -18,7 +18,8 @@ final class _Recorder extends Behaviour {
   @override
   void start() => log.add('$label.start');
   @override
-  void fixedUpdate() => log.add('$label.fixedUpdate(${time.deltaTime.toStringAsFixed(3)})');
+  void fixedUpdate() =>
+      log.add('$label.fixedUpdate(${time.deltaTime.toStringAsFixed(3)})');
   @override
   void update() => log.add('$label.update');
   @override
@@ -29,53 +30,59 @@ final class _Recorder extends Behaviour {
   void onDestroy() => log.add('$label.onDestroy');
 
   @override
-  void onTriggerEnter(Collider other) => log.add('$label.enter:${other.gameObject.name}');
+  void onTriggerEnter(Collider other) =>
+      log.add('$label.enter:${other.gameObject.name}');
   @override
-  void onTriggerStay(Collider other) => log.add('$label.stay:${other.gameObject.name}');
+  void onTriggerStay(Collider other) =>
+      log.add('$label.stay:${other.gameObject.name}');
   @override
-  void onTriggerExit(Collider other) => log.add('$label.exit:${other.gameObject.name}');
+  void onTriggerExit(Collider other) =>
+      log.add('$label.exit:${other.gameObject.name}');
 }
 
 void main() {
   group('Lifecycle & execution order', () {
-    test('runs awake -> onEnable -> start -> fixedUpdate -> update -> lateUpdate -> onDisable -> onDestroy', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
-      engine.time.fixedDeltaTime = 0.02;
-      final log = <String>[];
+    test(
+      'runs awake -> onEnable -> start -> fixedUpdate -> update -> lateUpdate -> onDisable -> onDestroy',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        engine.time.fixedDeltaTime = 0.02;
+        final log = <String>[];
 
-      final go = engine.scene.createGameObject('Actor');
-      final rec = go.addComponent(_Recorder(log));
-      expect(log, ['R.awake', 'R.onEnable']);
+        final go = engine.scene.createGameObject('Actor');
+        final rec = go.addComponent(_Recorder(log));
+        expect(log, ['R.awake', 'R.onEnable']);
 
-      log.clear();
-      engine.step(0.025);
-      expect(log, [
-        'R.start',
-        'R.fixedUpdate(0.020)',
-        'R.update',
-        'R.lateUpdate',
-      ]);
+        log.clear();
+        engine.step(0.025);
+        expect(log, [
+          'R.start',
+          'R.fixedUpdate(0.020)',
+          'R.update',
+          'R.lateUpdate',
+        ]);
 
-      log.clear();
-      rec.enabled = false;
-      expect(log, ['R.onDisable']);
+        log.clear();
+        rec.enabled = false;
+        expect(log, ['R.onDisable']);
 
-      log.clear();
-      engine.step(0.025);
-      expect(log, isEmpty);
+        log.clear();
+        engine.step(0.025);
+        expect(log, isEmpty);
 
-      rec.enabled = true;
-      expect(log, ['R.onEnable']);
+        rec.enabled = true;
+        expect(log, ['R.onEnable']);
 
-      log.clear();
-      go.destroy();
-      expect(log, isEmpty, reason: 'destroy is deferred to end of frame');
-      engine.step(0.005);
-      expect(log, ['R.onDisable', 'R.onDestroy']);
-      expect(go.isDestroyed, isTrue);
-      expect(engine.scene.find('Actor'), isNull);
-    });
+        log.clear();
+        go.destroy();
+        expect(log, isEmpty, reason: 'destroy is deferred to end of frame');
+        engine.step(0.005);
+        expect(log, ['R.onDisable', 'R.onDestroy']);
+        expect(go.isDestroyed, isTrue);
+        expect(engine.scene.find('Actor'), isNull);
+      },
+    );
 
     test('inactive GameObjects defer awake until first activated', () {
       final engine = Engine(HeadlessHost());
@@ -94,12 +101,25 @@ void main() {
     test('executionOrder sorts start, fixedUpdate, update, lateUpdate', () {
       final engine = Engine(HeadlessHost());
       final log = <String>[];
-      engine.scene.createGameObject('Late', components: [_Recorder(log, 'B', 10)]);
-      engine.scene.createGameObject('Early', components: [_Recorder(log, 'A', -5)]);
+      engine.scene.createGameObject(
+        'Late',
+        components: [_Recorder(log, 'B', 10)],
+      );
+      engine.scene.createGameObject(
+        'Early',
+        components: [_Recorder(log, 'A', -5)],
+      );
       log.clear();
 
       engine.step(0.001);
-      expect(log, ['A.start', 'B.start', 'A.update', 'B.update', 'A.lateUpdate', 'B.lateUpdate']);
+      expect(log, [
+        'A.start',
+        'B.start',
+        'A.update',
+        'B.update',
+        'A.lateUpdate',
+        'B.lateUpdate',
+      ]);
     });
   });
 
@@ -131,7 +151,10 @@ void main() {
 
     test('lookAt aligns transform.forward (-Z) toward target', () {
       final engine = Engine(HeadlessHost());
-      final go = engine.scene.createGameObject('Turret', position: const Vec3(0, 0, 0));
+      final go = engine.scene.createGameObject(
+        'Turret',
+        position: const Vec3(0, 0, 0),
+      );
       go.transform.lookAt(const Vec3(3, 0, -4));
       final expected = const Vec3(3, 0, -4).normalized;
       expect((go.transform.forward - expected).length, lessThan(1e-5));
@@ -150,23 +173,26 @@ void main() {
       expect(engine.time.fixedTime, closeTo(0.02, 1e-9));
     });
 
-    test('invoke fires on scaled game time and cancels with owning Behaviour', () {
-      final engine = Engine(HeadlessHost());
-      var hits = 0;
-      final go = engine.scene.createGameObject('Timer');
-      final b = go.addComponent(_Recorder([]));
-      b.invoke(0.05, () => hits++, repeatEvery: 0.05);
+    test(
+      'invoke fires on scaled game time and cancels with owning Behaviour',
+      () {
+        final engine = Engine(HeadlessHost());
+        var hits = 0;
+        final go = engine.scene.createGameObject('Timer');
+        final b = go.addComponent(_Recorder([]));
+        b.invoke(0.05, () => hits++, repeatEvery: 0.05);
 
-      engine.step(0.06);
-      expect(hits, 1);
-      engine.step(0.05);
-      expect(hits, 2);
+        engine.step(0.06);
+        expect(hits, 1);
+        engine.step(0.05);
+        expect(hits, 2);
 
-      go.destroy();
-      engine.step(0.01);
-      engine.step(0.10);
-      expect(hits, 2);
-    });
+        go.destroy();
+        engine.step(0.01);
+        engine.step(0.10);
+        expect(hits, 2);
+      },
+    );
   });
 
   group('InputActions', () {
@@ -192,77 +218,91 @@ void main() {
   });
 
   group('Trigger physics & queries', () {
-    test('fires onTriggerEnter, Stay, and Exit across fixed steps and respects layers', () {
-      final engine = Engine(HeadlessHost());
-      engine.time.fixedDeltaTime = 0.02;
-      final log = <String>[];
+    test(
+      'fires onTriggerEnter, Stay, and Exit across fixed steps and respects layers',
+      () {
+        final engine = Engine(HeadlessHost());
+        engine.time.fixedDeltaTime = 0.02;
+        final log = <String>[];
 
-      final ship = engine.scene.createGameObject('Ship', layer: 1)
-        ..addComponent(SphereCollider(radius: 1.0, collidesWithMask: 1 << 2))
-        ..addComponent(_Recorder(log, 'Ship'));
+        final ship = engine.scene.createGameObject('Ship', layer: 1)
+          ..addComponent(SphereCollider(radius: 1.0, collidesWithMask: 1 << 2))
+          ..addComponent(_Recorder(log, 'Ship'));
 
-      final rock = engine.scene.createGameObject('Rock', layer: 2, position: const Vec3(5, 0, 0))
-        ..addComponent(SphereCollider(radius: 1.0));
+        final rock = engine.scene.createGameObject(
+          'Rock',
+          layer: 2,
+          position: const Vec3(5, 0, 0),
+        )..addComponent(SphereCollider(radius: 1.0));
 
-      final ignored = engine.scene.createGameObject('Ignored', layer: 3)
-        ..addComponent(SphereCollider(radius: 10.0));
-      expect(ignored.layer, 3);
-      log.clear();
+        final ignored = engine.scene.createGameObject('Ignored', layer: 3)
+          ..addComponent(SphereCollider(radius: 10.0));
+        expect(ignored.layer, 3);
+        log.clear();
 
-      // Move rock into overlap.
-      rock.transform.position = const Vec3(1.5, 0, 0);
-      engine.step(0.02);
-      expect(log, contains('Ship.enter:Rock'));
+        // Move rock into overlap.
+        rock.transform.position = const Vec3(1.5, 0, 0);
+        engine.step(0.02);
+        expect(log, contains('Ship.enter:Rock'));
 
-      log.clear();
-      engine.step(0.02);
-      expect(log, contains('Ship.stay:Rock'));
+        log.clear();
+        engine.step(0.02);
+        expect(log, contains('Ship.stay:Rock'));
 
-      // Move rock away.
-      log.clear();
-      rock.transform.position = const Vec3(5, 0, 0);
-      engine.step(0.02);
-      expect(log, contains('Ship.exit:Rock'));
+        // Move rock away.
+        log.clear();
+        rock.transform.position = const Vec3(5, 0, 0);
+        engine.step(0.02);
+        expect(log, contains('Ship.exit:Rock'));
 
-      // Raycast from -Z toward the ship at the origin.
-      final hit = engine.physics.raycast(const Ray(origin: Vec3(0, 0, -5), direction: Vec3(0, 0, 1)));
-      expect(hit?.gameObject, same(ship));
-      expect(hit?.distance, closeTo(4.0, 1e-5));
-    });
+        // Raycast from -Z toward the ship at the origin.
+        final hit = engine.physics.raycast(
+          const Ray(origin: Vec3(0, 0, -5), direction: Vec3(0, 0, 1)),
+        );
+        expect(hit?.gameObject, same(ship));
+        expect(hit?.distance, closeTo(4.0, 1e-5));
+      },
+    );
   });
 
   group('Render sync', () {
-    test('collects Camera, DirectionalLight, PointLight and RenderSettings into Graphics', () {
-      final host = HeadlessHost();
-      final engine = Engine(host);
-      engine.renderSettings
-        ..fogEnabled = true
-        ..fogStart = 50
-        ..fogEnd = 150;
+    test(
+      'collects Camera, DirectionalLight, PointLight and RenderSettings into Graphics',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        engine.renderSettings
+          ..fogEnabled = true
+          ..fogStart = 50
+          ..fogEnd = 150;
 
-      engine.scene.createGameObject(
-        'Cam',
-        position: const Vec3(0, 2, 8),
-        components: [Camera(fovYRadians: 1.1)],
-      );
-      engine.scene.createGameObject(
-        'Sun',
-        components: [Light.directional(intensity: 2.5)],
-      );
-      engine.scene.createGameObject(
-        'Torch',
-        position: const Vec3(1, 2, 3),
-        components: [Light.point(intensity: 3.0, range: 9.0)],
-      );
+        engine.scene.createGameObject(
+          'Cam',
+          position: const Vec3(0, 2, 8),
+          components: [Camera(fovYRadians: 1.1)],
+        );
+        engine.scene.createGameObject(
+          'Sun',
+          components: [Light.directional(intensity: 2.5)],
+        );
+        engine.scene.createGameObject(
+          'Torch',
+          position: const Vec3(1, 2, 3),
+          components: [Light.point(intensity: 3.0, range: 9.0)],
+        );
 
-      engine.step(0.016);
+        engine.step(0.016);
 
-      expect(host.graphics.camera, isNotNull);
-      expect(host.graphics.camera!.eye, const Vec3(0, 2, 8));
-      expect(host.graphics.environment.directionalLight?.intensity, 2.5);
-      expect(host.graphics.environment.pointLights, hasLength(1));
-      expect(host.graphics.environment.pointLights.first.position, const Vec3(1, 2, 3));
-      expect(host.graphics.environment.fogStart, 50);
-    });
+        expect(host.graphics.camera, isNotNull);
+        expect(host.graphics.camera!.eye, const Vec3(0, 2, 8));
+        expect(host.graphics.environment.directionalLight?.intensity, 2.5);
+        expect(host.graphics.environment.pointLights, hasLength(1));
+        expect(
+          host.graphics.environment.pointLights.first.position,
+          const Vec3(1, 2, 3),
+        );
+        expect(host.graphics.environment.fogStart, 50);
+      },
+    );
   });
 }

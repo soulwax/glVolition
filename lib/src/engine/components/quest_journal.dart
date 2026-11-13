@@ -24,7 +24,8 @@ final class QuestLogComponent extends Behaviour {
 
   quest.FactionReputationMatrix get factions => tracker.factions;
 
-  void registerFaction(quest.FactionDef def) => tracker.factions.registerFaction(def);
+  void registerFaction(quest.FactionDef def) =>
+      tracker.factions.registerFaction(def);
 
   void registerQuest(quest.QuestDef def) => tracker.registerQuest(def);
 
@@ -107,14 +108,31 @@ final class QuestJournalUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -159,12 +177,10 @@ final class QuestJournalUI {
     );
     final currentHeadline = active.isNotEmpty
         ? '${active.first.def.title} (${active.first.currentStage?.title ?? "-"})'
-        : (available.isNotEmpty ? 'Ready: ${available.first.def.title}' : 'None');
-    ui.labelValue(
-      'Tracked',
-      currentHeadline,
-      valueColor: VoxColor.yellow,
-    );
+        : (available.isNotEmpty
+              ? 'Ready: ${available.first.def.title}'
+              : 'None');
+    ui.labelValue('Tracked', currentHeadline, valueColor: VoxColor.yellow);
 
     final fids = journal.factions.factionIds;
     final factionSummary = fids.isNotEmpty

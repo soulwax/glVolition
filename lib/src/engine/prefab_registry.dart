@@ -25,17 +25,17 @@ final class PrefabNodeOverride {
   });
 
   Map<String, Object?> toJson() => {
-        'nodePath': nodePath,
-        if (localPosition != null) 'localPosition': _vec3ToJson(localPosition!),
-        if (localRotation != null) 'localRotation': _quatToJson(localRotation!),
-        if (localScale != null) 'localScale': localScale,
-        if (active != null) 'active': active,
-        if (componentFieldOverrides.isNotEmpty)
-          'componentFieldOverrides': {
-            for (final entry in componentFieldOverrides.entries)
-              entry.key: Map<String, Object?>.from(entry.value),
-          },
-      };
+    'nodePath': nodePath,
+    if (localPosition != null) 'localPosition': _vec3ToJson(localPosition!),
+    if (localRotation != null) 'localRotation': _quatToJson(localRotation!),
+    if (localScale != null) 'localScale': localScale,
+    if (active != null) 'active': active,
+    if (componentFieldOverrides.isNotEmpty)
+      'componentFieldOverrides': {
+        for (final entry in componentFieldOverrides.entries)
+          entry.key: Map<String, Object?>.from(entry.value),
+      },
+  };
 
   factory PrefabNodeOverride.fromJson(Map<String, Object?> json) {
     final rawComps = json['componentFieldOverrides'];
@@ -61,8 +61,9 @@ final class PrefabNodeOverride {
           : null,
       localScale: (json['localScale'] as num?)?.toDouble(),
       active: json['active'] as bool?,
-      componentFieldOverrides:
-          parsedComps.isEmpty ? const {} : Map.unmodifiable(parsedComps),
+      componentFieldOverrides: parsedComps.isEmpty
+          ? const {}
+          : Map.unmodifiable(parsedComps),
     );
   }
 }
@@ -81,10 +82,7 @@ final class PrefabVariant {
   });
 
   /// Applies all [overrides] to an instantiated [root] hierarchy in order.
-  GameObject applyToInstance(
-    GameObject root, {
-    ComponentRegistry? registry,
-  }) {
+  GameObject applyToInstance(GameObject root, {ComponentRegistry? registry}) {
     _applyToInstanceInternal(root, registry: registry, deferRootActive: false);
     return root;
   }
@@ -95,7 +93,8 @@ final class PrefabVariant {
     required bool deferRootActive,
   }) {
     final reg =
-        registry ?? (root.scene._engine?.registry ?? ComponentRegistry.defaults());
+        registry ??
+        (root.scene._engine?.registry ?? ComponentRegistry.defaults());
     bool? rootActiveOverride;
 
     for (final ov in overrides) {
@@ -161,10 +160,10 @@ final class PrefabVariant {
   }
 
   Map<String, Object?> toJson() => {
-        'name': name,
-        'basePrefabId': basePrefabId,
-        'overrides': [for (final ov in overrides) ov.toJson()],
-      };
+    'name': name,
+    'basePrefabId': basePrefabId,
+    'overrides': [for (final ov in overrides) ov.toJson()],
+  };
 
   factory PrefabVariant.fromJson(Map<String, Object?> json) {
     final rawOverrides = json['overrides'];
@@ -257,9 +256,7 @@ final class PrefabRegistry {
 
     while (true) {
       if (!visited.add(currentId)) {
-        throw StateError(
-          'PrefabVariant cycle detected involving "$currentId"',
-        );
+        throw StateError('PrefabVariant cycle detected involving "$currentId"');
       }
       final prefab = _prefabs[currentId];
       if (prefab != null) {
@@ -315,9 +312,7 @@ final class PrefabRegistry {
       'prefabs': {
         for (final id in prefabIds) id: {'name': _prefabs[id]!.name},
       },
-      'variants': {
-        for (final id in variantIds) id: _variants[id]!.toJson(),
-      },
+      'variants': {for (final id in variantIds) id: _variants[id]!.toJson()},
       'registeredIds': registeredIds,
     };
   }

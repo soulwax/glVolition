@@ -15,36 +15,58 @@ final class VisualEffectComponent extends Behaviour {
   }) : simulation = simulation ?? vfx.VfxSimulation();
 
   /// Creates a bonfire/torch fire visual effect.
-  factory VisualEffectComponent.fire({int maxParticles = 500, bool followTransform = true}) {
+  factory VisualEffectComponent.fire({
+    int maxParticles = 500,
+    bool followTransform = true,
+  }) {
     final sim = vfx.VfxSimulation(
       maxParticles: maxParticles,
       config: vfx.VfxEmitterConfig.fire(),
     );
-    sim.forces.add(const vfx.GravityForce(vfx.VfxVec3(0.0, 1.5, 0.0))); // upward buoyancy
+    sim.forces.add(
+      const vfx.GravityForce(vfx.VfxVec3(0.0, 1.5, 0.0)),
+    ); // upward buoyancy
     sim.forces.add(const vfx.TurbulenceForce(strength: 1.2, frequency: 0.8));
-    return VisualEffectComponent(simulation: sim, followTransform: followTransform);
+    return VisualEffectComponent(
+      simulation: sim,
+      followTransform: followTransform,
+    );
   }
 
   /// Creates a shower of glowing spark particles with gravity and drag.
-  factory VisualEffectComponent.sparks({int maxParticles = 300, bool followTransform = true}) {
+  factory VisualEffectComponent.sparks({
+    int maxParticles = 300,
+    bool followTransform = true,
+  }) {
     final sim = vfx.VfxSimulation(
       maxParticles: maxParticles,
       config: vfx.VfxEmitterConfig.sparks(),
     );
     sim.forces.add(const vfx.GravityForce(vfx.VfxVec3(0.0, -9.81, 0.0)));
     sim.forces.add(const vfx.LinearDragForce(0.15));
-    return VisualEffectComponent(simulation: sim, followTransform: followTransform);
+    return VisualEffectComponent(
+      simulation: sim,
+      followTransform: followTransform,
+    );
   }
 
   /// Creates a swirling smoke column.
-  factory VisualEffectComponent.smoke({int maxParticles = 400, bool followTransform = true}) {
+  factory VisualEffectComponent.smoke({
+    int maxParticles = 400,
+    bool followTransform = true,
+  }) {
     final sim = vfx.VfxSimulation(
       maxParticles: maxParticles,
       config: vfx.VfxEmitterConfig.smoke(),
     );
-    sim.forces.add(const vfx.GravityForce(vfx.VfxVec3(0.0, 0.8, 0.0))); // gentle rising
+    sim.forces.add(
+      const vfx.GravityForce(vfx.VfxVec3(0.0, 0.8, 0.0)),
+    ); // gentle rising
     sim.forces.add(const vfx.LinearDragForce(0.3));
-    return VisualEffectComponent(simulation: sim, followTransform: followTransform);
+    return VisualEffectComponent(
+      simulation: sim,
+      followTransform: followTransform,
+    );
   }
 
   /// Creates an explosive particle shockwave.
@@ -58,7 +80,10 @@ final class VisualEffectComponent extends Behaviour {
     );
     sim.forces.add(const vfx.LinearDragForce(1.2));
     sim.forces.add(const vfx.GravityForce(vfx.VfxVec3(0.0, -4.0, 0.0)));
-    return VisualEffectComponent(simulation: sim, followTransform: followTransform);
+    return VisualEffectComponent(
+      simulation: sim,
+      followTransform: followTransform,
+    );
   }
 
   /// Manually triggers an instant burst of [count] particles.

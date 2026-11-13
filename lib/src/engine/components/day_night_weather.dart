@@ -28,14 +28,20 @@ final class WindZoneComponent extends Component {
       ),
       Field.number('radius', (w) => w.radius, (w, v) => w.radius = v),
       Field.number('strength', (w) => w.strength, (w, v) => w.strength = v),
-      Field.number('turbulence', (w) => w.turbulence, (w, v) => w.turbulence = v),
+      Field.number(
+        'turbulence',
+        (w) => w.turbulence,
+        (w, v) => w.turbulence = v,
+      ),
       Field.vec3('direction', (w) => w.direction, (w, v) => w.direction = v),
     ],
   );
 
   sky.WindZoneDef toWindZoneDef() {
     final pos = isAttached ? transform.position : Vec3.zero;
-    final worldDir = isAttached ? transform.rotation.rotate(direction) : direction;
+    final worldDir = isAttached
+        ? transform.rotation.rotate(direction)
+        : direction;
     return sky.WindZoneDef(
       id: 'wz_$instanceId',
       position: sky.SkyVec3(pos.x, pos.y, pos.z),
@@ -63,14 +69,18 @@ final class WeatherVolumeComponent extends Behaviour {
     this.transitionDurationSeconds = 5.0,
     this.windDirection = const Vec3(1.0, 0.0, 0.25),
     int seed = 1080,
-  })  : controller = sky.WeatherController(
-          initialKind: initialWeather,
-          transitionDurationSeconds: transitionDurationSeconds,
-          seed: seed,
-        ),
-        windSampler = sky.WindFieldSampler(
-          baseDirection: sky.SkyVec3(windDirection.x, windDirection.y, windDirection.z),
-        );
+  }) : controller = sky.WeatherController(
+         initialKind: initialWeather,
+         transitionDurationSeconds: transitionDurationSeconds,
+         seed: seed,
+       ),
+       windSampler = sky.WindFieldSampler(
+         baseDirection: sky.SkyVec3(
+           windDirection.x,
+           windDirection.y,
+           windDirection.z,
+         ),
+       );
 
   static final spec = ComponentSpec<WeatherVolumeComponent>(
     'WeatherVolumeComponent',
@@ -137,7 +147,11 @@ final class WeatherVolumeComponent extends Behaviour {
   void update() {
     controller.transitionDurationSeconds = transitionDurationSeconds;
     final snap = controller.update(time.deltaTime);
-    windSampler.baseDirection = sky.SkyVec3(windDirection.x, windDirection.y, windDirection.z);
+    windSampler.baseDirection = sky.SkyVec3(
+      windDirection.x,
+      windDirection.y,
+      windDirection.z,
+    );
     windSampler.baseSpeed = snap.windSpeed;
     windSampler.gustStrength = snap.windGustiness;
     windSampler.advance(time.deltaTime);
@@ -173,12 +187,12 @@ final class DayNightSkyComponent extends Behaviour {
     this.sunLight,
     this.weatherVolume,
     sky.AtmosphericSkyRamp? skyRamp,
-  })  : clock = sky.TimeOfDayClock(
-          initialHours: initialHours,
-          dayLengthSeconds: dayLengthSeconds,
-          paused: paused,
-        ),
-        skyRamp = skyRamp ?? sky.AtmosphericSkyRamp.earthDefault();
+  }) : clock = sky.TimeOfDayClock(
+         initialHours: initialHours,
+         dayLengthSeconds: dayLengthSeconds,
+         paused: paused,
+       ),
+       skyRamp = skyRamp ?? sky.AtmosphericSkyRamp.earthDefault();
 
   static final spec = ComponentSpec<DayNightSkyComponent>(
     'DayNightSkyComponent',
@@ -190,8 +204,16 @@ final class DayNightSkyComponent extends Behaviour {
         (d) => d.clock.dayLengthSeconds,
         (d, v) => d.clock.dayLengthSeconds = v,
       ),
-      Field.boolean('paused', (d) => d.clock.paused, (d, v) => d.clock.paused = v),
-      Field.number('latitudeDegrees', (d) => d.latitudeDegrees, (d, v) => d.latitudeDegrees = v),
+      Field.boolean(
+        'paused',
+        (d) => d.clock.paused,
+        (d, v) => d.clock.paused = v,
+      ),
+      Field.number(
+        'latitudeDegrees',
+        (d) => d.latitudeDegrees,
+        (d, v) => d.latitudeDegrees = v,
+      ),
       Field.number('fogStart', (d) => d.fogStart, (d, v) => d.fogStart = v),
       Field.number('fogEnd', (d) => d.fogEnd, (d, v) => d.fogEnd = v),
     ],
@@ -210,7 +232,9 @@ final class DayNightSkyComponent extends Behaviour {
   sky.SkyRampStop? get lastSkyStop => _lastSkyStop;
 
   WeatherVolumeComponent? _resolveWeather() {
-    if (weatherVolume != null && !weatherVolume!.isDestroyed) return weatherVolume;
+    if (weatherVolume != null && !weatherVolume!.isDestroyed) {
+      return weatherVolume;
+    }
     if (!isAttached) return null;
     final sibling = getComponent<WeatherVolumeComponent>();
     if (sibling != null) return sibling;
@@ -242,10 +266,10 @@ final class DayNightSkyComponent extends Behaviour {
     final tint = weather?.skyTint ?? sky.SkyColor.white;
 
     sky.SkyColor scaleTint(sky.SkyColor c) => sky.SkyColor(
-          c.r * tint.r + flash * 0.65,
-          c.g * tint.g + flash * 0.72,
-          c.b * tint.b + flash * 0.85,
-        );
+      c.r * tint.r + flash * 0.65,
+      c.g * tint.g + flash * 0.72,
+      c.b * tint.b + flash * 0.85,
+    );
 
     final horizon = scaleTint(stop.horizonColor);
     final zenith = scaleTint(stop.zenithColor);
@@ -268,7 +292,11 @@ final class DayNightSkyComponent extends Behaviour {
           assetId: 'voxsky_dome',
           horizon: LinearColor(horizon.r, horizon.g, horizon.b),
           zenith: LinearColor(zenith.r, zenith.g, zenith.b),
-          ground: LinearColor(stop.groundColor.r, stop.groundColor.g, stop.groundColor.b),
+          ground: LinearColor(
+            stop.groundColor.r,
+            stop.groundColor.g,
+            stop.groundColor.b,
+          ),
           horizonGlow: ephem.twilightFactor * 0.35,
           starDensity: stop.starVisibility01 * (1.0 - clouds) * 0.05,
           cloudCoverage: clouds,
@@ -321,14 +349,31 @@ final class WeatherInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -360,8 +405,9 @@ final class WeatherInspectorUI {
     final pad = ui.style.windowPadding;
     final w = weather ?? dayNight._resolveWeather();
     final snap = w?.currentSnapshot;
-    final elevDeg = ((dayNight.lastEphemeris?.sunElevationRadians ?? 0.0) * 180.0 / math.pi)
-        .toStringAsFixed(1);
+    final elevDeg =
+        ((dayNight.lastEphemeris?.sunElevationRadians ?? 0.0) * 180.0 / math.pi)
+            .toStringAsFixed(1);
 
     ui.labelValue(
       'Clock / Day',

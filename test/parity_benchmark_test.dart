@@ -61,20 +61,41 @@ void _assertFrameStatsValid(FrameStats stats, String label) {
 void main() {
   group('E100 — Headless & Native Parity + Draw/VRAM Benchmark', () {
     test('Headless parity across all 5 example scenes (30 frames each)', () {
-      final builders = <(String, void Function(ComponentRegistry), void Function(Engine))>[
-        ('Dungeon2D', registerDungeon2DSpecs, (e) => e.loadScene(buildDungeon2DScene())),
-        ('Procession', registerProcessionSpecs, (e) => e.loadScene(buildProcessionScene())),
-        ('Island3D', registerIsland3DSpecs, (e) => e.loadScene(buildIsland3DScene())),
-        ('PrismPulse', registerPrismPulseSpecs, (e) => e.loadScene(buildPrismPulseScene())),
-        (
-          'PixelRocket',
-          registerPixelRocketSpecs,
-          (e) {
-            e.loadScene(Scene('PixelRocket'));
-            buildPixelRocketScene(e, hud: NullRocketHud(), random: math.Random(7));
-          },
-        ),
-      ];
+      final builders =
+          <(String, void Function(ComponentRegistry), void Function(Engine))>[
+            (
+              'Dungeon2D',
+              registerDungeon2DSpecs,
+              (e) => e.loadScene(buildDungeon2DScene()),
+            ),
+            (
+              'Procession',
+              registerProcessionSpecs,
+              (e) => e.loadScene(buildProcessionScene()),
+            ),
+            (
+              'Island3D',
+              registerIsland3DSpecs,
+              (e) => e.loadScene(buildIsland3DScene()),
+            ),
+            (
+              'PrismPulse',
+              registerPrismPulseSpecs,
+              (e) => e.loadScene(buildPrismPulseScene()),
+            ),
+            (
+              'PixelRocket',
+              registerPixelRocketSpecs,
+              (e) {
+                e.loadScene(Scene('PixelRocket'));
+                buildPixelRocketScene(
+                  e,
+                  hud: NullRocketHud(),
+                  random: math.Random(7),
+                );
+              },
+            ),
+          ];
 
       for (final (name, registerSpecs, setupScene) in builders) {
         final host = HeadlessHost();
@@ -125,7 +146,9 @@ void main() {
             lastStats = runner.renderFrame(1 / 60);
             _assertFrameStatsValid(lastStats, '$label frame $i');
             if (lastStats.drawCalls > maxDraws) maxDraws = lastStats.drawCalls;
-            if (lastStats.liveGpuBytes > maxVram) maxVram = lastStats.liveGpuBytes;
+            if (lastStats.liveGpuBytes > maxVram) {
+              maxVram = lastStats.liveGpuBytes;
+            }
           }
           expect(runner.host.errors, isEmpty, reason: '$label host errors');
           expect(device.programCompileCalls, greaterThan(0));
@@ -252,7 +275,11 @@ void main() {
           'RocketDirector',
         ];
         for (final name in exampleSpecs) {
-          expect(reg.specByName(name), isNotNull, reason: 'Missing example spec $name');
+          expect(
+            reg.specByName(name),
+            isNotNull,
+            reason: 'Missing example spec $name',
+          );
         }
       },
     );

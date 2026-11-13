@@ -64,10 +64,7 @@ final class ParallaxBackground2D extends Behaviour {
 
   Vec3? _lastTrackedPosition;
 
-  ParallaxBackground2D({
-    List<ParallaxLayer> layers = const [],
-    this.target,
-  }) {
+  ParallaxBackground2D({List<ParallaxLayer> layers = const [], this.target}) {
     this.layers.addAll(layers);
   }
 
@@ -91,7 +88,10 @@ final class ParallaxBackground2D extends Behaviour {
     final prevPos = _lastTrackedPosition ?? currentPos;
     _lastTrackedPosition = currentPos;
 
-    final cameraDelta = Vec2(currentPos.x - prevPos.x, currentPos.y - prevPos.y);
+    final cameraDelta = Vec2(
+      currentPos.x - prevPos.x,
+      currentPos.y - prevPos.y,
+    );
     final dt = isAttached ? time.deltaTime : 1 / 60;
 
     for (final layer in layers) {

@@ -30,7 +30,11 @@ final class Time {
   double get fixedDeltaTime => _fixedDeltaTime;
   set fixedDeltaTime(double value) {
     if (!value.isFinite || value <= 0) {
-      throw ArgumentError.value(value, 'fixedDeltaTime', 'must be finite and > 0');
+      throw ArgumentError.value(
+        value,
+        'fixedDeltaTime',
+        'must be finite and > 0',
+      );
     }
     _fixedDeltaTime = value;
   }
@@ -53,7 +57,8 @@ final class Time {
 
   /// How far the clock is between the last fixed step and the next, 0..1.
   /// Use it to interpolate rendered positions of fixed-step bodies.
-  double get fixedInterpolation => (_accumulator / _fixedDeltaTime).clamp(0.0, 1.0);
+  double get fixedInterpolation =>
+      (_accumulator / _fixedDeltaTime).clamp(0.0, 1.0);
 
   /// Computes a smoothly damped value from [current] to [target] over [smoothTime] seconds (E21-3).
   ///
@@ -102,9 +107,30 @@ final class Time {
     double maxSpeed = double.infinity,
     double? dt,
   }) {
-    final resX = smoothDamp(current.x, target.x, currentVelocity.x, smoothTime: smoothTime, maxSpeed: maxSpeed, dt: dt);
-    final resY = smoothDamp(current.y, target.y, currentVelocity.y, smoothTime: smoothTime, maxSpeed: maxSpeed, dt: dt);
-    final resZ = smoothDamp(current.z, target.z, currentVelocity.z, smoothTime: smoothTime, maxSpeed: maxSpeed, dt: dt);
+    final resX = smoothDamp(
+      current.x,
+      target.x,
+      currentVelocity.x,
+      smoothTime: smoothTime,
+      maxSpeed: maxSpeed,
+      dt: dt,
+    );
+    final resY = smoothDamp(
+      current.y,
+      target.y,
+      currentVelocity.y,
+      smoothTime: smoothTime,
+      maxSpeed: maxSpeed,
+      dt: dt,
+    );
+    final resZ = smoothDamp(
+      current.z,
+      target.z,
+      currentVelocity.z,
+      smoothTime: smoothTime,
+      maxSpeed: maxSpeed,
+      dt: dt,
+    );
     return (
       current: Vec3(resX.current, resY.current, resZ.current),
       velocity: Vec3(resX.velocity, resY.velocity, resZ.velocity),

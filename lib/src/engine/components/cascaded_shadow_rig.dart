@@ -39,25 +39,41 @@ final class CascadedShadowRigComponent extends Behaviour {
     'CascadedShadowRigComponent',
     CascadedShadowRigComponent.new,
     [
-      Field.integer('cascadeCount', (c) => c.cascadeCount, (c, v) => c.cascadeCount = v),
+      Field.integer(
+        'cascadeCount',
+        (c) => c.cascadeCount,
+        (c, v) => c.cascadeCount = v,
+      ),
       Field.integer(
         'shadowMapResolution',
         (c) => c.shadowMapResolution,
         (c, v) => c.shadowMapResolution = v,
       ),
-      Field.number('splitLambda', (c) => c.splitLambda, (c, v) => c.splitLambda = v),
+      Field.number(
+        'splitLambda',
+        (c) => c.splitLambda,
+        (c, v) => c.splitLambda = v,
+      ),
       Field.number(
         'maxShadowDistance',
         (c) => c.maxShadowDistance,
         (c, v) => c.maxShadowDistance = v,
       ),
-      Field.boolean('snapToTexels', (c) => c.snapToTexels, (c, v) => c.snapToTexels = v),
+      Field.boolean(
+        'snapToTexels',
+        (c) => c.snapToTexels,
+        (c, v) => c.snapToTexels = v,
+      ),
       Field.number(
         'lightWorldRadius',
         (c) => c.lightWorldRadius,
         (c, v) => c.lightWorldRadius = v,
       ),
-      Field.integer('pcfSampleCount', (c) => c.pcfSampleCount, (c, v) => c.pcfSampleCount = v),
+      Field.integer(
+        'pcfSampleCount',
+        (c) => c.pcfSampleCount,
+        (c, v) => c.pcfSampleCount = v,
+      ),
       Field.boolean(
         'autoRebuildOnUpdate',
         (c) => c.autoRebuildOnUpdate,
@@ -89,12 +105,17 @@ final class CascadedShadowRigComponent extends Behaviour {
   }
 
   /// Computes practical splits and texel-snapped light ortho matrices for all cascades.
-  List<shadow.FittedCascadeOrtho> rebuildCascades({double? aspectRatioOverride}) {
+  List<shadow.FittedCascadeOrtho> rebuildCascades({
+    double? aspectRatioOverride,
+  }) {
     final cam = _resolveCamera();
     final light = _resolveDirectionalLight();
 
     final camNear = math.max(0.05, cam?.near ?? 0.1);
-    final camFar = math.max(camNear + 1.0, math.min(cam?.far ?? maxShadowDistance, maxShadowDistance));
+    final camFar = math.max(
+      camNear + 1.0,
+      math.min(cam?.far ?? maxShadowDistance, maxShadowDistance),
+    );
     final fovY = cam?.fovYRadians ?? 1.0;
 
     var aspect = aspectRatioOverride ?? (16.0 / 9.0);
@@ -104,13 +125,19 @@ final class CascadedShadowRigComponent extends Behaviour {
       if (vw > 0 && vh > 0) aspect = vw / vh;
     }
 
-    final camPos = cam != null && cam.isAttached ? cam.transform.position : Vec3.zero;
-    final camFwd = cam != null && cam.isAttached ? cam.transform.forward : kForward;
+    final camPos = cam != null && cam.isAttached
+        ? cam.transform.position
+        : Vec3.zero;
+    final camFwd = cam != null && cam.isAttached
+        ? cam.transform.forward
+        : kForward;
     final camUp = cam != null && cam.isAttached ? cam.transform.up : kUp;
 
     final lFwdVec = light != null && light.isAttached
         ? light.transform.forward
-        : (isAttached ? transform.forward : const Vec3(0.4, -0.85, -0.34).normalized);
+        : (isAttached
+              ? transform.forward
+              : const Vec3(0.4, -0.85, -0.34).normalized);
 
     splits = shadow.ShadowCascadeSplitter.computeSplits(
       nearPlane: camNear,
@@ -141,10 +168,14 @@ final class CascadedShadowRigComponent extends Behaviour {
     ];
 
     if (pcssKernel.taps.length != pcfSampleCount.clamp(1, 128)) {
-      pcssKernel = shadow.PcssKernelTable.vogelDisk(sampleCount: pcfSampleCount);
+      pcssKernel = shadow.PcssKernelTable.vogelDisk(
+        sampleCount: pcfSampleCount,
+      );
     }
     if (syncEnvironmentSettings && isAttached && scene.isLoaded) {
-      final baseTexel = cascades.isNotEmpty ? cascades.first.texelWorldSize : 0.05;
+      final baseTexel = cascades.isNotEmpty
+          ? cascades.first.texelWorldSize
+          : 0.05;
       scene.renderSettings
         ..shadowFilterRadius = lightWorldRadius.clamp(0.0, 3.0)
         ..shadowBias = (baseTexel * 0.008).clamp(0.0005, 0.01);
@@ -155,12 +186,11 @@ final class CascadedShadowRigComponent extends Behaviour {
   double estimatePenumbra({
     required double receiverDepth,
     required double averageBlockerDepth,
-  }) =>
-      shadow.PcssKernelTable.estimatePenumbraWidth(
-        receiverDepth: receiverDepth,
-        averageBlockerDepth: averageBlockerDepth,
-        lightWorldRadius: lightWorldRadius,
-      );
+  }) => shadow.PcssKernelTable.estimatePenumbraWidth(
+    receiverDepth: receiverDepth,
+    averageBlockerDepth: averageBlockerDepth,
+    lightWorldRadius: lightWorldRadius,
+  );
 
   @override
   void update() {
@@ -188,7 +218,8 @@ final class ShadowCascadeInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -253,7 +284,9 @@ final class ShadowCascadeInspectorUI {
       '${rig.snapToTexels ? 'On' : 'Off'} | texel $c0Texel',
       valueColor: rig.snapToTexels ? VoxColor.green : VoxColor.yellow,
     );
-    final maxFar = rig.splits.isNotEmpty ? rig.splits.last.farPlane.toStringAsFixed(1) : '-';
+    final maxFar = rig.splits.isNotEmpty
+        ? rig.splits.last.farPlane.toStringAsFixed(1)
+        : '-';
     ui.labelValue(
       'Max Dist / PCSS',
       '${maxFar}m | ${rig.pcssKernel.taps.length} Vogel taps',
@@ -267,7 +300,13 @@ final class ShadowCascadeInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final snapRect = VoxRect(x + pad, barY, 78.0, 22.0);
-    if (_drawButton(ui, uiState, 'csm_snap', rig.snapToTexels ? 'Snap: On' : 'Snap: Off', snapRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'csm_snap',
+      rig.snapToTexels ? 'Snap: On' : 'Snap: Off',
+      snapRect,
+    )) {
       rig.snapToTexels = !rig.snapToTexels;
       rig.rebuildCascades();
     }
@@ -280,7 +319,9 @@ final class ShadowCascadeInspectorUI {
 
     final lamRect = VoxRect(incRect.right + 8.0, barY, 92.0, 22.0);
     if (_drawButton(ui, uiState, 'csm_lam', 'Lambda +0.1', lamRect)) {
-      rig.splitLambda = ((rig.splitLambda + 0.1) > 1.0 ? 0.1 : rig.splitLambda + 0.1);
+      rig.splitLambda = ((rig.splitLambda + 0.1) > 1.0
+          ? 0.1
+          : rig.splitLambda + 0.1);
       rig.rebuildCascades();
     }
 

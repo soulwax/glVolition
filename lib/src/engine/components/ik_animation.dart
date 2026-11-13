@@ -43,7 +43,8 @@ class TwoBoneIkComponent extends Behaviour {
     if (targetPos == null) return;
 
     // Default pole position: forward from mid joint
-    final polePos = pole?.transform.position ??
+    final polePos =
+        pole?.transform.position ??
         polePosition ??
         (mid.transform.position + mid.transform.forward * 2.0);
 
@@ -59,14 +60,27 @@ class TwoBoneIkComponent extends Behaviour {
 
     // Apply root rotation delta
     final rootDelta = _toQuat(result.rootRotationDelta);
-    root.transform.rotation = Mathfx.slerp(root.transform.rotation, rootDelta * root.transform.rotation, w);
+    root.transform.rotation = Mathfx.slerp(
+      root.transform.rotation,
+      rootDelta * root.transform.rotation,
+      w,
+    );
 
     // With root rotated, compute mid-to-end alignment to target
     final currentMidToEnd = end.transform.position - mid.transform.position;
-    final targetMidToEnd = _toVec3(result.endPosition) - _toVec3(result.midPosition);
-    if (currentMidToEnd.lengthSquared > 1e-6 && targetMidToEnd.lengthSquared > 1e-6) {
-      final midDelta = Quat.fromTo(currentMidToEnd.normalized, targetMidToEnd.normalized);
-      mid.transform.rotation = Mathfx.slerp(mid.transform.rotation, midDelta * mid.transform.rotation, w);
+    final targetMidToEnd =
+        _toVec3(result.endPosition) - _toVec3(result.midPosition);
+    if (currentMidToEnd.lengthSquared > 1e-6 &&
+        targetMidToEnd.lengthSquared > 1e-6) {
+      final midDelta = Quat.fromTo(
+        currentMidToEnd.normalized,
+        targetMidToEnd.normalized,
+      );
+      mid.transform.rotation = Mathfx.slerp(
+        mid.transform.rotation,
+        midDelta * mid.transform.rotation,
+        w,
+      );
     }
   }
 }
@@ -119,10 +133,7 @@ class BlendTreeComponent extends Behaviour {
 
   double get animationTime => _animationTime;
 
-  BlendTreeComponent({
-    this.rootNode,
-    Map<String, double>? initialParameters,
-  }) {
+  BlendTreeComponent({this.rootNode, Map<String, double>? initialParameters}) {
     if (initialParameters != null) {
       parameters.addAll(initialParameters);
     }

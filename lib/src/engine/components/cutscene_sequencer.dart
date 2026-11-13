@@ -19,7 +19,8 @@ final class CutsceneDirectorComponent extends Behaviour {
   String? _activeCameraId;
 
   final List<void Function(seq.SubtitleClip? clip)> _subtitleListeners = [];
-  final List<void Function(String? cameraId, Camera? camera)> _cameraListeners = [];
+  final List<void Function(String? cameraId, Camera? camera)> _cameraListeners =
+      [];
 
   CutsceneDirectorComponent({
     seq.TimelineSequence? sequence,
@@ -31,15 +32,16 @@ final class CutsceneDirectorComponent extends Behaviour {
     this.autoTriggerAudio = true,
     void Function()? onCompleted,
     void Function(seq.SeqEventMarker marker)? onEvent,
-  }) : sequence = sequence ??
-            seq.TimelineSequence(
-              name: name,
-              duration: duration,
-              wrapMode: wrapMode,
-              speed: speed,
-              onCompleted: onCompleted,
-              onEvent: onEvent,
-            ) {
+  }) : sequence =
+           sequence ??
+           seq.TimelineSequence(
+             name: name,
+             duration: duration,
+             wrapMode: wrapMode,
+             speed: speed,
+             onCompleted: onCompleted,
+             onEvent: onEvent,
+           ) {
     final prevAudio = this.sequence.onAudioCue;
     this.sequence.onAudioCue = (cue) {
       prevAudio?.call(cue);
@@ -58,8 +60,7 @@ final class CutsceneDirectorComponent extends Behaviour {
 
   void addCameraCutListener(
     void Function(String? cameraId, Camera? camera) listener,
-  ) =>
-      _cameraListeners.add(listener);
+  ) => _cameraListeners.add(listener);
 
   void play({bool fromStart = false}) => sequence.play(fromStart: fromStart);
   void pause() => sequence.pause();
@@ -292,15 +293,30 @@ final class TimelineSequencerUI {
       state.activeButtonId = id;
     }
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -379,17 +395,43 @@ final class TimelineSequencerUI {
 
     // Time ruler & scrub bar
     final rulerRect = VoxRect(rulerX, rulerY, rulerW, _rulerHeight);
-    dl.addRectFilled(rulerX, rulerY, rulerW, _rulerHeight, const VoxColor(30, 34, 44, 255), cornerRadius: 3.0);
-    dl.addRectOutline(rulerX, rulerY, rulerW, _rulerHeight, ui.style.windowBorder, cornerRadius: 3.0);
+    dl.addRectFilled(
+      rulerX,
+      rulerY,
+      rulerW,
+      _rulerHeight,
+      const VoxColor(30, 34, 44, 255),
+      cornerRadius: 3.0,
+    );
+    dl.addRectOutline(
+      rulerX,
+      rulerY,
+      rulerW,
+      _rulerHeight,
+      ui.style.windowBorder,
+      cornerRadius: 3.0,
+    );
 
     // Tick marks along ruler
     const tickCount = 4;
     for (int i = 0; i <= tickCount; i++) {
       final frac = i / tickCount;
       final tx = rulerX + frac * rulerW;
-      dl.addLine(tx, rulerY + _rulerHeight - 6.0, tx, rulerY + _rulerHeight, VoxColor.lightGray);
+      dl.addLine(
+        tx,
+        rulerY + _rulerHeight - 6.0,
+        tx,
+        rulerY + _rulerHeight,
+        VoxColor.lightGray,
+      );
       final stamp = (frac * dur).toStringAsFixed(1);
-      dl.addText('${stamp}s', math.min(tx + 2.0, rulerRect.right - 26.0), rulerY + 3.0, color: VoxColor.lightGray, size: 10.0);
+      dl.addText(
+        '${stamp}s',
+        math.min(tx + 2.0, rulerRect.right - 26.0),
+        rulerY + 3.0,
+        color: VoxColor.lightGray,
+        size: 10.0,
+      );
     }
 
     // Handle ruler scrub interaction
@@ -407,7 +449,8 @@ final class TimelineSequencerUI {
     // Tracks
     final tracks = sequence.tracks;
     var rowY = rulerY + _rulerHeight + 6.0;
-    final contentBottomLimit = y + height - (subtitlePreview != null ? 30.0 : 12.0);
+    final contentBottomLimit =
+        y + height - (subtitlePreview != null ? 30.0 : 12.0);
 
     for (final track in tracks) {
       if (rowY + _rowHeight > contentBottomLimit) break;
@@ -424,7 +467,12 @@ final class TimelineSequencerUI {
         cornerRadius: 3.0,
       );
 
-      final muteRect = VoxRect(trackOriginX + 4.0, rowY + 3.0, 18.0, _rowHeight - 8.0);
+      final muteRect = VoxRect(
+        trackOriginX + 4.0,
+        rowY + 3.0,
+        18.0,
+        _rowHeight - 8.0,
+      );
       if (muteRect.contains(inp.mouseX, inp.mouseY) && inp.wasMouseClicked) {
         track.muted = !track.muted;
       }
@@ -436,7 +484,13 @@ final class TimelineSequencerUI {
         track.muted ? VoxColor.red : const VoxColor(60, 70, 90, 255),
         cornerRadius: 2.0,
       );
-      dl.addText('M', muteRect.x + 5.0, muteRect.y + 1.0, color: VoxColor.white, size: 10.0);
+      dl.addText(
+        'M',
+        muteRect.x + 5.0,
+        muteRect.y + 1.0,
+        color: VoxColor.white,
+        size: 10.0,
+      );
       dl.addText(
         track.name,
         muteRect.right + 6.0,
@@ -463,13 +517,30 @@ final class TimelineSequencerUI {
       if (track is seq.ValueTrack) {
         for (final key in track.keyframes) {
           final kx = rulerX + (key.time * invDur).clamp(0.0, 1.0) * rulerW;
-          dl.addCircleFilled(kx, rowY + (_rowHeight - 2.0) * 0.5, 4.0, VoxColor.yellow);
+          dl.addCircleFilled(
+            kx,
+            rowY + (_rowHeight - 2.0) * 0.5,
+            4.0,
+            VoxColor.yellow,
+          );
         }
       } else if (track is seq.EventTrack) {
         for (final marker in track.markers) {
           final mx = rulerX + (marker.time * invDur).clamp(0.0, 1.0) * rulerW;
-          dl.addLine(mx, rowY + 2.0, mx, rowY + _rowHeight - 4.0, const VoxColor(255, 145, 50, 255), thickness: 2.0);
-          dl.addCircleFilled(mx, rowY + 6.0, 3.5, const VoxColor(255, 145, 50, 255));
+          dl.addLine(
+            mx,
+            rowY + 2.0,
+            mx,
+            rowY + _rowHeight - 4.0,
+            const VoxColor(255, 145, 50, 255),
+            thickness: 2.0,
+          );
+          dl.addCircleFilled(
+            mx,
+            rowY + 6.0,
+            3.5,
+            const VoxColor(255, 145, 50, 255),
+          );
         }
       } else if (track is seq.AudioCueTrack) {
         for (final cue in track.cues) {
@@ -478,23 +549,57 @@ final class TimelineSequencerUI {
               ? rulerX + (cue.endTime * invDur).clamp(0.0, 1.0) * rulerW
               : cx + 10.0;
           final cw = math.max(6.0, endX - cx);
-          dl.addRectFilled(cx, rowY + 3.0, cw, _rowHeight - 8.0, const VoxColor(90, 185, 110, 220), cornerRadius: 2.0);
+          dl.addRectFilled(
+            cx,
+            rowY + 3.0,
+            cw,
+            _rowHeight - 8.0,
+            const VoxColor(90, 185, 110, 220),
+            cornerRadius: 2.0,
+          );
         }
       } else if (track is seq.CameraCutTrack) {
         for (final shot in track.shots) {
-          final sx = rulerX + (shot.startTime * invDur).clamp(0.0, 1.0) * rulerW;
+          final sx =
+              rulerX + (shot.startTime * invDur).clamp(0.0, 1.0) * rulerW;
           final ex = rulerX + (shot.endTime * invDur).clamp(0.0, 1.0) * rulerW;
           final sw = math.max(8.0, ex - sx);
-          dl.addRectFilled(sx, rowY + 3.0, sw, _rowHeight - 8.0, const VoxColor(60, 140, 225, 220), cornerRadius: 2.0);
-          dl.addText(shot.cameraId, sx + 4.0, rowY + 5.0, color: VoxColor.white, size: 10.0);
+          dl.addRectFilled(
+            sx,
+            rowY + 3.0,
+            sw,
+            _rowHeight - 8.0,
+            const VoxColor(60, 140, 225, 220),
+            cornerRadius: 2.0,
+          );
+          dl.addText(
+            shot.cameraId,
+            sx + 4.0,
+            rowY + 5.0,
+            color: VoxColor.white,
+            size: 10.0,
+          );
         }
       } else if (track is seq.SubtitleTrack) {
         for (final sub in track.clips) {
           final sx = rulerX + (sub.startTime * invDur).clamp(0.0, 1.0) * rulerW;
           final ex = rulerX + (sub.endTime * invDur).clamp(0.0, 1.0) * rulerW;
           final sw = math.max(8.0, ex - sx);
-          dl.addRectFilled(sx, rowY + 3.0, sw, _rowHeight - 8.0, const VoxColor(175, 95, 215, 220), cornerRadius: 2.0);
-          dl.addText(sub.speaker, sx + 4.0, rowY + 5.0, color: VoxColor.white, size: 10.0);
+          dl.addRectFilled(
+            sx,
+            rowY + 3.0,
+            sw,
+            _rowHeight - 8.0,
+            const VoxColor(175, 95, 215, 220),
+            cornerRadius: 2.0,
+          );
+          dl.addText(
+            sub.speaker,
+            sx + 4.0,
+            rowY + 5.0,
+            color: VoxColor.white,
+            size: 10.0,
+          );
         }
       }
 
@@ -504,7 +609,14 @@ final class TimelineSequencerUI {
     // Playhead vertical cursor spanning ruler & tracks
     if (dur > 0.0) {
       final px = rulerX + (sequence.currentTime / dur).clamp(0.0, 1.0) * rulerW;
-      dl.addLine(px, rulerY, px, math.max(rulerY + _rulerHeight, rowY - 2.0), VoxColor.red, thickness: 2.0);
+      dl.addLine(
+        px,
+        rulerY,
+        px,
+        math.max(rulerY + _rulerHeight, rowY - 2.0),
+        VoxColor.red,
+        thickness: 2.0,
+      );
     }
 
     if (subtitlePreview != null && subtitlePreview.isNotEmpty) {

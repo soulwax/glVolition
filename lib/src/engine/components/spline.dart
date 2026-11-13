@@ -6,8 +6,10 @@ final class SplinePath extends Component {
 
   SplinePath(this.spline);
 
-  factory SplinePath.fromPoints(List<Vec3> controlPoints, {bool closed = false}) =>
-      SplinePath(CatmullRomSpline3D(points: controlPoints, closed: closed));
+  factory SplinePath.fromPoints(
+    List<Vec3> controlPoints, {
+    bool closed = false,
+  }) => SplinePath(CatmullRomSpline3D(points: controlPoints, closed: closed));
 
   double get totalLength => spline.totalLength;
 
@@ -71,12 +73,22 @@ final class SplineFollower extends Behaviour {
 
   static final spec = ComponentSpec<SplineFollower>(
     'SplineFollower',
-    () => SplineFollower(path: SplinePath.fromPoints(const [Vec3.zero, Vec3(0, 0, -5)])),
+    () => SplineFollower(
+      path: SplinePath.fromPoints(const [Vec3.zero, Vec3(0, 0, -5)]),
+    ),
     [
       Field.number('speed', (s) => s.speed, (s, v) => s.speed = v),
       Field.number('distance', (s) => s.distance, (s, v) => s.distance = v),
-      Field.boolean('alignToTangent', (s) => s.alignToTangent, (s, v) => s.alignToTangent = v),
-      Field.vec3('localOffset', (s) => s.localOffset, (s, v) => s.localOffset = v),
+      Field.boolean(
+        'alignToTangent',
+        (s) => s.alignToTangent,
+        (s, v) => s.alignToTangent = v,
+      ),
+      Field.vec3(
+        'localOffset',
+        (s) => s.localOffset,
+        (s, v) => s.localOffset = v,
+      ),
     ],
   );
 

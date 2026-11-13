@@ -105,7 +105,12 @@ final class WaterSurfaceComponent extends Behaviour {
   static final spec = ComponentSpec<WaterSurfaceComponent>(
     'WaterSurfaceComponent',
     () => WaterSurfaceComponent(
-      surface: WaterSurfaceMesh(width: 8.0, depth: 8.0, subdivisionsX: 4, subdivisionsZ: 4),
+      surface: WaterSurfaceMesh(
+        width: 8.0,
+        depth: 8.0,
+        subdivisionsX: 4,
+        subdivisionsZ: 4,
+      ),
       waves: GerstnerWaveEvaluator.ocean(),
     ),
     const [],
@@ -116,7 +121,10 @@ final class WaterSurfaceComponent extends Behaviour {
     scene._waters.add(this);
     if (_leaf == null) {
       final g = engine.graphics;
-      _mesh = g.createMesh(surface.mesh, debugLabel: '${gameObject.name}#water');
+      _mesh = g.createMesh(
+        surface.mesh,
+        debugLabel: '${gameObject.name}#water',
+      );
       _material = g.createMaterial(materialDefinition);
       _leaf = gameObject.node.add(
         name: '${gameObject.name}#water_node',
@@ -164,22 +172,20 @@ final class BuoyantBody extends Behaviour {
     double yaw = 0.0,
     this.waveEvaluator,
   }) : vessel = BuoyantVesselBody(
-          position: Vec3.zero,
-          width: width,
-          length: length,
-          mass: mass,
-          linearDamping: linearDamping,
-          angularDamping: angularDamping,
-          rightingStiffness: rightingStiffness,
-          yaw: yaw,
-        );
+         position: Vec3.zero,
+         width: width,
+         length: length,
+         mass: mass,
+         linearDamping: linearDamping,
+         angularDamping: angularDamping,
+         rightingStiffness: rightingStiffness,
+         yaw: yaw,
+       );
 
   static final spec = ComponentSpec<BuoyantBody>(
     'BuoyantBody',
     BuoyantBody.new,
-    [
-      Field.number('yaw', (b) => b.yaw, (b, v) => b.yaw = v),
-    ],
+    [Field.number('yaw', (b) => b.yaw, (b, v) => b.yaw = v)],
   );
 
   double get yaw => vessel.yaw;

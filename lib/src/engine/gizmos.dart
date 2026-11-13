@@ -9,7 +9,13 @@ final class GizmoLine {
 }
 
 /// One projected drawing-buffer-space segment produced by [Gizmos.project].
-typedef GizmoScreenLine = ({double x0, double y0, double x1, double y1, int color});
+typedef GizmoScreenLine = ({
+  double x0,
+  double y0,
+  double x1,
+  double y1,
+  int color,
+});
 
 /// Host-neutral immediate-mode debug drawing (E15-1).
 ///
@@ -38,7 +44,10 @@ final class Gizmos {
   int circleSegments = 24;
 
   Camera2D? _overlayCamera;
-  final SpriteBatch _batch = SpriteBatch(initialCapacity: 1024, debugLabel: 'gizmos');
+  final SpriteBatch _batch = SpriteBatch(
+    initialCapacity: 1024,
+    debugLabel: 'gizmos',
+  );
 
   Gizmos._(this._scene);
 
@@ -61,7 +70,9 @@ final class Gizmos {
     final len = dir.length;
     if (len < 1e-6) return;
     final unitDir = dir * (1.0 / len);
-    final helper = unitDir.y.abs() < 0.99 ? const Vec3(0, 1, 0) : const Vec3(1, 0, 0);
+    final helper = unitDir.y.abs() < 0.99
+        ? const Vec3(0, 1, 0)
+        : const Vec3(1, 0, 0);
     final side = unitDir.cross(helper).normalized * headSize;
     final up = unitDir.cross(side).normalized * headSize;
     final headBase = to - unitDir * headSize;
@@ -72,7 +83,9 @@ final class Gizmos {
   }
 
   void wireDisc(Vec3 center, double radius, Vec3 normal, {int? color}) {
-    final n = normal.lengthSquared > 1e-10 ? normal.normalized : const Vec3(0, 1, 0);
+    final n = normal.lengthSquared > 1e-10
+        ? normal.normalized
+        : const Vec3(0, 1, 0);
     final helper = n.y.abs() < 0.99 ? const Vec3(0, 1, 0) : const Vec3(1, 0, 0);
     final u = n.cross(helper).normalized;
     final v = n.cross(u).normalized;
@@ -88,8 +101,14 @@ final class Gizmos {
   void wireBox(Aabb box, {int? color}) {
     final mn = box.min, mx = box.max;
     final c = [
-      Vec3(mn.x, mn.y, mn.z), Vec3(mx.x, mn.y, mn.z), Vec3(mx.x, mn.y, mx.z), Vec3(mn.x, mn.y, mx.z), //
-      Vec3(mn.x, mx.y, mn.z), Vec3(mx.x, mx.y, mn.z), Vec3(mx.x, mx.y, mx.z), Vec3(mn.x, mx.y, mx.z),
+      Vec3(mn.x, mn.y, mn.z),
+      Vec3(mx.x, mn.y, mn.z),
+      Vec3(mx.x, mn.y, mx.z),
+      Vec3(mn.x, mn.y, mx.z), //
+      Vec3(mn.x, mx.y, mn.z),
+      Vec3(mx.x, mx.y, mn.z),
+      Vec3(mx.x, mx.y, mx.z),
+      Vec3(mn.x, mx.y, mx.z),
     ];
     for (var i = 0; i < 4; i++) {
       line(c[i], c[(i + 1) % 4], color: color);
@@ -99,7 +118,15 @@ final class Gizmos {
   }
 
   /// Circle of [radius] around [center] in the plane spanned by [u] and [v].
-  void circle(Vec3 center, double radius, Vec3 u, Vec3 v, {int? color, double arcStart = 0, double arc = math.pi * 2}) {
+  void circle(
+    Vec3 center,
+    double radius,
+    Vec3 u,
+    Vec3 v, {
+    int? color,
+    double arcStart = 0,
+    double arc = math.pi * 2,
+  }) {
     final n = math.max(3, (circleSegments * arc / (math.pi * 2)).ceil());
     Vec3 at(int i) {
       final t = arcStart + arc * i / n;
@@ -123,8 +150,12 @@ final class Gizmos {
 
   void wireCapsule(Vec3 start, Vec3 end, double radius, {int? color}) {
     final axis = end - start;
-    final up = axis.lengthSquared > 1e-10 ? axis.normalized : const Vec3(0, 1, 0);
-    final helper = up.y.abs() < 0.99 ? const Vec3(0, 1, 0) : const Vec3(1, 0, 0);
+    final up = axis.lengthSquared > 1e-10
+        ? axis.normalized
+        : const Vec3(0, 1, 0);
+    final helper = up.y.abs() < 0.99
+        ? const Vec3(0, 1, 0)
+        : const Vec3(1, 0, 0);
     final u = up.cross(helper).normalized;
     final v = up.cross(u).normalized;
     circle(start, radius, u, v, color: color);
@@ -147,7 +178,12 @@ final class Gizmos {
       case BoxCollider b:
         wireBox(b.worldBounds, color: col);
       case CapsuleCollider cap:
-        wireCapsule(cap.segmentStart, cap.segmentEnd, cap.worldRadius, color: col);
+        wireCapsule(
+          cap.segmentStart,
+          cap.segmentEnd,
+          cap.worldRadius,
+          color: col,
+        );
     }
   }
 
@@ -210,7 +246,13 @@ final class Gizmos {
         final vis = (a ?? b)!;
         final clip = camera.worldToScreenPoint(front);
         if (clip != null) {
-          out.add((x0: vis.x, y0: vis.y, x1: clip.x, y1: clip.y, color: l.color));
+          out.add((
+            x0: vis.x,
+            y0: vis.y,
+            x1: clip.x,
+            y1: clip.y,
+            color: l.color,
+          ));
         }
       }
     }
@@ -225,7 +267,9 @@ final class Gizmos {
     final cam = Camera.of(_scene);
     if (cam != null && cam._active) {
       var overlay = _overlayCamera;
-      if (overlay == null || overlay.designWidth != vw || overlay.designHeight != vh) {
+      if (overlay == null ||
+          overlay.designWidth != vw ||
+          overlay.designHeight != vh) {
         overlay = _overlayCamera = Camera2D(
           designWidth: vw.toDouble(),
           designHeight: vh.toDouble(),
@@ -238,7 +282,14 @@ final class Gizmos {
         ..y = vh * 0.5;
       _batch.clear();
       for (final s in project(cam)) {
-        _batch.drawLine(s.x0, s.y0, s.x1, s.y1, thickness: thickness, color: s.color);
+        _batch.drawLine(
+          s.x0,
+          s.y0,
+          s.x1,
+          s.y1,
+          thickness: thickness,
+          color: s.color,
+        );
       }
       if (!_batch.isEmpty) {
         encoder.drawSprites(_batch, overlay, stage: SpriteStage.overlay);

@@ -91,8 +91,10 @@ final class RocketVisualAssets {
       };
 
   static Future<RocketVisualAssets> load(AssetLoader assets) async {
-    Future<ModelAsset> model(String name, {MaterialOverride tweak = kenneySurface}) =>
-        assets.loadModel('res/models/$name.glb', materialOverride: tweak);
+    Future<ModelAsset> model(
+      String name, {
+      MaterialOverride tweak = kenneySurface,
+    }) => assets.loadModel('res/models/$name.glb', materialOverride: tweak);
 
     final loaded = await Future.wait([
       model('craft_speederA'),
@@ -140,7 +142,8 @@ final class ChaseCameraController implements CameraController {
   @override
   Vec3 get forward => (_look - _eye).normalized;
 
-  Vec3 get _desiredEye => Vec3(target.x * 0.6, target.y * 0.6, target.z) + _offset;
+  Vec3 get _desiredEye =>
+      Vec3(target.x * 0.6, target.y * 0.6, target.z) + _offset;
 
   void snap() {
     _eye = _desiredEye;
@@ -159,13 +162,13 @@ final class ChaseCameraController implements CameraController {
 
   @override
   CameraView toCameraView(double aspect) => CameraView.look(
-        eye: _eye,
-        forward: forward,
-        fovYRadians: _fov,
-        aspect: aspect,
-        near: 0.1,
-        far: 260,
-      );
+    eye: _eye,
+    forward: forward,
+    fovYRadians: _fov,
+    aspect: aspect,
+    near: 0.1,
+    far: 260,
+  );
 }
 
 /// One meteor, crystal or fuel canister streaming down +Z, managed via
@@ -209,8 +212,14 @@ final class FieldBody extends Behaviour with Poolable {
         final aimed = !initial && rng.nextDouble() < 0.3;
         pos = aimed
             ? Vec3(
-                (shipPos.x + (rng.nextDouble() - 0.5) * 4).clamp(-fieldHalfX, fieldHalfX),
-                (shipPos.y + (rng.nextDouble() - 0.5) * 3).clamp(-fieldHalfY, fieldHalfY),
+                (shipPos.x + (rng.nextDouble() - 0.5) * 4).clamp(
+                  -fieldHalfX,
+                  fieldHalfX,
+                ),
+                (shipPos.y + (rng.nextDouble() - 0.5) * 3).clamp(
+                  -fieldHalfY,
+                  fieldHalfY,
+                ),
                 z,
               )
             : Vec3(
@@ -240,7 +249,10 @@ final class FieldBody extends Behaviour with Poolable {
     transform
       ..localPosition = pos
       ..localScale = scale
-      ..localRotation = Quat.axisAngle(spinAxis, rng.nextDouble() * math.pi * 2);
+      ..localRotation = Quat.axisAngle(
+        spinAxis,
+        rng.nextDouble() * math.pi * 2,
+      );
     consumed = false;
     gameObject.setActive(true);
   }
@@ -273,7 +285,9 @@ final class ShipController extends Behaviour {
 
   static final spec = ComponentSpec<ShipController>(
     'ShipController',
-    () => throw StateError('ShipController is constructed by buildPixelRocketScene'),
+    () => throw StateError(
+      'ShipController is constructed by buildPixelRocketScene',
+    ),
     [
       Field.vec3('logicalPos', (s) => s.logicalPos, (s, v) => s.logicalPos = v),
       Field.vec3('velocity', (s) => s.velocity, (s, v) => s.velocity = v),
@@ -309,8 +323,14 @@ final class ShipController extends Behaviour {
   }
 
   void pose(double t) {
-    final roll = Quat.axisAngle(Vec3.unitZ, (-velocity.x * 0.06).clamp(-0.65, 0.65));
-    final pitch = Quat.axisAngle(Vec3.unitX, (velocity.y * 0.05).clamp(-0.5, 0.5));
+    final roll = Quat.axisAngle(
+      Vec3.unitZ,
+      (-velocity.x * 0.06).clamp(-0.65, 0.65),
+    );
+    final pitch = Quat.axisAngle(
+      Vec3.unitX,
+      (velocity.y * 0.05).clamp(-0.5, 0.5),
+    );
     final bob = math.sin(t * 3.1) * 0.04;
     final tilt = roll * pitch;
 
@@ -318,7 +338,9 @@ final class ShipController extends Behaviour {
     visual.transform.localRotation = tilt * _shipYaw;
 
     if (director.phase != GamePhase.over) {
-      final shown = director.invulnerable <= 0 || (director.invulnerable * 12).floor().isEven;
+      final shown =
+          director.invulnerable <= 0 ||
+          (director.invulnerable * 12).floor().isEven;
       visual.setActive(shown);
     }
 
@@ -331,9 +353,12 @@ final class ShipController extends Behaviour {
       translation: Vec3(0, flameLength / 2 * len, 0),
       stretch: Vec3(1, len, 1),
     );
-    flamePivot.setActive(director.engineLit && director.phase != GamePhase.over);
+    flamePivot.setActive(
+      director.engineLit && director.phase != GamePhase.over,
+    );
 
-    final lightOn = director.phase != GamePhase.over || director.invulnerable > 0;
+    final lightOn =
+        director.phase != GamePhase.over || director.invulnerable > 0;
     engineLight
       ..intensity = lightOn ? (director.boosting ? 3.2 : 1.8) : 0
       ..range = director.boosting ? 9.0 : 6.0;
@@ -388,23 +413,24 @@ final class RocketDirector extends Behaviour {
   double _scoreDebt = 0;
 
   RocketDirector({RocketHud? hud, math.Random? random})
-      : hud = hud ?? NullRocketHud(),
-        rng = random ?? math.Random();
+    : hud = hud ?? NullRocketHud(),
+      rng = random ?? math.Random();
 
-  static final spec = ComponentSpec<RocketDirector>(
-    'RocketDirector',
-    RocketDirector.new,
-    [
-      Field.number('speed', (d) => d.speed, (d, v) => d.speed = v),
-      Field.integer('score', (d) => d.score, (d, v) => d.score = v),
-      Field.integer('best', (d) => d.best, (d, v) => d.best = v),
-      Field.number('fuel', (d) => d.fuel, (d, v) => d.fuel = v),
-      Field.integer('shields', (d) => d.shields, (d, v) => d.shields = v),
-      Field.number('invulnerable', (d) => d.invulnerable, (d, v) => d.invulnerable = v),
-      Field.boolean('boosting', (d) => d.boosting, (d, v) => d.boosting = v),
-      Field.boolean('retro', (d) => d.retro, (d, v) => d.retro = v),
-    ],
-  );
+  static final spec =
+      ComponentSpec<RocketDirector>('RocketDirector', RocketDirector.new, [
+        Field.number('speed', (d) => d.speed, (d, v) => d.speed = v),
+        Field.integer('score', (d) => d.score, (d, v) => d.score = v),
+        Field.integer('best', (d) => d.best, (d, v) => d.best = v),
+        Field.number('fuel', (d) => d.fuel, (d, v) => d.fuel = v),
+        Field.integer('shields', (d) => d.shields, (d, v) => d.shields = v),
+        Field.number(
+          'invulnerable',
+          (d) => d.invulnerable,
+          (d, v) => d.invulnerable = v,
+        ),
+        Field.boolean('boosting', (d) => d.boosting, (d, v) => d.boosting = v),
+        Field.boolean('retro', (d) => d.retro, (d, v) => d.retro = v),
+      ]);
 
   @override
   void awake() {
@@ -413,13 +439,31 @@ final class RocketDirector extends Behaviour {
       ..button('Retro', ['KeyP'])
       ..button('Mute', ['KeyM']);
 
-    _crystalClip = engine.audio.clip('res/audio/forceField_000.ogg', volume: 0.5);
+    _crystalClip = engine.audio.clip(
+      'res/audio/forceField_000.ogg',
+      volume: 0.5,
+    );
     _fuelClip = engine.audio.clip('res/audio/laserSmall_000.ogg', volume: 0.55);
     _hitClip = engine.audio.clip('res/audio/impactMetal_002.ogg', volume: 0.7);
-    _explodeClip = engine.audio.clip('res/audio/lowFrequency_explosion_000.ogg', volume: 0.8, voices: 1);
-    _crunchClip = engine.audio.clip('res/audio/explosionCrunch_000.ogg', volume: 0.6);
-    _boostClip = engine.audio.clip('res/audio/thrusterFire_000.ogg', volume: 0.4, voices: 2);
-    _engineClip = engine.audio.clip('res/audio/spaceEngineLow_000.ogg', volume: 0.25, voices: 1);
+    _explodeClip = engine.audio.clip(
+      'res/audio/lowFrequency_explosion_000.ogg',
+      volume: 0.8,
+      voices: 1,
+    );
+    _crunchClip = engine.audio.clip(
+      'res/audio/explosionCrunch_000.ogg',
+      volume: 0.6,
+    );
+    _boostClip = engine.audio.clip(
+      'res/audio/thrusterFire_000.ogg',
+      volume: 0.4,
+      voices: 2,
+    );
+    _engineClip = engine.audio.clip(
+      'res/audio/spaceEngineLow_000.ogg',
+      volume: 0.25,
+      voices: 1,
+    );
 
     best = int.tryParse(engine.storage.read('pixelrocket.best') ?? '0') ?? 0;
   }
@@ -476,7 +520,7 @@ final class RocketDirector extends Behaviour {
     hud.message(
       why,
       'Score  $score\nDistance  ${(distance / 10).round()} km\n\n'
-          '${isBest ? 'NEW BEST!\n\n' : ''}Press SPACE to fly again',
+      '${isBest ? 'NEW BEST!\n\n' : ''}Press SPACE to fly again',
       best: best,
     );
   }
@@ -497,13 +541,23 @@ final class RocketDirector extends Behaviour {
         ship.stepSteering(dt);
         elapsed += dt;
         final cruise = math.min(maxCruise, cruiseSpeed + elapsed * 0.45);
-        final targetSpeed = fuel > 0 ? cruise * (boosting ? boostFactor : 1.0) : 0.0;
+        final targetSpeed = fuel > 0
+            ? cruise * (boosting ? boostFactor : 1.0)
+            : 0.0;
         speed += (targetSpeed - speed) * damp(fuel > 0 ? 3.0 : 0.9, dt);
         invulnerable = math.max(0, invulnerable - dt);
         _burnFuel(dt);
       case GamePhase.title:
-        ship.logicalPos = Vec3(math.sin(t * 0.6) * 3.0, math.sin(t * 0.9) * 1.2, 0);
-        ship.velocity = Vec3(math.cos(t * 0.6) * 1.8, math.cos(t * 0.9) * 1.1, 0);
+        ship.logicalPos = Vec3(
+          math.sin(t * 0.6) * 3.0,
+          math.sin(t * 0.9) * 1.2,
+          0,
+        );
+        ship.velocity = Vec3(
+          math.cos(t * 0.6) * 1.8,
+          math.cos(t * 0.9) * 1.1,
+          0,
+        );
         ship.transform.localPosition = ship.logicalPos;
         speed = cruiseSpeed * 0.8;
       case GamePhase.over:
@@ -517,7 +571,8 @@ final class RocketDirector extends Behaviour {
   @override
   void update() {
     if (input.wasPressed('Submit')) {
-      if (phase == GamePhase.title || (phase == GamePhase.over && _overTimer > 0.8)) {
+      if (phase == GamePhase.title ||
+          (phase == GamePhase.over && _overTimer > 0.8)) {
         startGame();
       }
     }
@@ -533,7 +588,11 @@ final class RocketDirector extends Behaviour {
 
     ship.pose(time.time);
 
-    final speed01 = ((speed - cruiseSpeed) / (maxCruise * boostFactor - cruiseSpeed)).clamp(0.0, 1.0);
+    final speed01 =
+        ((speed - cruiseSpeed) / (maxCruise * boostFactor - cruiseSpeed)).clamp(
+          0.0,
+          1.0,
+        );
     chaseCamera
       ..target = ship.logicalPos
       ..speed01 = speed01;
@@ -675,7 +734,10 @@ RocketDirector buildPixelRocketScene(
     'Sun',
     rotation: lookRotation(const Vec3(-0.45, -0.8, -0.35)),
     components: [
-      Light.directional(color: const LinearColor(1.0, 0.9, 0.78), intensity: 2.6),
+      Light.directional(
+        color: const LinearColor(1.0, 0.9, 0.78),
+        intensity: 2.6,
+      ),
     ],
   );
 
@@ -703,7 +765,11 @@ RocketDirector buildPixelRocketScene(
     ],
   );
 
-  final coneData = Primitives.cone(radius: 0.15, height: flameLength, radialSegments: 14);
+  final coneData = Primitives.cone(
+    radius: 0.15,
+    height: flameLength,
+    radialSegments: 14,
+  );
   final coneMesh = g.createMesh(coneData, debugLabel: 'engine_flame');
   final flameMat = g.createMaterial(
     const MaterialDefinition(
@@ -768,39 +834,78 @@ RocketDirector buildPixelRocketScene(
   director.ship = shipCtrl;
 
   // Streamed field bodies built via Prefab + ObjectPool<FieldBody>.
-  double radiusOf(ModelAsset? asset, double fallback) =>
-      asset == null ? fallback : (asset.bounds.max - asset.bounds.min).length * 0.5;
+  double radiusOf(ModelAsset? asset, double fallback) => asset == null
+      ? fallback
+      : (asset.bounds.max - asset.bounds.min).length * 0.5;
 
-  Prefab makeBodyPrefab(String name, BodyKind kind, ModelAsset? model, double baseRadius) =>
-      Prefab(name, (go) {
-        go.layer = kFieldLayer;
-        if (model != null) go.addComponent(ModelRenderer(model, centerOrigin: true));
-        go
-          ..addComponent(SphereCollider(radius: baseRadius, collidesWithMask: 1 << kShipLayer))
-          ..addComponent(FieldBody(kind, baseRadius: baseRadius));
-      });
+  Prefab makeBodyPrefab(
+    String name,
+    BodyKind kind,
+    ModelAsset? model,
+    double baseRadius,
+  ) => Prefab(name, (go) {
+    go.layer = kFieldLayer;
+    if (model != null) {
+      go.addComponent(ModelRenderer(model, centerOrigin: true));
+    }
+    go
+      ..addComponent(
+        SphereCollider(radius: baseRadius, collidesWithMask: 1 << kShipLayer),
+      )
+      ..addComponent(FieldBody(kind, baseRadius: baseRadius));
+  });
 
   for (var i = 0; i < meteorCount; i++) {
     final model = visuals?.meteors[i % visuals.meteors.length];
-    final prefab = makeBodyPrefab('Meteor_$i', BodyKind.meteor, model, radiusOf(model, 0.85) * 0.72);
-    final pool = ObjectPool<FieldBody>(scene: scene, prefab: prefab, initialCapacity: 1);
+    final prefab = makeBodyPrefab(
+      'Meteor_$i',
+      BodyKind.meteor,
+      model,
+      radiusOf(model, 0.85) * 0.72,
+    );
+    final pool = ObjectPool<FieldBody>(
+      scene: scene,
+      prefab: prefab,
+      initialCapacity: 1,
+    );
     director.bodies.add(pool.acquire());
   }
   for (var i = 0; i < crystalCount; i++) {
     final model = visuals?.crystal;
-    final prefab = makeBodyPrefab('Crystal_$i', BodyKind.crystal, model, radiusOf(model, 0.45) * 1.4);
-    final pool = ObjectPool<FieldBody>(scene: scene, prefab: prefab, initialCapacity: 1);
+    final prefab = makeBodyPrefab(
+      'Crystal_$i',
+      BodyKind.crystal,
+      model,
+      radiusOf(model, 0.45) * 1.4,
+    );
+    final pool = ObjectPool<FieldBody>(
+      scene: scene,
+      prefab: prefab,
+      initialCapacity: 1,
+    );
     director.bodies.add(pool.acquire());
   }
   for (var i = 0; i < fuelCount; i++) {
     final model = visuals?.fuel;
-    final prefab = makeBodyPrefab('Fuel_$i', BodyKind.fuel, model, radiusOf(model, 0.45) * 1.4);
-    final pool = ObjectPool<FieldBody>(scene: scene, prefab: prefab, initialCapacity: 1);
+    final prefab = makeBodyPrefab(
+      'Fuel_$i',
+      BodyKind.fuel,
+      model,
+      radiusOf(model, 0.45) * 1.4,
+    );
+    final pool = ObjectPool<FieldBody>(
+      scene: scene,
+      prefab: prefab,
+      initialCapacity: 1,
+    );
     director.bodies.add(pool.acquire());
   }
 
   // Particle systems.
-  final quad = g.createMesh(Primitives.quad(width: 1, height: 1), debugLabel: 'particle_quad');
+  final quad = g.createMesh(
+    Primitives.quad(width: 1, height: 1),
+    debugLabel: 'particle_quad',
+  );
   MaterialHandle glow(String key, double r, double gr, double b, double e) =>
       g.createParticleMaterial(key: key, color: LinearColor(r, gr, b), glow: e);
 
@@ -808,7 +913,10 @@ RocketDirector buildPixelRocketScene(
     ParticleEmitter(
       mesh: quad,
       material: glow('fx_blast', 1.0, 0.42, 0.1, 2.4),
-      shape: const SphereShape(radius: 0.4, directionMode: SphereDirectionMode.outward),
+      shape: const SphereShape(
+        radius: 0.4,
+        directionMode: SphereDirectionMode.outward,
+      ),
       minLifetime: 0.5,
       maxLifetime: 1.1,
       minSpeed: 6,
@@ -830,7 +938,10 @@ RocketDirector buildPixelRocketScene(
     ParticleEmitter(
       mesh: quad,
       material: glow('fx_sparkle', 0.3, 1.0, 0.6, 6.0),
-      shape: const SphereShape(radius: 0.3, directionMode: SphereDirectionMode.outward),
+      shape: const SphereShape(
+        radius: 0.3,
+        directionMode: SphereDirectionMode.outward,
+      ),
       minLifetime: 0.35,
       maxLifetime: 0.7,
       minSpeed: 3,
@@ -849,7 +960,10 @@ RocketDirector buildPixelRocketScene(
     ParticleEmitter(
       mesh: quad,
       material: glow('fx_dust', 0.75, 0.82, 1.0, 2.5),
-      shape: const BoxShape(halfExtents: Vec3(22, 13, 4), fixedDirection: Vec3.unitZ),
+      shape: const BoxShape(
+        halfExtents: Vec3(22, 13, 4),
+        fixedDirection: Vec3.unitZ,
+      ),
       rate: 90,
       minLifetime: 1.6,
       maxLifetime: 1.8,
@@ -865,7 +979,11 @@ RocketDirector buildPixelRocketScene(
     ),
   );
 
-  scene.createGameObject('Starfield', position: const Vec3(0, 0, -95), components: [starsSys]);
+  scene.createGameObject(
+    'Starfield',
+    position: const Vec3(0, 0, -95),
+    components: [starsSys],
+  );
   scene.createGameObject('BlastFx', components: [blastSys]);
   scene.createGameObject('SparkleFx', components: [sparkleSys]);
   director

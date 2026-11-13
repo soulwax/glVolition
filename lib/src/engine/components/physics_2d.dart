@@ -61,8 +61,8 @@ class RigidBody2D extends Component {
     this.gravityScale = 1.0,
     this.fixedRotation = false,
     this.bullet = false,
-  })  : _initialLinearVelocity = linearVelocity,
-        _initialAngularVelocity = angularVelocity;
+  }) : _initialLinearVelocity = linearVelocity,
+       _initialAngularVelocity = angularVelocity;
 
   phys.RigidBody? get rawBody => _rawBody;
 
@@ -77,7 +77,8 @@ class RigidBody2D extends Component {
     _rawBody?.linearVelocity = phys.PhysVec2(v.x, v.y);
   }
 
-  double get angularVelocity => _rawBody?.angularVelocity ?? _initialAngularVelocity;
+  double get angularVelocity =>
+      _rawBody?.angularVelocity ?? _initialAngularVelocity;
   set angularVelocity(double w) {
     _initialAngularVelocity = w;
     _rawBody?.angularVelocity = w;
@@ -119,7 +120,9 @@ class RigidBody2D extends Component {
   Vec2 getVelocityAtPoint(Vec2 worldPoint) {
     final b = _rawBody;
     if (b == null) return Vec2.zero;
-    final v = b.getVelocityAtWorldPoint(phys.PhysVec2(worldPoint.x, worldPoint.y));
+    final v = b.getVelocityAtWorldPoint(
+      phys.PhysVec2(worldPoint.x, worldPoint.y),
+    );
     return Vec2(v.x, v.y);
   }
 
@@ -393,19 +396,24 @@ class Physics2DWorld {
     final q = body.transform.rotation;
     final angle = 2.0 * math.atan2(q.z, q.w);
 
-    final raw = _world.createBody(phys.RigidBodyDef(
-      type: body.bodyType,
-      position: phys.PhysVec2(pos.x, pos.y),
-      angle: angle,
-      linearVelocity: phys.PhysVec2(body._initialLinearVelocity.x, body._initialLinearVelocity.y),
-      angularVelocity: body._initialAngularVelocity,
-      linearDamping: body.linearDamping,
-      angularDamping: body.angularDamping,
-      gravityScale: body.gravityScale,
-      fixedRotation: body.fixedRotation,
-      bullet: body.bullet,
-      userData: body,
-    ));
+    final raw = _world.createBody(
+      phys.RigidBodyDef(
+        type: body.bodyType,
+        position: phys.PhysVec2(pos.x, pos.y),
+        angle: angle,
+        linearVelocity: phys.PhysVec2(
+          body._initialLinearVelocity.x,
+          body._initialLinearVelocity.y,
+        ),
+        angularVelocity: body._initialAngularVelocity,
+        linearDamping: body.linearDamping,
+        angularDamping: body.angularDamping,
+        gravityScale: body.gravityScale,
+        fixedRotation: body.fixedRotation,
+        bullet: body.bullet,
+        userData: body,
+      ),
+    );
     body._rawBody = raw;
 
     // Attach any colliders already on this GameObject
@@ -430,8 +438,11 @@ class Physics2DWorld {
     if (_colliders.contains(collider)) return;
     _colliders.add(collider);
 
-    final rb = collider.rigidBody ??
-        collider.gameObject.addComponent<RigidBody2D>(RigidBody2D(bodyType: phys.BodyType.staticBody));
+    final rb =
+        collider.rigidBody ??
+        collider.gameObject.addComponent<RigidBody2D>(
+          RigidBody2D(bodyType: phys.BodyType.staticBody),
+        );
 
     final raw = rb.rawBody;
     if (raw != null) {
@@ -442,16 +453,18 @@ class Physics2DWorld {
   void _attachColliderToBody(Collider2D collider, phys.RigidBody rawBody) {
     if (collider._fixture != null) return;
     final shape = collider._createShape();
-    final fixture = rawBody.createFixture(phys.FixtureDef(
-      shape: shape,
-      density: collider.density,
-      friction: collider.friction,
-      restitution: collider.restitution,
-      isSensor: collider.isTrigger,
-      categoryBits: collider.categoryBits,
-      maskBits: collider.maskBits,
-      userData: collider,
-    ));
+    final fixture = rawBody.createFixture(
+      phys.FixtureDef(
+        shape: shape,
+        density: collider.density,
+        friction: collider.friction,
+        restitution: collider.restitution,
+        isSensor: collider.isTrigger,
+        categoryBits: collider.categoryBits,
+        maskBits: collider.maskBits,
+        userData: collider,
+      ),
+    );
     collider._fixture = fixture;
     _fixtureToCollider[fixture] = collider;
   }
@@ -474,56 +487,71 @@ class Physics2DWorld {
       final rbA = joint.gameObject.getComponent<RigidBody2D>();
       final rbB = joint.connectedBody;
       if (rbA?.rawBody != null && rbB?.rawBody != null) {
-        joint._rawJoint = _world.createJoint(phys.DistanceJoint(
-          bodyA: rbA!.rawBody!,
-          bodyB: rbB!.rawBody!,
-          localAnchorA: phys.PhysVec2(joint.anchor.x, joint.anchor.y),
-          localAnchorB: phys.PhysVec2(joint.connectedAnchor.x, joint.connectedAnchor.y),
-          length: joint.length,
-          frequencyHz: joint.frequencyHz,
-          dampingRatio: joint.dampingRatio,
-          collideConnected: joint.collideConnected,
-          userData: joint,
-        ));
+        joint._rawJoint = _world.createJoint(
+          phys.DistanceJoint(
+            bodyA: rbA!.rawBody!,
+            bodyB: rbB!.rawBody!,
+            localAnchorA: phys.PhysVec2(joint.anchor.x, joint.anchor.y),
+            localAnchorB: phys.PhysVec2(
+              joint.connectedAnchor.x,
+              joint.connectedAnchor.y,
+            ),
+            length: joint.length,
+            frequencyHz: joint.frequencyHz,
+            dampingRatio: joint.dampingRatio,
+            collideConnected: joint.collideConnected,
+            userData: joint,
+          ),
+        );
       }
     } else if (joint is RevoluteJoint2D) {
       final rbA = joint.gameObject.getComponent<RigidBody2D>();
       final rbB = joint.connectedBody;
       if (rbA?.rawBody != null && rbB?.rawBody != null) {
-        joint._rawJoint = _world.createJoint(phys.RevoluteJoint(
-          bodyA: rbA!.rawBody!,
-          bodyB: rbB!.rawBody!,
-          localAnchorA: phys.PhysVec2(joint.anchor.x, joint.anchor.y),
-          localAnchorB: phys.PhysVec2(joint.connectedAnchor.x, joint.connectedAnchor.y),
-          enableMotor: joint.enableMotor,
-          motorSpeed: joint.motorSpeed,
-          maxMotorTorque: joint.maxMotorTorque,
-          enableLimit: joint.enableLimit,
-          lowerAngle: joint.lowerAngle,
-          upperAngle: joint.upperAngle,
-          collideConnected: joint.collideConnected,
-          userData: joint,
-        ));
+        joint._rawJoint = _world.createJoint(
+          phys.RevoluteJoint(
+            bodyA: rbA!.rawBody!,
+            bodyB: rbB!.rawBody!,
+            localAnchorA: phys.PhysVec2(joint.anchor.x, joint.anchor.y),
+            localAnchorB: phys.PhysVec2(
+              joint.connectedAnchor.x,
+              joint.connectedAnchor.y,
+            ),
+            enableMotor: joint.enableMotor,
+            motorSpeed: joint.motorSpeed,
+            maxMotorTorque: joint.maxMotorTorque,
+            enableLimit: joint.enableLimit,
+            lowerAngle: joint.lowerAngle,
+            upperAngle: joint.upperAngle,
+            collideConnected: joint.collideConnected,
+            userData: joint,
+          ),
+        );
       }
     } else if (joint is PrismaticJoint2D) {
       final rbA = joint.gameObject.getComponent<RigidBody2D>();
       final rbB = joint.connectedBody;
       if (rbA?.rawBody != null && rbB?.rawBody != null) {
-        joint._rawJoint = _world.createJoint(phys.PrismaticJoint(
-          bodyA: rbA!.rawBody!,
-          bodyB: rbB!.rawBody!,
-          localAnchorA: phys.PhysVec2(joint.anchor.x, joint.anchor.y),
-          localAnchorB: phys.PhysVec2(joint.connectedAnchor.x, joint.connectedAnchor.y),
-          localAxisA: phys.PhysVec2(joint.axis.x, joint.axis.y),
-          enableMotor: joint.enableMotor,
-          motorSpeed: joint.motorSpeed,
-          maxMotorForce: joint.maxMotorForce,
-          enableLimit: joint.enableLimit,
-          lowerTranslation: joint.lowerTranslation,
-          upperTranslation: joint.upperTranslation,
-          collideConnected: joint.collideConnected,
-          userData: joint,
-        ));
+        joint._rawJoint = _world.createJoint(
+          phys.PrismaticJoint(
+            bodyA: rbA!.rawBody!,
+            bodyB: rbB!.rawBody!,
+            localAnchorA: phys.PhysVec2(joint.anchor.x, joint.anchor.y),
+            localAnchorB: phys.PhysVec2(
+              joint.connectedAnchor.x,
+              joint.connectedAnchor.y,
+            ),
+            localAxisA: phys.PhysVec2(joint.axis.x, joint.axis.y),
+            enableMotor: joint.enableMotor,
+            motorSpeed: joint.motorSpeed,
+            maxMotorForce: joint.maxMotorForce,
+            enableLimit: joint.enableLimit,
+            lowerTranslation: joint.lowerTranslation,
+            upperTranslation: joint.upperTranslation,
+            collideConnected: joint.collideConnected,
+            userData: joint,
+          ),
+        );
       }
     }
   }
@@ -584,7 +612,9 @@ class Physics2DWorld {
       } else {
         final m = contact.manifold;
         final normal = m != null ? Vec2(m.normal.x, m.normal.y) : Vec2.zero;
-        final pts = m != null ? m.points.map((p) => Vec2(p.position.x, p.position.y)).toList() : <Vec2>[];
+        final pts = m != null
+            ? m.points.map((p) => Vec2(p.position.x, p.position.y)).toList()
+            : <Vec2>[];
         final relVel = colB.rigidBody != null && colA.rigidBody != null
             ? colB.rigidBody!.linearVelocity - colA.rigidBody!.linearVelocity
             : Vec2.zero;
@@ -630,7 +660,9 @@ class Physics2DWorld {
     } else {
       final m = contact.manifold;
       final normal = m != null ? Vec2(m.normal.x, m.normal.y) : Vec2.zero;
-      final pts = m != null ? m.points.map((p) => Vec2(p.position.x, p.position.y)).toList() : <Vec2>[];
+      final pts = m != null
+          ? m.points.map((p) => Vec2(p.position.x, p.position.y)).toList()
+          : <Vec2>[];
       final relVel = colB.rigidBody != null && colA.rigidBody != null
           ? colB.rigidBody!.linearVelocity - colA.rigidBody!.linearVelocity
           : Vec2.zero;
@@ -675,7 +707,9 @@ class Physics2DWorld {
     } else {
       final m = contact.manifold;
       final normal = m != null ? Vec2(m.normal.x, m.normal.y) : Vec2.zero;
-      final pts = m != null ? m.points.map((p) => Vec2(p.position.x, p.position.y)).toList() : <Vec2>[];
+      final pts = m != null
+          ? m.points.map((p) => Vec2(p.position.x, p.position.y)).toList()
+          : <Vec2>[];
       final relVel = colB.rigidBody != null && colA.rigidBody != null
           ? colB.rigidBody!.linearVelocity - colA.rigidBody!.linearVelocity
           : Vec2.zero;
@@ -714,7 +748,10 @@ class Physics2DWorld {
     if (len < 1e-12) return null;
     final dir = Vec2(direction.x / len, direction.y / len);
     final p1 = phys.PhysVec2(origin.x, origin.y);
-    final p2 = phys.PhysVec2(origin.x + dir.x * maxDistance, origin.y + dir.y * maxDistance);
+    final p2 = phys.PhysVec2(
+      origin.x + dir.x * maxDistance,
+      origin.y + dir.y * maxDistance,
+    );
 
     final rawHit = _world.raycastClosest(p1, p2, mask: mask);
     if (rawHit == null) return null;

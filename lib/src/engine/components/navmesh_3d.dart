@@ -12,15 +12,23 @@ final class NavMeshSurfaceComponent extends Behaviour {
     nav3.NavPolygonMesh? mesh,
     this.maxStepHeight = 0.6,
     this.maxSlopeDegrees = 45.0,
-  })  : _mesh = mesh,
-        _query = mesh == null ? null : nav3.NavMeshQuery(mesh);
+  }) : _mesh = mesh,
+       _query = mesh == null ? null : nav3.NavMeshQuery(mesh);
 
   static final spec = ComponentSpec<NavMeshSurfaceComponent>(
     'NavMeshSurfaceComponent',
     NavMeshSurfaceComponent.new,
     [
-      Field.number('maxStepHeight', (n) => n.maxStepHeight, (n, v) => n.maxStepHeight = v),
-      Field.number('maxSlopeDegrees', (n) => n.maxSlopeDegrees, (n, v) => n.maxSlopeDegrees = v),
+      Field.number(
+        'maxStepHeight',
+        (n) => n.maxStepHeight,
+        (n, v) => n.maxStepHeight = v,
+      ),
+      Field.number(
+        'maxSlopeDegrees',
+        (n) => n.maxSlopeDegrees,
+        (n, v) => n.maxSlopeDegrees = v,
+      ),
     ],
   );
 
@@ -101,13 +109,15 @@ final class NavMeshSurfaceComponent extends Behaviour {
     final converted = polygonLoops
         .map((poly) => poly.map((v) => nav3.NavVec3(v.x, v.y, v.z)).toList())
         .toList();
-    setMesh(nav3.NavMeshBuilder.fromPolygons(
-      converted,
-      areaCosts: areaCosts,
-      areaFlags: areaFlags,
-      offMeshLinks: offMeshLinks,
-      stepTolerance: maxStepHeight,
-    ));
+    setMesh(
+      nav3.NavMeshBuilder.fromPolygons(
+        converted,
+        areaCosts: areaCosts,
+        areaFlags: areaFlags,
+        offMeshLinks: offMeshLinks,
+        stepTolerance: maxStepHeight,
+      ),
+    );
   }
 
   void addOffMeshLink(nav3.NavOffMeshLink link) {
@@ -168,11 +178,27 @@ final class NavMeshAgent3DComponent extends Behaviour {
     NavMeshAgent3DComponent.new,
     [
       Field.number('speed', (a) => a.speed, (a, v) => a.speed = v),
-      Field.number('angularSpeed', (a) => a.angularSpeed, (a, v) => a.angularSpeed = v),
-      Field.number('stoppingDistance', (a) => a.stoppingDistance, (a, v) => a.stoppingDistance = v),
+      Field.number(
+        'angularSpeed',
+        (a) => a.angularSpeed,
+        (a, v) => a.angularSpeed = v,
+      ),
+      Field.number(
+        'stoppingDistance',
+        (a) => a.stoppingDistance,
+        (a, v) => a.stoppingDistance = v,
+      ),
       Field.integer('areaMask', (a) => a.areaMask, (a, v) => a.areaMask = v),
-      Field.boolean('alignToVelocity', (a) => a.alignToVelocity, (a, v) => a.alignToVelocity = v),
-      Field.number('heightOffset', (a) => a.heightOffset, (a, v) => a.heightOffset = v),
+      Field.boolean(
+        'alignToVelocity',
+        (a) => a.alignToVelocity,
+        (a, v) => a.alignToVelocity = v,
+      ),
+      Field.number(
+        'heightOffset',
+        (a) => a.heightOffset,
+        (a, v) => a.heightOffset = v,
+      ),
     ],
   );
 
@@ -196,7 +222,9 @@ final class NavMeshAgent3DComponent extends Behaviour {
 
   /// Plans a funnel-smoothed 3D path from current position to [target] and starts moving.
   bool setDestination(Vec3 target) {
-    final surf = surface ?? (isAttached ? scene.findObjectOfType<NavMeshSurfaceComponent>() : null);
+    final surf =
+        surface ??
+        (isAttached ? scene.findObjectOfType<NavMeshSurfaceComponent>() : null);
     if (surf == null) return false;
     surface = surf;
 
@@ -237,13 +265,19 @@ final class NavMeshAgent3DComponent extends Behaviour {
     if (dt <= 0.0) return;
 
     var remainingMove = speed * dt;
-    while (remainingMove > 1e-6 && _waypointIndex < _currentPath.waypoints.length) {
+    while (remainingMove > 1e-6 &&
+        _waypointIndex < _currentPath.waypoints.length) {
       final wp = _currentPath.waypoints[_waypointIndex];
-      final targetPos = Vec3(wp.position.x, wp.position.y + heightOffset, wp.position.z);
+      final targetPos = Vec3(
+        wp.position.x,
+        wp.position.y + heightOffset,
+        wp.position.z,
+      );
       final delta = targetPos - transform.position;
       final dist = delta.length;
 
-      if (wp.offMeshLink != null && !identical(wp.offMeshLink, _lastDispatchedLink)) {
+      if (wp.offMeshLink != null &&
+          !identical(wp.offMeshLink, _lastDispatchedLink)) {
         _lastDispatchedLink = wp.offMeshLink;
         onTraverseOffMeshLink?.call(wp.offMeshLink!);
       }
@@ -310,9 +344,21 @@ final class NavMeshDebuggerUI {
       }
     }
 
-    ui.labelValue('Polygons', '${surface.polygonCount}', valueColor: VoxColor.cyan);
-    ui.labelValue('Shared Portals', '${portalTotal ~/ 2}', valueColor: VoxColor.lightGray);
-    ui.labelValue('Off-Mesh Links', '${surface.offMeshLinkCount}', valueColor: VoxColor.yellow);
+    ui.labelValue(
+      'Polygons',
+      '${surface.polygonCount}',
+      valueColor: VoxColor.cyan,
+    );
+    ui.labelValue(
+      'Shared Portals',
+      '${portalTotal ~/ 2}',
+      valueColor: VoxColor.lightGray,
+    );
+    ui.labelValue(
+      'Off-Mesh Links',
+      '${surface.offMeshLinkCount}',
+      valueColor: VoxColor.yellow,
+    );
 
     if (agent != null) {
       ui.separator();

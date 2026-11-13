@@ -22,14 +22,18 @@ final class TilemapComponent extends Component {
   void setTile(int column, int row, int id) => layer.setTile(column, row, id);
 
   bool isSolidTileId(int id) {
-    if (id < 0) return false; // Empty tile (-1) or out-of-bounds is non-solid unless explicitly flagged
+    if (id < 0) {
+      return false; // Empty tile (-1) or out-of-bounds is non-solid unless explicitly flagged
+    }
     final pred = isSolidPredicate;
     if (pred != null && pred(id)) return true;
     return solidTileIds.contains(id);
   }
 
   bool isSolidCell(int column, int row) {
-    if (column < 0 || row < 0 || column >= columns || row >= rows) return true; // Outside map bounds is solid
+    if (column < 0 || row < 0 || column >= columns || row >= rows) {
+      return true; // Outside map bounds is solid
+    }
     return isSolidTileId(layer.tileAt(column, row));
   }
 
@@ -56,7 +60,10 @@ final class TilemapComponent extends Component {
 
   /// Traces a 2D line from [start] to [end] across tile cells, returning the first solid hit,
   /// or null if the path is clear.
-  ({int column, int row, Vec2 point, double distance})? raycast(Vec2 start, Vec2 end) {
+  ({int column, int row, Vec2 point, double distance})? raycast(
+    Vec2 start,
+    Vec2 end,
+  ) {
     final dx = end.x - start.x;
     final dy = end.y - start.y;
     final totalDist = math.sqrt(dx * dx + dy * dy);
@@ -139,7 +146,10 @@ final class TilemapComponent extends Component {
           final penRight = (right - x).abs();
           final penTop = (y - top).abs();
           final penBottom = (bottom - y).abs();
-          final minPen = math.min(math.min(penLeft, penRight), math.min(penTop, penBottom));
+          final minPen = math.min(
+            math.min(penLeft, penRight),
+            math.min(penTop, penBottom),
+          );
           if (minPen == penLeft) {
             x = left - radius;
           } else if (minPen == penRight) {

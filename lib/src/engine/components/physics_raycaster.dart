@@ -46,8 +46,16 @@ final class PhysicsRaycaster extends Behaviour {
     PhysicsRaycaster.new,
     [
       Field.integer('layerMask', (r) => r.layerMask, (r, v) => r.layerMask = v),
-      Field.number('maxDistance', (r) => r.maxDistance, (r, v) => r.maxDistance = v),
-      Field.boolean('includeTriggers', (r) => r.includeTriggers, (r, v) => r.includeTriggers = v),
+      Field.number(
+        'maxDistance',
+        (r) => r.maxDistance,
+        (r, v) => r.maxDistance = v,
+      ),
+      Field.boolean(
+        'includeTriggers',
+        (r) => r.includeTriggers,
+        (r, v) => r.includeTriggers = v,
+      ),
     ],
   );
 
@@ -80,7 +88,9 @@ final class PhysicsRaycaster extends Behaviour {
 
     // Hover transitions
     if (hitGo != _currentHovered) {
-      if (_currentHovered != null && !_currentHovered!.isDestroyed && _currentCollider != null) {
+      if (_currentHovered != null &&
+          !_currentHovered!.isDestroyed &&
+          _currentCollider != null) {
         final exitHit = PointerRaycastHit(
           gameObject: _currentHovered!,
           collider: _currentCollider!,
@@ -129,7 +139,9 @@ final class PhysicsRaycaster extends Behaviour {
 
     // Pointer release / up / click
     if (rawInput.pointerReleased) {
-      if (_pressedObject != null && !_pressedObject!.isDestroyed && _pressedCollider != null) {
+      if (_pressedObject != null &&
+          !_pressedObject!.isDestroyed &&
+          _pressedCollider != null) {
         final upHit = PointerRaycastHit(
           gameObject: _pressedObject!,
           collider: _pressedCollider!,
@@ -165,7 +177,9 @@ final class PhysicsRaycaster extends Behaviour {
 
   @override
   void onDisable() {
-    if (_currentHovered != null && !_currentHovered!.isDestroyed && _currentCollider != null) {
+    if (_currentHovered != null &&
+        !_currentHovered!.isDestroyed &&
+        _currentCollider != null) {
       final exitHit = PointerRaycastHit(
         gameObject: _currentHovered!,
         collider: _currentCollider!,

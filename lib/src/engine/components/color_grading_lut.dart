@@ -41,9 +41,17 @@ final class ColorGradingLutComponent extends Behaviour {
     ColorGradingLutComponent.new,
     [
       Field.integer('lutSize', (c) => c.lutSize, (c, v) => c.lutSize = v),
-      Field.number('temperature', (c) => c.temperature, (c, v) => c.temperature = v),
+      Field.number(
+        'temperature',
+        (c) => c.temperature,
+        (c, v) => c.temperature = v,
+      ),
       Field.number('contrast', (c) => c.contrast, (c, v) => c.contrast = v),
-      Field.number('saturation', (c) => c.saturation, (c, v) => c.saturation = v),
+      Field.number(
+        'saturation',
+        (c) => c.saturation,
+        (c, v) => c.saturation = v,
+      ),
       Field.number('gamma', (c) => c.gamma, (c, v) => c.gamma = v),
       Field.number(
         'gradientCursor',
@@ -124,10 +132,18 @@ final class ColorGradingLutComponent extends Behaviour {
   }
 
   LinearColor gradeLinearColor(LinearColor input) {
-    final srgb = vcolor.OkLabColor.fromLinearRgb(input.r, input.g, input.b).toSrgb();
+    final srgb = vcolor.OkLabColor.fromLinearRgb(
+      input.r,
+      input.g,
+      input.b,
+    ).toSrgb();
     final g = lut.sample(srgb.r, srgb.g, srgb.b);
     final lin = vcolor.OkLabColor.fromSrgb(g.r, g.g, g.b).toLinearRgb();
-    return LinearColor(lin.r.clamp(0.0, 1.0), lin.g.clamp(0.0, 1.0), lin.b.clamp(0.0, 1.0));
+    return LinearColor(
+      lin.r.clamp(0.0, 1.0),
+      lin.g.clamp(0.0, 1.0),
+      lin.b.clamp(0.0, 1.0),
+    );
   }
 
   @override
@@ -169,7 +185,8 @@ final class ColorGradingInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -244,7 +261,13 @@ final class ColorGradingInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'cg_pause', comp.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'cg_pause',
+      comp.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       comp.paused = !comp.paused;
     }
 

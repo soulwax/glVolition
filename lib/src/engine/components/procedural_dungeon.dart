@@ -31,8 +31,15 @@ final class ProceduralDungeonComponent extends Component {
   List<ProcRect> get rooms => _dungeonResult?.rooms ?? const [];
 
   /// World-space centers of all carved rooms.
-  List<Vec3> get roomCenters =>
-      rooms.map((r) => Vec3((r.center.x + 0.5) * tileSize, 0.0, (r.center.y + 0.5) * tileSize)).toList();
+  List<Vec3> get roomCenters => rooms
+      .map(
+        (r) => Vec3(
+          (r.center.x + 0.5) * tileSize,
+          0.0,
+          (r.center.y + 0.5) * tileSize,
+        ),
+      )
+      .toList();
 
   /// Recommended world spawn position for player (center of first room).
   Vec3 get playerSpawn {
@@ -52,11 +59,7 @@ final class ProceduralDungeonComponent extends Component {
       maxRoomSize: maxRoomSize,
     );
 
-    final result = bsp.generate(
-      width: width,
-      height: height,
-      seed: s,
-    );
+    final result = bsp.generate(width: width, height: height, seed: s);
     _dungeonResult = result;
 
     // Build NavGrid (floor = 1/walkable, wall = 0/blocked)
@@ -71,7 +74,8 @@ final class ProceduralDungeonComponent extends Component {
     _navGrid = grid;
 
     // Populate Tilemap if available
-    final tilemap = targetTilemap ?? gameObject.getComponent<TilemapComponent>();
+    final tilemap =
+        targetTilemap ?? gameObject.getComponent<TilemapComponent>();
     if (tilemap != null) {
       for (var y = 0; y < height; y++) {
         for (var x = 0; x < width; x++) {
@@ -126,11 +130,7 @@ final class PoissonScatterComponent extends Component {
     final spawned = <GameObject>[];
 
     for (final pos in positions) {
-      final go = prefab.instantiate(
-        scene,
-        parent: p,
-        position: pos,
-      );
+      final go = prefab.instantiate(scene, parent: p, position: pos);
       spawned.add(go);
     }
 

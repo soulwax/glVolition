@@ -43,11 +43,17 @@ final class Camera2DComponent extends Component {
   double get rotation => raw.rotation;
   set rotation(double value) => raw.rotation = value;
 
-  Vec2 screenToWorld(double screenX, double screenY) => raw.screenToWorld(screenX, screenY);
-  Vec2 worldToScreen(double worldX, double worldY) => raw.worldToScreen(worldX, worldY);
+  Vec2 screenToWorld(double screenX, double screenY) =>
+      raw.screenToWorld(screenX, screenY);
+  Vec2 worldToScreen(double worldX, double worldY) =>
+      raw.worldToScreen(worldX, worldY);
 
   /// Smoothly interpolates the camera's 2D position towards [target] using exponential decay.
-  void smoothFollow(Vec2 target, {double smoothing = 10.0, double dt = 1 / 60}) {
+  void smoothFollow(
+    Vec2 target, {
+    double smoothing = 10.0,
+    double dt = 1 / 60,
+  }) {
     final factor = 1.0 - math.exp(-smoothing * dt);
     final curX = x;
     final curY = y;
@@ -130,18 +136,17 @@ final class SpriteRenderer extends Component {
     int layer = 0,
     bool flipX = false,
     bool flipY = false,
-  }) =>
-      SpriteRenderer(
-        region: region,
-        width: width,
-        height: height,
-        originX: originX,
-        originY: originY,
-        color: color,
-        layer: layer,
-        flipX: flipX,
-        flipY: flipY,
-      );
+  }) => SpriteRenderer(
+    region: region,
+    width: width,
+    height: height,
+    originX: originX,
+    originY: originY,
+    color: color,
+    layer: layer,
+    flipX: flipX,
+    flipY: flipY,
+  );
 
   void _drawInto(SpriteBatch batch) {
     final pos = transform.position;
@@ -196,7 +201,12 @@ final class SpriteAnimator extends Behaviour {
 
   static final spec = ComponentSpec<SpriteAnimator>(
     'SpriteAnimator',
-    () => SpriteAnimator(clips: {'idle': [SpriteRegion.white]}, initialClip: 'idle'),
+    () => SpriteAnimator(
+      clips: {
+        'idle': [SpriteRegion.white],
+      },
+      initialClip: 'idle',
+    ),
     [
       Field.number('fps', (s) => s.fps, (s, v) => s.fps = v),
       Field.boolean('loop', (s) => s.loop, (s, v) => s.loop = v),
@@ -208,7 +218,11 @@ final class SpriteAnimator extends Behaviour {
 
   void play(String clipName, {bool restart = false}) {
     if (!clips.containsKey(clipName)) {
-      throw ArgumentError.value(clipName, 'clipName', 'unknown sprite animation clip');
+      throw ArgumentError.value(
+        clipName,
+        'clipName',
+        'unknown sprite animation clip',
+      );
     }
     if (_currentClip != clipName || restart) {
       _currentClip = clipName;

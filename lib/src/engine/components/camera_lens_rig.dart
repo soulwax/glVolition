@@ -66,7 +66,11 @@ final class CameraLensRigComponent extends Behaviour {
       Field.number('railSpeed', (c) => c.railSpeed, (c, v) => c.railSpeed = v),
       Field.boolean('playing', (c) => c.playing, (c, v) => c.playing = v),
       Field.boolean('loopRail', (c) => c.loopRail, (c, v) => c.setLoopRail(v)),
-      Field.boolean('alignToTangent', (c) => c.alignToTangent, (c, v) => c.alignToTangent = v),
+      Field.boolean(
+        'alignToTangent',
+        (c) => c.alignToTangent,
+        (c, v) => c.alignToTangent = v,
+      ),
       Field.number(
         'traumaDecayPerSecond',
         (c) => c.traumaDecayPerSecond,
@@ -96,8 +100,9 @@ final class CameraLensRigComponent extends Behaviour {
   );
 
   double get progress => _normalizedProgress;
-  set progress(double value) =>
-      _normalizedProgress = loopRail ? (value % 1.0 + 1.0) % 1.0 : value.clamp(0.0, 1.0).toDouble();
+  set progress(double value) => _normalizedProgress = loopRail
+      ? (value % 1.0 + 1.0) % 1.0
+      : value.clamp(0.0, 1.0).toDouble();
 
   double get trauma => shakeGenerator.trauma;
   lens.CameraSplineSample? get lastSplineSample => _lastSplineSample;
@@ -167,7 +172,11 @@ final class CameraLensRigComponent extends Behaviour {
     _lastTransitionState = trans;
 
     if (isAttached) {
-      final basePos = Vec3(sample.position.x, sample.position.y, sample.position.z);
+      final basePos = Vec3(
+        sample.position.x,
+        sample.position.y,
+        sample.position.z,
+      );
       final shakeVec = Vec3(
         shake.translationOffset.x,
         shake.translationOffset.y,
@@ -184,10 +193,12 @@ final class CameraLensRigComponent extends Behaviour {
       }
 
       if (shake.shakeStrength > 1e-6) {
-        final shakeRot = Quat.axisAngle(kRight, shake.pitchRad) *
+        final shakeRot =
+            Quat.axisAngle(kRight, shake.pitchRad) *
             Quat.axisAngle(kUp, shake.yawRad) *
             Quat.axisAngle(kForward, shake.rollRad);
-        transform.localRotation = (transform.localRotation * shakeRot).normalized;
+        transform.localRotation =
+            (transform.localRotation * shakeRot).normalized;
       }
 
       final cam = targetCamera ?? getComponent<Camera>();
@@ -228,7 +239,8 @@ final class LensRigInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -302,12 +314,20 @@ final class LensRigInspectorUI {
       trans != null && trans.isActive
           ? '${trans.effect.name} ${(trans.progress * 100.0).toStringAsFixed(0)}%'
           : 'Idle (vig ${(trans?.vignetteIntensity ?? rig.baseVignette).toStringAsFixed(2)})',
-      valueColor: trans != null && trans.isActive ? VoxColor.cyan : VoxColor.lightGray,
+      valueColor: trans != null && trans.isActive
+          ? VoxColor.cyan
+          : VoxColor.lightGray,
     );
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final playRect = VoxRect(x + pad, barY, 70.0, 22.0);
-    if (_drawButton(ui, uiState, 'lens_play', rig.playing ? 'Pause' : 'Play', playRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'lens_play',
+      rig.playing ? 'Pause' : 'Play',
+      playRect,
+    )) {
       rig.playing = !rig.playing;
     }
 

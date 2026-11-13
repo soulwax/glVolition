@@ -15,7 +15,8 @@ final class SceneTransition {
   });
 
   bool get isComplete => elapsed >= duration;
-  double get progress => duration <= 0.0 ? 1.0 : (elapsed / duration).clamp(0.0, 1.0);
+  double get progress =>
+      duration <= 0.0 ? 1.0 : (elapsed / duration).clamp(0.0, 1.0);
 
   /// Normalized opacity curve: `0.0 -> 1.0` during fade-out (first half),
   /// and `1.0 -> 0.0` during fade-in (second half).
@@ -47,7 +48,8 @@ final class SceneManager {
   String? get activeSceneName => _activeSceneName;
   Iterable<String> get registeredSceneNames => _builders.keys;
   SceneTransition? get activeTransition => _activeTransition;
-  bool get isTransitioning => _activeTransition != null && !_activeTransition!.isComplete;
+  bool get isTransitioning =>
+      _activeTransition != null && !_activeTransition!.isComplete;
   double get transitionAlpha => _activeTransition?.alpha ?? 0.0;
 
   /// Registers a named scene factory [builder] under [name].
@@ -68,8 +70,13 @@ final class SceneManager {
 
   /// Builds and loads the scene registered under [name].
   Scene load(String name) {
-    final builder = _builders[name] ??
-        (throw ArgumentError.value(name, 'name', 'No scene registered with name "$name"'));
+    final builder =
+        _builders[name] ??
+        (throw ArgumentError.value(
+          name,
+          'name',
+          'No scene registered with name "$name"',
+        ));
     _activeSceneName = name;
     final next = builder();
     _engine.loadScene(next);
@@ -78,8 +85,11 @@ final class SceneManager {
 
   /// Rebuilds and reloads the currently active named scene.
   Scene reloadCurrent() {
-    final name = _activeSceneName ??
-        (throw StateError('No named scene is currently active in SceneManager'));
+    final name =
+        _activeSceneName ??
+        (throw StateError(
+          'No named scene is currently active in SceneManager',
+        ));
     return load(name);
   }
 

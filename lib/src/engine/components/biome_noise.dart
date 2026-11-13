@@ -63,9 +63,21 @@ final class BiomeTerrainGeneratorComponent extends Component {
     [
       Field.integer('seed', (b) => b.seed, (b, v) => b.seed = v),
       Field.integer('gridWidth', (b) => b.gridWidth, (b, v) => b.gridWidth = v),
-      Field.integer('gridHeight', (b) => b.gridHeight, (b, v) => b.gridHeight = v),
-      Field.number('worldWidth', (b) => b.worldWidth, (b, v) => b.worldWidth = v),
-      Field.number('worldDepth', (b) => b.worldDepth, (b, v) => b.worldDepth = v),
+      Field.integer(
+        'gridHeight',
+        (b) => b.gridHeight,
+        (b, v) => b.gridHeight = v,
+      ),
+      Field.number(
+        'worldWidth',
+        (b) => b.worldWidth,
+        (b, v) => b.worldWidth = v,
+      ),
+      Field.number(
+        'worldDepth',
+        (b) => b.worldDepth,
+        (b, v) => b.worldDepth = v,
+      ),
       Field.number('amplitude', (b) => b.amplitude, (b, v) => b.amplitude = v),
       Field.number('frequency', (b) => b.frequency, (b, v) => b.frequency = v),
       Field.integer('octaves', (b) => b.octaves, (b, v) => b.octaves = v),
@@ -125,7 +137,10 @@ final class BiomeTerrainGeneratorComponent extends Component {
       biome.BiomeSplatClassifier.temperateDefault(
         seaLevel: seaLevel,
         maxElevation: amplitude,
-        moistureField: biome.SimplexNoise2D(seed: seed ^ 0x4242, frequency: frequency * 0.9),
+        moistureField: biome.SimplexNoise2D(
+          seed: seed ^ 0x4242,
+          frequency: frequency * 0.9,
+        ),
       );
 
   /// Synthesizes heightfield from the noise graph and runs optional erosion & splat bake.
@@ -146,12 +161,15 @@ final class BiomeTerrainGeneratorComponent extends Component {
 
     if (applyErosion) {
       if (initialErosionDroplets > 0) {
-        _lastErosionStats = biome.HydraulicDropletErosion(seed: seed + 17)
-            .erode(g, dropletCount: initialErosionDroplets);
+        _lastErosionStats = biome.HydraulicDropletErosion(
+          seed: seed + 17,
+        ).erode(g, dropletCount: initialErosionDroplets);
       }
       if (initialThermalIterations > 0) {
-        _lastThermalMovedVolume = const biome.ThermalTalusSolver()
-            .relax(g, iterations: initialThermalIterations);
+        _lastThermalMovedVolume = const biome.ThermalTalusSolver().relax(
+          g,
+          iterations: initialThermalIterations,
+        );
       }
     }
 
@@ -159,16 +177,22 @@ final class BiomeTerrainGeneratorComponent extends Component {
   }
 
   /// Applies [dropletCount] additional hydraulic erosion droplets to the active grid.
-  biome.DropletErosionStats erodeDroplets({int dropletCount = 250, int? erosionSeed}) {
+  biome.DropletErosionStats erodeDroplets({
+    int dropletCount = 250,
+    int? erosionSeed,
+  }) {
     if (_grid == null) regenerate(applyErosion: false);
     final g = _grid!;
     final prev = _lastErosionStats;
     final runSeed = erosionSeed ?? (seed + (prev?.dropletsSimulated ?? 0) + 31);
-    final delta = biome.HydraulicDropletErosion(seed: runSeed)
-        .erode(g, dropletCount: dropletCount);
+    final delta = biome.HydraulicDropletErosion(
+      seed: runSeed,
+    ).erode(g, dropletCount: dropletCount);
     _lastErosionStats = biome.DropletErosionStats(
-      dropletsSimulated: (prev?.dropletsSimulated ?? 0) + delta.dropletsSimulated,
-      totalErodedVolume: (prev?.totalErodedVolume ?? 0.0) + delta.totalErodedVolume,
+      dropletsSimulated:
+          (prev?.dropletsSimulated ?? 0) + delta.dropletsSimulated,
+      totalErodedVolume:
+          (prev?.totalErodedVolume ?? 0.0) + delta.totalErodedVolume,
       totalDepositedVolume:
           (prev?.totalDepositedVolume ?? 0.0) + delta.totalDepositedVolume,
     );
@@ -179,7 +203,10 @@ final class BiomeTerrainGeneratorComponent extends Component {
   /// Applies [iterations] additional thermal talus slope relaxation passes.
   double relaxThermal({int iterations = 6}) {
     if (_grid == null) regenerate(applyErosion: false);
-    final moved = const biome.ThermalTalusSolver().relax(_grid!, iterations: iterations);
+    final moved = const biome.ThermalTalusSolver().relax(
+      _grid!,
+      iterations: iterations,
+    );
     _lastThermalMovedVolume += moved;
     _rebuildOutputs();
     return moved;
@@ -203,7 +230,9 @@ final class BiomeTerrainGeneratorComponent extends Component {
     final slope = g.sampleWorldSlopeRadians(worldX, worldZ);
     final classifier = resolveClassifier();
     final rawM = classifier.moistureField?.sample(worldX, worldZ) ?? 0.5;
-    final moisture = rawM < 0.0 ? (rawM * 0.5 + 0.5).clamp(0.0, 1.0) : rawM.clamp(0.0, 1.0);
+    final moisture = rawM < 0.0
+        ? (rawM * 0.5 + 0.5).clamp(0.0, 1.0)
+        : rawM.clamp(0.0, 1.0);
     return classifier.classifyPoint(h, slope, moisture: moisture);
   }
 
@@ -308,7 +337,8 @@ final class BiomeTerrainGeneratorComponent extends Component {
       );
       final nextMat = graphics.createMaterial(
         MaterialDefinition(
-          key: '${gameObject.name}#biome_mat_${_lastErosionStats?.dropletsSimulated ?? 0}',
+          key:
+              '${gameObject.name}#biome_mat_${_lastErosionStats?.dropletsSimulated ?? 0}',
           albedoTexture: nextTex,
           roughness: roughness,
           metallic: metallic,
@@ -324,11 +354,7 @@ final class BiomeTerrainGeneratorComponent extends Component {
       var mr = getComponent<MeshRenderer>();
       if (mr == null && autoCreateMeshRenderer) {
         mr = gameObject.addComponent(
-          MeshRenderer(
-            mesh: nextMesh,
-            meshData: meshData,
-            material: nextMat,
-          ),
+          MeshRenderer(mesh: nextMesh, meshData: meshData, material: nextMat),
         );
       } else if (mr != null) {
         mr.mesh = nextMesh;
@@ -382,14 +408,31 @@ final class NoiseErosionUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

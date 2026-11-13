@@ -52,12 +52,28 @@ final class VirtualCameraComponent extends Behaviour {
     [
       Field.text('cameraId', (c) => c.cameraId, (c, v) => c.cameraId = v),
       Field.integer('priority', (c) => c.priority, (c, v) => c.priority = v),
-      Field.number('fovYDegrees', (c) => c.fovYDegrees, (c, v) => c.fovYDegrees = v),
+      Field.number(
+        'fovYDegrees',
+        (c) => c.fovYDegrees,
+        (c, v) => c.fovYDegrees = v,
+      ),
       Field.number('near', (c) => c.near, (c, v) => c.near = v),
       Field.number('far', (c) => c.far, (c, v) => c.far = v),
-      Field.number('dutchRollRadians', (c) => c.dutchRollRadians, (c, v) => c.dutchRollRadians = v),
-      Field.boolean('obstacleAvoidance', (c) => c.obstacleAvoidance, (c, v) => c.obstacleAvoidance = v),
-      Field.boolean('applyRigPoseToTransform', (c) => c.applyRigPoseToTransform, (c, v) => c.applyRigPoseToTransform = v),
+      Field.number(
+        'dutchRollRadians',
+        (c) => c.dutchRollRadians,
+        (c, v) => c.dutchRollRadians = v,
+      ),
+      Field.boolean(
+        'obstacleAvoidance',
+        (c) => c.obstacleAvoidance,
+        (c, v) => c.obstacleAvoidance = v,
+      ),
+      Field.boolean(
+        'applyRigPoseToTransform',
+        (c) => c.applyRigPoseToTransform,
+        (c, v) => c.applyRigPoseToTransform = v,
+      ),
     ],
   );
 
@@ -116,15 +132,18 @@ final class VirtualCameraComponent extends Behaviour {
     }
 
     final look = lookAtTarget;
-    r.lookAtTarget =
-        (look != null && !look.isDestroyed) ? _toCamVec3(look.transform.position) : null;
+    r.lookAtTarget = (look != null && !look.isDestroyed)
+        ? _toCamVec3(look.transform.position)
+        : null;
 
     final drivenByProceduralRig =
         followTarget != null && (framingComposer != null || orbitRig != null);
     if (!drivenByProceduralRig && isAttached) {
       r.pose = vcam.CamPose(
         position: _toCamVec3(transform.position),
-        rotation: lookAtTarget == null ? _toCamQuat(transform.rotation) : r.pose.rotation,
+        rotation: lookAtTarget == null
+            ? _toCamQuat(transform.rotation)
+            : r.pose.rotation,
         fovYDegrees: fovYDegrees,
         near: near,
         far: far,
@@ -142,7 +161,9 @@ final class VirtualCameraComponent extends Behaviour {
 
   void _syncFromRig() {
     if (!applyRigPoseToTransform || !isAttached) return;
-    if (framingComposer == null && orbitRig == null && lookAtTarget == null) return;
+    if (framingComposer == null && orbitRig == null && lookAtTarget == null) {
+      return;
+    }
     final p = rig.pose;
     transform.position = Vec3(p.position.x, p.position.y, p.position.z);
     final rot = p.composedRotation;
@@ -175,13 +196,17 @@ final class CameraBrainComponent extends Behaviour {
   /// in the owning [Scene] during [lateUpdate].
   bool autoDiscoverSceneCameras;
 
-  final Map<VirtualCameraComponent, vcam.VirtualCameraRig> _trackedComponents = {};
+  final Map<VirtualCameraComponent, vcam.VirtualCameraRig> _trackedComponents =
+      {};
 
   CameraBrainComponent({
     vcam.CameraDirectorBrain? brain,
-    vcam.CameraTransitionSpec defaultTransition = const vcam.CameraTransitionSpec(),
+    vcam.CameraTransitionSpec defaultTransition =
+        const vcam.CameraTransitionSpec(),
     this.autoDiscoverSceneCameras = true,
-  }) : brain = brain ?? vcam.CameraDirectorBrain(defaultTransition: defaultTransition);
+  }) : brain =
+           brain ??
+           vcam.CameraDirectorBrain(defaultTransition: defaultTransition);
 
   static final spec = ComponentSpec<CameraBrainComponent>(
     'CameraBrainComponent',
@@ -213,13 +238,13 @@ final class CameraBrainComponent extends Behaviour {
     }
   }
 
-  void setTransition(String fromId, String toId, vcam.CameraTransitionSpec spec) =>
-      brain.setTransition(fromId, toId, spec);
+  void setTransition(
+    String fromId,
+    String toId,
+    vcam.CameraTransitionSpec spec,
+  ) => brain.setTransition(fromId, toId, spec);
 
-  void triggerImpulse({
-    double trauma = 0.6,
-    Vec3 kick = Vec3.zero,
-  }) =>
+  void triggerImpulse({double trauma = 0.6, Vec3 kick = Vec3.zero}) =>
       brain.triggerImpulse(
         traumaAmount: trauma,
         kick: vcam.CamVec3(kick.x, kick.y, kick.z),
@@ -234,7 +259,9 @@ final class CameraBrainComponent extends Behaviour {
   void _syncSceneCameras(double dt) {
     if (!isAttached) return;
     if (autoDiscoverSceneCameras) {
-      final live = scene.findObjectsOfType<VirtualCameraComponent>(includeInactive: true).toSet();
+      final live = scene
+          .findObjectsOfType<VirtualCameraComponent>(includeInactive: true)
+          .toSet();
       for (final comp in live) {
         if (!_trackedComponents.containsKey(comp)) {
           _trackedComponents[comp] = comp.rig;
@@ -256,7 +283,11 @@ final class CameraBrainComponent extends Behaviour {
     }
   }
 
-  double? _probeObstacle(vcam.CamVec3 origin, vcam.CamVec3 dir, double maxDistance) {
+  double? _probeObstacle(
+    vcam.CamVec3 origin,
+    vcam.CamVec3 dir,
+    double maxDistance,
+  ) {
     if (!isAttached) return null;
     final activeRig = brain.activeCamera;
     VirtualCameraComponent? activeComp;
@@ -292,7 +323,11 @@ final class CameraBrainComponent extends Behaviour {
 
   void _applyPoseToCamera(vcam.CamPose pose) {
     if (!isAttached) return;
-    transform.position = Vec3(pose.position.x, pose.position.y, pose.position.z);
+    transform.position = Vec3(
+      pose.position.x,
+      pose.position.y,
+      pose.position.z,
+    );
     final rot = pose.composedRotation;
     transform.rotation = Quat(rot.x, rot.y, rot.z, rot.w).normalized;
 
@@ -344,15 +379,30 @@ final class CameraDirectorUI {
       state.activeButtonId = id;
     }
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -386,7 +436,11 @@ final class CameraDirectorUI {
     final pose = brain.currentPose;
 
     ui.labelValue('Active Rig', activeId, valueColor: VoxColor.cyan);
-    ui.labelValue('FOV Y', '${pose.fovYDegrees.toStringAsFixed(1)} deg', valueColor: VoxColor.lightGray);
+    ui.labelValue(
+      'FOV Y',
+      '${pose.fovYDegrees.toStringAsFixed(1)} deg',
+      valueColor: VoxColor.lightGray,
+    );
     ui.labelValue(
       'Blend State',
       brain.isBlending
@@ -410,7 +464,14 @@ final class CameraDirectorUI {
     // Blend progress bar
     final progX = shakeRect.right + 10.0;
     final progW = math.max(40.0, x + width - pad - progX);
-    dl.addRectFilled(progX, barY + 5.0, progW, 12.0, const VoxColor(30, 34, 44, 255), cornerRadius: 3.0);
+    dl.addRectFilled(
+      progX,
+      barY + 5.0,
+      progW,
+      12.0,
+      const VoxColor(30, 34, 44, 255),
+      cornerRadius: 3.0,
+    );
     dl.addRectFilled(
       progX,
       barY + 5.0,
@@ -424,7 +485,13 @@ final class CameraDirectorUI {
     final rigs = List<vcam.VirtualCameraRig>.of(brain.rigs)
       ..sort((a, b) => b.priority.compareTo(a.priority));
     var rowY = barY + 34.0;
-    dl.addText('Virtual Rigs (${rigs.length}):', x + pad, rowY, color: VoxColor.yellow, size: ui.style.fontSize);
+    dl.addText(
+      'Virtual Rigs (${rigs.length}):',
+      x + pad,
+      rowY,
+      color: VoxColor.yellow,
+      size: ui.style.fontSize,
+    );
     rowY += 18.0;
 
     for (final rig in rigs) {

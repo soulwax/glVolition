@@ -236,7 +236,9 @@ final class AudioSource extends Component {
           play(cross.nextClip);
         }
       } else {
-        final t = half <= 0.0 ? 1.0 : ((cross.elapsed - half) / half).clamp(0.0, 1.0);
+        final t = half <= 0.0
+            ? 1.0
+            : ((cross.elapsed - half) / half).clamp(0.0, 1.0);
         _volume = cross.targetVolume * t;
         _syncChannelVolume();
         if (cross.elapsed >= cross.duration) {
@@ -264,7 +266,9 @@ final class AudioSource extends Component {
     final busGain = isAttached && scene.isLoaded
         ? scene.audioMixer.effectiveBusGain(bus)
         : 1.0;
-    final listener = isAttached && scene.isLoaded ? AudioListener.of(scene) : null;
+    final listener = isAttached && scene.isLoaded
+        ? AudioListener.of(scene)
+        : null;
     final listenerGain = listener?.volume ?? 1.0;
     final baseGain = _volume * busGain * listenerGain;
 
@@ -274,8 +278,10 @@ final class AudioSource extends Component {
       return (volume: baseGain, pan: 0.0);
     }
 
-    final srcPos = sourcePosition ?? (isAttached ? transform.position : Vec3.zero);
-    final TransformComponent? listenerTransform = listener?.transform ??
+    final srcPos =
+        sourcePosition ?? (isAttached ? transform.position : Vec3.zero);
+    final TransformComponent? listenerTransform =
+        listener?.transform ??
         (isAttached && scene.isLoaded ? Camera.of(scene)?.transform : null);
     final dstPos = listenerPosition ?? listenerTransform?.position ?? Vec3.zero;
     final right = listenerRight ?? listenerTransform?.right ?? Vec3.unitX;
@@ -357,7 +363,11 @@ final class AudioSource extends Component {
     return go;
   }
 
-  void playOneShot(AudioClip oneShot, {double volumeScale = 1.0, double pitch = 1.0}) {
+  void playOneShot(
+    AudioClip oneShot, {
+    double volumeScale = 1.0,
+    double pitch = 1.0,
+  }) {
     final eval = evaluateSpatial();
     engine.audio.playOneShot(
       oneShot,

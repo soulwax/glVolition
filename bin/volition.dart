@@ -11,7 +11,8 @@ String get _dartExecutable {
   // Platform.resolvedExecutable points to volition.exe itself, NOT the Dart SDK.
   // Resolve 'dart' or 'dart.exe' on PATH instead.
   final current = Platform.resolvedExecutable;
-  if (current.toLowerCase().endsWith('dart') || current.toLowerCase().endsWith('dart.exe')) {
+  if (current.toLowerCase().endsWith('dart') ||
+      current.toLowerCase().endsWith('dart.exe')) {
     return current;
   }
   return Platform.isWindows ? 'dart.exe' : 'dart';
@@ -23,9 +24,15 @@ Future<void> main(List<String> args) async {
     if (Platform.isWindows && stdout.hasTerminal) {
       stdout.writeln('--------------------------------------------------');
       stdout.writeln('Interactive Launcher (Console):');
-      stdout.writeln('  [1] serve  - Start live dev server with hot reload (pixel_rocket)');
-      stdout.writeln('  [2] build  - Build game into ./dist/<version>/<name>/<target>/');
-      stdout.writeln('  [3] dist   - Package complete distribution (CLI + Game targets)');
+      stdout.writeln(
+        '  [1] serve  - Start live dev server with hot reload (pixel_rocket)',
+      );
+      stdout.writeln(
+        '  [2] build  - Build game into ./dist/<version>/<name>/<target>/',
+      );
+      stdout.writeln(
+        '  [3] dist   - Package complete distribution (CLI + Game targets)',
+      );
       stdout.writeln('  [4] test   - Run engine test suite');
       stdout.writeln('  [q] exit');
       stdout.writeln('--------------------------------------------------');
@@ -37,19 +44,23 @@ Future<void> main(List<String> args) async {
       if (input.isEmpty || input == '1') {
         await _runServe(['example/pixel_rocket/main.dart']);
       } else if (input == '2') {
-        await _runBuild(['example/pixel_rocket/main.dart', '--target', 'windows']);
+        await _runBuild([
+          'example/pixel_rocket/main.dart',
+          '--target',
+          'windows',
+        ]);
         stdout.writeln('\nBuild completed. Press Enter to exit.');
         stdin.readLineSync();
       } else if (input == '3') {
         await _runDist(['example/pixel_rocket/main.dart']);
-        stdout.writeln('\nDistribution packaging completed. Press Enter to exit.');
+        stdout.writeln(
+          '\nDistribution packaging completed. Press Enter to exit.',
+        );
         stdin.readLineSync();
       } else if (input == '4') {
-        final proc = await Process.start(
-          _dartExecutable,
-          ['test'],
-          mode: ProcessStartMode.inheritStdio,
-        );
+        final proc = await Process.start(_dartExecutable, [
+          'test',
+        ], mode: ProcessStartMode.inheritStdio);
         final code = await proc.exitCode;
         stdout.writeln('\nTests exited with code $code. Press Enter to exit.');
         stdin.readLineSync();
@@ -71,11 +82,10 @@ Future<void> main(List<String> args) async {
   final rest = args.sublist(1);
   switch (cmd) {
     case 'test':
-      final proc = await Process.start(
-        _dartExecutable,
-        ['test', ...rest],
-        mode: ProcessStartMode.inheritStdio,
-      );
+      final proc = await Process.start(_dartExecutable, [
+        'test',
+        ...rest,
+      ], mode: ProcessStartMode.inheritStdio);
       exit(await proc.exitCode);
     case 'serve':
       await _runServe(rest);
@@ -129,7 +139,8 @@ Future<void> _runServe(List<String> args) async {
   }
 
   final serveRoot = Directory(rootDir ?? entryFile.parent.path);
-  final outDir = Directory('.dart_tool/volition_serve')..createSync(recursive: true);
+  final outDir = Directory('.dart_tool/volition_serve')
+    ..createSync(recursive: true);
   final jsOut = File('${outDir.path}/main.dart.js');
 
   final sseClients = <HttpResponse>[];
@@ -137,7 +148,7 @@ Future<void> _runServe(List<String> args) async {
 
   Future<bool> compile() async {
     final sw = Stopwatch()..start();
-    final res = await Process.run(Platform.resolvedExecutable, [
+    final res = await Process.run(_dartExecutable, [
       'compile',
       'js',
       '-O0',
@@ -190,7 +201,9 @@ Future<void> _runServe(List<String> args) async {
   };
   for (final dir in watchedDirs) {
     dir.watch(recursive: true).listen((event) {
-      if (!event.path.endsWith('.dart') && !event.path.endsWith('.html')) return;
+      if (!event.path.endsWith('.dart') && !event.path.endsWith('.html')) {
+        return;
+      }
       debounce?.cancel();
       debounce = Timer(const Duration(milliseconds: 80), triggerCompile);
     });
@@ -222,7 +235,9 @@ Future<void> _runServe(List<String> args) async {
         ..bufferOutput = false;
       req.response.write(': connected\n\n');
       if (lastError != null) {
-        req.response.write('event: compile_error\ndata: ${jsonEncode(lastError)}\n\n');
+        req.response.write(
+          'event: compile_error\ndata: ${jsonEncode(lastError)}\n\n',
+        );
       }
       sseClients.add(req.response);
       req.response.done.whenComplete(() => sseClients.remove(req.response));
@@ -230,7 +245,10 @@ Future<void> _runServe(List<String> args) async {
     }
 
     if (path == '/main.dart.js' && jsOut.existsSync()) {
-      req.response.headers.set(HttpHeaders.contentTypeHeader, 'application/javascript; charset=utf-8');
+      req.response.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'application/javascript; charset=utf-8',
+      );
       await req.response.addStream(jsOut.openRead());
       await req.response.close();
       continue;
@@ -252,7 +270,10 @@ Future<void> _runServe(List<String> args) async {
     }
 
     if (rel == 'index.html') {
-      req.response.headers.set(HttpHeaders.contentTypeHeader, 'text/html; charset=utf-8');
+      req.response.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'text/html; charset=utf-8',
+      );
       final html = await file.readAsString();
       req.response.write(_injectLiveReload(html));
       await req.response.close();
@@ -345,11 +366,16 @@ String _resolveName(File entryFile, {String? explicit}) {
     }
   }
   final parent = entryFile.parent.path.replaceAll('\\', '/').split('/').last;
-  if (parent.isNotEmpty && parent != '.' && parent != 'lib' && parent != 'bin') {
+  if (parent.isNotEmpty &&
+      parent != '.' &&
+      parent != 'lib' &&
+      parent != 'bin') {
     return parent;
   }
   final fileName = parts.isEmpty ? 'game' : parts.last;
-  return fileName.endsWith('.dart') ? fileName.substring(0, fileName.length - 5) : fileName;
+  return fileName.endsWith('.dart')
+      ? fileName.substring(0, fileName.length - 5)
+      : fileName;
 }
 
 String _resolveGitCommit() {
@@ -403,9 +429,9 @@ void _writeBuildMetadata(
     'builtAt': DateTime.now().toUtc().toIso8601String(),
     'commit': _resolveGitCommit(),
   };
-  File('${destDir.path}/metadata.json').writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert(meta),
-  );
+  File(
+    '${destDir.path}/metadata.json',
+  ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(meta));
 }
 
 Future<void> _runBuild(List<String> args) async {
@@ -444,9 +470,12 @@ Future<void> _runBuild(List<String> args) async {
   final name = _resolveName(entryFile, explicit: explicitName);
 
   // Default output directory lands in a versioned, named organized folder structure under ./dist
-  final targetSubdir = (target == 'native' || target == 'exe') ? 'native' : target;
+  final targetSubdir = (target == 'native' || target == 'exe')
+      ? 'native'
+      : target;
   final defaultOutDir = '$distRoot/$version/$name/$targetSubdir';
-  final destDir = Directory(outPath ?? defaultOutDir)..createSync(recursive: true);
+  final destDir = Directory(outPath ?? defaultOutDir)
+    ..createSync(recursive: true);
 
   // Keep dist/version synchronized with active build version
   _writeDistVersion(version, distRoot: distRoot);
@@ -568,10 +597,14 @@ Future<void> _runDist(List<String> args) async {
   _writeDistVersion(version, distRoot: distRoot);
   final name = _resolveName(entryFile, explicit: explicitName);
 
-  log.info('Packaging distribution for "$name" (version: $version, target: $target)...');
+  log.info(
+    'Packaging distribution for "$name" (version: $version, target: $target)...',
+  );
 
-  final versionDir = Directory('$distRoot/$version')..createSync(recursive: true);
-  final binDir = Directory('${versionDir.path}/bin')..createSync(recursive: true);
+  final versionDir = Directory('$distRoot/$version')
+    ..createSync(recursive: true);
+  final binDir = Directory('${versionDir.path}/bin')
+    ..createSync(recursive: true);
 
   // 1. Build CLI native executable
   final ext = Platform.isWindows ? '.exe' : '';
@@ -591,9 +624,7 @@ Future<void> _runDist(List<String> args) async {
   }
 
   // 2. Build game targets
-  final targetsToBuild = target == 'all'
-      ? ['windows', 'js', 'wasm']
-      : [target];
+  final targetsToBuild = target == 'all' ? ['windows', 'js', 'wasm'] : [target];
 
   for (final t in targetsToBuild) {
     log.info('Building target [$t] for "$name"...');
@@ -619,8 +650,9 @@ Future<void> _runDist(List<String> args) async {
     'builtAt': DateTime.now().toUtc().toIso8601String(),
     'commit': _resolveGitCommit(),
   };
-  File('${versionDir.path}/metadata.json')
-      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(meta));
+  File(
+    '${versionDir.path}/metadata.json',
+  ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(meta));
 
   log.info('Distribution packaging complete: ${versionDir.path}/');
 }
@@ -650,7 +682,8 @@ Future<void> _buildWindowsExecutable(
   Directory destDir, {
   String name = 'game',
 }) async {
-  final buildSubdir = Directory('${destDir.path}/build')..createSync(recursive: true);
+  final buildSubdir = Directory('${destDir.path}/build')
+    ..createSync(recursive: true);
   final outJs = '${destDir.path}/main.dart.js';
   final outBuildJs = '${buildSubdir.path}/main.dart.js';
   log.info('Compiling JS bundle for Windows desktop host...');
@@ -670,7 +703,8 @@ Future<void> _buildWindowsExecutable(
   }
   File(outJs).copySync(outBuildJs);
 
-  final launcherScript = '''@echo off
+  final launcherScript =
+      '''@echo off
 setlocal
 cd /d "%~dp0"
 if exist "$name.exe" (
@@ -698,7 +732,8 @@ pause
     return;
   }
 
-  final desktopDir = Directory('${destDir.path}/desktop')..createSync(recursive: true);
+  final desktopDir = Directory('${destDir.path}/desktop')
+    ..createSync(recursive: true);
   final csproj = File('${desktopDir.path}/GlVolitionGame.csproj');
   final hostAbs = hostCs.absolute.path;
   csproj.writeAsStringSync('''
@@ -771,7 +806,9 @@ void _copyDirectory(Directory src, Directory dst) {
 String _mimeType(String path) {
   final lower = path.toLowerCase();
   if (lower.endsWith('.html')) return 'text/html; charset=utf-8';
-  if (lower.endsWith('.js') || lower.endsWith('.mjs')) return 'application/javascript; charset=utf-8';
+  if (lower.endsWith('.js') || lower.endsWith('.mjs')) {
+    return 'application/javascript; charset=utf-8';
+  }
   if (lower.endsWith('.wasm')) return 'application/wasm';
   if (lower.endsWith('.css')) return 'text/css; charset=utf-8';
   if (lower.endsWith('.json')) return 'application/json; charset=utf-8';

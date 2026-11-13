@@ -24,7 +24,11 @@ final class FactoryProducerComponent extends Behaviour {
     'FactoryProducerComponent',
     FactoryProducerComponent.new,
     [
-      Field.integer('maxActiveSlots', (f) => f.maxActiveSlots, (f, v) => f.maxActiveSlots = v),
+      Field.integer(
+        'maxActiveSlots',
+        (f) => f.maxActiveSlots,
+        (f, v) => f.maxActiveSlots = v,
+      ),
       Field.number(
         'speedMultiplier',
         (f) => f.speedMultiplier,
@@ -127,11 +131,14 @@ final class DynamicMarketComponent extends Behaviour {
     ],
   );
 
-  craft.DynamicMarketBook get book =>
-      _book ??= craft.DynamicMarketBook(maxHistorySamples: math.max(2, maxHistorySamples));
+  craft.DynamicMarketBook get book => _book ??= craft.DynamicMarketBook(
+    maxHistorySamples: math.max(2, maxHistorySamples),
+  );
 
-  void registerCommodity(craft.MarketCommoditySpec spec, {double? initialStock}) =>
-      book.registerCommodity(spec, initialStock: initialStock);
+  void registerCommodity(
+    craft.MarketCommoditySpec spec, {
+    double? initialStock,
+  }) => book.registerCommodity(spec, initialStock: initialStock);
 
   craft.MarketTradeReceipt buy(String commodityId, double quantity) =>
       book.buy(commodityId, quantity);
@@ -169,14 +176,31 @@ final class EconomyFactoryUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -207,7 +231,8 @@ final class EconomyFactoryUI {
     }
 
     final pad = ui.style.windowPadding;
-    final commodityKey = primaryCommodityId ??
+    final commodityKey =
+        primaryCommodityId ??
         (market != null && market.book.listings.isNotEmpty
             ? market.book.listings.keys.first
             : null);

@@ -344,7 +344,10 @@ final class EngineWorkbenchComponent extends Behaviour {
       return;
     }
 
-    final visibleCount = math.min(maxVisible, entries.length - uiState.scrollIndex);
+    final visibleCount = math.min(
+      maxVisible,
+      entries.length - uiState.scrollIndex,
+    );
     for (var i = 0; i < visibleCount; i++) {
       final idx = uiState.scrollIndex + i;
       final entry = entries[idx];
@@ -357,7 +360,9 @@ final class EngineWorkbenchComponent extends Behaviour {
       const gap = 4.0;
       final selectW = math.max(40.0, innerW - indent - toggleW - gap);
       final selectRect = VoxRect(innerX + indent, rowY, selectW, rowH);
-      final prefix = entry.depth > 0 ? '${' ' * math.min(entry.depth, 4)}- ' : '';
+      final prefix = entry.depth > 0
+          ? '${' ' * math.min(entry.depth, 4)}- '
+          : '';
       final isSelected = identical(selectedObject, go);
 
       if (_drawButton(
@@ -562,7 +567,10 @@ final class EngineWorkbenchComponent extends Behaviour {
       }
     }
 
-    final visibleCount = math.min(maxVisible, rows.length - uiState.scrollIndex);
+    final visibleCount = math.min(
+      maxVisible,
+      rows.length - uiState.scrollIndex,
+    );
     for (var i = 0; i < visibleCount; i++) {
       final row = rows[uiState.scrollIndex + i];
       final rowY = listTop + i * rowStride;
@@ -774,7 +782,13 @@ final class EngineWorkbenchComponent extends Behaviour {
     drawLineRow('Lights', '$lightCount', VoxColor.yellow);
 
     if (y + 6.0 <= contentBottom) {
-      dl.addLine(innerX, y + 2.0, innerRight, y + 2.0, uiContext.style.separator);
+      dl.addLine(
+        innerX,
+        y + 2.0,
+        innerRight,
+        y + 2.0,
+        uiContext.style.separator,
+      );
       y += 10.0;
     }
 
@@ -820,7 +834,11 @@ final class EngineWorkbenchComponent extends Behaviour {
         }
       }
     } else {
-      drawLineRow('DebugController', 'Not attached', uiContext.style.textDisabled);
+      drawLineRow(
+        'DebugController',
+        'Not attached',
+        uiContext.style.textDisabled,
+      );
     }
   }
 
@@ -838,7 +856,8 @@ final class EngineWorkbenchComponent extends Behaviour {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -910,10 +929,8 @@ final class _InspectorRow {
     this.readColor,
   });
 
-  factory _InspectorRow.header(String title) => _InspectorRow._(
-    kind: _InspectorRowKind.header,
-    label: title,
-  );
+  factory _InspectorRow.header(String title) =>
+      _InspectorRow._(kind: _InspectorRowKind.header, label: title);
 
   factory _InspectorRow.boolean({
     required String id,

@@ -1,10 +1,7 @@
 part of '../../engine.dart';
 
 /// Quick chassis preset for [VehicleChassisComponent] serialization and defaults (E58-2).
-enum VehicleChassisPreset {
-  sportsCar,
-  offroad4x4,
-}
+enum VehicleChassisPreset { sportsCar, offroad4x4 }
 
 /// Marks a child [GameObject] as a wheel visual driven by a parent [VehicleChassisComponent] (E58-2).
 final class WheelSuspensionComponent extends Component {
@@ -26,8 +23,16 @@ final class WheelSuspensionComponent extends Component {
     'WheelSuspensionComponent',
     WheelSuspensionComponent.new,
     [
-      Field.integer('wheelIndex', (w) => w.wheelIndex, (w, v) => w.wheelIndex = v),
-      Field.vec3('visualOffset', (w) => w.visualOffset, (w, v) => w.visualOffset = v),
+      Field.integer(
+        'wheelIndex',
+        (w) => w.wheelIndex,
+        (w, v) => w.wheelIndex = v,
+      ),
+      Field.vec3(
+        'visualOffset',
+        (w) => w.visualOffset,
+        (w, v) => w.visualOffset = v,
+      ),
       Field.boolean('syncSpin', (w) => w.syncSpin, (w, v) => w.syncSpin = v),
       Field.boolean('syncSteer', (w) => w.syncSteer, (w, v) => w.syncSteer = v),
       Field.boolean(
@@ -127,12 +132,36 @@ final class VehicleChassisComponent extends Behaviour {
         (v) => v.suspensionRestLength,
         (v, val) => v.suspensionRestLength = val,
       ),
-      Field.number('wheelRadius', (v) => v.wheelRadius, (v, val) => v.wheelRadius = val),
-      Field.number('peakGripMu', (v) => v.peakGripMu, (v, val) => v.peakGripMu = val),
-      Field.number('throttleInput', (v) => v.throttleInput, (v, val) => v.throttleInput = val),
-      Field.number('brakeInput', (v) => v.brakeInput, (v, val) => v.brakeInput = val),
-      Field.number('steerInput', (v) => v.steerInput, (v, val) => v.steerInput = val),
-      Field.boolean('handbrakeInput', (v) => v.handbrakeInput, (v, val) => v.handbrakeInput = val),
+      Field.number(
+        'wheelRadius',
+        (v) => v.wheelRadius,
+        (v, val) => v.wheelRadius = val,
+      ),
+      Field.number(
+        'peakGripMu',
+        (v) => v.peakGripMu,
+        (v, val) => v.peakGripMu = val,
+      ),
+      Field.number(
+        'throttleInput',
+        (v) => v.throttleInput,
+        (v, val) => v.throttleInput = val,
+      ),
+      Field.number(
+        'brakeInput',
+        (v) => v.brakeInput,
+        (v, val) => v.brakeInput = val,
+      ),
+      Field.number(
+        'steerInput',
+        (v) => v.steerInput,
+        (v, val) => v.steerInput = val,
+      ),
+      Field.boolean(
+        'handbrakeInput',
+        (v) => v.handbrakeInput,
+        (v, val) => v.handbrakeInput = val,
+      ),
       Field.boolean(
         'useScenePhysicsRaycasts',
         (v) => v.useScenePhysicsRaycasts,
@@ -143,12 +172,17 @@ final class VehicleChassisComponent extends Behaviour {
         (v) => v.useFlatGroundFallback,
         (v, val) => v.useFlatGroundFallback = val,
       ),
-      Field.number('groundPlaneY', (v) => v.groundPlaneY, (v, val) => v.groundPlaneY = val),
+      Field.number(
+        'groundPlaneY',
+        (v) => v.groundPlaneY,
+        (v, val) => v.groundPlaneY = val,
+      ),
     ],
   );
 
   wheel.VehicleDynamicsSolver _ensureSolver() {
-    final dirty = _solver == null ||
+    final dirty =
+        _solver == null ||
         _builtPreset != preset ||
         _builtLayout != driveLayout ||
         _builtMass != mass ||
@@ -274,11 +308,19 @@ final class VehicleChassisComponent extends Behaviour {
   void shiftDown() => _ensureSolver().shiftDown();
 
   void resetVehicle({Vec3? position, Quat? rotation}) {
-    final targetPos = position ?? (isAttached ? transform.position : const Vec3(0.0, 0.7, 0.0));
-    final targetRot = rotation ?? (isAttached ? transform.rotation : Quat.identity);
+    final targetPos =
+        position ??
+        (isAttached ? transform.position : const Vec3(0.0, 0.7, 0.0));
+    final targetRot =
+        rotation ?? (isAttached ? transform.rotation : Quat.identity);
     _ensureSolver().reset(
       position: wheel.WheelVec3(targetPos.x, targetPos.y, targetPos.z),
-      rotation: wheel.WheelQuat(targetRot.x, targetRot.y, targetRot.z, targetRot.w),
+      rotation: wheel.WheelQuat(
+        targetRot.x,
+        targetRot.y,
+        targetRot.z,
+        targetRot.w,
+      ),
     );
     if (isAttached) {
       transform
@@ -368,7 +410,9 @@ final class VehicleChassisComponent extends Behaviour {
           wComp.wheelIndex < s.state.wheelStates.length) {
         final cfg = s.spec.wheels[wComp.wheelIndex];
         final ws = s.state.wheelStates[wComp.wheelIndex];
-        final travelY = wComp.syncSuspensionTravel ? -ws.suspensionLength : -cfg.restLength;
+        final travelY = wComp.syncSuspensionTravel
+            ? -ws.suspensionLength
+            : -cfg.restLength;
         node.transform.localPosition = Vec3(
           cfg.localAnchor.x + wComp.visualOffset.x,
           cfg.localAnchor.y + travelY + wComp.visualOffset.y,
@@ -426,7 +470,11 @@ final class VehicleChassisComponent extends Behaviour {
 
     if (isAttached) {
       transform
-        ..position = Vec3(s.state.position.x, s.state.position.y, s.state.position.z)
+        ..position = Vec3(
+          s.state.position.x,
+          s.state.position.y,
+          s.state.position.z,
+        )
         ..rotation = Quat(
           s.state.rotation.x,
           s.state.rotation.y,
@@ -457,14 +505,31 @@ final class VehicleTelemetryUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -501,7 +566,9 @@ final class VehicleTelemetryUI {
     final ws = vehicle.state.wheelStates;
     var maxSlip = 0.0;
     for (final w in ws) {
-      final combined = math.sqrt(w.slipRatio * w.slipRatio + w.slipAngleRad * w.slipAngleRad);
+      final combined = math.sqrt(
+        w.slipRatio * w.slipRatio + w.slipAngleRad * w.slipAngleRad,
+      );
       if (combined > maxSlip) maxSlip = combined;
     }
 

@@ -38,8 +38,16 @@ final class FrameProfilerComponent extends Behaviour {
         (c) => c.arenaCapacityBytes,
         (c, v) => c.arenaCapacityBytes = v,
       ),
-      Field.integer('slabCapacity', (c) => c.slabCapacity, (c, v) => c.slabCapacity = v),
-      Field.integer('historyWindow', (c) => c.historyWindow, (c, v) => c.historyWindow = v),
+      Field.integer(
+        'slabCapacity',
+        (c) => c.slabCapacity,
+        (c, v) => c.slabCapacity = v,
+      ),
+      Field.integer(
+        'historyWindow',
+        (c) => c.historyWindow,
+        (c, v) => c.historyWindow = v,
+      ),
       Field.number(
         'targetFrameBudgetMs',
         (c) => c.targetFrameBudgetMs,
@@ -77,8 +85,16 @@ final class FrameProfilerComponent extends Behaviour {
     telemetry.recordFrame(
       totalFrameMs: dtMs,
       spans: [
-        alloc.TelemetrySpan(name: 'EngineUpdate', durationMs: dtMs * 0.65, depth: 0),
-        alloc.TelemetrySpan(name: 'SceneRender', durationMs: dtMs * 0.35, depth: 0),
+        alloc.TelemetrySpan(
+          name: 'EngineUpdate',
+          durationMs: dtMs * 0.65,
+          depth: 0,
+        ),
+        alloc.TelemetrySpan(
+          name: 'SceneRender',
+          durationMs: dtMs * 0.35,
+          depth: 0,
+        ),
       ],
     );
     if (autoResetArenaOnUpdate) {
@@ -106,7 +122,8 @@ final class ProfilerTelemetryInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
     if (inp.wasMouseReleased && state.activeButtonId == id) {
       state.activeButtonId = null;
     }
@@ -162,7 +179,9 @@ final class ProfilerTelemetryInspectorUI {
     ui.labelValue(
       'Mean / P99 (ms)',
       '${stats.meanMs.toStringAsFixed(2)}ms | P99 ${stats.p99Ms.toStringAsFixed(2)}ms',
-      valueColor: stats.p99Ms > prof.targetFrameBudgetMs ? VoxColor.yellow : VoxColor.cyan,
+      valueColor: stats.p99Ms > prof.targetFrameBudgetMs
+          ? VoxColor.yellow
+          : VoxColor.cyan,
     );
     ui.labelValue(
       'Arena Used / Peak',
@@ -182,7 +201,13 @@ final class ProfilerTelemetryInspectorUI {
 
     final barY = y + ui.style.titleBarHeight + pad + 92.0;
     final pauseRect = VoxRect(x + pad, barY, 72.0, 22.0);
-    if (_drawButton(ui, uiState, 'prof_pause', prof.paused ? 'Resume' : 'Pause', pauseRect)) {
+    if (_drawButton(
+      ui,
+      uiState,
+      'prof_pause',
+      prof.paused ? 'Resume' : 'Pause',
+      pauseRect,
+    )) {
       prof.paused = !prof.paused;
     }
 

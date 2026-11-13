@@ -56,7 +56,10 @@ class Light2DComponent extends Component {
   }
 
   /// Evaluates lighting contribution at [target] in 2D space.
-  vlight.Illumination2D evaluate(Vec2 target, [List<vlight.Segment2D>? occluders]) {
+  vlight.Illumination2D evaluate(
+    Vec2 target, [
+    List<vlight.Segment2D>? occluders,
+  ]) {
     final light = toVoxLight();
     return light.evaluate(_toLightVec2(target), occluders);
   }
@@ -105,7 +108,10 @@ class ShadowCaster2DComponent extends Component {
   }
 
   factory ShadowCaster2DComponent.box(Vec2 halfExtents) {
-    return ShadowCaster2DComponent(boxHalfExtents: halfExtents, useCollider: false);
+    return ShadowCaster2DComponent(
+      boxHalfExtents: halfExtents,
+      useCollider: false,
+    );
   }
 
   /// Returns world-space occluding segments for this caster.
@@ -116,7 +122,10 @@ class ShadowCaster2DComponent extends Component {
     // 1. Box half extents
     final box = boxHalfExtents;
     if (box != null) {
-      final caster = vlight.ShadowCaster2D.fromBox(_toLightVec2(pos), _toLightVec2(box));
+      final caster = vlight.ShadowCaster2D.fromBox(
+        _toLightVec2(pos),
+        _toLightVec2(box),
+      );
       segments.addAll(caster.segments);
     }
 
@@ -133,13 +142,18 @@ class ShadowCaster2DComponent extends Component {
       if (boxCol != null) {
         final center = Vec2(pos.x + boxCol.offset.x, pos.y + boxCol.offset.y);
         final halfSize = Vec2(boxCol.size.x * 0.5, boxCol.size.y * 0.5);
-        final caster = vlight.ShadowCaster2D.fromBox(_toLightVec2(center), _toLightVec2(halfSize));
+        final caster = vlight.ShadowCaster2D.fromBox(
+          _toLightVec2(center),
+          _toLightVec2(halfSize),
+        );
         segments.addAll(caster.segments);
       }
 
       final polyCol = getComponent<PolygonCollider2D>();
       if (polyCol != null && polyCol.points.length >= 3) {
-        final worldPts = polyCol.points.map((p) => vlight.LightVec2(p.x + pos.x, p.y + pos.y)).toList();
+        final worldPts = polyCol.points
+            .map((p) => vlight.LightVec2(p.x + pos.x, p.y + pos.y))
+            .toList();
         final caster = vlight.ShadowCaster2D.fromPolygon(worldPts);
         segments.addAll(caster.segments);
       }
@@ -171,11 +185,11 @@ class FogOfWar2DComponent extends Component {
     double cellSize = 1.0,
     Vec2 origin = Vec2.zero,
   }) : _fog = vlight.FogOfWar(
-          width: width,
-          height: height,
-          cellSize: cellSize,
-          origin: _toLightVec2(origin),
-        );
+         width: width,
+         height: height,
+         cellSize: cellSize,
+         origin: _toLightVec2(origin),
+       );
 
   int get width => _fog.width;
   int get height => _fog.height;

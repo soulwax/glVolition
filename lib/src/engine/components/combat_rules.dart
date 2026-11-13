@@ -9,7 +9,8 @@ final class StatusEffectComponent extends Behaviour {
 
   double currentHp;
   double maxHp;
-  void Function(rule.StatusTickEvent tick, double finalHpDamage, double healed)? onTickApplied;
+  void Function(rule.StatusTickEvent tick, double finalHpDamage, double healed)?
+  onTickApplied;
   void Function(rule.CombatResult result)? onDamaged;
   void Function()? onDefeated;
 
@@ -26,14 +27,14 @@ final class StatusEffectComponent extends Behaviour {
     this.onTickApplied,
     this.onDamaged,
     this.onDefeated,
-  })  : currentHp = currentHp ?? maxHp,
-        defense = rule.CombatDefenseProfile(
-          armor: armor,
-          dodgeChance: dodgeChance,
-          blockChance: blockChance,
-          blockReduction: blockReduction,
-          resistances: resistances,
-        ) {
+  }) : currentHp = currentHp ?? maxHp,
+       defense = rule.CombatDefenseProfile(
+         armor: armor,
+         dodgeChance: dodgeChance,
+         blockChance: blockChance,
+         blockReduction: blockReduction,
+         resistances: resistances,
+       ) {
     defense.statusContainer = statuses;
     statuses.onChanged = _syncStatsModifiers;
     statuses.onTick = _handleTick;
@@ -46,8 +47,7 @@ final class StatusEffectComponent extends Behaviour {
     rule.StatusEffectDef def, {
     Object? sourceId,
     int initialStacks = 1,
-  }) =>
-      statuses.apply(def, sourceId: sourceId, initialStacks: initialStacks);
+  }) => statuses.apply(def, sourceId: sourceId, initialStacks: initialStacks);
 
   int dispelByTag(String tag, {int? maxCount}) =>
       statuses.dispelByTag(tag, maxCount: maxCount);
@@ -124,28 +124,34 @@ final class StatusEffectComponent extends Behaviour {
       final statName = entry.key;
       final b = entry.value;
       if (b.flat != 0.0) {
-        statsComp.addModifier(items.StatModifier(
-          statName: statName,
-          value: b.flat,
-          type: items.StatModifierType.flat,
-          source: _statusModifierSource,
-        ));
+        statsComp.addModifier(
+          items.StatModifier(
+            statName: statName,
+            value: b.flat,
+            type: items.StatModifierType.flat,
+            source: _statusModifierSource,
+          ),
+        );
       }
       if (b.percentAdd != 0.0) {
-        statsComp.addModifier(items.StatModifier(
-          statName: statName,
-          value: b.percentAdd,
-          type: items.StatModifierType.percentAdd,
-          source: _statusModifierSource,
-        ));
+        statsComp.addModifier(
+          items.StatModifier(
+            statName: statName,
+            value: b.percentAdd,
+            type: items.StatModifierType.percentAdd,
+            source: _statusModifierSource,
+          ),
+        );
       }
       if ((b.percentMult - 1.0).abs() > 1e-6) {
-        statsComp.addModifier(items.StatModifier(
-          statName: statName,
-          value: b.percentMult - 1.0,
-          type: items.StatModifierType.percentMult,
-          source: _statusModifierSource,
-        ));
+        statsComp.addModifier(
+          items.StatModifier(
+            statName: statName,
+            value: b.percentMult - 1.0,
+            type: items.StatModifierType.percentMult,
+            source: _statusModifierSource,
+          ),
+        );
       }
     }
   }
@@ -153,7 +159,9 @@ final class StatusEffectComponent extends Behaviour {
   @override
   void awake() {
     final statsComp = isAttached ? getComponent<StatsComponent>() : null;
-    if (statsComp != null && defense.armor != 0.0 && statsComp.stats.getStat('armor') == null) {
+    if (statsComp != null &&
+        defense.armor != 0.0 &&
+        statsComp.stats.getStat('armor') == null) {
       statsComp.setBase('armor', defense.armor);
     }
     _syncStatsModifiers();
@@ -181,11 +189,11 @@ final class TurnEncounterComponent extends Component {
     int? seed,
     this.onTurnStarted,
   }) : scheduler = rule.TurnScheduler(
-          mode: mode,
-          ctThreshold: ctThreshold,
-          initiativeDie: initiativeDie,
-          seed: seed,
-        );
+         mode: mode,
+         ctThreshold: ctThreshold,
+         initiativeDie: initiativeDie,
+         seed: seed,
+       );
 
   void registerParticipant(
     rule.CombatantSlot slot, {
@@ -240,7 +248,9 @@ final class CombatHudUI {
       return;
     }
 
-    final hpFrac = actor.maxHp <= 0 ? 0.0 : (actor.currentHp / actor.maxHp).clamp(0.0, 1.0);
+    final hpFrac = actor.maxHp <= 0
+        ? 0.0
+        : (actor.currentHp / actor.maxHp).clamp(0.0, 1.0);
     final prevGrab = ui.style.sliderGrab;
     ui.style.sliderGrab = const VoxColor(210, 60, 65, 255);
     ui.progressBar(
@@ -250,15 +260,25 @@ final class CombatHudUI {
     ui.style.sliderGrab = prevGrab;
 
     if (actor.statuses.totalShield > 0.0) {
-      ui.labelValue('Shield', actor.statuses.totalShield.toStringAsFixed(0), valueColor: VoxColor.cyan);
+      ui.labelValue(
+        'Shield',
+        actor.statuses.totalShield.toStringAsFixed(0),
+        valueColor: VoxColor.cyan,
+      );
     }
 
     if (actor.statuses.active.isNotEmpty) {
       ui.text('Effects:', color: VoxColor.lightGray);
       for (final st in actor.statuses.active) {
-        final durLabel = st.isPermanent ? 'INF' : '${st.remainingDuration.toStringAsFixed(1)}s';
+        final durLabel = st.isPermanent
+            ? 'INF'
+            : '${st.remainingDuration.toStringAsFixed(1)}s';
         final stacksLabel = st.stacks > 1 ? ' x${st.stacks}' : '';
-        ui.labelValue('${st.def.name}$stacksLabel', durLabel, valueColor: VoxColor.yellow);
+        ui.labelValue(
+          '${st.def.name}$stacksLabel',
+          durLabel,
+          valueColor: VoxColor.yellow,
+        );
       }
     }
 
@@ -267,7 +287,9 @@ final class CombatHudUI {
       ui.style.sliderGrab = ready ? VoxColor.green : VoxColor.blue;
       ui.progressBar(
         actor.cooldowns.progress(ab),
-        overlay: ready ? '$ab: READY' : '$ab (${actor.cooldowns.remaining(ab).toStringAsFixed(1)}s)',
+        overlay: ready
+            ? '$ab: READY'
+            : '$ab (${actor.cooldowns.remaining(ab).toStringAsFixed(1)}s)',
       );
       ui.style.sliderGrab = prevGrab;
     }
@@ -276,7 +298,10 @@ final class CombatHudUI {
       final upcoming = encounter.previewOrder(4);
       if (upcoming.isNotEmpty) {
         ui.separator();
-        ui.text('Next Turns: ${upcoming.map((s) => s.name).join(" -> ")}', color: VoxColor.cyan);
+        ui.text(
+          'Next Turns: ${upcoming.map((s) => s.name).join(" -> ")}',
+          color: VoxColor.cyan,
+        );
       }
     }
 

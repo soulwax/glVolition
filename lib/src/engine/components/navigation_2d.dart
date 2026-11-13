@@ -28,14 +28,16 @@ final class NavAgent2D extends Behaviour {
   bool get isMoving => _isMoving && !_isPaused;
 
   /// Whether the agent has pending waypoints.
-  bool get hasPath => _waypoints.isNotEmpty && _currentWaypointIndex < _waypoints.length;
+  bool get hasPath =>
+      _waypoints.isNotEmpty && _currentWaypointIndex < _waypoints.length;
 
   /// Remaining waypoints on current path.
   List<Vec2> get remainingWaypoints =>
       hasPath ? _waypoints.sublist(_currentWaypointIndex) : const [];
 
   /// Current target waypoint in world space.
-  Vec2? get currentWaypoint => hasPath ? _waypoints[_currentWaypointIndex] : null;
+  Vec2? get currentWaypoint =>
+      hasPath ? _waypoints[_currentWaypointIndex] : null;
 
   /// Sets destination in 2D coordinates `(x, y)` using [grid] or provided [navGrid].
   ///
@@ -72,10 +74,7 @@ final class NavAgent2D extends Behaviour {
 
       _waypoints.clear();
       for (final p in tilePath) {
-        _waypoints.add(Vec2(
-          (p.x + 0.5) * tileSize,
-          (p.y + 0.5) * tileSize,
-        ));
+        _waypoints.add(Vec2((p.x + 0.5) * tileSize, (p.y + 0.5) * tileSize));
       }
     } else {
       // Direct straight line
@@ -164,10 +163,7 @@ final class FlowField2DComponent extends Component {
   final double tileSize;
   FlowField? _flowField;
 
-  FlowField2DComponent({
-    required this.grid,
-    this.tileSize = 1.0,
-  });
+  FlowField2DComponent({required this.grid, this.tileSize = 1.0});
 
   /// Cached flow field instance or null if not yet computed.
   FlowField? get flowField => _flowField;

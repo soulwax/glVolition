@@ -18,18 +18,17 @@ final class ParticleSystem extends Component {
     double scale = 1.0,
     int? seed,
     bool followTransform = true,
-  }) =>
-      ParticleSystem(
-        ParticlePresets.campfire(
-          mesh: mesh,
-          material: material,
-          materialRamp: materialRamp,
-          origin: origin,
-          scale: scale,
-          seed: seed,
-        ),
-        followTransform: followTransform,
-      );
+  }) => ParticleSystem(
+    ParticlePresets.campfire(
+      mesh: mesh,
+      material: material,
+      materialRamp: materialRamp,
+      origin: origin,
+      scale: scale,
+      seed: seed,
+    ),
+    followTransform: followTransform,
+  );
 
   /// Creates an explosion particle preset emitter (E18-1).
   factory ParticleSystem.explosion({
@@ -41,19 +40,18 @@ final class ParticleSystem extends Component {
     double explosionSpeed = 12.0,
     int? seed,
     bool followTransform = true,
-  }) =>
-      ParticleSystem(
-        ParticlePresets.explosion(
-          mesh: mesh,
-          material: material,
-          origin: origin,
-          radius: radius,
-          particleCount: particleCount,
-          explosionSpeed: explosionSpeed,
-          seed: seed,
-        ),
-        followTransform: followTransform,
-      );
+  }) => ParticleSystem(
+    ParticlePresets.explosion(
+      mesh: mesh,
+      material: material,
+      origin: origin,
+      radius: radius,
+      particleCount: particleCount,
+      explosionSpeed: explosionSpeed,
+      seed: seed,
+    ),
+    followTransform: followTransform,
+  );
 
   /// Creates a smoke plume particle preset emitter (E18-1).
   factory ParticleSystem.smokePlume({
@@ -63,17 +61,16 @@ final class ParticleSystem extends Component {
     double scale = 1.0,
     int? seed,
     bool followTransform = true,
-  }) =>
-      ParticleSystem(
-        ParticlePresets.smokePlume(
-          mesh: mesh,
-          material: material,
-          origin: origin,
-          scale: scale,
-          seed: seed,
-        ),
-        followTransform: followTransform,
-      );
+  }) => ParticleSystem(
+    ParticlePresets.smokePlume(
+      mesh: mesh,
+      material: material,
+      origin: origin,
+      scale: scale,
+      seed: seed,
+    ),
+    followTransform: followTransform,
+  );
 
   /// Creates bouncing sparks particle preset emitter (E18-1).
   factory ParticleSystem.bouncingSparks({
@@ -84,18 +81,17 @@ final class ParticleSystem extends Component {
     double groundHeight = 0.0,
     int? seed,
     bool followTransform = true,
-  }) =>
-      ParticleSystem(
-        ParticlePresets.bouncingSparks(
-          mesh: mesh,
-          material: material,
-          origin: origin,
-          sprayDirection: sprayDirection,
-          groundHeight: groundHeight,
-          seed: seed,
-        ),
-        followTransform: followTransform,
-      );
+  }) => ParticleSystem(
+    ParticlePresets.bouncingSparks(
+      mesh: mesh,
+      material: material,
+      origin: origin,
+      sprayDirection: sprayDirection,
+      groundHeight: groundHeight,
+      seed: seed,
+    ),
+    followTransform: followTransform,
+  );
 
   /// Creates fireflies particle preset emitter (E18-1).
   factory ParticleSystem.fireflies({
@@ -106,18 +102,17 @@ final class ParticleSystem extends Component {
     int particleCount = 40,
     int? seed,
     bool followTransform = true,
-  }) =>
-      ParticleSystem(
-        ParticlePresets.fireflies(
-          mesh: mesh,
-          material: material,
-          origin: origin,
-          boundsHalfExtents: boundsHalfExtents,
-          particleCount: particleCount,
-          seed: seed,
-        ),
-        followTransform: followTransform,
-      );
+  }) => ParticleSystem(
+    ParticlePresets.fireflies(
+      mesh: mesh,
+      material: material,
+      origin: origin,
+      boundsHalfExtents: boundsHalfExtents,
+      particleCount: particleCount,
+      seed: seed,
+    ),
+    followTransform: followTransform,
+  );
 
   /// Creates celebratory confetti particle preset emitter (E18-1).
   factory ParticleSystem.confetti({
@@ -127,24 +122,24 @@ final class ParticleSystem extends Component {
     Vec3 areaHalfExtents = const Vec3(4, 0.5, 4),
     int? seed,
     bool followTransform = true,
-  }) =>
-      ParticleSystem(
-        ParticlePresets.confetti(
-          mesh: mesh,
-          material: material,
-          origin: origin,
-          areaHalfExtents: areaHalfExtents,
-          seed: seed,
-        ),
-        followTransform: followTransform,
-      );
+  }) => ParticleSystem(
+    ParticlePresets.confetti(
+      mesh: mesh,
+      material: material,
+      origin: origin,
+      areaHalfExtents: areaHalfExtents,
+      seed: seed,
+    ),
+    followTransform: followTransform,
+  );
 
   int get activeParticleCount => emitter.activeCount;
 
   void reset() => emitter.reset();
   void clear() => emitter.reset();
 
-  int burst(int count, {Vec3? position, Vec3? inheritedVelocity}) => emitter.burst(
+  int burst(int count, {Vec3? position, Vec3? inheritedVelocity}) =>
+      emitter.burst(
         count,
         position: position ?? (followTransform ? transform.position : null),
         inheritedVelocity: inheritedVelocity,

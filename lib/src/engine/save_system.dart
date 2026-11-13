@@ -17,20 +17,20 @@ final class SaveSlotMeta {
   });
 
   Map<String, Object?> toJson() => {
-        'slot': slot,
-        'savedAtIso': savedAtIso,
-        'sceneName': sceneName,
-        if (summary != null) 'summary': summary,
-        'hasCheckpoint': hasCheckpoint,
-      };
+    'slot': slot,
+    'savedAtIso': savedAtIso,
+    'sceneName': sceneName,
+    if (summary != null) 'summary': summary,
+    'hasCheckpoint': hasCheckpoint,
+  };
 
   factory SaveSlotMeta.fromJson(Map<String, Object?> json) => SaveSlotMeta(
-        slot: (json['slot'] as String?) ?? 'default',
-        savedAtIso: (json['savedAtIso'] as String?) ?? '',
-        sceneName: (json['sceneName'] as String?) ?? 'Scene',
-        summary: json['summary'] as String?,
-        hasCheckpoint: (json['hasCheckpoint'] as bool?) ?? false,
-      );
+    slot: (json['slot'] as String?) ?? 'default',
+    savedAtIso: (json['savedAtIso'] as String?) ?? '',
+    sceneName: (json['sceneName'] as String?) ?? 'Scene',
+    summary: json['summary'] as String?,
+    hasCheckpoint: (json['hasCheckpoint'] as bool?) ?? false,
+  );
 }
 
 /// Manages named save-game slots and full scene/session checkpoints on top of
@@ -61,11 +61,7 @@ final class SaveSystem {
   bool hasSlot(String slot) => listSlots().any((m) => m.slot == slot);
 
   /// Saves arbitrary JSON-compatible progress [data] into [slot].
-  void saveData(
-    String slot,
-    Map<String, Object?> data, {
-    String? summary,
-  }) {
+  void saveData(String slot, Map<String, Object?> data, {String? summary}) {
     _store.write('$_dataPrefix$slot', jsonEncode(data));
     _upsertMeta(
       SaveSlotMeta(

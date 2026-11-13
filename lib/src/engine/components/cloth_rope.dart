@@ -53,9 +53,21 @@ final class ClothSimulationComponent extends Behaviour {
       Field.number('width', (c) => c.width, (c, v) => c.width = v),
       Field.number('height', (c) => c.height, (c, v) => c.height = v),
       Field.vec3('wind', (c) => c.wind, (c, v) => c.wind = v),
-      Field.number('windTurbulence', (c) => c.windTurbulence, (c, v) => c.windTurbulence = v),
-      Field.boolean('pinTopEdge', (c) => c.pinTopEdge, (c, v) => c.pinTopEdge = v),
-      Field.boolean('pinTopCorners', (c) => c.pinTopCorners, (c, v) => c.pinTopCorners = v),
+      Field.number(
+        'windTurbulence',
+        (c) => c.windTurbulence,
+        (c, v) => c.windTurbulence = v,
+      ),
+      Field.boolean(
+        'pinTopEdge',
+        (c) => c.pinTopEdge,
+        (c, v) => c.pinTopEdge = v,
+      ),
+      Field.boolean(
+        'pinTopCorners',
+        (c) => c.pinTopCorners,
+        (c, v) => c.pinTopCorners = v,
+      ),
       Field.boolean('fixedStep', (c) => c.fixedStep, (c, v) => c.fixedStep = v),
     ],
   );
@@ -65,19 +77,23 @@ final class ClothSimulationComponent extends Behaviour {
   List<cloth.XpbdParticle> get particles => world.particles;
 
   void addSphereCollider(Vec3 center, double radius, {double friction = 0.2}) {
-    world.addCollider(cloth.SphereConstraintCollider(
-      center: cloth.XpbdVec3(center.x, center.y, center.z),
-      radius: radius,
-      friction: friction,
-    ));
+    world.addCollider(
+      cloth.SphereConstraintCollider(
+        center: cloth.XpbdVec3(center.x, center.y, center.z),
+        radius: radius,
+        friction: friction,
+      ),
+    );
   }
 
   void addPlaneCollider(Vec3 point, Vec3 normal, {double friction = 0.4}) {
-    world.addCollider(cloth.PlaneConstraintCollider(
-      point: cloth.XpbdVec3(point.x, point.y, point.z),
-      normal: cloth.XpbdVec3(normal.x, normal.y, normal.z),
-      friction: friction,
-    ));
+    world.addCollider(
+      cloth.PlaneConstraintCollider(
+        point: cloth.XpbdVec3(point.x, point.y, point.z),
+        normal: cloth.XpbdVec3(normal.x, normal.y, normal.z),
+        friction: friction,
+      ),
+    );
   }
 
   void rebuildPatch() {
@@ -114,19 +130,34 @@ final class ClothSimulationComponent extends Behaviour {
 
       if (col is SphereCollider) {
         final existing = _colliderProxies[col];
-        final wc = cloth.XpbdVec3(col.worldCenter.x, col.worldCenter.y, col.worldCenter.z);
+        final wc = cloth.XpbdVec3(
+          col.worldCenter.x,
+          col.worldCenter.y,
+          col.worldCenter.z,
+        );
         if (existing is cloth.SphereConstraintCollider) {
           existing.center = wc;
           existing.radius = col.worldRadius;
         } else {
-          final created = cloth.SphereConstraintCollider(center: wc, radius: col.worldRadius);
+          final created = cloth.SphereConstraintCollider(
+            center: wc,
+            radius: col.worldRadius,
+          );
           _colliderProxies[col] = created;
           world.addCollider(created);
         }
       } else if (col is CapsuleCollider) {
         final existing = _colliderProxies[col];
-        final s = cloth.XpbdVec3(col.segmentStart.x, col.segmentStart.y, col.segmentStart.z);
-        final e = cloth.XpbdVec3(col.segmentEnd.x, col.segmentEnd.y, col.segmentEnd.z);
+        final s = cloth.XpbdVec3(
+          col.segmentStart.x,
+          col.segmentStart.y,
+          col.segmentStart.z,
+        );
+        final e = cloth.XpbdVec3(
+          col.segmentEnd.x,
+          col.segmentEnd.y,
+          col.segmentEnd.z,
+        );
         if (existing is cloth.CapsuleConstraintCollider) {
           existing.start = s;
           existing.end = e;
@@ -154,7 +185,9 @@ final class ClothSimulationComponent extends Behaviour {
     final indices = Uint32List.fromList(p.triangleIndices);
 
     var minX = double.infinity, minY = double.infinity, minZ = double.infinity;
-    var maxX = -double.infinity, maxY = -double.infinity, maxZ = -double.infinity;
+    var maxX = -double.infinity,
+        maxY = -double.infinity,
+        maxZ = -double.infinity;
 
     final invWorldPos = isAttached ? transform.position : Vec3.zero;
     for (int i = 0; i < p.particles.length; i++) {
@@ -285,7 +318,11 @@ final class RopeSimulationComponent extends Behaviour {
     'RopeSimulationComponent',
     RopeSimulationComponent.new,
     [
-      Field.vec3('startOffset', (r) => r.startOffset, (r, v) => r.startOffset = v),
+      Field.vec3(
+        'startOffset',
+        (r) => r.startOffset,
+        (r, v) => r.startOffset = v,
+      ),
       Field.vec3('endOffset', (r) => r.endOffset, (r, v) => r.endOffset = v),
       Field.integer('segments', (r) => r.segments, (r, v) => r.segments = v),
       Field.boolean('pinStart', (r) => r.pinStart, (r, v) => r.pinStart = v),
@@ -300,19 +337,25 @@ final class RopeSimulationComponent extends Behaviour {
     nodes.clear();
 
     final basePos = isAttached ? transform.position : Vec3.zero;
-    final startWorld = startAnchor != null ? startAnchor!.transform.position : (basePos + startOffset);
-    final endWorld = endAnchor != null ? endAnchor!.transform.position : (basePos + endOffset);
+    final startWorld = startAnchor != null
+        ? startAnchor!.transform.position
+        : (basePos + startOffset);
+    final endWorld = endAnchor != null
+        ? endAnchor!.transform.position
+        : (basePos + endOffset);
 
-    nodes.addAll(cloth.RopeChainBuilder.populate(
-      world,
-      start: cloth.XpbdVec3(startWorld.x, startWorld.y, startWorld.z),
-      end: cloth.XpbdVec3(endWorld.x, endWorld.y, endWorld.z),
-      segments: segments,
-      stretchCompliance: stretchCompliance,
-      bendingCompliance: bendingCompliance,
-      pinStart: pinStart,
-      pinEnd: pinEnd,
-    ));
+    nodes.addAll(
+      cloth.RopeChainBuilder.populate(
+        world,
+        start: cloth.XpbdVec3(startWorld.x, startWorld.y, startWorld.z),
+        end: cloth.XpbdVec3(endWorld.x, endWorld.y, endWorld.z),
+        segments: segments,
+        stretchCompliance: stretchCompliance,
+        bendingCompliance: bendingCompliance,
+        pinStart: pinStart,
+        pinEnd: pinEnd,
+      ),
+    );
     _initialized = true;
     _syncLineRenderer();
   }
@@ -383,14 +426,31 @@ final class XpbdDebuggerUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -436,7 +496,9 @@ final class XpbdDebuggerUI {
     ui.labelValue(
       'Stretch Error (Avg/Max)',
       '$avgPct% / $maxPct%',
-      valueColor: world.maxStretchError < 0.03 ? VoxColor.green : VoxColor.yellow,
+      valueColor: world.maxStretchError < 0.03
+          ? VoxColor.green
+          : VoxColor.yellow,
     );
     ui.labelValue(
       'Wind Speed',

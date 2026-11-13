@@ -177,7 +177,11 @@ _Pt _polyCentroid(List<_Pt> poly) {
 }
 
 /// Shrinks a convex polygon cleanly around its centroid without ever flipping or creating slivers.
-List<_Pt> _scaleAroundCentroid(List<_Pt> poly, double factor, {double maxPxInset = 2.2}) {
+List<_Pt> _scaleAroundCentroid(
+  List<_Pt> poly,
+  double factor, {
+  double maxPxInset = 2.2,
+}) {
   final c = _polyCentroid(poly);
   return poly.map((p) {
     final v = p - c;
@@ -325,11 +329,17 @@ String _polyToPath(
       final fOut = math.min(fillet, dOut.len * 0.36);
       final pBefore = curr + dIn.norm * fIn;
       final pAfter = curr + dOut.norm * fOut;
-      segs.add(i == 0 ? 'M ${f(pBefore.x)} ${f(pBefore.y)}' : 'L ${f(pBefore.x)} ${f(pBefore.y)}');
+      segs.add(
+        i == 0
+            ? 'M ${f(pBefore.x)} ${f(pBefore.y)}'
+            : 'L ${f(pBefore.x)} ${f(pBefore.y)}',
+      );
       segs.add('Q ${f(curr.x)} ${f(curr.y)} ${f(pAfter.x)} ${f(pAfter.y)}');
       pStart = pAfter;
     } else {
-      segs.add(i == 0 ? 'M ${f(curr.x)} ${f(curr.y)}' : 'L ${f(curr.x)} ${f(curr.y)}');
+      segs.add(
+        i == 0 ? 'M ${f(curr.x)} ${f(curr.y)}' : 'L ${f(curr.x)} ${f(curr.y)}',
+      );
     }
 
     final nextNext = poly[(i + 2) % n];
@@ -352,7 +362,10 @@ String _polyToPath(
     }
     final onOuter = isOnOuterPerimeter(curr, next, roundCorners);
 
-    if (voxelStairs && onOuter && spanLen > 16.0 && (dir.x.abs() > 0.2 && dir.y.abs() > 0.2)) {
+    if (voxelStairs &&
+        onOuter &&
+        spanLen > 16.0 &&
+        (dir.x.abs() > 0.2 && dir.y.abs() > 0.2)) {
       // Staircase pixel-step ONLY along sloped left/right outer triangle sides
       final steps = math.max(2, (spanLen / 13.0).floor());
       for (var s = 0; s < steps; s++) {
@@ -362,7 +375,9 @@ String _polyToPath(
         final corner = (pStart.y < pEnd.y)
             ? _Pt(prevPt.x, nextPt.y)
             : _Pt(nextPt.x, prevPt.y);
-        segs.add('L ${f(corner.x)} ${f(corner.y)} L ${f(nextPt.x)} ${f(nextPt.y)}');
+        segs.add(
+          'L ${f(corner.x)} ${f(corner.y)} L ${f(nextPt.x)} ${f(nextPt.y)}',
+        );
       }
     } else if (outerWave && onOuter && spanLen > 20.0) {
       // Clean sweeping 2-half-wave or 4-half-wave liquid curves proportionally to edge length!
@@ -383,7 +398,9 @@ String _polyToPath(
     } else if (curveS.abs() > 0.1 && !onOuter && spanLen > 14.0) {
       final c1 = pStart + span * 0.33 + outN * curveS;
       final c2 = pStart + span * 0.67 - outN * curveS;
-      segs.add('C ${f(c1.x)} ${f(c1.y)} ${f(c2.x)} ${f(c2.y)} ${f(pEnd.x)} ${f(pEnd.y)}');
+      segs.add(
+        'C ${f(c1.x)} ${f(c1.y)} ${f(c2.x)} ${f(c2.y)} ${f(pEnd.x)} ${f(pEnd.y)}',
+      );
     } else if (sawtoothInner && !onOuter && spanLen > 18.0) {
       const teeth = 2;
       for (var s = 0; s < teeth; s++) {
@@ -409,7 +426,9 @@ String renderApertureSvg(LogoSpec spec) {
   final triVerts = <_Pt>[];
   for (var i = 0; i < 3; i++) {
     final ang = (-90.0 + i * 120.0) * math.pi / 180.0;
-    triVerts.add(_Pt(cx + spec.outerR * math.cos(ang), cy + spec.outerR * math.sin(ang)));
+    triVerts.add(
+      _Pt(cx + spec.outerR * math.cos(ang), cy + spec.outerR * math.sin(ang)),
+    );
   }
 
   var basePoly = List<_Pt>.from(triVerts);
@@ -425,14 +444,19 @@ String renderApertureSvg(LogoSpec spec) {
 
   final inner = <_Pt>[];
   for (var k = 0; k < spec.blades; k++) {
-    final ang = (-90.0 + spec.twistDeg + k * (360.0 / spec.blades)) * math.pi / 180.0;
-    inner.add(_Pt(cx + spec.innerR * math.cos(ang), cy + spec.innerR * math.sin(ang)));
+    final ang =
+        (-90.0 + spec.twistDeg + k * (360.0 / spec.blades)) * math.pi / 180.0;
+    inner.add(
+      _Pt(cx + spec.innerR * math.cos(ang), cy + spec.innerR * math.sin(ang)),
+    );
   }
 
   final bladePolys = <List<_Pt>>[];
   final halfGap = spec.gap * 0.5;
   final roundSet = spec.chamferCorners > 0.1 ? basePoly : triVerts;
-  final effFillet = spec.chamferCorners > 0.1 ? spec.cornerFillet * 0.45 : spec.cornerFillet;
+  final effFillet = spec.chamferCorners > 0.1
+      ? spec.cornerFillet * 0.45
+      : spec.cornerFillet;
 
   for (var k = 0; k < spec.blades; k++) {
     final prevIdx = (k - 1 + spec.blades) % spec.blades;
@@ -464,7 +488,11 @@ String renderApertureSvg(LogoSpec spec) {
   final overLayer = <String>[];
 
   // True negative-space cutouts applied cleanly to blade polygons!
-  List<List<_Pt>> applyNegativeSpaceBandCuts(List<List<_Pt>> polys, double yCut, double halfH) {
+  List<List<_Pt>> applyNegativeSpaceBandCuts(
+    List<List<_Pt>> polys,
+    double yCut,
+    double halfH,
+  ) {
     final res = <List<_Pt>>[];
     for (final p in polys) {
       final top = _clipHalfPlane(p, _Pt(cx, yCut - halfH), const _Pt(0, -1));
@@ -477,10 +505,14 @@ String renderApertureSvg(LogoSpec spec) {
 
   // 1. Optional Ghost Echo Silhouette Behind (voxrollback, voxsnap)
   if (spec.motif == MotifKind.ghostEcho) {
-    final shift = spec.name == 'voxrollback' ? const _Pt(-5.5, 4.0) : const _Pt(-5.0, -3.5);
+    final shift = spec.name == 'voxrollback'
+        ? const _Pt(-5.5, 4.0)
+        : const _Pt(-5.0, -3.5);
     final ghostVerts = triVerts.map((v) => v + shift).toList();
     final gd = _polyToPath(ghostVerts, ghostVerts, effFillet);
-    underLayer.add('<path d="$gd" fill="none" stroke="${spec.colors.first}" stroke-width="2.5" stroke-dasharray="6 4" opacity="0.58"/>');
+    underLayer.add(
+      '<path d="$gd" fill="none" stroke="${spec.colors.first}" stroke-width="2.5" stroke-dasharray="6 4" opacity="0.58"/>',
+    );
   }
 
   // 2. Motif-driven Blade Rendering
@@ -489,14 +521,27 @@ String renderApertureSvg(LogoSpec spec) {
       var poly = bladePolys[b];
       if (b == 0) {
         // Clip the apex tip cleanly along the diagonal decal peel fold crease!
-        poly = _clipHalfPlane(poly, const _Pt(64.0, 35.5), const _Pt(0.18, 0.984));
+        poly = _clipHalfPlane(
+          poly,
+          const _Pt(64.0, 35.5),
+          const _Pt(0.18, 0.984),
+        );
       }
       if (poly.length >= 3 && _polyArea(poly) > 12.0) {
-        final d = _polyToPath(poly, roundSet, effFillet, innerTipFillet: spec.innerTipFillet);
-        bodyLayer.add('<path d="$d" fill="${spec.colors[b % spec.colors.length]}"/>');
+        final d = _polyToPath(
+          poly,
+          roundSet,
+          effFillet,
+          innerTipFillet: spec.innerTipFillet,
+        );
+        bodyLayer.add(
+          '<path d="$d" fill="${spec.colors[b % spec.colors.length]}"/>',
+        );
       }
     }
-  } else if (spec.motif == MotifKind.fractureTris || spec.motif == MotifKind.navMeshTris || spec.motif == MotifKind.shatterShards) {
+  } else if (spec.motif == MotifKind.fractureTris ||
+      spec.motif == MotifKind.navMeshTris ||
+      spec.motif == MotifKind.shatterShards) {
     final isEcs = spec.motif == MotifKind.fractureTris;
     final isShatter = spec.motif == MotifKind.shatterShards;
     var shardIdx = 0;
@@ -520,7 +565,9 @@ String renderApertureSvg(LogoSpec spec) {
         shardIdx++;
       }
     }
-  } else if (spec.motif == MotifKind.terrainStrata || spec.motif == MotifKind.htnTreeTiers || spec.motif == MotifKind.scoreStems) {
+  } else if (spec.motif == MotifKind.terrainStrata ||
+      spec.motif == MotifKind.htnTreeTiers ||
+      spec.motif == MotifKind.scoreStems) {
     final bands = spec.motif == MotifKind.scoreStems ? 4 : 3;
     const minY = 20.0, maxY = 104.0;
     final bandH = (maxY - minY) / bands;
@@ -528,27 +575,49 @@ String renderApertureSvg(LogoSpec spec) {
     for (var b = 0; b < bladePolys.length; b++) {
       for (var row = 0; row < bands; row++) {
         final y0 = minY + row * bandH + (row == 0 ? 0.0 : bandGap * 0.5);
-        final y1 = minY + (row + 1) * bandH - (row == bands - 1 ? 0.0 : bandGap * 0.5);
+        final y1 =
+            minY + (row + 1) * bandH - (row == bands - 1 ? 0.0 : bandGap * 0.5);
         var slice = _clipHalfPlane(bladePolys[b], _Pt(cx, y0), const _Pt(0, 1));
         slice = _clipHalfPlane(slice, _Pt(cx, y1), const _Pt(0, -1));
         if (slice.length >= 3 && _polyArea(slice) > 12.0) {
-          final d = _polyToPath(slice, roundSet, effFillet * 0.7, innerTipFillet: 1.0);
+          final d = _polyToPath(
+            slice,
+            roundSet,
+            effFillet * 0.7,
+            innerTipFillet: 1.0,
+          );
           final colorIdx = spec.motif == MotifKind.terrainStrata ? row : b;
-          bodyLayer.add('<path d="$d" fill="${spec.colors[colorIdx % spec.colors.length]}"/>');
+          bodyLayer.add(
+            '<path d="$d" fill="${spec.colors[colorIdx % spec.colors.length]}"/>',
+          );
         }
       }
     }
-  } else if (spec.motif == MotifKind.gridCrosshair || spec.motif == MotifKind.itemCells || spec.motif == MotifKind.ruleShield) {
-    final vSplits = spec.motif == MotifKind.ruleShield ? [64.0] : (spec.motif == MotifKind.itemCells ? [64.0] : [53.0, 75.0]);
-    final hSplits = spec.motif == MotifKind.ruleShield ? <double>[] : (spec.motif == MotifKind.itemCells ? [72.0] : [60.0, 82.0]);
+  } else if (spec.motif == MotifKind.gridCrosshair ||
+      spec.motif == MotifKind.itemCells ||
+      spec.motif == MotifKind.ruleShield) {
+    final vSplits = spec.motif == MotifKind.ruleShield
+        ? [64.0]
+        : (spec.motif == MotifKind.itemCells ? [64.0] : [53.0, 75.0]);
+    final hSplits = spec.motif == MotifKind.ruleShield
+        ? <double>[]
+        : (spec.motif == MotifKind.itemCells ? [72.0] : [60.0, 82.0]);
     const slitHalf = 1.4;
     for (var b = 0; b < bladePolys.length; b++) {
       var cells = [bladePolys[b]];
       for (final vx in vSplits) {
         final next = <List<_Pt>>[];
         for (final c in cells) {
-          final left = _clipHalfPlane(c, _Pt(vx - slitHalf, cy), const _Pt(-1, 0));
-          final right = _clipHalfPlane(c, _Pt(vx + slitHalf, cy), const _Pt(1, 0));
+          final left = _clipHalfPlane(
+            c,
+            _Pt(vx - slitHalf, cy),
+            const _Pt(-1, 0),
+          );
+          final right = _clipHalfPlane(
+            c,
+            _Pt(vx + slitHalf, cy),
+            const _Pt(1, 0),
+          );
           if (left.length >= 3 && _polyArea(left) > 12.0) next.add(left);
           if (right.length >= 3 && _polyArea(right) > 12.0) next.add(right);
         }
@@ -557,31 +626,57 @@ String renderApertureSvg(LogoSpec spec) {
       for (final hy in hSplits) {
         final next = <List<_Pt>>[];
         for (final c in cells) {
-          final top = _clipHalfPlane(c, _Pt(cx, hy - slitHalf), const _Pt(0, -1));
-          final bot = _clipHalfPlane(c, _Pt(cx, hy + slitHalf), const _Pt(0, 1));
+          final top = _clipHalfPlane(
+            c,
+            _Pt(cx, hy - slitHalf),
+            const _Pt(0, -1),
+          );
+          final bot = _clipHalfPlane(
+            c,
+            _Pt(cx, hy + slitHalf),
+            const _Pt(0, 1),
+          );
           if (top.length >= 3 && _polyArea(top) > 12.0) next.add(top);
           if (bot.length >= 3 && _polyArea(bot) > 12.0) next.add(bot);
         }
         cells = next;
       }
       for (var ci = 0; ci < cells.length; ci++) {
-        final d = _polyToPath(cells[ci], roundSet, effFillet * 0.7, innerTipFillet: 0.8);
-        bodyLayer.add('<path d="$d" fill="${spec.colors[(b + ci) % spec.colors.length]}"/>');
+        final d = _polyToPath(
+          cells[ci],
+          roundSet,
+          effFillet * 0.7,
+          innerTipFillet: 0.8,
+        );
+        bodyLayer.add(
+          '<path d="$d" fill="${spec.colors[(b + ci) % spec.colors.length]}"/>',
+        );
       }
     }
-  } else if (spec.motif == MotifKind.skyHorizon || spec.motif == MotifKind.seqTimeline || spec.motif == MotifKind.uiWindow || spec.motif == MotifKind.rhythmBeat) {
+  } else if (spec.motif == MotifKind.skyHorizon ||
+      spec.motif == MotifKind.seqTimeline ||
+      spec.motif == MotifKind.uiWindow ||
+      spec.motif == MotifKind.rhythmBeat) {
     // True transparent negative-space horizontal band slicing through blades!
     final yCut = spec.motif == MotifKind.skyHorizon
         ? 68.0
-        : (spec.motif == MotifKind.seqTimeline || spec.motif == MotifKind.rhythmBeat ? 84.0 : 54.5);
+        : (spec.motif == MotifKind.seqTimeline ||
+                  spec.motif == MotifKind.rhythmBeat
+              ? 84.0
+              : 54.5);
     final halfH = spec.motif == MotifKind.skyHorizon
         ? 2.2
-        : (spec.motif == MotifKind.seqTimeline || spec.motif == MotifKind.rhythmBeat ? 2.8 : 1.8);
+        : (spec.motif == MotifKind.seqTimeline ||
+                  spec.motif == MotifKind.rhythmBeat
+              ? 2.8
+              : 1.8);
     for (var b = 0; b < bladePolys.length; b++) {
       final parts = applyNegativeSpaceBandCuts([bladePolys[b]], yCut, halfH);
       for (final p in parts) {
         final d = _polyToPath(p, roundSet, effFillet, innerTipFillet: 1.0);
-        bodyLayer.add('<path d="$d" fill="${spec.colors[b % spec.colors.length]}"/>');
+        bodyLayer.add(
+          '<path d="$d" fill="${spec.colors[b % spec.colors.length]}"/>',
+        );
       }
     }
   } else if (spec.motif == MotifKind.dspEq) {
@@ -590,16 +685,28 @@ String renderApertureSvg(LogoSpec spec) {
       var poly = bladePolys[b];
       if (b == 1) {
         // Split bottom-ish blade around centered EQ window (x in 48..80, y >= 87)
-        final left = _clipHalfPlane(poly, const _Pt(49.0, 90.0), const _Pt(-1, 0));
-        final right = _clipHalfPlane(poly, const _Pt(79.0, 90.0), const _Pt(1, 0));
+        final left = _clipHalfPlane(
+          poly,
+          const _Pt(49.0, 90.0),
+          const _Pt(-1, 0),
+        );
+        final right = _clipHalfPlane(
+          poly,
+          const _Pt(79.0, 90.0),
+          const _Pt(1, 0),
+        );
         for (final piece in [left, right]) {
           if (piece.length >= 3 && _polyArea(piece) > 10.0) {
-            bodyLayer.add('<path d="${_polyToPath(piece, roundSet, effFillet, innerTipFillet: 1.0)}" fill="${spec.colors[b % spec.colors.length]}"/>');
+            bodyLayer.add(
+              '<path d="${_polyToPath(piece, roundSet, effFillet, innerTipFillet: 1.0)}" fill="${spec.colors[b % spec.colors.length]}"/>',
+            );
           }
         }
         continue;
       }
-      bodyLayer.add('<path d="${_polyToPath(poly, roundSet, effFillet, innerTipFillet: spec.innerTipFillet)}" fill="${spec.colors[b % spec.colors.length]}"/>');
+      bodyLayer.add(
+        '<path d="${_polyToPath(poly, roundSet, effFillet, innerTipFillet: spec.innerTipFillet)}" fill="${spec.colors[b % spec.colors.length]}"/>',
+      );
     }
   } else {
     for (var b = 0; b < bladePolys.length; b++) {
@@ -620,7 +727,9 @@ String renderApertureSvg(LogoSpec spec) {
         voxelStairs: spec.motif == MotifKind.voxelSteps,
         center: center,
       );
-      bodyLayer.add('<path d="$d" fill="${spec.colors[b % spec.colors.length]}"/>');
+      bodyLayer.add(
+        '<path d="$d" fill="${spec.colors[b % spec.colors.length]}"/>',
+      );
     }
   }
 
@@ -628,7 +737,10 @@ String renderApertureSvg(LogoSpec spec) {
   if (spec.outerRingR > spec.outerR + 1.0) {
     final ringVerts = List.generate(3, (i) {
       final ang = (-90.0 + i * 120.0) * math.pi / 180.0;
-      return _Pt(cx + spec.outerRingR * math.cos(ang), cy + spec.outerRingR * math.sin(ang));
+      return _Pt(
+        cx + spec.outerRingR * math.cos(ang),
+        cy + spec.outerRingR * math.sin(ang),
+      );
     });
     final ringD = _polyToPath(ringVerts, ringVerts, 7.5);
     overLayer.add(
@@ -681,39 +793,75 @@ String renderApertureSvg(LogoSpec spec) {
   // 4. Symbolic Intent Accents (clean geometric cutouts / center-iris symbols)
   switch (spec.motif) {
     case MotifKind.pixelCorner:
-      overLayer.add('<rect x="102" y="96" width="11.5" height="11.5" rx="1.8" fill="#38BDF8"/>');
-      overLayer.add('<rect x="108" y="83" width="6.5" height="6.5" rx="1.2" fill="#818CF8"/>');
+      overLayer.add(
+        '<rect x="102" y="96" width="11.5" height="11.5" rx="1.8" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="108" y="83" width="6.5" height="6.5" rx="1.2" fill="#818CF8"/>',
+      );
     case MotifKind.decalPeel:
-      overLayer.add('<polygon points="56.5,36.8 72.5,34.0 62.5,46.0" fill="#38BDF8"/>');
+      overLayer.add(
+        '<polygon points="56.5,36.8 72.5,34.0 62.5,46.0" fill="#38BDF8"/>',
+      );
     case MotifKind.dspEq:
-      overLayer.add('<rect x="52.5" y="90" width="4" height="13" rx="2" fill="#F59E0B"/>');
-      overLayer.add('<rect x="59.0" y="84" width="4" height="19" rx="2" fill="#FBBF24"/>');
-      overLayer.add('<rect x="65.5" y="87" width="4" height="16" rx="2" fill="#FB923C"/>');
-      overLayer.add('<rect x="72.0" y="92" width="4" height="11" rx="2" fill="#EA580C"/>');
+      overLayer.add(
+        '<rect x="52.5" y="90" width="4" height="13" rx="2" fill="#F59E0B"/>',
+      );
+      overLayer.add(
+        '<rect x="59.0" y="84" width="4" height="19" rx="2" fill="#FBBF24"/>',
+      );
+      overLayer.add(
+        '<rect x="65.5" y="87" width="4" height="16" rx="2" fill="#FB923C"/>',
+      );
+      overLayer.add(
+        '<rect x="72.0" y="92" width="4" height="11" rx="2" fill="#EA580C"/>',
+      );
     case MotifKind.seqTimeline:
       // Horizontal rail cleanly inside the true transparent cutout band + keyframe diamond!
-      overLayer.add('<line x1="25" y1="84" x2="103" y2="84" stroke="#F43F5E" stroke-width="2.4" stroke-linecap="round"/>');
-      overLayer.add('<polygon points="64,77.5 70.5,84 64,90.5 57.5,84" fill="#FB923C"/>');
+      overLayer.add(
+        '<line x1="25" y1="84" x2="103" y2="84" stroke="#F43F5E" stroke-width="2.4" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<polygon points="64,77.5 70.5,84 64,90.5 57.5,84" fill="#FB923C"/>',
+      );
     case MotifKind.statSteps:
-      overLayer.add('<rect x="93" y="96" width="5.5" height="8" rx="1.5" fill="#34D399"/>');
-      overLayer.add('<rect x="101" y="90" width="5.5" height="14" rx="1.5" fill="#38BDF8"/>');
-      overLayer.add('<rect x="109" y="83" width="5.5" height="21" rx="1.5" fill="#0EA5E9"/>');
+      overLayer.add(
+        '<rect x="93" y="96" width="5.5" height="8" rx="1.5" fill="#34D399"/>',
+      );
+      overLayer.add(
+        '<rect x="101" y="90" width="5.5" height="14" rx="1.5" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="109" y="83" width="5.5" height="21" rx="1.5" fill="#0EA5E9"/>',
+      );
     case MotifKind.talkBubble:
-      overLayer.add('<polygon points="24,102 36,102 22,114" fill="${spec.colors[1]}"/>');
+      overLayer.add(
+        '<polygon points="24,102 36,102 22,114" fill="${spec.colors[1]}"/>',
+      );
       overLayer.add('<circle cx="59.0" cy="75.0" r="1.9" fill="#7C3AED"/>');
       overLayer.add('<circle cx="64.0" cy="75.0" r="1.9" fill="#8B5CF6"/>');
       overLayer.add('<circle cx="69.0" cy="75.0" r="1.9" fill="#A78BFA"/>');
     case MotifKind.lightRays:
-      overLayer.add('<line x1="64" y1="76" x2="64" y2="11" stroke="#FBBF24" stroke-width="2.5" stroke-linecap="round"/>');
-      overLayer.add('<line x1="64" y1="76" x2="116" y2="106" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>');
-      overLayer.add('<line x1="64" y1="76" x2="12" y2="106" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>');
+      overLayer.add(
+        '<line x1="64" y1="76" x2="64" y2="11" stroke="#FBBF24" stroke-width="2.5" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<line x1="64" y1="76" x2="116" y2="106" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<line x1="64" y1="76" x2="12" y2="106" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>',
+      );
     case MotifKind.probeLobes:
-      overLayer.add('<path d="M 64 65.5 Q 66.2 73.8 74.5 76 Q 66.2 78.2 64 86.5 Q 61.8 78.2 53.5 76 Q 61.8 73.8 64 65.5 Z" fill="#F59E0B"/>');
+      overLayer.add(
+        '<path d="M 64 65.5 Q 66.2 73.8 74.5 76 Q 66.2 78.2 64 86.5 Q 61.8 78.2 53.5 76 Q 61.8 73.8 64 65.5 Z" fill="#F59E0B"/>',
+      );
     case MotifKind.skyHorizon:
       overLayer.add('<circle cx="64" cy="60.5" r="5.2" fill="#FBBF24"/>');
     case MotifKind.vfxSparks:
       overLayer.add('<polygon points="64,9 68.5,17 59.5,17" fill="#FB7185"/>');
-      overLayer.add('<polygon points="118,108 110,109 114,101" fill="#F43F5E"/>');
+      overLayer.add(
+        '<polygon points="118,108 110,109 114,101" fill="#F43F5E"/>',
+      );
       overLayer.add('<polygon points="10,108 18,109 14,101" fill="#FB923C"/>');
     case MotifKind.foliageVeins:
       overLayer.add(
@@ -721,20 +869,32 @@ String renderApertureSvg(LogoSpec spec) {
         'stroke="#6EE7B7" stroke-width="2.0" stroke-linecap="round" opacity="0.88"/>',
       );
     case MotifKind.physImpulse:
-      overLayer.add('<path d="M 79 34 A 24 24 0 0 1 94 52" stroke="#34D399" stroke-width="2.5" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 79 34 A 24 24 0 0 1 94 52" stroke="#34D399" stroke-width="2.5" stroke-linecap="round"/>',
+      );
     case MotifKind.wheelCog:
-      overLayer.add('<circle cx="64" cy="76" r="7.0" fill="none" stroke="${spec.centerColor ?? spec.colors.first}" stroke-width="2.4"/>');
+      overLayer.add(
+        '<circle cx="64" cy="76" r="7.0" fill="none" stroke="${spec.centerColor ?? spec.colors.first}" stroke-width="2.4"/>',
+      );
     case MotifKind.ragdollJoints:
       for (var k = 0; k < 3; k++) {
         final a = (-90.0 + spec.twistDeg + k * 120.0) * math.pi / 180.0;
         final px = cx + (spec.innerR + 6) * math.cos(a);
         final py = cy + (spec.innerR + 6) * math.sin(a);
-        overLayer.add('<circle cx="${f(px)}" cy="${f(py)}" r="3.4" fill="#2DD4BF"/>');
+        overLayer.add(
+          '<circle cx="${f(px)}" cy="${f(py)}" r="3.4" fill="#2DD4BF"/>',
+        );
       }
     case MotifKind.crowdBoids:
-      overLayer.add('<polygon points="64,69.5 67.5,75 64,73.5 60.5,75" fill="#38BDF8"/>');
-      overLayer.add('<polygon points="58.5,78 62.5,82 59.5,80.5 57.5,82" fill="#059669"/>');
-      overLayer.add('<polygon points="69.5,78 70.5,82 68.5,80.5 65.5,82" fill="#2DD4BF"/>');
+      overLayer.add(
+        '<polygon points="64,69.5 67.5,75 64,73.5 60.5,75" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<polygon points="58.5,78 62.5,82 59.5,80.5 57.5,82" fill="#059669"/>',
+      );
+      overLayer.add(
+        '<polygon points="69.5,78 70.5,82 68.5,80.5 65.5,82" fill="#2DD4BF"/>',
+      );
     case MotifKind.trafficLanes:
       overLayer.add('<circle cx="64" cy="70.5" r="2.0" fill="#F43F5E"/>');
       overLayer.add('<circle cx="64" cy="76.0" r="2.0" fill="#FBBF24"/>');
@@ -742,144 +902,278 @@ String renderApertureSvg(LogoSpec spec) {
     case MotifKind.aiNodes:
       for (var k = 0; k < 3; k++) {
         final a = (-90.0 + spec.twistDeg + k * 120.0) * math.pi / 180.0;
-        overLayer.add('<circle cx="${f(cx + 21 * math.cos(a))}" cy="${f(cy + 21 * math.sin(a))}" r="3.2" fill="#38BDF8"/>');
+        overLayer.add(
+          '<circle cx="${f(cx + 21 * math.cos(a))}" cy="${f(cy + 21 * math.sin(a))}" r="3.2" fill="#38BDF8"/>',
+        );
       }
     case MotifKind.pathCurve:
-      overLayer.add('<path d="M 59 73 Q 64 70.5 69 75.5 T 64 82.5" stroke="#818CF8" stroke-width="1.8" stroke-dasharray="2 2.4" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 59 73 Q 64 70.5 69 75.5 T 64 82.5" stroke="#818CF8" stroke-width="1.8" stroke-dasharray="2 2.4" stroke-linecap="round"/>',
+      );
       overLayer.add('<circle cx="58.5" cy="72.5" r="2.2" fill="#38BDF8"/>');
       overLayer.add('<circle cx="68.5" cy="75.5" r="2.2" fill="#38BDF8"/>');
       overLayer.add('<circle cx="64.0" cy="82.5" r="2.5" fill="#6366F1"/>');
     case MotifKind.flowPorts:
-      overLayer.add('<path d="M 58.5 76.5 C 62 76.5 64 73.5 69.5 73.5" stroke="#38BDF8" stroke-width="2.0" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 58.5 76.5 C 62 76.5 64 73.5 69.5 73.5" stroke="#38BDF8" stroke-width="2.0" stroke-linecap="round"/>',
+      );
       overLayer.add('<circle cx="58.5" cy="76.5" r="2.6" fill="#38BDF8"/>');
       overLayer.add('<circle cx="69.5" cy="73.5" r="2.6" fill="#A78BFA"/>');
     case MotifKind.circuitTraces:
-      overLayer.add('<path d="M 64 69.5 L 64 75.5 L 68.5 79.5" stroke="#0EA5E9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>');
+      overLayer.add(
+        '<path d="M 64 69.5 L 64 75.5 L 68.5 79.5" stroke="#0EA5E9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+      );
       overLayer.add('<circle cx="64" cy="69.5" r="1.8" fill="#0EA5E9"/>');
       overLayer.add('<circle cx="68.5" cy="79.5" r="2.4" fill="#38BDF8"/>');
     case MotifKind.questFork:
-      overLayer.add('<path d="M 64 84.5 L 64 77 M 64 77 L 58.5 71 M 64 77 L 69.5 71" stroke="#F59E0B" stroke-width="2.3" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 64 84.5 L 64 77 M 64 77 L 58.5 71 M 64 77 L 69.5 71" stroke="#F59E0B" stroke-width="2.3" stroke-linecap="round"/>',
+      );
       overLayer.add('<circle cx="58.5" cy="71" r="2.2" fill="#F59E0B"/>');
       overLayer.add('<circle cx="69.5" cy="71" r="2.2" fill="#EC4899"/>');
     case MotifKind.archRooms:
-      overLayer.add('<rect x="59" y="88" width="10" height="5" rx="1.2" fill="#38BDF8"/>');
+      overLayer.add(
+        '<rect x="59" y="88" width="10" height="5" rx="1.2" fill="#38BDF8"/>',
+      );
     case MotifKind.buildSockets:
-      overLayer.add('<rect x="61.5" y="53" width="5" height="5" rx="1" fill="#38BDF8"/>');
-      overLayer.add('<rect x="75" y="82" width="5" height="5" rx="1" fill="#60A5FA"/>');
-      overLayer.add('<rect x="48" y="82" width="5" height="5" rx="1" fill="#2563EB"/>');
+      overLayer.add(
+        '<rect x="61.5" y="53" width="5" height="5" rx="1" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="75" y="82" width="5" height="5" rx="1" fill="#60A5FA"/>',
+      );
+      overLayer.add(
+        '<rect x="48" y="82" width="5" height="5" rx="1" fill="#2563EB"/>',
+      );
     case MotifKind.locMeridian:
-      overLayer.add('<circle cx="64" cy="76" r="6.4" stroke="#0EA5E9" stroke-width="1.8"/>');
-      overLayer.add('<ellipse cx="64" cy="76" rx="3.0" ry="6.4" stroke="#0EA5E9" stroke-width="1.4"/>');
-      overLayer.add('<line x1="57.6" y1="76" x2="70.4" y2="76" stroke="#0EA5E9" stroke-width="1.4"/>');
+      overLayer.add(
+        '<circle cx="64" cy="76" r="6.4" stroke="#0EA5E9" stroke-width="1.8"/>',
+      );
+      overLayer.add(
+        '<ellipse cx="64" cy="76" rx="3.0" ry="6.4" stroke="#0EA5E9" stroke-width="1.4"/>',
+      );
+      overLayer.add(
+        '<line x1="57.6" y1="76" x2="70.4" y2="76" stroke="#0EA5E9" stroke-width="1.4"/>',
+      );
     case MotifKind.logChevron:
-      overLayer.add('<path d="M 58.0 72.0 L 62.2 75.8 L 58.0 79.6" stroke="#0EA5E9" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>');
-      overLayer.add('<line x1="64.2" y1="79.6" x2="69.8" y2="79.6" stroke="#38BDF8" stroke-width="2.3" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 58.0 72.0 L 62.2 75.8 L 58.0 79.6" stroke="#0EA5E9" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>',
+      );
+      overLayer.add(
+        '<line x1="64.2" y1="79.6" x2="69.8" y2="79.6" stroke="#38BDF8" stroke-width="2.3" stroke-linecap="round"/>',
+      );
     case MotifKind.uiWindow:
       break;
     case MotifKind.padCluster:
-      overLayer.add('<path d="M 64 70.5 L 64 81.5 M 58.5 76 L 69.5 76" stroke="#3B82F6" stroke-width="3.0" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 64 70.5 L 64 81.5 M 58.5 76 L 69.5 76" stroke="#3B82F6" stroke-width="3.0" stroke-linecap="round"/>',
+      );
     case MotifKind.rhythmBeat:
-      overLayer.add('<line x1="25" y1="84" x2="103" y2="84" stroke="#F43F5E" stroke-width="2.4" stroke-linecap="round"/>');
-      overLayer.add('<polygon points="64,77.5 70.5,84 64,90.5 57.5,84" fill="#FB923C"/>');
+      overLayer.add(
+        '<line x1="25" y1="84" x2="103" y2="84" stroke="#F43F5E" stroke-width="2.4" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<polygon points="64,77.5 70.5,84 64,90.5 57.5,84" fill="#FB923C"/>',
+      );
       overLayer.add('<circle cx="48" cy="84" r="2.8" fill="#F43F5E"/>');
       overLayer.add('<circle cx="80" cy="84" r="2.8" fill="#FB7185"/>');
     case MotifKind.gaitStrides:
-      overLayer.add('<path d="M 52 79 Q 58 68 64 78" stroke="#10B981" stroke-width="2.2" stroke-linecap="round"/>');
-      overLayer.add('<path d="M 64 79 Q 70 68 76 78" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="2.4 2.2"/>');
+      overLayer.add(
+        '<path d="M 52 79 Q 58 68 64 78" stroke="#10B981" stroke-width="2.2" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<path d="M 64 79 Q 70 68 76 78" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="2.4 2.2"/>',
+      );
       overLayer.add('<circle cx="52" cy="79" r="2.2" fill="#059669"/>');
       overLayer.add('<circle cx="64" cy="79" r="2.2" fill="#10B981"/>');
       overLayer.add('<circle cx="76" cy="79" r="2.2" fill="#34D399"/>');
     case MotifKind.atlasGrid:
-      overLayer.add('<rect x="55" y="67.5" width="10.2" height="7.5" rx="1.4" fill="#38BDF8"/>');
-      overLayer.add('<rect x="66.8" y="67.5" width="6.4" height="10.8" rx="1.4" fill="#F59E0B"/>');
-      overLayer.add('<rect x="55" y="76.8" width="10.2" height="6.2" rx="1.4" fill="#34D399"/>');
-      overLayer.add('<rect x="66.8" y="79.8" width="6.4" height="3.2" rx="1.0" fill="#818CF8"/>');
+      overLayer.add(
+        '<rect x="55" y="67.5" width="10.2" height="7.5" rx="1.4" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="66.8" y="67.5" width="6.4" height="10.8" rx="1.4" fill="#F59E0B"/>',
+      );
+      overLayer.add(
+        '<rect x="55" y="76.8" width="10.2" height="6.2" rx="1.4" fill="#34D399"/>',
+      );
+      overLayer.add(
+        '<rect x="66.8" y="79.8" width="6.4" height="3.2" rx="1.0" fill="#818CF8"/>',
+      );
     case MotifKind.lensDolly:
-      overLayer.add('<circle cx="64" cy="76" r="8.2" stroke="#38BDF8" stroke-width="2.1"/>');
-      overLayer.add('<path d="M 30 112 Q 64 103 98 112" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="6 4"/>');
+      overLayer.add(
+        '<circle cx="64" cy="76" r="8.2" stroke="#38BDF8" stroke-width="2.1"/>',
+      );
+      overLayer.add(
+        '<path d="M 30 112 Q 64 103 98 112" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="6 4"/>',
+      );
       overLayer.add('<circle cx="64" cy="107.5" r="2.6" fill="#F59E0B"/>');
     case MotifKind.broadSweep:
-      overLayer.add('<rect x="55" y="69" width="7.5" height="7.5" rx="1.2" stroke="#34D399" stroke-width="1.9"/>');
-      overLayer.add('<rect x="65.5" y="75" width="7.5" height="7.5" rx="1.2" stroke="#22D3EE" stroke-width="1.9"/>');
-      overLayer.add('<path d="M 54 83 L 74 68" stroke="#F59E0B" stroke-width="2.1" stroke-linecap="round"/>');
+      overLayer.add(
+        '<rect x="55" y="69" width="7.5" height="7.5" rx="1.2" stroke="#34D399" stroke-width="1.9"/>',
+      );
+      overLayer.add(
+        '<rect x="65.5" y="75" width="7.5" height="7.5" rx="1.2" stroke="#22D3EE" stroke-width="1.9"/>',
+      );
+      overLayer.add(
+        '<path d="M 54 83 L 74 68" stroke="#F59E0B" stroke-width="2.1" stroke-linecap="round"/>',
+      );
       overLayer.add('<circle cx="74" cy="68" r="2.1" fill="#F59E0B"/>');
     case MotifKind.ribbonSwirl:
-      overLayer.add('<path d="M 55 83 C 58 70 70 82 73 69" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round"/>');
-      overLayer.add('<path d="M 55 76 C 58 63 70 75 73 62" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round" opacity="0.88"/>');
+      overLayer.add(
+        '<path d="M 55 83 C 58 70 70 82 73 69" stroke="#FB7185" stroke-width="2.6" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<path d="M 55 76 C 58 63 70 75 73 62" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round" opacity="0.88"/>',
+      );
     case MotifKind.steerWedge:
-      overLayer.add('<polygon points="64,67.5 68.5,75.5 64,73.5 59.5,75.5" fill="#34D399"/>');
-      overLayer.add('<polygon points="56.5,77.5 60.5,83.5 56.5,81.8 52.5,83.5" fill="#10B981"/>');
-      overLayer.add('<polygon points="71.5,77.5 75.5,83.5 71.5,81.8 67.5,83.5" fill="#2DD4BF"/>');
+      overLayer.add(
+        '<polygon points="64,67.5 68.5,75.5 64,73.5 59.5,75.5" fill="#34D399"/>',
+      );
+      overLayer.add(
+        '<polygon points="56.5,77.5 60.5,83.5 56.5,81.8 52.5,83.5" fill="#10B981"/>',
+      );
+      overLayer.add(
+        '<polygon points="71.5,77.5 75.5,83.5 71.5,81.8 67.5,83.5" fill="#2DD4BF"/>',
+      );
     case MotifKind.dagNodes:
-      overLayer.add('<line x1="56.5" y1="71.5" x2="64" y2="81.5" stroke="#38BDF8" stroke-width="1.8"/>');
-      overLayer.add('<line x1="71.5" y1="71.5" x2="64" y2="81.5" stroke="#818CF8" stroke-width="1.8"/>');
+      overLayer.add(
+        '<line x1="56.5" y1="71.5" x2="64" y2="81.5" stroke="#38BDF8" stroke-width="1.8"/>',
+      );
+      overLayer.add(
+        '<line x1="71.5" y1="71.5" x2="64" y2="81.5" stroke="#818CF8" stroke-width="1.8"/>',
+      );
       overLayer.add('<circle cx="56.5" cy="71.5" r="2.7" fill="#38BDF8"/>');
       overLayer.add('<circle cx="71.5" cy="71.5" r="2.7" fill="#818CF8"/>');
       overLayer.add('<circle cx="64.0" cy="81.5" r="3.0" fill="#F59E0B"/>');
     case MotifKind.blendCross:
-      overLayer.add('<path d="M 55 82 C 60 82 68 70 73 70" stroke="#F43F5E" stroke-width="2.2" stroke-linecap="round"/>');
-      overLayer.add('<path d="M 55 70 C 60 70 68 82 73 82" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 55 82 C 60 82 68 70 73 70" stroke="#F43F5E" stroke-width="2.2" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<path d="M 55 70 C 60 70 68 82 73 82" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round"/>',
+      );
       overLayer.add('<circle cx="64.0" cy="76.0" r="2.6" fill="#F59E0B"/>');
     case MotifKind.shadowCascades:
-      overLayer.add('<polygon points="64,67.5 68.5,73 59.5,73" fill="#FBBF24"/>');
-      overLayer.add('<polygon points="57.5,75.5 70.5,75.5 72.5,79 55.5,79" fill="#94A3B8"/>');
-      overLayer.add('<polygon points="54.5,81 73.5,81 75.5,84.5 52.5,84.5" fill="#475569"/>');
+      overLayer.add(
+        '<polygon points="64,67.5 68.5,73 59.5,73" fill="#FBBF24"/>',
+      );
+      overLayer.add(
+        '<polygon points="57.5,75.5 70.5,75.5 72.5,79 55.5,79" fill="#94A3B8"/>',
+      );
+      overLayer.add(
+        '<polygon points="54.5,81 73.5,81 75.5,84.5 52.5,84.5" fill="#475569"/>',
+      );
     case MotifKind.splineRibbon:
-      overLayer.add('<path d="M 54 83 C 58 67 70 85 74 69" stroke="#38BDF8" stroke-width="2.4" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 54 83 C 58 67 70 85 74 69" stroke="#38BDF8" stroke-width="2.4" stroke-linecap="round"/>',
+      );
       overLayer.add('<circle cx="54" cy="83" r="2.2" fill="#2DD4BF"/>');
       overLayer.add('<circle cx="64" cy="76" r="2.2" fill="#F59E0B"/>');
       overLayer.add('<circle cx="74" cy="69" r="2.2" fill="#38BDF8"/>');
     case MotifKind.allocArena:
-      overLayer.add('<rect x="54.5" y="69.5" width="7" height="5" rx="1" fill="#34D399"/>');
-      overLayer.add('<rect x="63.0" y="69.5" width="10.5" height="5" rx="1" fill="#38BDF8"/>');
-      overLayer.add('<rect x="54.5" y="76.5" width="13" height="5" rx="1" fill="#F59E0B"/>');
-      overLayer.add('<rect x="69.0" y="76.5" width="4.5" height="5" rx="1" fill="#475569"/>');
+      overLayer.add(
+        '<rect x="54.5" y="69.5" width="7" height="5" rx="1" fill="#34D399"/>',
+      );
+      overLayer.add(
+        '<rect x="63.0" y="69.5" width="10.5" height="5" rx="1" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="54.5" y="76.5" width="13" height="5" rx="1" fill="#F59E0B"/>',
+      );
+      overLayer.add(
+        '<rect x="69.0" y="76.5" width="4.5" height="5" rx="1" fill="#475569"/>',
+      );
     case MotifKind.batchClusters:
-      overLayer.add('<rect x="54.5" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>');
-      overLayer.add('<rect x="61.6" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>');
-      overLayer.add('<rect x="68.7" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>');
-      overLayer.add('<rect x="56.5" y="77.5" width="15.0" height="5.2" rx="1.4" fill="#F59E0B"/>');
+      overLayer.add(
+        '<rect x="54.5" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="61.6" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="68.7" y="69.0" width="4.8" height="4.8" rx="1" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="56.5" y="77.5" width="15.0" height="5.2" rx="1.4" fill="#F59E0B"/>',
+      );
     case MotifKind.ikLimbs:
-      overLayer.add('<path d="M 55 82 L 64 70 L 73 79" stroke="#2DD4BF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>');
+      overLayer.add(
+        '<path d="M 55 82 L 64 70 L 73 79" stroke="#2DD4BF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+      );
       overLayer.add('<circle cx="55" cy="82" r="2.2" fill="#38BDF8"/>');
       overLayer.add('<circle cx="64" cy="70" r="2.4" fill="#F59E0B"/>');
       overLayer.add('<circle cx="73" cy="79" r="2.4" fill="#34D399"/>');
     case MotifKind.curveWave:
-      overLayer.add('<path d="M 53.5 82 L 58.0 69.5 L 65.5 73.5 L 71.0 73.5 L 74.5 82" stroke="#F43F5E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>');
+      overLayer.add(
+        '<path d="M 53.5 82 L 58.0 69.5 L 65.5 73.5 L 71.0 73.5 L 74.5 82" stroke="#F43F5E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+      );
       overLayer.add('<circle cx="58.0" cy="69.5" r="2.1" fill="#FBBF24"/>');
       overLayer.add('<circle cx="65.5" cy="73.5" r="2.0" fill="#FB923C"/>');
       overLayer.add('<circle cx="71.0" cy="73.5" r="2.0" fill="#38BDF8"/>');
     case MotifKind.octreeBoxes:
-      overLayer.add('<rect x="54.0" y="67.5" width="20.0" height="17.0" rx="2.0" stroke="#38BDF8" stroke-width="1.9"/>');
-      overLayer.add('<line x1="64.0" y1="67.5" x2="64.0" y2="84.5" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>');
-      overLayer.add('<line x1="54.0" y1="76.0" x2="74.0" y2="76.0" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>');
-      overLayer.add('<rect x="65.5" y="69.0" width="6.8" height="5.5" rx="1.0" fill="#34D399"/>');
+      overLayer.add(
+        '<rect x="54.0" y="67.5" width="20.0" height="17.0" rx="2.0" stroke="#38BDF8" stroke-width="1.9"/>',
+      );
+      overLayer.add(
+        '<line x1="64.0" y1="67.5" x2="64.0" y2="84.5" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>',
+      );
+      overLayer.add(
+        '<line x1="54.0" y1="76.0" x2="74.0" y2="76.0" stroke="#38BDF8" stroke-width="1.4" opacity="0.8"/>',
+      );
+      overLayer.add(
+        '<rect x="65.5" y="69.0" width="6.8" height="5.5" rx="1.0" fill="#34D399"/>',
+      );
     case MotifKind.noiseCurl:
-      overLayer.add('<path d="M 54.0 82.0 C 55.5 68.5 72.5 83.5 74.0 70.0" stroke="#22D3EE" stroke-width="2.4" stroke-linecap="round"/>');
-      overLayer.add('<path d="M 56.5 69.5 Q 64.0 76.0 71.5 82.5" stroke="#A78BFA" stroke-width="1.7" stroke-linecap="round" opacity="0.9"/>');
+      overLayer.add(
+        '<path d="M 54.0 82.0 C 55.5 68.5 72.5 83.5 74.0 70.0" stroke="#22D3EE" stroke-width="2.4" stroke-linecap="round"/>',
+      );
+      overLayer.add(
+        '<path d="M 56.5 69.5 Q 64.0 76.0 71.5 82.5" stroke="#A78BFA" stroke-width="1.7" stroke-linecap="round" opacity="0.9"/>',
+      );
       overLayer.add('<circle cx="56.0" cy="70.0" r="2.1" fill="#F59E0B"/>');
       overLayer.add('<circle cx="72.0" cy="82.0" r="2.1" fill="#34D399"/>');
       overLayer.add('<circle cx="64.0" cy="76.0" r="2.2" fill="#38BDF8"/>');
     case MotifKind.colorSpectrum:
-      overLayer.add('<path d="M 54.5 79.5 A 10.5 10.5 0 0 1 73.5 79.5" stroke="#0EA5E9" stroke-width="2.4" stroke-linecap="round"/>');
+      overLayer.add(
+        '<path d="M 54.5 79.5 A 10.5 10.5 0 0 1 73.5 79.5" stroke="#0EA5E9" stroke-width="2.4" stroke-linecap="round"/>',
+      );
       overLayer.add('<circle cx="55.5" cy="78.0" r="2.4" fill="#38BDF8"/>');
       overLayer.add('<circle cx="64.0" cy="70.0" r="2.6" fill="#A855F7"/>');
       overLayer.add('<circle cx="72.5" cy="78.0" r="2.4" fill="#F43F5E"/>');
-      overLayer.add('<rect x="59.0" y="79.5" width="10.0" height="4.2" rx="1.2" fill="#F59E0B"/>');
+      overLayer.add(
+        '<rect x="59.0" y="79.5" width="10.0" height="4.2" rx="1.2" fill="#F59E0B"/>',
+      );
     case MotifKind.verletMesh:
-      overLayer.add('<polygon points="64.0,67.5 74.0,81.5 54.0,81.5" stroke="#FB923C" stroke-width="1.9" stroke-linejoin="round"/>');
-      overLayer.add('<line x1="64.0" y1="67.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>');
-      overLayer.add('<line x1="54.0" y1="81.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>');
-      overLayer.add('<line x1="74.0" y1="81.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>');
+      overLayer.add(
+        '<polygon points="64.0,67.5 74.0,81.5 54.0,81.5" stroke="#FB923C" stroke-width="1.9" stroke-linejoin="round"/>',
+      );
+      overLayer.add(
+        '<line x1="64.0" y1="67.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>',
+      );
+      overLayer.add(
+        '<line x1="54.0" y1="81.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>',
+      );
+      overLayer.add(
+        '<line x1="74.0" y1="81.5" x2="64.0" y2="77.0" stroke="#FBBF24" stroke-width="1.6"/>',
+      );
       overLayer.add('<circle cx="64.0" cy="67.5" r="2.1" fill="#F43F5E"/>');
       overLayer.add('<circle cx="54.0" cy="81.5" r="2.1" fill="#38BDF8"/>');
       overLayer.add('<circle cx="74.0" cy="81.5" r="2.1" fill="#34D399"/>');
       overLayer.add('<circle cx="64.0" cy="77.0" r="2.0" fill="#FBBF24"/>');
     case MotifKind.greedyBrick:
-      overLayer.add('<rect x="54.0" y="68.0" width="12.5" height="7.5" rx="1.2" fill="#38BDF8"/>');
-      overLayer.add('<rect x="68.0" y="68.0" width="6.0" height="7.5" rx="1.2" fill="#22D3EE"/>');
-      overLayer.add('<rect x="54.0" y="77.0" width="20.0" height="6.8" rx="1.2" fill="#34D399"/>');
-      overLayer.add('<rect x="55.5" y="78.5" width="3.0" height="3.0" rx="0.6" fill="#0F172A" opacity="0.45"/>');
+      overLayer.add(
+        '<rect x="54.0" y="68.0" width="12.5" height="7.5" rx="1.2" fill="#38BDF8"/>',
+      );
+      overLayer.add(
+        '<rect x="68.0" y="68.0" width="6.0" height="7.5" rx="1.2" fill="#22D3EE"/>',
+      );
+      overLayer.add(
+        '<rect x="54.0" y="77.0" width="20.0" height="6.8" rx="1.2" fill="#34D399"/>',
+      );
+      overLayer.add(
+        '<rect x="55.5" y="78.5" width="3.0" height="3.0" rx="0.6" fill="#0F172A" opacity="0.45"/>',
+      );
     default:
       break;
   }
@@ -889,7 +1183,9 @@ String renderApertureSvg(LogoSpec spec) {
     final cCol = spec.centerColor ?? spec.colors.first;
     switch (spec.centerShape) {
       case 'circle':
-        overLayer.add('<circle cx="$cx" cy="$cy" r="${f(spec.centerDotR)}" fill="$cCol"/>');
+        overLayer.add(
+          '<circle cx="$cx" cy="$cy" r="${f(spec.centerDotR)}" fill="$cCol"/>',
+        );
       case 'tri':
       case 'upTri':
         final baseDeg = spec.centerShape == 'upTri' ? -90.0 : 90.0;
@@ -1970,9 +2266,10 @@ void _updateReadmeLogo(String readmePath, String title, String description) {
 }
 
 String _buildGalleryHtml() {
-  final cards = allLogoSpecs.map((spec) {
-    final svg = renderApertureSvg(spec);
-    return '''<div class="card">
+  final cards = allLogoSpecs
+      .map((spec) {
+        final svg = renderApertureSvg(spec);
+        return '''<div class="card">
   <div class="swatches">
     <div class="preview dark">$svg</div>
     <div class="preview light">$svg</div>
@@ -1982,7 +2279,8 @@ String _buildGalleryHtml() {
     <span>${spec.motif.name}</span>
   </div>
 </div>''';
-  }).join('\n');
+      })
+      .join('\n');
 
   return '''<!DOCTYPE html>
 <html lang="en">
@@ -2034,10 +2332,10 @@ void main(List<String> args) {
   final vendorDir = Directory('vendor');
   final vendorNames = vendorDir.existsSync()
       ? vendorDir
-          .listSync()
-          .whereType<Directory>()
-          .map((d) => d.uri.pathSegments.where((s) => s.isNotEmpty).last)
-          .toSet()
+            .listSync()
+            .whereType<Directory>()
+            .map((d) => d.uri.pathSegments.where((s) => s.isNotEmpty).last)
+            .toSet()
       : <String>{};
   final specNames = allLogoSpecs.skip(1).map((s) => s.name).toSet();
   final missing = vendorNames.difference(specNames);
@@ -2051,7 +2349,9 @@ void main(List<String> args) {
     final file = File(previewPath);
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(_buildGalleryHtml());
-    stdout.writeln('Generated preview HTML (${allLogoSpecs.length} marks) -> $previewPath');
+    stdout.writeln(
+      'Generated preview HTML (${allLogoSpecs.length} marks) -> $previewPath',
+    );
   }
 
   if (doApply) {
@@ -2076,8 +2376,12 @@ void main(List<String> args) {
         'Pure Dart ${spec.category.toLowerCase()} library for glVolition.',
       );
     }
-    stdout.writeln('Applied ${allLogoSpecs.length} symbolic SVG logos across root and ./vendor submodules.');
+    stdout.writeln(
+      'Applied ${allLogoSpecs.length} symbolic SVG logos across root and ./vendor submodules.',
+    );
   } else if (previewPath == null) {
-    stdout.writeln('Usage: dart run tool/generate_logos.dart [--preview <out.html>] [--apply]');
+    stdout.writeln(
+      'Usage: dart run tool/generate_logos.dart [--preview <out.html>] [--apply]',
+    );
   }
 }

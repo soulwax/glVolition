@@ -19,8 +19,16 @@ final class BrazierBehaviour extends Behaviour {
     'BrazierBehaviour',
     BrazierBehaviour.new,
     [
-      Field.number('igniteRadius', (b) => b.igniteRadius, (b, v) => b.igniteRadius = v),
-      Field.number('safeRadius', (b) => b.safeRadius, (b, v) => b.safeRadius = v),
+      Field.number(
+        'igniteRadius',
+        (b) => b.igniteRadius,
+        (b, v) => b.igniteRadius = v,
+      ),
+      Field.number(
+        'safeRadius',
+        (b) => b.safeRadius,
+        (b, v) => b.safeRadius = v,
+      ),
       Field.boolean('isLit', (b) => b.isLit, (b, v) => b.isLit = v),
     ],
   );
@@ -52,7 +60,11 @@ final class MoteBehaviour extends Behaviour {
     'MoteBehaviour',
     MoteBehaviour.new,
     [
-      Field.number('pickupRadius', (m) => m.pickupRadius, (m, v) => m.pickupRadius = v),
+      Field.number(
+        'pickupRadius',
+        (m) => m.pickupRadius,
+        (m, v) => m.pickupRadius = v,
+      ),
       Field.boolean('collected', (m) => m.collected, (m, v) => m.collected = v),
     ],
   );
@@ -91,7 +103,11 @@ final class ShadeBehaviour extends Behaviour {
       final dist = away.length;
       if (dist < b.safeRadius && dist > 1e-4) {
         final push = away * (speed * 1.4 * time.deltaTime / dist);
-        transform.localPosition = Vec3(myPos.x + push.x, myPos.y + push.y, myPos.z);
+        transform.localPosition = Vec3(
+          myPos.x + push.x,
+          myPos.y + push.y,
+          myPos.z,
+        );
         return;
       }
     }
@@ -103,13 +119,21 @@ final class ShadeBehaviour extends Behaviour {
       // Knock shade back after hit
       if (dist > 1e-4) {
         final back = toPlayer * (-28.0 / dist);
-        transform.localPosition = Vec3(myPos.x + back.x, myPos.y + back.y, myPos.z);
+        transform.localPosition = Vec3(
+          myPos.x + back.x,
+          myPos.y + back.y,
+          myPos.z,
+        );
       }
       return;
     }
     if (dist > 1e-4) {
       final step = toPlayer * (math.min(dist, speed * time.deltaTime) / dist);
-      transform.localPosition = Vec3(myPos.x + step.x, myPos.y + step.y, myPos.z);
+      transform.localPosition = Vec3(
+        myPos.x + step.x,
+        myPos.y + step.y,
+        myPos.z,
+      );
     }
   }
 }
@@ -135,16 +159,17 @@ final class DungeonExplorer extends Behaviour {
     this.moveSpeed = 80.0,
     this.radius = 6.0,
     this.portalPosition = const Vec2(208, 112),
-  }) : tilemap = tilemap ??
-            TilemapComponent(
-              TileLayer(
-                columns: 1,
-                rows: 1,
-                tileWidth: 16,
-                tileHeight: 16,
-                tileset: [SpriteRegion.white],
-              ),
-            );
+  }) : tilemap =
+           tilemap ??
+           TilemapComponent(
+             TileLayer(
+               columns: 1,
+               rows: 1,
+               tileWidth: 16,
+               tileHeight: 16,
+               tileset: [SpriteRegion.white],
+             ),
+           );
 
   static final spec = ComponentSpec<DungeonExplorer>(
     'DungeonExplorer',
@@ -152,12 +177,28 @@ final class DungeonExplorer extends Behaviour {
     [
       Field.number('moveSpeed', (e) => e.moveSpeed, (e, v) => e.moveSpeed = v),
       Field.number('radius', (e) => e.radius, (e, v) => e.radius = v),
-      Field.integer('motesCollected', (e) => e.motesCollected, (e, v) => e.motesCollected = v),
-      Field.integer('braziersLit', (e) => e.braziersLit, (e, v) => e.braziersLit = v),
+      Field.integer(
+        'motesCollected',
+        (e) => e.motesCollected,
+        (e, v) => e.motesCollected = v,
+      ),
+      Field.integer(
+        'braziersLit',
+        (e) => e.braziersLit,
+        (e, v) => e.braziersLit = v,
+      ),
       Field.integer('hitsTaken', (e) => e.hitsTaken, (e, v) => e.hitsTaken = v),
       Field.number('torchFuel', (e) => e.torchFuel, (e, v) => e.torchFuel = v),
-      Field.boolean('portalUnlocked', (e) => e.portalUnlocked, (e, v) => e.portalUnlocked = v),
-      Field.boolean('levelCompleted', (e) => e.levelCompleted, (e, v) => e.levelCompleted = v),
+      Field.boolean(
+        'portalUnlocked',
+        (e) => e.portalUnlocked,
+        (e, v) => e.portalUnlocked = v,
+      ),
+      Field.boolean(
+        'levelCompleted',
+        (e) => e.levelCompleted,
+        (e, v) => e.levelCompleted = v,
+      ),
     ],
   );
 
@@ -216,7 +257,9 @@ final class DungeonExplorer extends Behaviour {
     }
 
     // Check portal exit
-    if (portalUnlocked && Vec2(next.x - portalPosition.x, next.y - portalPosition.y).length <= 16.0) {
+    if (portalUnlocked &&
+        Vec2(next.x - portalPosition.x, next.y - portalPosition.y).length <=
+            16.0) {
       levelCompleted = true;
     }
 
@@ -244,7 +287,10 @@ void registerDungeon2DSpecs(ComponentRegistry registry) {
 /// Builds a playable 2D dungeon [Scene] (Lantern port) with a walled room,
 /// braziers, light motes, shade enemies, portal, animated explorer, camera,
 /// and in-canvas HUD.
-Scene buildDungeon2DScene({double designWidth = 320, double designHeight = 180}) {
+Scene buildDungeon2DScene({
+  double designWidth = 320,
+  double designHeight = 180,
+}) {
   final scene = Scene('Dungeon2D');
 
   final camGo = scene.createGameObject(
@@ -265,19 +311,34 @@ Scene buildDungeon2DScene({double designWidth = 320, double designHeight = 180})
     tileHeight: 16,
     tileset: [SpriteRegion.white, SpriteRegion.white],
   );
-  layer.fill((c, r) => (c == 0 || r == 0 || c == cols - 1 || r == rows - 1) ? 1 : 0);
+  layer.fill(
+    (c, r) => (c == 0 || r == 0 || c == cols - 1 || r == rows - 1) ? 1 : 0,
+  );
 
   final tilemap = TilemapComponent(layer, solidTiles: const {1});
   scene.createGameObject('Tilemap', components: [tilemap]);
 
   // Braziers
-  for (final (i, p) in [(0, const Vec3(96, 64, 0)), (1, const Vec3(160, 64, 0))]) {
+  for (final (i, p) in [
+    (0, const Vec3(96, 64, 0)),
+    (1, const Vec3(160, 64, 0)),
+  ]) {
     scene.createGameObject(
       'Brazier_$i',
       position: p,
       components: [
-        SpriteRenderer(region: SpriteRegion.white, width: 10, height: 10, color: 0x554433FF, layer: 1),
-        Light.point(color: const LinearColor(1.0, 0.65, 0.25), intensity: 0.0, range: 12.0),
+        SpriteRenderer(
+          region: SpriteRegion.white,
+          width: 10,
+          height: 10,
+          color: 0x554433FF,
+          layer: 1,
+        ),
+        Light.point(
+          color: const LinearColor(1.0, 0.65, 0.25),
+          intensity: 0.0,
+          range: 12.0,
+        ),
         BrazierBehaviour(),
       ],
     );
@@ -288,7 +349,14 @@ Scene buildDungeon2DScene({double designWidth = 320, double designHeight = 180})
     'Mote_0',
     position: const Vec3(80, 64, 0),
     components: [
-      SpriteRenderer(region: SpriteRegion.white, width: 6, height: 6, color: 0xFFEE66FF, glow: 0.7, layer: 1),
+      SpriteRenderer(
+        region: SpriteRegion.white,
+        width: 6,
+        height: 6,
+        color: 0xFFEE66FF,
+        glow: 0.7,
+        layer: 1,
+      ),
       MoteBehaviour(),
     ],
   );
@@ -298,7 +366,13 @@ Scene buildDungeon2DScene({double designWidth = 320, double designHeight = 180})
     'Shade_0',
     position: const Vec3(192, 96, 0),
     components: [
-      SpriteRenderer(region: SpriteRegion.white, width: 11, height: 11, color: 0x9922CCFF, layer: 2),
+      SpriteRenderer(
+        region: SpriteRegion.white,
+        width: 11,
+        height: 11,
+        color: 0x9922CCFF,
+        layer: 2,
+      ),
       ShadeBehaviour(),
     ],
   );
@@ -310,7 +384,13 @@ Scene buildDungeon2DScene({double designWidth = 320, double designHeight = 180})
     position: const Vec3(64, 64, 0),
     tag: 'Player',
     components: [
-      SpriteRenderer(region: idleRegion, width: 12, height: 12, color: 0x4DFFAAFF, layer: 2),
+      SpriteRenderer(
+        region: idleRegion,
+        width: 12,
+        height: 12,
+        color: 0x4DFFAAFF,
+        layer: 2,
+      ),
       SpriteAnimator(
         clips: {
           'idle': [idleRegion],
@@ -326,15 +406,7 @@ Scene buildDungeon2DScene({double designWidth = 320, double designHeight = 180})
 
   // HUD overlay
   final hud = UICanvas(designWidth: designWidth, designHeight: designHeight);
-  hud.add(
-    UIPanel(
-      anchor: UIAnchor.topLeft,
-      x: 6,
-      y: 6,
-      width: 96,
-      height: 20,
-    ),
-  );
+  hud.add(UIPanel(anchor: UIAnchor.topLeft, x: 6, y: 6, width: 96, height: 20));
   hud.add(
     UIProgressBar(
       anchor: UIAnchor.topLeft,

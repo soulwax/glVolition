@@ -1,12 +1,7 @@
 part of '../../engine.dart';
 
 /// Built-in cross-section preset modes supported by [SplineExtrudeComponent] (E54-2).
-enum ExtrudeProfilePreset {
-  road,
-  riverRibbon,
-  circle,
-  boxBeam,
-}
+enum ExtrudeProfilePreset { road, riverRibbon, circle, boxBeam }
 
 /// Procedurally sweeps a cross-section profile along a sibling or linked [SplinePath]
 /// using twist-free Bishop rotation-minimizing frames (or horizon-locked mode for roads),
@@ -69,7 +64,11 @@ final class SplineExtrudeComponent extends Component {
       Field.number('radius', (s) => s.radius, (s, v) => s.radius = v),
       Field.boolean('upLocked', (s) => s.upLocked, (s, v) => s.upLocked = v),
       Field.boolean('capEnds', (s) => s.capEnds, (s, v) => s.capEnds = v),
-      Field.boolean('closedLoop', (s) => s.closedLoop, (s, v) => s.closedLoop = v),
+      Field.boolean(
+        'closedLoop',
+        (s) => s.closedLoop,
+        (s, v) => s.closedLoop = v,
+      ),
       Field.number('uvScaleU', (s) => s.uvScaleU, (s, v) => s.uvScaleU = v),
       Field.number('uvScaleV', (s) => s.uvScaleV, (s, v) => s.uvScaleV = v),
     ],
@@ -86,24 +85,30 @@ final class SplineExtrudeComponent extends Component {
     if (customProfile != null) return customProfile!;
     return switch (profilePreset) {
       ExtrudeProfilePreset.road => ext.CrossSectionProfile.road(width: width),
-      ExtrudeProfilePreset.riverRibbon => ext.CrossSectionProfile.riverRibbon(width: width),
-      ExtrudeProfilePreset.circle => ext.CrossSectionProfile.circle(radius: radius),
-      ExtrudeProfilePreset.boxBeam => ext.CrossSectionProfile.boxBeam(width: width, height: height),
+      ExtrudeProfilePreset.riverRibbon => ext.CrossSectionProfile.riverRibbon(
+        width: width,
+      ),
+      ExtrudeProfilePreset.circle => ext.CrossSectionProfile.circle(
+        radius: radius,
+      ),
+      ExtrudeProfilePreset.boxBeam => ext.CrossSectionProfile.boxBeam(
+        width: width,
+        height: height,
+      ),
     };
   }
 
   /// Generates extruded geometry from [targetPath] (or sibling/linked [path]) and
   /// uploads the mesh to a sibling [MeshRenderer] when attached to an active [Scene].
   ext.ExtrudedMeshData? rebuildMesh([SplinePath? targetPath]) {
-    final activePath = targetPath ?? path ?? (isAttached ? getComponent<SplinePath>() : null);
+    final activePath =
+        targetPath ?? path ?? (isAttached ? getComponent<SplinePath>() : null);
     if (activePath == null) return null;
 
     final pts = activePath.spline.controlPoints;
     if (pts.length < 2) return null;
 
-    final extPoints = [
-      for (final p in pts) ext.ExtVec3(p.x, p.y, p.z),
-    ];
+    final extPoints = [for (final p in pts) ext.ExtVec3(p.x, p.y, p.z)];
     final samples = ext.ExtrusionResampler.fromCatmullRom(
       extPoints,
       closed: activePath.spline.closed || closedLoop,
@@ -178,11 +183,7 @@ final class SplineExtrudeComponent extends Component {
 
       if (mr == null && autoCreateMeshRenderer) {
         mr = gameObject.addComponent(
-          MeshRenderer(
-            mesh: handle,
-            meshData: meshData,
-            material: material,
-          ),
+          MeshRenderer(mesh: handle, meshData: meshData, material: material),
         );
       } else if (mr != null) {
         mr.mesh = handle;
@@ -232,14 +233,31 @@ final class ExtrusionInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,

@@ -23,8 +23,8 @@ final class GameObject {
   bool _destroyed = false;
 
   GameObject._(this._scene, this.name, {this.tag = 'Untagged', int layer = 0})
-      : _layer = layer,
-        node = SceneNode.group(name: name) {
+    : _layer = layer,
+      node = SceneNode.group(name: name) {
     if (layer < 0 || layer > 31) throw RangeError.range(layer, 0, 31, 'layer');
     transform = TransformComponent._();
     transform._gameObject = this;
@@ -81,7 +81,8 @@ final class GameObject {
   List<Component> get components => List.unmodifiable(_components);
 
   bool get activeSelf => _activeSelf;
-  bool get activeInHierarchy => !_destroyed && _activeSelf && (_parent?.activeInHierarchy ?? true);
+  bool get activeInHierarchy =>
+      !_destroyed && _activeSelf && (_parent?.activeInHierarchy ?? true);
   bool get isDestroyed => _destroyed;
 
   void setActive(bool value) {
@@ -105,9 +106,13 @@ final class GameObject {
   void setParent(GameObject? newParent, {bool worldPositionStays = true}) {
     if (newParent == _parent) return;
     if (newParent != null) {
-      if (newParent.scene != scene) throw ArgumentError('Cannot parent across scenes');
+      if (newParent.scene != scene) {
+        throw ArgumentError('Cannot parent across scenes');
+      }
       for (GameObject? p = newParent; p != null; p = p._parent) {
-        if (p == this) throw ArgumentError('Cannot parent $name under its own descendant');
+        if (p == this) {
+          throw ArgumentError('Cannot parent $name under its own descendant');
+        }
       }
     }
     final worldPos = transform.position;
@@ -128,9 +133,13 @@ final class GameObject {
 
   /// Attaches [component] and runs its lifecycle up to where this object is.
   T addComponent<T extends Component>(T component) {
-    if (_destroyed || _destroyRequested) throw StateError('GameObject $name is destroyed');
+    if (_destroyed || _destroyRequested) {
+      throw StateError('GameObject $name is destroyed');
+    }
     if (component._gameObject != null) {
-      throw StateError('$component is already attached to ${component._gameObject!.name}');
+      throw StateError(
+        '$component is already attached to ${component._gameObject!.name}',
+      );
     }
     component._gameObject = this;
     _components.add(component);
@@ -150,7 +159,8 @@ final class GameObject {
   T requireComponent<T>() =>
       getComponent<T>() ?? (throw StateError('GameObject $name has no $T'));
 
-  Iterable<T> getComponents<T>() => _components.where((c) => !c._destroyRequested).whereType<T>();
+  Iterable<T> getComponents<T>() =>
+      _components.where((c) => !c._destroyRequested).whereType<T>();
 
   T? getComponentInChildren<T>({bool includeInactive = false}) {
     if (includeInactive || activeInHierarchy) {
@@ -158,7 +168,9 @@ final class GameObject {
       if (own != null) return own;
     }
     for (final child in _children) {
-      final found = child.getComponentInChildren<T>(includeInactive: includeInactive);
+      final found = child.getComponentInChildren<T>(
+        includeInactive: includeInactive,
+      );
       if (found != null) return found;
     }
     return null;
@@ -177,7 +189,9 @@ final class GameObject {
   GameObject? find(String childName) {
     GameObject? current = this;
     for (final part in childName.split('/')) {
-      current = current?._children.where((c) => c.name == part && !c._destroyRequested).firstOrNull;
+      current = current?._children
+          .where((c) => c.name == part && !c._destroyRequested)
+          .firstOrNull;
       if (current == null) return null;
     }
     return current;
@@ -191,16 +205,15 @@ final class GameObject {
     double? scale,
     String? name,
     bool active = true,
-  }) =>
-      scene.clone(
-        this,
-        parent: parent,
-        position: position,
-        rotation: rotation,
-        scale: scale,
-        name: name,
-        active: active,
-      );
+  }) => scene.clone(
+    this,
+    parent: parent,
+    position: position,
+    rotation: rotation,
+    scale: scale,
+    name: name,
+    active: active,
+  );
 
   /// Smoothly interpolates uniform scale over [duration] seconds (E29-1).
   Tween<double> tweenScale(double target, double duration, {EaseFunc? ease}) =>

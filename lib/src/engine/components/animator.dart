@@ -25,8 +25,13 @@ final class Animator extends Behaviour {
   void addClip(AnimationClip clip) => clips[clip.name] = clip;
 
   void play(String clipName, {double speed = 1.0}) {
-    final clip = clips[clipName] ??
-        (throw ArgumentError.value(clipName, 'clipName', 'AnimationClip not registered on Animator'));
+    final clip =
+        clips[clipName] ??
+        (throw ArgumentError.value(
+          clipName,
+          'clipName',
+          'AnimationClip not registered on Animator',
+        ));
     player.play(clip, speed: speed);
   }
 

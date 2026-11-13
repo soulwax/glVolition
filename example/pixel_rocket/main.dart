@@ -23,11 +23,7 @@ void main() async {
   final RocketDirector director;
   try {
     final visuals = await RocketVisualAssets.load(runner.engine.assets);
-    director = buildPixelRocketScene(
-      runner.engine,
-      hud: hud,
-      visuals: visuals,
-    );
+    director = buildPixelRocketScene(runner.engine, hud: hud, visuals: visuals);
   } catch (e, s) {
     print('Pixel Rocket failed to load: $e\n$s');
     hud.message('LOAD FAILED', '$e');
@@ -45,11 +41,14 @@ final class DomRocketHud implements RocketHud {
   final web.Element? _best = web.document.querySelector('#best');
   final web.Element? _speed = web.document.querySelector('#speed');
   final web.Element? _shields = web.document.querySelector('#shields');
-  final web.HTMLElement? _fuel = web.document.querySelector('#fuel-fill') as web.HTMLElement?;
-  final web.HTMLElement? _card = web.document.querySelector('#card') as web.HTMLElement?;
+  final web.HTMLElement? _fuel =
+      web.document.querySelector('#fuel-fill') as web.HTMLElement?;
+  final web.HTMLElement? _card =
+      web.document.querySelector('#card') as web.HTMLElement?;
   final web.Element? _title = web.document.querySelector('#card-title');
   final web.Element? _body = web.document.querySelector('#card-body');
-  final web.HTMLElement? _boost = web.document.querySelector('#boost') as web.HTMLElement?;
+  final web.HTMLElement? _boost =
+      web.document.querySelector('#boost') as web.HTMLElement?;
 
   String _last = '';
 

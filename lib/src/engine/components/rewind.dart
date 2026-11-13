@@ -49,7 +49,10 @@ final class TimeRewindComponent extends Behaviour {
   /// Rewinds directly back by [seconds] without remaining in continuous rewind mode.
   bool rewindSeconds(double seconds) {
     if (_buffer.isEmpty) return false;
-    final targetTime = math.max(_buffer.oldest!.time, _buffer.latest!.time - seconds);
+    final targetTime = math.max(
+      _buffer.oldest!.time,
+      _buffer.latest!.time - seconds,
+    );
     _applyTimeSample(targetTime);
     _buffer.truncateAfter(targetTime);
     _clock = targetTime;
@@ -75,25 +78,22 @@ final class TimeRewindComponent extends Behaviour {
       custom = w.toBytes();
     }
 
-    _buffer.push(
-      _clock,
-      (
-        transform: snap.TransformSample(
-          time: _clock,
-          px: p.x,
-          py: p.y,
-          pz: p.z,
-          qx: q.x,
-          qy: q.y,
-          qz: q.z,
-          qw: q.w,
-          sx: s,
-          sy: s,
-          sz: s,
-        ),
-        customBytes: custom,
+    _buffer.push(_clock, (
+      transform: snap.TransformSample(
+        time: _clock,
+        px: p.x,
+        py: p.y,
+        pz: p.z,
+        qx: q.x,
+        qy: q.y,
+        qz: q.z,
+        qw: q.w,
+        sx: s,
+        sy: s,
+        sz: s,
       ),
-    );
+      customBytes: custom,
+    ));
   }
 
   void _applyTimeSample(double targetTime) {
@@ -165,19 +165,21 @@ final class GhostRecorderComponent extends Behaviour {
       final p = transform.position;
       final q = transform.rotation;
       final s = transform.localScale;
-      track.addSample(snap.TransformSample(
-        time: _elapsed,
-        px: p.x,
-        py: p.y,
-        pz: p.z,
-        qx: q.x,
-        qy: q.y,
-        qz: q.z,
-        qw: q.w,
-        sx: s,
-        sy: s,
-        sz: s,
-      ));
+      track.addSample(
+        snap.TransformSample(
+          time: _elapsed,
+          px: p.x,
+          py: p.y,
+          pz: p.z,
+          qx: q.x,
+          qy: q.y,
+          qz: q.z,
+          qw: q.w,
+          sx: s,
+          sy: s,
+          sz: s,
+        ),
+      );
     }
   }
 }
@@ -192,10 +194,10 @@ final class GhostPlaybackComponent extends Behaviour {
     bool loop = true,
     bool autoPlay = true,
   }) : player = snap.GhostPlayer(
-          track,
-          playbackSpeed: playbackSpeed,
-          loop: loop,
-        ) {
+         track,
+         playbackSpeed: playbackSpeed,
+         loop: loop,
+       ) {
     if (autoPlay) player.play();
   }
 
@@ -204,13 +206,12 @@ final class GhostPlaybackComponent extends Behaviour {
     double playbackSpeed = 1.0,
     bool loop = true,
     bool autoPlay = true,
-  }) =>
-      GhostPlaybackComponent(
-        snap.GhostTrack.decodeBinary(bytes),
-        playbackSpeed: playbackSpeed,
-        loop: loop,
-        autoPlay: autoPlay,
-      );
+  }) => GhostPlaybackComponent(
+    snap.GhostTrack.decodeBinary(bytes),
+    playbackSpeed: playbackSpeed,
+    loop: loop,
+    autoPlay: autoPlay,
+  );
 
   @override
   void update() {

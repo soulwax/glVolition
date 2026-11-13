@@ -6,22 +6,18 @@ part of '../../engine.dart';
 abstract final class SceneSerializer {
   static const int schemaVersion = 1;
 
-  static String toJsonString(
-    Scene scene, {
-    ComponentRegistry? registry,
-  }) =>
+  static String toJsonString(Scene scene, {ComponentRegistry? registry}) =>
       jsonEncode(toJson(scene, registry: registry));
 
   static Scene fromJsonString(
     String json, {
     ComponentRegistry? registry,
     Map<String, Prefab> prefabs = const {},
-  }) =>
-      fromJson(
-        jsonDecode(json) as Map<String, Object?>,
-        registry: registry,
-        prefabs: prefabs,
-      );
+  }) => fromJson(
+    jsonDecode(json) as Map<String, Object?>,
+    registry: registry,
+    prefabs: prefabs,
+  );
 
   static Map<String, Object?> toJson(
     Scene scene, {
@@ -43,7 +39,8 @@ abstract final class SceneSerializer {
         'fogColor': _colorToJson(rs.fogColor),
         'fogStart': rs.fogStart,
         'fogEnd': rs.fogEnd,
-        if (rs.fogHeightFalloff != null) 'fogHeightFalloff': rs.fogHeightFalloff,
+        if (rs.fogHeightFalloff != null)
+          'fogHeightFalloff': rs.fogHeightFalloff,
         if (rs.fogDensity != null) 'fogDensity': rs.fogDensity,
         'shadowFilterRadius': rs.shadowFilterRadius,
         'shadowBias': rs.shadowBias,
@@ -58,7 +55,10 @@ abstract final class SceneSerializer {
     };
   }
 
-  static Map<String, Object?> _objectToJson(GameObject go, ComponentRegistry reg) {
+  static Map<String, Object?> _objectToJson(
+    GameObject go,
+    ComponentRegistry reg,
+  ) {
     final t = go.transform;
     final comps = <Map<String, Object?>>[];
     for (final c in go._components) {
@@ -105,20 +105,38 @@ abstract final class SceneSerializer {
     final rsMap = data['renderSettings'] as Map<String, Object?>?;
     if (rsMap != null) {
       final rs = scene.renderSettings;
-      if (rsMap['clearColor'] != null) rs.clearColor = _colorFromJson(rsMap['clearColor']);
-      if (rsMap['ambientColor'] != null) rs.ambientColor = _colorFromJson(rsMap['ambientColor']);
-      if (rsMap['ambientIntensity'] != null) rs.ambientIntensity = (rsMap['ambientIntensity'] as num).toDouble();
-      if (rsMap['reflectionColor'] != null) rs.reflectionColor = _colorFromJson(rsMap['reflectionColor']);
+      if (rsMap['clearColor'] != null) {
+        rs.clearColor = _colorFromJson(rsMap['clearColor']);
+      }
+      if (rsMap['ambientColor'] != null) {
+        rs.ambientColor = _colorFromJson(rsMap['ambientColor']);
+      }
+      if (rsMap['ambientIntensity'] != null) {
+        rs.ambientIntensity = (rsMap['ambientIntensity'] as num).toDouble();
+      }
+      if (rsMap['reflectionColor'] != null) {
+        rs.reflectionColor = _colorFromJson(rsMap['reflectionColor']);
+      }
       if (rsMap['reflectionIntensity'] != null) {
-        rs.reflectionIntensity = (rsMap['reflectionIntensity'] as num).toDouble();
+        rs.reflectionIntensity = (rsMap['reflectionIntensity'] as num)
+            .toDouble();
       }
       if (rsMap['reflectionConfidence'] != null) {
-        rs.reflectionConfidence = (rsMap['reflectionConfidence'] as num).toDouble();
+        rs.reflectionConfidence = (rsMap['reflectionConfidence'] as num)
+            .toDouble();
       }
-      if (rsMap['fogEnabled'] != null) rs.fogEnabled = rsMap['fogEnabled'] as bool;
-      if (rsMap['fogColor'] != null) rs.fogColor = _colorFromJson(rsMap['fogColor']);
-      if (rsMap['fogStart'] != null) rs.fogStart = (rsMap['fogStart'] as num).toDouble();
-      if (rsMap['fogEnd'] != null) rs.fogEnd = (rsMap['fogEnd'] as num).toDouble();
+      if (rsMap['fogEnabled'] != null) {
+        rs.fogEnabled = rsMap['fogEnabled'] as bool;
+      }
+      if (rsMap['fogColor'] != null) {
+        rs.fogColor = _colorFromJson(rsMap['fogColor']);
+      }
+      if (rsMap['fogStart'] != null) {
+        rs.fogStart = (rsMap['fogStart'] as num).toDouble();
+      }
+      if (rsMap['fogEnd'] != null) {
+        rs.fogEnd = (rsMap['fogEnd'] as num).toDouble();
+      }
       if (rsMap.containsKey('fogHeightFalloff')) {
         final raw = rsMap['fogHeightFalloff'];
         rs.fogHeightFalloff = raw is num ? raw.toDouble() : null;
@@ -149,7 +167,13 @@ abstract final class SceneSerializer {
 
     final objects = (data['objects'] as List<Object?>?) ?? const [];
     for (final raw in objects) {
-      _buildObjectFromJson(scene, null, raw as Map<String, Object?>, reg, prefabs);
+      _buildObjectFromJson(
+        scene,
+        null,
+        raw as Map<String, Object?>,
+        reg,
+        prefabs,
+      );
     }
     return scene;
   }
@@ -193,10 +217,18 @@ abstract final class SceneSerializer {
 
     final tMap = data['transform'] as Map<String, Object?>?;
     if (tMap != null) {
-      if (tMap['p'] != null) go.transform.localPosition = _vec3FromJson(tMap['p']);
-      if (tMap['r'] != null) go.transform.localRotation = _quatFromJson(tMap['r']);
-      if (tMap['s'] != null) go.transform.localScale = (tMap['s'] as num).toDouble();
-      if (tMap['stretch'] != null) go.transform.localStretch = _vec3FromJson(tMap['stretch']);
+      if (tMap['p'] != null) {
+        go.transform.localPosition = _vec3FromJson(tMap['p']);
+      }
+      if (tMap['r'] != null) {
+        go.transform.localRotation = _quatFromJson(tMap['r']);
+      }
+      if (tMap['s'] != null) {
+        go.transform.localScale = (tMap['s'] as num).toDouble();
+      }
+      if (tMap['stretch'] != null) {
+        go.transform.localStretch = _vec3FromJson(tMap['stretch']);
+      }
     }
 
     final comps = (data['components'] as List<Object?>?) ?? const [];
@@ -224,36 +256,42 @@ abstract final class SceneSerializer {
 
     final children = (data['children'] as List<Object?>?) ?? const [];
     for (final rawChild in children) {
-      _buildObjectFromJson(go.scene, go, rawChild as Map<String, Object?>, reg, prefabs);
+      _buildObjectFromJson(
+        go.scene,
+        go,
+        rawChild as Map<String, Object?>,
+        reg,
+        prefabs,
+      );
     }
   }
 
   static Map<String, Object?> _postToJson(PostProcessState p) => {
-        'exposure': p.exposure,
-        'bloomStrength': p.bloomStrength,
-        'ssaoStrength': p.ssaoStrength,
-        'depthOfFieldStrength': p.depthOfFieldStrength,
-        'vignette': p.vignette,
-        'grain': p.grain,
-        'rainIntensity': p.rainIntensity,
-        'surfaceWetness': p.surfaceWetness,
-        'surfaceSnowCoverage': p.surfaceSnowCoverage,
-        'surfaceDissolution': p.surfaceDissolution,
-        'rainWindowVisibility': p.rainWindowVisibility,
-        'ditherStrength': p.ditherStrength,
-        'colorGradeStrength': p.colorGradeStrength,
-        'affineWarpStrength': p.affineWarpStrength,
-        'vertexSnapGrid': p.vertexSnapGrid,
-        'quantizationBits': p.quantizationBits,
-        'vhsChromaWeight': p.vhsChromaWeight,
-        'vhsTrackingWeight': p.vhsTrackingWeight,
-        'vhsNoiseWeight': p.vhsNoiseWeight,
-        'vhsHeadSwitchWeight': p.vhsHeadSwitchWeight,
-        'vhsDropoutWeight': p.vhsDropoutWeight,
-        'vhsGhostWeight': p.vhsGhostWeight,
-        'reducedMotion': p.reducedMotion,
-        'toneMapping': p.toneMapping.name,
-      };
+    'exposure': p.exposure,
+    'bloomStrength': p.bloomStrength,
+    'ssaoStrength': p.ssaoStrength,
+    'depthOfFieldStrength': p.depthOfFieldStrength,
+    'vignette': p.vignette,
+    'grain': p.grain,
+    'rainIntensity': p.rainIntensity,
+    'surfaceWetness': p.surfaceWetness,
+    'surfaceSnowCoverage': p.surfaceSnowCoverage,
+    'surfaceDissolution': p.surfaceDissolution,
+    'rainWindowVisibility': p.rainWindowVisibility,
+    'ditherStrength': p.ditherStrength,
+    'colorGradeStrength': p.colorGradeStrength,
+    'affineWarpStrength': p.affineWarpStrength,
+    'vertexSnapGrid': p.vertexSnapGrid,
+    'quantizationBits': p.quantizationBits,
+    'vhsChromaWeight': p.vhsChromaWeight,
+    'vhsTrackingWeight': p.vhsTrackingWeight,
+    'vhsNoiseWeight': p.vhsNoiseWeight,
+    'vhsHeadSwitchWeight': p.vhsHeadSwitchWeight,
+    'vhsDropoutWeight': p.vhsDropoutWeight,
+    'vhsGhostWeight': p.vhsGhostWeight,
+    'reducedMotion': p.reducedMotion,
+    'toneMapping': p.toneMapping.name,
+  };
 
   static PostProcessState _postFromJson(Map<String, Object?> map) {
     const defaults = PostProcessState();

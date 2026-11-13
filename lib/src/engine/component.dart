@@ -18,7 +18,8 @@ abstract class Component {
   bool _destroyRequested = false;
 
   GameObject get gameObject =>
-      _gameObject ?? (throw StateError('$runtimeType is not attached to a GameObject'));
+      _gameObject ??
+      (throw StateError('$runtimeType is not attached to a GameObject'));
   bool get isAttached => _gameObject != null;
 
   TransformComponent get transform => gameObject.transform;
@@ -48,13 +49,15 @@ abstract class Component {
 
   T? getComponent<T>() => gameObject.getComponent<T>();
   T requireComponent<T>() => gameObject.requireComponent<T>();
-  T addComponent<T extends Component>(T component) => gameObject.addComponent(component);
+  T addComponent<T extends Component>(T component) =>
+      gameObject.addComponent(component);
 
   /// Destroys this component at the end of the frame.
   void destroy() => scene._requestDestroyComponent(this);
 
   @override
-  String toString() => '$runtimeType#$instanceId(${_gameObject?.name ?? 'detached'})';
+  String toString() =>
+      '$runtimeType#$instanceId(${_gameObject?.name ?? 'detached'})';
 }
 
 /// A component that can be switched on and off and receives per-frame
@@ -131,8 +134,16 @@ abstract class Behaviour extends Component {
   /// Runs [action] after [delaySeconds] of game time, then every
   /// [repeatEvery] seconds if given. Cancelled automatically when this
   /// behaviour is destroyed.
-  Invocation invoke(double delaySeconds, void Function() action, {double? repeatEvery}) =>
-      engine.invoke(delaySeconds, action, repeatEvery: repeatEvery, owner: this);
+  Invocation invoke(
+    double delaySeconds,
+    void Function() action, {
+    double? repeatEvery,
+  }) => engine.invoke(
+    delaySeconds,
+    action,
+    repeatEvery: repeatEvery,
+    owner: this,
+  );
 
   /// Starts a generator [Coroutine] (`Iterable<YieldInstruction?> Function()`)
   /// that steps each frame after `update()` and cancels automatically if this

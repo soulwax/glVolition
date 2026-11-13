@@ -29,17 +29,14 @@ final class _ListenerEntry<E> {
 /// Listeners bound to an `owner` [Component] are automatically skipped when the
 /// component is inactive and removed when the component is destroyed.
 final class SceneEvents {
-  final Map<Type, List< Object>> _listenersByType = {};
+  final Map<Type, List<Object>> _listenersByType = {};
 
   /// Subscribes [handler] to events of type [E].
   ///
   /// When [owner] is provided, the listener only fires while
   /// `owner.isActiveAndEnabled` is true and is automatically garbage-collected
   /// once `owner.isDestroyed` is true.
-  EventSubscription on<E>(
-    void Function(E event) handler, {
-    Component? owner,
-  }) {
+  EventSubscription on<E>(void Function(E event) handler, {Component? owner}) {
     final list = _listenersByType.putIfAbsent(E, () => <_ListenerEntry<E>>[]);
     final entry = _ListenerEntry<E>(handler, owner);
     list.add(entry);
@@ -113,7 +110,7 @@ final class Coroutine {
   bool _started = false;
 
   Coroutine._(this.owner, Iterable<YieldInstruction?> iterable)
-      : _iterator = iterable.iterator;
+    : _iterator = iterable.iterator;
 
   bool get isFinished => _finished;
 

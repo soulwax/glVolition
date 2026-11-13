@@ -53,9 +53,21 @@ final class LightProbeVolumeComponent extends Behaviour {
       Field.integer('ny', (p) => p.ny, (p, v) => p.ny = v),
       Field.integer('nz', (p) => p.nz, (p, v) => p.nz = v),
       Field.color('skyColor', (p) => p.skyColor, (p, v) => p.skyColor = v),
-      Field.color('horizonColor', (p) => p.horizonColor, (p, v) => p.horizonColor = v),
-      Field.color('groundColor', (p) => p.groundColor, (p, v) => p.groundColor = v),
-      Field.boolean('autoSyncSky', (p) => p.autoSyncSky, (p, v) => p.autoSyncSky = v),
+      Field.color(
+        'horizonColor',
+        (p) => p.horizonColor,
+        (p, v) => p.horizonColor = v,
+      ),
+      Field.color(
+        'groundColor',
+        (p) => p.groundColor,
+        (p, v) => p.groundColor = v,
+      ),
+      Field.boolean(
+        'autoSyncSky',
+        (p) => p.autoSyncSky,
+        (p, v) => p.autoSyncSky = v,
+      ),
       Field.boolean(
         'checkColliderOcclusion',
         (p) => p.checkColliderOcclusion,
@@ -119,13 +131,21 @@ final class LightProbeVolumeComponent extends Behaviour {
     if (dayNights.isNotEmpty) {
       final stop = dayNights.first.lastSkyStop;
       if (stop != null) {
-        skyColor = LinearColor(stop.zenithColor.r, stop.zenithColor.g, stop.zenithColor.b);
+        skyColor = LinearColor(
+          stop.zenithColor.r,
+          stop.zenithColor.g,
+          stop.zenithColor.b,
+        );
         horizonColor = LinearColor(
           stop.horizonColor.r,
           stop.horizonColor.g,
           stop.horizonColor.b,
         );
-        groundColor = LinearColor(stop.groundColor.r, stop.groundColor.g, stop.groundColor.b);
+        groundColor = LinearColor(
+          stop.groundColor.r,
+          stop.groundColor.g,
+          stop.groundColor.b,
+        );
         return true;
       }
     }
@@ -185,7 +205,9 @@ final class LightProbeVolumeComponent extends Behaviour {
         final wp = Vec3(p.x, p.y, p.z);
         if (occlusionPredicate != null && occlusionPredicate!(wp)) return true;
         if (checkColliderOcclusion && isAttached) {
-          return scene.physics.overlapSphere(wp, 0.15, includeTriggers: false).isNotEmpty;
+          return scene.physics
+              .overlapSphere(wp, 0.15, includeTriggers: false)
+              .isNotEmpty;
         }
         return false;
       };
@@ -193,7 +215,8 @@ final class LightProbeVolumeComponent extends Behaviour {
 
     bool Function(probe.ProbeVec3 from, probe.ProbeVec3 to)? rayFn;
     if (shadowRayPredicate != null) {
-      rayFn = (a, b) => shadowRayPredicate!(Vec3(a.x, a.y, a.z), Vec3(b.x, b.y, b.z));
+      rayFn = (a, b) =>
+          shadowRayPredicate!(Vec3(a.x, a.y, a.z), Vec3(b.x, b.y, b.z));
     }
 
     grid.bakeFromLights(
@@ -211,8 +234,9 @@ final class LightProbeVolumeComponent extends Behaviour {
     grid.clear();
   }
 
-  LinearColor sampleIrradiance(Vec3 worldPos, Vec3 normal) =>
-      _toLinearColor(grid.sampleIrradiance(_toProbeVec3(worldPos), _toProbeVec3(normal)));
+  LinearColor sampleIrradiance(Vec3 worldPos, Vec3 normal) => _toLinearColor(
+    grid.sampleIrradiance(_toProbeVec3(worldPos), _toProbeVec3(normal)),
+  );
 
   Float32List sampleUniformSH27(Vec3 worldPos) =>
       grid.sampleAt(_toProbeVec3(worldPos)).toFlatArray27();
@@ -237,14 +261,31 @@ final class ProbeGiInspectorUI {
     final hovered = rect.contains(inp.mouseX, inp.mouseY);
     if (hovered && inp.wasMouseClicked) state.activeButtonId = id;
     final pressed = hovered && state.activeButtonId == id && inp.isMouseDown;
-    final clicked = hovered && state.activeButtonId == id && inp.wasMouseReleased;
-    if (inp.wasMouseReleased && state.activeButtonId == id) state.activeButtonId = null;
+    final clicked =
+        hovered && state.activeButtonId == id && inp.wasMouseReleased;
+    if (inp.wasMouseReleased && state.activeButtonId == id) {
+      state.activeButtonId = null;
+    }
 
     final bg = pressed
         ? ui.style.buttonActive
         : (hovered ? ui.style.buttonHover : ui.style.buttonBg);
-    dl.addRectFilled(rect.x, rect.y, rect.width, rect.height, bg, cornerRadius: ui.style.frameRounding);
-    dl.addRectOutline(rect.x, rect.y, rect.width, rect.height, ui.style.windowBorder, cornerRadius: ui.style.frameRounding);
+    dl.addRectFilled(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      bg,
+      cornerRadius: ui.style.frameRounding,
+    );
+    dl.addRectOutline(
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      ui.style.windowBorder,
+      cornerRadius: ui.style.frameRounding,
+    );
     final textW = label.length * (ui.style.fontSize * 0.6);
     dl.addText(
       label,
@@ -281,7 +322,9 @@ final class ProbeGiInspectorUI {
     ui.labelValue(
       'Occluded',
       '${probes.occludedProbeCount}',
-      valueColor: probes.occludedProbeCount > 0 ? VoxColor.yellow : VoxColor.green,
+      valueColor: probes.occludedProbeCount > 0
+          ? VoxColor.yellow
+          : VoxColor.green,
     );
     ui.labelValue(
       'Bake Pass',

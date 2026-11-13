@@ -45,7 +45,10 @@ sealed class UIElement {
       UIAnchor.topCenter => (canvasW * 0.5 - width * 0.5, 0.0),
       UIAnchor.topRight => (canvasW - width, 0.0),
       UIAnchor.centerLeft => (0.0, canvasH * 0.5 - height * 0.5),
-      UIAnchor.center => (canvasW * 0.5 - width * 0.5, canvasH * 0.5 - height * 0.5),
+      UIAnchor.center => (
+        canvasW * 0.5 - width * 0.5,
+        canvasH * 0.5 - height * 0.5,
+      ),
       UIAnchor.centerRight => (canvasW - width, canvasH * 0.5 - height * 0.5),
       UIAnchor.bottomLeft => (0.0, canvasH - height),
       UIAnchor.bottomCenter => (canvasW * 0.5 - width * 0.5, canvasH - height),
@@ -515,8 +518,9 @@ final class UIDropdown extends UIElement {
     super.visible,
   });
 
-  String get selectedOption =>
-      options.isNotEmpty ? options[selectedIndex.clamp(0, options.length - 1)] : '';
+  String get selectedOption => options.isNotEmpty
+      ? options[selectedIndex.clamp(0, options.length - 1)]
+      : '';
 
   void select(int index) {
     if (options.isEmpty) return;
@@ -539,20 +543,23 @@ final class UICanvas extends Behaviour {
   BitmapFont? font;
   final List<UIElement> elements = [];
 
-  static final spec = ComponentSpec<UICanvas>(
-    'UICanvas',
-    UICanvas.new,
-    [
-      Field.number('designWidth', (c) => c.designWidth, (c, v) => c.designWidth = v),
-      Field.number('designHeight', (c) => c.designHeight, (c, v) => c.designHeight = v),
-    ],
-  );
+  static final spec = ComponentSpec<UICanvas>('UICanvas', UICanvas.new, [
+    Field.number(
+      'designWidth',
+      (c) => c.designWidth,
+      (c, v) => c.designWidth = v,
+    ),
+    Field.number(
+      'designHeight',
+      (c) => c.designHeight,
+      (c, v) => c.designHeight = v,
+    ),
+  ]);
 
-  late final Camera2D _camera = Camera2D(
-    designWidth: designWidth,
-    designHeight: designHeight,
-  )..x = designWidth * 0.5
-   ..y = designHeight * 0.5;
+  late final Camera2D _camera =
+      Camera2D(designWidth: designWidth, designHeight: designHeight)
+        ..x = designWidth * 0.5
+        ..y = designHeight * 0.5;
 
   final SpriteBatch _batch = SpriteBatch(
     initialCapacity: 512,
@@ -588,6 +595,7 @@ final class UICanvas extends Behaviour {
         }
       }
     }
+
     for (final el in elements) {
       collect(el);
     }
@@ -741,15 +749,24 @@ final class UICanvas extends Behaviour {
         field._handleInput(raw);
       case UIDropdown dropdown:
         final (rx, ry) = dropdown.resolveTopLeft(designWidth, designHeight);
-        final headerHit = pt.x >= rx && pt.x <= rx + dropdown.width && pt.y >= ry && pt.y <= ry + dropdown.height;
+        final headerHit =
+            pt.x >= rx &&
+            pt.x <= rx + dropdown.width &&
+            pt.y >= ry &&
+            pt.y <= ry + dropdown.height;
         if (dropdown.isOpen) {
           final totalH = dropdown.height * (dropdown.options.length + 1);
-          final menuHit = pt.x >= rx && pt.x <= rx + dropdown.width && pt.y >= ry && pt.y <= ry + totalH;
+          final menuHit =
+              pt.x >= rx &&
+              pt.x <= rx + dropdown.width &&
+              pt.y >= ry &&
+              pt.y <= ry + totalH;
           if (raw.pointerPressed) {
             if (headerHit) {
               dropdown.isOpen = false;
             } else if (menuHit) {
-              final optIdx = ((pt.y - (ry + dropdown.height)) / dropdown.height).floor();
+              final optIdx = ((pt.y - (ry + dropdown.height)) / dropdown.height)
+                  .floor();
               if (optIdx >= 0 && optIdx < dropdown.options.length) {
                 dropdown.select(optIdx);
               }
@@ -794,7 +811,13 @@ final class UICanvas extends Behaviour {
         stack.layout(canvasW: designWidth, canvasH: designHeight);
         final (sx, sy) = stack.resolveTopLeft(designWidth, designHeight);
         if (stack.backgroundColor != null) {
-          _batch.drawRect(sx, sy, stack.width, stack.height, color: stack.backgroundColor!);
+          _batch.drawRect(
+            sx,
+            sy,
+            stack.width,
+            stack.height,
+            color: stack.backgroundColor!,
+          );
         }
         if (stack.borderColor != null) {
           _drawBorder(sx, sy, stack.width, stack.height, 1, stack.borderColor!);
@@ -810,7 +833,14 @@ final class UICanvas extends Behaviour {
       case UIPanel p:
         _batch.drawRect(rx, ry, p.width, p.height, color: p.fillColor);
         if (p.borderColor != null) {
-          _drawBorder(rx, ry, p.width, p.height, p.borderThickness, p.borderColor!);
+          _drawBorder(
+            rx,
+            ry,
+            p.width,
+            p.height,
+            p.borderThickness,
+            p.borderColor!,
+          );
         }
       case UIImage img:
         _batch.draw(
@@ -834,7 +864,13 @@ final class UICanvas extends Behaviour {
           color: l.color,
         );
       case UIProgressBar bar:
-        _batch.drawRect(rx, ry, bar.width, bar.height, color: bar.backgroundColor);
+        _batch.drawRect(
+          rx,
+          ry,
+          bar.width,
+          bar.height,
+          color: bar.backgroundColor,
+        );
         final frac = bar.value.clamp(0.0, 1.0);
         final fillCol = (bar.lowFillColor != null && frac <= bar.lowThreshold)
             ? bar.lowFillColor!
@@ -849,8 +885,8 @@ final class UICanvas extends Behaviour {
         final bg = !btn.enabled
             ? btn.disabledColor
             : (btn.isPressed
-                ? btn.pressedColor
-                : (btn.isHovered ? btn.hoverColor : btn.normalColor));
+                  ? btn.pressedColor
+                  : (btn.isHovered ? btn.hoverColor : btn.normalColor));
         _batch.drawRect(rx, ry, btn.width, btn.height, color: bg);
         final f = font;
         if (f != null && btn.label.isNotEmpty) {
@@ -865,8 +901,21 @@ final class UICanvas extends Behaviour {
           );
         }
       case UIToggle toggle:
-        _batch.drawRect(rx, ry, toggle.height, toggle.height, color: toggle.boxColor);
-        _drawBorder(rx, ry, toggle.height, toggle.height, 1, toggle.borderColor);
+        _batch.drawRect(
+          rx,
+          ry,
+          toggle.height,
+          toggle.height,
+          color: toggle.boxColor,
+        );
+        _drawBorder(
+          rx,
+          ry,
+          toggle.height,
+          toggle.height,
+          1,
+          toggle.borderColor,
+        );
         if (toggle.value) {
           final inset = math.max(2.0, toggle.height * 0.22);
           _batch.drawRect(
@@ -889,19 +938,50 @@ final class UICanvas extends Behaviour {
           );
         }
       case UISlider slider:
-        _batch.drawRect(rx, ry, slider.width, slider.height, color: slider.trackColor);
+        _batch.drawRect(
+          rx,
+          ry,
+          slider.width,
+          slider.height,
+          color: slider.trackColor,
+        );
         final frac = slider.normalized;
         if (frac > 0) {
-          _batch.drawRect(rx, ry, slider.width * frac, slider.height, color: slider.fillColor);
+          _batch.drawRect(
+            rx,
+            ry,
+            slider.width * frac,
+            slider.height,
+            color: slider.fillColor,
+          );
         }
         if (slider.borderColor != null) {
-          _drawBorder(rx, ry, slider.width, slider.height, 1, slider.borderColor!);
+          _drawBorder(
+            rx,
+            ry,
+            slider.width,
+            slider.height,
+            1,
+            slider.borderColor!,
+          );
         }
         final thumbW = math.max(4.0, slider.height * 0.5);
         final thumbX = rx + (slider.width - thumbW) * frac;
-        _batch.drawRect(thumbX, ry - 1, thumbW, slider.height + 2, color: slider.thumbColor);
+        _batch.drawRect(
+          thumbX,
+          ry - 1,
+          thumbW,
+          slider.height + 2,
+          color: slider.thumbColor,
+        );
       case UITextField field:
-        _batch.drawRect(rx, ry, field.width, field.height, color: field.backgroundColor);
+        _batch.drawRect(
+          rx,
+          ry,
+          field.width,
+          field.height,
+          color: field.backgroundColor,
+        );
         _drawBorder(
           rx,
           ry,
@@ -919,12 +999,27 @@ final class UICanvas extends Behaviour {
             rx + 5,
             ry + (field.height - f.lineHeight * field.textScale) * 0.5,
             scale: field.textScale,
-            color: field.text.isNotEmpty ? field.textColor : field.placeholderColor,
+            color: field.text.isNotEmpty
+                ? field.textColor
+                : field.placeholderColor,
           );
         }
       case UIDropdown dropdown:
-        _batch.drawRect(rx, ry, dropdown.width, dropdown.height, color: dropdown.backgroundColor);
-        _drawBorder(rx, ry, dropdown.width, dropdown.height, 1, dropdown.borderColor);
+        _batch.drawRect(
+          rx,
+          ry,
+          dropdown.width,
+          dropdown.height,
+          color: dropdown.backgroundColor,
+        );
+        _drawBorder(
+          rx,
+          ry,
+          dropdown.width,
+          dropdown.height,
+          1,
+          dropdown.borderColor,
+        );
         final f = font;
         if (f != null && dropdown.selectedOption.isNotEmpty) {
           f.draw(
@@ -939,16 +1034,32 @@ final class UICanvas extends Behaviour {
         if (dropdown.isOpen) {
           for (var i = 0; i < dropdown.options.length; i++) {
             final itemY = ry + (i + 1) * dropdown.height;
-            _batch.drawRect(rx, itemY, dropdown.width, dropdown.height, color: dropdown.backgroundColor);
-            _drawBorder(rx, itemY, dropdown.width, dropdown.height, 1, dropdown.borderColor);
+            _batch.drawRect(
+              rx,
+              itemY,
+              dropdown.width,
+              dropdown.height,
+              color: dropdown.backgroundColor,
+            );
+            _drawBorder(
+              rx,
+              itemY,
+              dropdown.width,
+              dropdown.height,
+              1,
+              dropdown.borderColor,
+            );
             if (f != null) {
               f.draw(
                 _batch,
                 dropdown.options[i],
                 rx + 6,
-                itemY + (dropdown.height - f.lineHeight * dropdown.textScale) * 0.5,
+                itemY +
+                    (dropdown.height - f.lineHeight * dropdown.textScale) * 0.5,
                 scale: dropdown.textScale,
-                color: i == dropdown.selectedIndex ? 0x5CE1E6FF : dropdown.textColor,
+                color: i == dropdown.selectedIndex
+                    ? 0x5CE1E6FF
+                    : dropdown.textColor,
               );
             }
           }
@@ -981,7 +1092,14 @@ final class UICanvas extends Behaviour {
       ..y = canvasPt.y - worldAnchor.child.height * 0.5;
   }
 
-  void _drawBorder(double x, double y, double w, double h, double t, int color) {
+  void _drawBorder(
+    double x,
+    double y,
+    double w,
+    double h,
+    double t,
+    int color,
+  ) {
     _batch
       ..drawRect(x, y, w, t, color: color)
       ..drawRect(x, y + h - t, w, t, color: color)

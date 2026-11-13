@@ -12,11 +12,12 @@ final class LocalizationComponent extends Behaviour {
     String activeLocale = 'en',
     String fallbackLocale = 'en',
     this.onLocaleChanged,
-  }) : manager = manager ??
-            loc.LocalizationManager(
-              activeLocale: activeLocale,
-              fallbackLocale: fallbackLocale,
-            ) {
+  }) : manager =
+           manager ??
+           loc.LocalizationManager(
+             activeLocale: activeLocale,
+             fallbackLocale: fallbackLocale,
+           ) {
     this.manager.addLocaleListener((locale) => onLocaleChanged?.call(locale));
   }
 
@@ -49,8 +50,7 @@ final class LocalizationComponent extends Behaviour {
     String key, {
     Map<String, Object?> params = const {},
     String? defaultValue,
-  }) =>
-      manager.tr(key, params: params, defaultValue: defaultValue);
+  }) => manager.tr(key, params: params, defaultValue: defaultValue);
 
   String trPlural(
     String key,
@@ -91,10 +91,20 @@ final class LocalizationDebuggerUI {
       return;
     }
 
-    ui.labelValue('Active Locale', manager.activeLocale, valueColor: VoxColor.cyan);
-    ui.labelValue('Fallback Chain', manager.fallbackChain.join(' -> '), valueColor: VoxColor.lightGray);
+    ui.labelValue(
+      'Active Locale',
+      manager.activeLocale,
+      valueColor: VoxColor.cyan,
+    );
+    ui.labelValue(
+      'Fallback Chain',
+      manager.fallbackChain.join(' -> '),
+      valueColor: VoxColor.lightGray,
+    );
 
-    final glyphs = manager.table.collectGlyphCodePoints(localeTag: manager.activeLocale).length;
+    final glyphs = manager.table
+        .collectGlyphCodePoints(localeTag: manager.activeLocale)
+        .length;
     ui.labelValue('Unique Glyphs', '$glyphs', valueColor: VoxColor.green);
     ui.labelValue(
       'Missing Keys',

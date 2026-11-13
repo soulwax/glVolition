@@ -13,8 +13,13 @@ final class TransformComponent extends Component {
   SceneNode get _node => gameObject.node;
 
   TransformComponent? get parent => gameObject.parent?.transform;
-  void setParent(TransformComponent? newParent, {bool worldPositionStays = true}) =>
-      gameObject.setParent(newParent?.gameObject, worldPositionStays: worldPositionStays);
+  void setParent(
+    TransformComponent? newParent, {
+    bool worldPositionStays = true,
+  }) => gameObject.setParent(
+    newParent?.gameObject,
+    worldPositionStays: worldPositionStays,
+  );
 
   // ── Local space ─────────────────────────────────────────────────────────
 
@@ -65,7 +70,9 @@ final class TransformComponent extends Component {
 
   /// Moves by [delta], in local axes by default (as Unity's `Translate`).
   void translate(Vec3 delta, {Space relativeTo = Space.self}) {
-    final worldDelta = relativeTo == Space.self ? rotation.rotate(delta) : delta;
+    final worldDelta = relativeTo == Space.self
+        ? rotation.rotate(delta)
+        : delta;
     position = position + worldDelta;
   }
 
@@ -112,7 +119,8 @@ final class TransformComponent extends Component {
   }
 
   Vec3 transformDirection(Vec3 direction) => rotation.rotate(direction);
-  Vec3 inverseTransformDirection(Vec3 direction) => rotation.inverse.rotate(direction);
+  Vec3 inverseTransformDirection(Vec3 direction) =>
+      rotation.inverse.rotate(direction);
 
   /// Smoothly interpolates world position to [target] over [duration] seconds (E29-1).
   Tween<Vec3> tweenPosition(Vec3 target, double duration, {EaseFunc? ease}) {
@@ -128,7 +136,11 @@ final class TransformComponent extends Component {
   }
 
   /// Smoothly interpolates local position to [target] over [duration] seconds (E29-1).
-  Tween<Vec3> tweenLocalPosition(Vec3 target, double duration, {EaseFunc? ease}) {
+  Tween<Vec3> tweenLocalPosition(
+    Vec3 target,
+    double duration, {
+    EaseFunc? ease,
+  }) {
     return TweenManager.instance.custom<Vec3>(
       getter: () => localPosition,
       setter: (v) => localPosition = v,
