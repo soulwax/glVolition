@@ -92,13 +92,27 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Compiled volition CLI executable successfully: $binDist\volition.exe" -ForegroundColor Green
 }
 
-# Build Standalone Windows Desktop Game Host into dist/<version>/pixel_rocket/windows
-Write-Host "`nBuilding standalone Windows desktop game into $versionDist\pixel_rocket\windows..." -ForegroundColor Yellow
+# Build Standalone Windows Native AOT Game into dist/<version>/pixel_rocket/windows/pixel_rocket.exe
+# (falling back to WebView2 desktop packaging if the entry is web-only).
+$gameDist = Join-Path $versionDist "pixel_rocket\windows"
+$gameExe = Join-Path $gameDist "pixel_rocket.exe"
+$fallbackWebViewExe = Join-Path $gameDist "GlVolitionGame.exe"
+Write-Host "`nBuilding standalone Windows native AOT game into $gameExe..." -ForegroundColor Yellow
 dart run bin/volition.dart build example/pixel_rocket/main.dart --target windows --version $Version --dist $resolvedDist
-if ($LASTEXITCODE -eq 0) {
-    $gameDist = Join-Path $versionDist "pixel_rocket\windows"
-    $gameExe = Join-Path $gameDist "GlVolitionGame.exe"
-    
+$gameBuildExit = $LASTEXITCODE
+if ($gameBuildExit -ne 0) {
+    Write-Warning "Native AOT Windows build did not complete for pixel_rocket (exit $gameBuildExit); trying WebView2 fallback (--target webview)..."
+    dart run bin/volition.dart build example/pixel_rocket/main.dart --target webview --version $Version --out $gameDist --dist $resolvedDist
+    $gameBuildExit = $LASTEXITCODE
+}
+
+if ($gameBuildExit -eq 0) {
+    if (Test-Path $gameExe) {
+        Write-Host "Packaged native AOT executable: $gameExe" -ForegroundColor Green
+    } elseif (Test-Path $fallbackWebViewExe) {
+        Write-Host "Packaged WebView2 fallback executable: $fallbackWebViewExe" -ForegroundColor Green
+    }
+
     # Create double-clickable launcher script in dist
     $launcherPath = Join-Path $resolvedDist "Launch_Pixel_Rocket.cmd"
     @"
@@ -106,23 +120,24 @@ if ($LASTEXITCODE -eq 0) {
 setlocal
 cd /d "%~dp0"
 if exist "$Version\pixel_rocket\windows\pixel_rocket.exe" (
-    start "" "%~dp0$Version\pixel_rocket\windows\pixel_rocket.exe"
+    set "PATH=%~dp0$Version\pixel_rocket\windows;%PATH%"
+    start "" "%~dp0$Version\pixel_rocket\windows\pixel_rocket.exe" %*
     exit /b 0
 )
 if exist "$Version\pixel_rocket\windows\GlVolitionGame.exe" (
-    start "" "%~dp0$Version\pixel_rocket\windows\GlVolitionGame.exe"
+    start "" "%~dp0$Version\pixel_rocket\windows\GlVolitionGame.exe" %*
     exit /b 0
 )
 if exist "$Version\pixel_rocket\windows\index.html" (
     start "" msedge --app="%~dp0$Version\pixel_rocket\windows\index.html"
     exit /b 0
 )
-echo [ERROR] No runnable game binary found under $Version\pixel_rocket\windows.
+echo [ERROR] Expected native AOT binary "$Version\pixel_rocket\windows\pixel_rocket.exe" (or WebView2/HTML fallback) was not found.
 pause
 "@ | Set-Content -Path $launcherPath -Encoding ASCII
     Write-Host "Created game launcher: $launcherPath" -ForegroundColor Green
 } else {
-    Write-Warning "Windows game build could not complete (dotnet or WebView2 may be missing)."
+    Write-Warning "Windows game build could not complete (native AOT compilation failed and WebView2/dotnet fallback was unavailable)."
 }
 
 Write-Host "`n==========================================" -ForegroundColor Green

@@ -30,12 +30,20 @@ final class HeadlessHost implements EngineHost {
   }
 }
 
+/// Alias matching Wave 10 host contract naming.
+typedef HeadlessInput = ScriptedInput;
+
 /// Input driven by test code: call [press]/[release], then [endFrame] after
 /// each engine tick, exactly as a real host would.
 final class ScriptedInput implements Input {
   final Set<String> _down = {};
   final Set<String> _pressed = {};
   final Set<String> _released = {};
+  final List<TouchPoint> _touches = [];
+  final Map<int, Map<int, double>> _gamepadAxes = {};
+  final Map<int, Set<int>> _gamepadButtons = {};
+  int _gamepadCount = 0;
+  final StringBuffer _textInput = StringBuffer();
 
   void press(String code) {
     if (_down.add(code)) _pressed.add(code);
@@ -45,11 +53,72 @@ final class ScriptedInput implements Input {
     if (_down.remove(code)) _released.add(code);
   }
 
+  void scrollWheel(double dx, double dy) {
+    wheelDeltaX += dx;
+    wheelDeltaY += dy;
+  }
+
+  void addPointerDelta(double dx, double dy) {
+    pointerDeltaX += dx;
+    pointerDeltaY += dy;
+  }
+
+  void setTouches(Iterable<TouchPoint> activeTouches) {
+    _touches
+      ..clear()
+      ..addAll(activeTouches);
+  }
+
+  void clearTouches() => _touches.clear();
+
+  void setGamepadConnected(int index, bool connected) {
+    if (connected) {
+      if (index + 1 > _gamepadCount) _gamepadCount = index + 1;
+      _gamepadAxes.putIfAbsent(index, () => {});
+      _gamepadButtons.putIfAbsent(index, () => {});
+    } else {
+      _gamepadAxes.remove(index);
+      _gamepadButtons.remove(index);
+      if (index + 1 >= _gamepadCount) {
+        var highest = -1;
+        for (final k in _gamepadAxes.keys) {
+          if (k > highest) highest = k;
+        }
+        for (final k in _gamepadButtons.keys) {
+          if (k > highest) highest = k;
+        }
+        _gamepadCount = highest + 1;
+      }
+    }
+  }
+
+  void setGamepadAxis(int gamepadIndex, int axisIndex, double value) {
+    setGamepadConnected(gamepadIndex, true);
+    _gamepadAxes[gamepadIndex]![axisIndex] = value.clamp(-1.0, 1.0);
+  }
+
+  void setGamepadButton(int gamepadIndex, int buttonIndex, bool down) {
+    setGamepadConnected(gamepadIndex, true);
+    final buttons = _gamepadButtons[gamepadIndex]!;
+    if (down) {
+      buttons.add(buttonIndex);
+    } else {
+      buttons.remove(buttonIndex);
+    }
+  }
+
+  void appendTextInput(String text) => _textInput.write(text);
+
   void endFrame() {
     _pressed.clear();
     _released.clear();
     pointerPressed = false;
     pointerReleased = false;
+    wheelDeltaX = 0.0;
+    wheelDeltaY = 0.0;
+    pointerDeltaX = 0.0;
+    pointerDeltaY = 0.0;
+    _textInput.clear();
   }
 
   @override
@@ -69,6 +138,44 @@ final class ScriptedInput implements Input {
   bool pointerPressed = false;
   @override
   bool pointerReleased = false;
+
+  @override
+  double wheelDeltaX = 0;
+  @override
+  double wheelDeltaY = 0;
+  @override
+  double pointerDeltaX = 0;
+  @override
+  double pointerDeltaY = 0;
+  @override
+  bool pointerLocked = false;
+
+  @override
+  void requestPointerLock() {
+    pointerLocked = true;
+  }
+
+  @override
+  void exitPointerLock() {
+    pointerLocked = false;
+  }
+
+  @override
+  List<TouchPoint> get touches => List<TouchPoint>.unmodifiable(_touches);
+
+  @override
+  int get gamepadCount => _gamepadCount;
+
+  @override
+  double gamepadAxis(int gamepadIndex, int axisIndex) =>
+      _gamepadAxes[gamepadIndex]?[axisIndex] ?? 0.0;
+
+  @override
+  bool gamepadButtonDown(int gamepadIndex, int buttonIndex) =>
+      _gamepadButtons[gamepadIndex]?.contains(buttonIndex) ?? false;
+
+  @override
+  String get textInputBuffer => _textInput.toString();
 }
 
 final class HeadlessGraphics implements Graphics {
@@ -93,6 +200,12 @@ final class HeadlessGraphics implements Graphics {
   final Set<MeshHandle> liveMeshes = {};
   final Set<MaterialHandle> liveMaterials = {};
   final Set<TextureHandle> liveTextures = {};
+  final Set<RenderTargetHandle> liveRenderTargets = {};
+  final List<CameraRenderDescriptor> renderedCameraPasses = [];
+  int activeViewportX = 0;
+  int activeViewportY = 0;
+  int activeViewportWidth = 1280;
+  int activeViewportHeight = 720;
   final Map<ShaderTarget, Map<String, ShaderUniform>> shaderUniforms = {};
   final Map<ShaderTarget, Map<String, TextureHandle>> shaderTextures = {};
   Map<ShaderSlot, ShaderOverride> shaderOverrides = const {};
@@ -199,6 +312,57 @@ final class HeadlessGraphics implements Graphics {
 
   @override
   Ray? screenRay(double x, double y) => null;
+
+  @override
+  RenderTargetHandle createRenderTarget({
+    required int width,
+    required int height,
+    String? debugLabel,
+  }) {
+    final slot = _slot++;
+    final colorTex = TextureHandle(slot, 0, debugLabel);
+    liveTextures.add(colorTex);
+    final handle = RenderTargetHandle(
+      slot,
+      width: width,
+      height: height,
+      colorTexture: colorTex,
+      debugLabel: debugLabel,
+    );
+    liveRenderTargets.add(handle);
+    return handle;
+  }
+
+  @override
+  void releaseRenderTarget(RenderTargetHandle handle) {
+    liveRenderTargets.remove(handle);
+    liveTextures.remove(handle.colorTexture);
+  }
+
+  @override
+  void setViewport(int x, int y, int width, int height) {
+    activeViewportX = x;
+    activeViewportY = y;
+    activeViewportWidth = width;
+    activeViewportHeight = height;
+  }
+
+  @override
+  void renderFrameToTarget(
+    RenderTargetHandle? target, {
+    required CameraRenderDescriptor descriptor,
+  }) {
+    final rect = descriptor.normalizedViewportRect;
+    final targetW = target?.width ?? viewportWidth;
+    final targetH = target?.height ?? viewportHeight;
+    final pxX = (rect.x * targetW).round();
+    final pxY = (rect.y * targetH).round();
+    final pxW = (rect.z * targetW).round().clamp(1, targetW);
+    final pxH = (rect.w * targetH).round().clamp(1, targetH);
+    setViewport(pxX, pxY, pxW, pxH);
+    visibilityMask = descriptor.visibilityMask;
+    renderedCameraPasses.add(descriptor);
+  }
 }
 
 final class _NoAssets implements AssetLoader {
@@ -226,10 +390,18 @@ final class _SilentClip implements AudioClip {
   _SilentClip(this.path);
 }
 
+/// Inspectable mock channel backing [SilentAudio] / [HeadlessAudio].
 final class _SilentChannel implements AudioChannel {
   @override
   bool isPlaying = false;
   bool _loop = false;
+  double lastVolume = 1.0;
+  double lastPitch = 1.0;
+  double lastPan = 0.0;
+  double lastLowPassCutoffHz = 20000.0;
+  double lastLowPassResonance = 0.707;
+  double lastReverbSend = 0.0;
+  bool disposed = false;
 
   @override
   void play(
@@ -238,6 +410,8 @@ final class _SilentChannel implements AudioChannel {
     double pitch = 1,
     bool loop = false,
   }) {
+    lastVolume = volume;
+    lastPitch = pitch;
     _loop = loop;
     isPlaying = _loop;
   }
@@ -245,12 +419,29 @@ final class _SilentChannel implements AudioChannel {
   @override
   void stop() => isPlaying = false;
   @override
-  set volume(double value) {}
+  set volume(double value) => lastVolume = value;
   @override
-  set pitch(double value) {}
+  set pitch(double value) => lastPitch = value;
   @override
-  void dispose() => isPlaying = false;
+  void setPan(double pan) => lastPan = pan.clamp(-1.0, 1.0);
+  @override
+  void setLowPass(double cutoffHz, {double resonance = 0.707}) {
+    lastLowPassCutoffHz = cutoffHz;
+    lastLowPassResonance = resonance;
+  }
+
+  @override
+  void setReverbSend(double wet) => lastReverbSend = wet.clamp(0.0, 1.0);
+
+  @override
+  void dispose() {
+    disposed = true;
+    isPlaying = false;
+  }
 }
+
+/// Alias matching Wave 10 host contract naming.
+typedef HeadlessAudio = SilentAudio;
 
 final class SilentAudio implements AudioDevice {
   @override
@@ -259,16 +450,38 @@ final class SilentAudio implements AudioDevice {
   /// Paths of every one-shot requested, in order.
   final List<String> played = [];
 
+  /// Channels created on this device, retained for DSP inspection in tests.
+  final List<_SilentChannel> channels = [];
+
+  Vec3 listenerPosition = const Vec3(0, 0, 0);
+  Vec3 listenerForward = const Vec3(0, 0, -1);
+  Vec3 listenerUp = const Vec3(0, 1, 0);
+
   @override
   AudioClip clip(String path, {double volume = 1, int voices = 3}) =>
       _SilentClip(path);
 
   @override
-  AudioChannel createChannel() => _SilentChannel();
+  AudioChannel createChannel() {
+    final ch = _SilentChannel();
+    channels.add(ch);
+    return ch;
+  }
 
   @override
   void playOneShot(AudioClip clip, {double volume = 1, double pitch = 1}) {
     if (!muted) played.add(clip.path);
+  }
+
+  @override
+  void setListenerPose({
+    Vec3 position = const Vec3(0, 0, 0),
+    Vec3 forward = const Vec3(0, 0, -1),
+    Vec3 up = const Vec3(0, 1, 0),
+  }) {
+    listenerPosition = position;
+    listenerForward = forward;
+    listenerUp = up;
   }
 }
 

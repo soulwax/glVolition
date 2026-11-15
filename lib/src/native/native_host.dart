@@ -7,11 +7,16 @@ import 'package:pixeldart/rendering/webgl/device_api.dart';
 import 'package:pixeldart/rendering/webgl/state_cache.dart';
 
 import '../../gl_volition.dart';
+import 'gles3_bindings.dart';
+import 'gles3_ffi_device.dart';
+import 'native_audio_device.dart';
 import 'native_bindings.dart';
+import 'native_ffi_transport.dart';
+import 'sdl3_bindings.dart';
 
-/// Optional callback invoked by [GlesDevice] for each low-level GPU operation,
-/// allowing an FFI OpenGL ES 3.0 / ANGLE host to forward validated commands
-/// to native GL entrypoints.
+/// Optional callback invoked by [RecordingGlesDevice] for each low-level GPU
+/// operation, allowing an FFI OpenGL ES 3.0 / ANGLE host to forward validated
+/// commands to native GL entrypoints.
 typedef GlesDispatchHook = void Function(String command, List<Object?> args);
 
 final class _NativeGpuObject implements GpuObject {
@@ -27,13 +32,17 @@ final class _NativeTimerQuery implements GpuObject {
   _NativeTimerQuery(this.id);
 }
 
-/// Native / AOT [GpuDevice] implementation for `glVolition` (E6-3).
+/// Preserved backward-compatible alias for [RecordingGlesDevice].
+typedef GlesDevice = RecordingGlesDevice;
+
+/// Recording / software-validated native [GpuDevice] implementation for
+/// `glVolition` (E6-3).
 ///
 /// Implements the full `pixeldart` [GpuDevice] and [GpuContextGeneration]
 /// contracts without `package:web`, validating shaders, render target
 /// attachments, vertex/index bindings, and resource lifetimes while optionally
 /// dispatching commands to a native GLES3 / FFI [onCommand] hook.
-final class GlesDevice implements GpuDevice, GpuContextGeneration {
+final class RecordingGlesDevice implements GpuDevice, GpuContextGeneration {
   final bool timerQueries;
   final bool disjointTimer;
   int maxSamples;
@@ -42,7 +51,7 @@ final class GlesDevice implements GpuDevice, GpuContextGeneration {
   int? incompleteAboveSamples;
   final GlesDispatchHook? onCommand;
 
-  GlesDevice({
+  RecordingGlesDevice({
     this.timerQueries = true,
     this.disjointTimer = false,
     this.maxSamples = 4,
@@ -813,6 +822,137 @@ final class NativeEngineHost implements EngineHost {
     return NativeEngineRunner._(host, engine);
   }
 
+  /// Headless-safe factory over [RecordingGlesDevice] and [SilentAudio] for
+  /// deterministic CI and unit tests.
+  static Future<NativeEngineRunner> recording({
+    RecordingGlesDevice? device,
+    AudioDevice? audio,
+    NativeWindowBackend? windowBackend,
+    int width = 1280,
+    int height = 720,
+    double devicePixelRatio = 1.0,
+    QualityProfile requestedProfile = QualityProfile.clean,
+    Directory? assetsDirectory,
+    File? storageFile,
+    bool rethrowErrors = true,
+    void Function(ComponentRegistry registry)? registerSpecs,
+    Scene? initialScene,
+  }) => boot(
+    device: device ?? RecordingGlesDevice(),
+    audio: audio ?? SilentAudio(),
+    windowBackend: windowBackend,
+    width: width,
+    height: height,
+    devicePixelRatio: devicePixelRatio,
+    requestedProfile: requestedProfile,
+    assetsDirectory: assetsDirectory,
+    storageFile: storageFile,
+    rethrowErrors: rethrowErrors,
+    registerSpecs: registerSpecs,
+    initialScene: initialScene,
+  );
+
+  /// Default windowed hardware desktop factory wiring [Sdl3WindowBackend] +
+  /// [Gles3FfiDevice] + [NativeAudioDevice].
+  ///
+  /// When [fallbackToRecording] is `true`, safely falls back to [recording] if
+  /// native window or GLES3 initialization fails on headless CI machines.
+  static Future<NativeEngineRunner> desktop({
+    String title = 'glVolition',
+    int width = 1280,
+    int height = 720,
+    bool resizable = true,
+    double devicePixelRatio = 1.0,
+    QualityProfile requestedProfile = QualityProfile.clean,
+    Directory? assetsDirectory,
+    File? storageFile,
+    bool rethrowErrors = true,
+    bool fallbackToRecording = false,
+    Sdl3WindowBackend? windowBackend,
+    Gles3Api? glesApi,
+    NativeAudioSink? audioSink,
+    NativeAudioConfig audioConfig = const NativeAudioConfig(),
+    void Function(ComponentRegistry registry)? registerSpecs,
+    Scene? initialScene,
+  }) async {
+    final ownsWindow = windowBackend == null;
+    final window = windowBackend ?? Sdl3WindowBackend();
+    if (!window.isInitialized) {
+      final opened = window.openWindow(
+        title: title,
+        width: width,
+        height: height,
+        resizable: resizable,
+        gles3: true,
+      );
+      if (!opened) {
+        final error = window.lastError ?? 'failed to open SDL3 GLES3 window';
+        if (ownsWindow) window.dispose();
+        if (fallbackToRecording) {
+          return recording(
+            width: width,
+            height: height,
+            devicePixelRatio: devicePixelRatio,
+            requestedProfile: requestedProfile,
+            assetsDirectory: assetsDirectory,
+            storageFile: storageFile,
+            rethrowErrors: rethrowErrors,
+            registerSpecs: registerSpecs,
+            initialScene: initialScene,
+          );
+        }
+        throw StateError('NativeEngineHost.desktop: $error');
+      }
+    }
+    window.makeCurrent();
+
+    final targetWidth = window.pixelWidth > 0 ? window.pixelWidth : width;
+    final targetHeight = window.pixelHeight > 0 ? window.pixelHeight : height;
+    final dpr = window.devicePixelRatio > 0
+        ? window.devicePixelRatio
+        : devicePixelRatio;
+    final gl = glesApi ?? FfiGles3Api(DynamicLibraryGlLoader());
+    final gpu = Gles3FfiDevice(gl, targetWidth, targetHeight);
+    final audio = NativeAudioDevice(
+      sink: audioSink,
+      config: audioConfig,
+      rootDirectory: assetsDirectory,
+    );
+    try {
+      return await boot(
+        device: gpu,
+        audio: audio,
+        windowBackend: window,
+        width: targetWidth,
+        height: targetHeight,
+        devicePixelRatio: dpr,
+        requestedProfile: requestedProfile,
+        assetsDirectory: assetsDirectory,
+        storageFile: storageFile,
+        rethrowErrors: rethrowErrors,
+        registerSpecs: registerSpecs,
+        initialScene: initialScene,
+      );
+    } catch (_) {
+      audio.dispose();
+      if (ownsWindow) window.dispose();
+      if (fallbackToRecording) {
+        return recording(
+          width: width,
+          height: height,
+          devicePixelRatio: devicePixelRatio,
+          requestedProfile: requestedProfile,
+          assetsDirectory: assetsDirectory,
+          storageFile: storageFile,
+          rethrowErrors: rethrowErrors,
+          registerSpecs: registerSpecs,
+          initialScene: initialScene,
+        );
+      }
+      rethrow;
+    }
+  }
+
   SurfaceMetrics get surface => _surface;
 
   /// Steps the bound [Engine] by [dt], synchronizes [sceneRoot] to [world],
@@ -866,6 +1006,15 @@ final class NativeEngineHost implements EngineHost {
       }
       eng.encodeFrame(encoder, frameInput);
       final stats = renderer.endFrame();
+      if (audio case final NativeAudioDevice nativeAudio) {
+        final audioFrames = dt > 0
+            ? (dt * nativeAudio.config.sampleRate).round().clamp(
+                1,
+                nativeAudio.config.sampleRate,
+              )
+            : nativeAudio.config.framesPerBuffer;
+        nativeAudio.pumpAudio(frames: audioFrames);
+      }
       input.endFrame();
       return stats;
     } catch (error) {
@@ -889,6 +1038,9 @@ final class NativeEngineHost implements EngineHost {
       maxDevicePixelRatio: 2.0,
     );
     renderer.resize(_surface);
+    if (device case final Gles3FfiDevice gles3) {
+      gles3.setViewport(0, 0, _surface.pixelWidth, _surface.pixelHeight);
+    }
     await renderer.configure(
       renderer.configuration.copyWith(
         internalWidth: _surface.pixelWidth,
@@ -935,6 +1087,19 @@ final class NativeEngineRunner {
 
   Future<void> resize(int width, int height, {double devicePixelRatio = 1.0}) =>
       host.resize(width, height, devicePixelRatio: devicePixelRatio);
+
+  /// Creates a [NativeDesktopBridge] bound to this runner and its active
+  /// `windowBackend`.
+  NativeDesktopBridge createDesktopBridge({
+    NativeGlTransport? transport,
+    Sdl3EventPump? eventPump,
+    NativeWindowBackend? windowBackend,
+  }) => NativeDesktopBridge(
+    runner: this,
+    transport: transport ?? NativeGlTransport(),
+    eventPump: eventPump,
+    windowBackend: windowBackend ?? host.windowBackend,
+  );
 
   void dispose() => host.dispose();
 }
@@ -1177,6 +1342,19 @@ final class NativeGraphics implements Graphics {
     }
   }
 
+  int _nextRenderTargetSlot = 1;
+  final Set<RenderTargetHandle> liveRenderTargets = {};
+  final List<CameraRenderDescriptor> renderedCameraPasses = [];
+  int activeViewportX = 0;
+  int activeViewportY = 0;
+  int _activeViewportWidth = 0;
+  int _activeViewportHeight = 0;
+
+  int get activeViewportWidth =>
+      _activeViewportWidth > 0 ? _activeViewportWidth : viewportWidth;
+  int get activeViewportHeight =>
+      _activeViewportHeight > 0 ? _activeViewportHeight : viewportHeight;
+
   @override
   Ray? screenRay(double x, double y) {
     final w = viewportWidth;
@@ -1195,6 +1373,63 @@ final class NativeGraphics implements Graphics {
                 far: 200,
               ));
     return cam.screenPointToRay(x, y, w, h);
+  }
+
+  @override
+  RenderTargetHandle createRenderTarget({
+    required int width,
+    required int height,
+    String? debugLabel,
+  }) {
+    final colorTex = createTexture(
+      width: width,
+      height: height,
+      debugLabel: debugLabel,
+    );
+    final handle = RenderTargetHandle(
+      _nextRenderTargetSlot++,
+      width: width,
+      height: height,
+      colorTexture: colorTex,
+      debugLabel: debugLabel,
+    );
+    liveRenderTargets.add(handle);
+    return handle;
+  }
+
+  @override
+  void releaseRenderTarget(RenderTargetHandle handle) {
+    if (liveRenderTargets.remove(handle)) {
+      releaseTexture(handle.colorTexture);
+    }
+  }
+
+  @override
+  void setViewport(int x, int y, int width, int height) {
+    activeViewportX = x;
+    activeViewportY = y;
+    _activeViewportWidth = width;
+    _activeViewportHeight = height;
+    if (_host.device case final Gles3FfiDevice gles3) {
+      gles3.setViewport(x, y, width, height);
+    }
+  }
+
+  @override
+  void renderFrameToTarget(
+    RenderTargetHandle? target, {
+    required CameraRenderDescriptor descriptor,
+  }) {
+    final rect = descriptor.normalizedViewportRect;
+    final tw = target?.width ?? viewportWidth;
+    final th = target?.height ?? viewportHeight;
+    final pxX = (rect.x * tw).round();
+    final pxY = (rect.y * th).round();
+    final pxW = (rect.z * tw).round().clamp(1, tw > 0 ? tw : 1);
+    final pxH = (rect.w * th).round().clamp(1, th > 0 ? th : 1);
+    setViewport(pxX, pxY, pxW, pxH);
+    visibilityMask = descriptor.visibilityMask;
+    renderedCameraPasses.add(descriptor);
   }
 }
 

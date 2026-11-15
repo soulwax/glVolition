@@ -75,7 +75,7 @@
     - Update `NativeEngineHost` constructor to accept optional injectable `AudioDevice?`, `GpuDevice?`, and `NativeWindowBackend?` so concurrent workers implement hardware modules cleanly against frozen types.
   - **DoneWhen:** `dart analyze` passes.
 
-- [ ] **[P1-W9-A] Real SDL3 `dart:ffi` Windowing, Context Creation & Live Event Pump**
+- [x] **[P1-W9-A] Real SDL3 `dart:ffi` Windowing, Context Creation & Live Event Pump**
   - **Priority:** P0
   - **DependsOn:** `[P1-W9-0]`
   - **Owns:** `lib/src/native/sdl3_bindings.dart`, `lib/src/native/native_ffi_transport.dart`, `test/native/sdl3_transport_test.dart`
@@ -85,7 +85,7 @@
     - Replace stubbed queue-only behavior in `Sdl3EventPump` and `NativeDesktopBridge` with live SDL3 event decoding (keyboard up/down/repeat, mouse move/button/wheel, window resize/close/focus) while retaining a test-injectable queue adapter for deterministic VM tests.
   - **DoneWhen:** `dart test test/native/sdl3_transport_test.dart` passes; missing-DLL handling fails cleanly with actionable error messages rather than uncaught FFI segfaults.
 
-- [ ] **[P1-W9-B] Real GLES3 / ANGLE Hardware `GpuDevice` + Preserved `RecordingGlesDevice` for CI**
+- [x] **[P1-W9-B] Real GLES3 / ANGLE Hardware `GpuDevice` + Preserved `RecordingGlesDevice` for CI**
   - **Priority:** P0
   - **DependsOn:** `[P1-W9-0]`
   - **Owns:** `lib/src/native/gles3_bindings.dart`, `lib/src/native/gles3_ffi_device.dart`, `lib/src/native/native_host.dart`, `test/native/gles3_device_test.dart`
@@ -95,7 +95,7 @@
     - Create `Gles3Bindings` (EGL/ANGLE/GLES3 FFI function lookup via `GlProcBindings` / `DynamicLibrary`) and `Gles3FfiDevice implements GpuDevice, GpuContextGeneration` implementing real FBOs, VBOs/VAOs, textures, GLSL shader compile/link checks, uniform uploads, draw calls, readPixels, and genuine `GL_EXT_disjoint_timer_query` / timestamp polling (zero hardcoded timer values on `Gles3FfiDevice`).
   - **DoneWhen:** `dart test test/native/gles3_device_test.dart` passes against both `RecordingGlesDevice` and live FFI binding signature checks; zero hardcoded timer values on `Gles3FfiDevice`.
 
-- [ ] **[P1-W9-C] Native Hardware PCM Audio Device Replacing `SilentAudio`**
+- [x] **[P1-W9-C] Native Hardware PCM Audio Device Replacing `SilentAudio`**
   - **Priority:** P1
   - **DependsOn:** `[P1-W9-0]`
   - **Owns:** `lib/src/native/native_audio_device.dart`, `test/native/native_audio_test.dart`
@@ -105,7 +105,7 @@
     - Provide clean fallback/diagnostic mode when audio hardware is unavailable (headless CI without sound card).
   - **DoneWhen:** `dart test test/native/native_audio_test.dart` verifies mixing, looping, stop/pause, and PCM frame emission deterministically.
 
-- [ ] **[P1-W9-D] True Native AOT Desktop Build Targets (`--target windows|linux|macos`)**
+- [x] **[P1-W9-D] True Native AOT Desktop Build Targets (`--target windows|linux|macos`)**
   - **Priority:** P0
   - **DependsOn:** `[P1-W9-0]`
   - **Owns:** `bin/volition.dart`, `dist.ps1`, `tool/package_native.dart`, `example/native_smoke/main.dart`, `test/native/package_native_test.dart`
@@ -116,7 +116,7 @@
     - Update `example/native_smoke/main.dart` to accept `--hardware` / `--headless` smoke mode flags and update `dist.ps1`.
   - **DoneWhen:** `dart test test/native/package_native_test.dart` and `dart run bin/volition.dart build example/native_smoke/main.dart --target windows --dry-run` (or full local AOT bundle build) pass cleanly.
 
-- [ ] **[P1-W9-M] Coordinator Merge: Default `NativeEngineHost` Hardware Wiring**
+- [x] **[P1-W9-M] Coordinator Merge: Default `NativeEngineHost` Hardware Wiring**
   - **Priority:** P0
   - **DependsOn:** `[P1-W9-A]`, `[P1-W9-B]`, `[P1-W9-C]`, `[P1-W9-D]`
   - **Owns:** `lib/gl_volition_native.dart`, `lib/src/native/native_host.dart`
@@ -128,7 +128,7 @@
 
 **Wave Exit Gate:** Feature parity across `HeadlessHost`, `WebEngineHost`, and `NativeEngineHost` for wheel/touch/pointer-lock/gamepad input, spatial Web Audio DSP, multi-camera viewports + render-to-texture, and Web `visibilityMask` culling.
 
-- [ ] **[P2-W10-0] Coordinator Freeze: Extend `host.dart` / `headless.dart`, Split `web_host.dart` & Patch `PixeldartApp._frame`**
+- [x] **[P2-W10-0] Coordinator Freeze: Extend `host.dart` / `headless.dart`, Split `web_host.dart` & Patch `PixeldartApp._frame`**
   - **Priority:** P0
   - **DependsOn:** `[P1-W9-M]`
   - **Owns:** `lib/src/engine/host.dart`, `lib/src/engine/headless.dart`, `lib/src/web/web_host.dart`, `vendor/pixeldart/lib/rendering/webgl/pixeldart_app.dart`

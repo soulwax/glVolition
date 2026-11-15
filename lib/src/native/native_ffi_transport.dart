@@ -387,7 +387,19 @@ final class NativeGlTransport {
 }
 
 /// Event kinds recognized by [Sdl3EventPump].
-enum Sdl3EventKind { keyDown, keyUp, mouseMove, mouseDown, mouseUp, quit }
+enum Sdl3EventKind {
+  keyDown,
+  keyUp,
+  mouseMove,
+  mouseDown,
+  mouseUp,
+  quit,
+  keyRepeat,
+  mouseWheel,
+  windowResize,
+  windowFocus,
+  windowBlur,
+}
 
 /// Normalized desktop input event produced by an SDL3 native bridge or decoded
 /// from a compact raw bridge packet.
@@ -395,7 +407,8 @@ final class Sdl3InputEvent {
   /// Classification of this input or window lifecycle event.
   final Sdl3EventKind kind;
 
-  /// Key identifier (for [Sdl3EventKind.keyDown] and [Sdl3EventKind.keyUp]).
+  /// Key identifier (for [Sdl3EventKind.keyDown], [Sdl3EventKind.keyRepeat],
+  /// and [Sdl3EventKind.keyUp]).
   final String keyCode;
 
   /// Horizontal pointer coordinate in surface pixels.
@@ -407,6 +420,21 @@ final class Sdl3InputEvent {
   /// Mouse button index (1 = primary/left by SDL3 convention).
   final int mouseButton;
 
+  /// Horizontal scroll delta (for [Sdl3EventKind.mouseWheel]).
+  final double wheelX;
+
+  /// Vertical scroll delta (for [Sdl3EventKind.mouseWheel]).
+  final double wheelY;
+
+  /// New surface width in pixels (for [Sdl3EventKind.windowResize]).
+  final int width;
+
+  /// New surface height in pixels (for [Sdl3EventKind.windowResize]).
+  final int height;
+
+  /// Whether this key event is an OS auto-repeat event.
+  final bool repeat;
+
   /// Creates an [Sdl3InputEvent].
   const Sdl3InputEvent({
     required this.kind,
@@ -414,6 +442,11 @@ final class Sdl3InputEvent {
     this.x = 0.0,
     this.y = 0.0,
     this.mouseButton = 1,
+    this.wheelX = 0.0,
+    this.wheelY = 0.0,
+    this.width = 0,
+    this.height = 0,
+    this.repeat = false,
   });
 }
 
@@ -425,6 +458,9 @@ final class Sdl3EventPump {
   final ListQueue<Sdl3InputEvent> _queue = ListQueue<Sdl3InputEvent>();
   bool _quitRequested = false;
   int _pumpedCount = 0;
+  double _wheelDeltaX = 0.0;
+  double _wheelDeltaY = 0.0;
+  bool _hasWindowFocus = true;
 
   /// Whether a [Sdl3EventKind.quit] event has been pumped.
   bool get quitRequested => _quitRequested;
@@ -434,6 +470,15 @@ final class Sdl3EventPump {
 
   /// Number of events currently waiting in the queue.
   int get pendingCount => _queue.length;
+
+  /// Horizontal scroll delta accumulated during the most recent [pumpInto].
+  double get wheelDeltaX => _wheelDeltaX;
+
+  /// Vertical scroll delta accumulated during the most recent [pumpInto].
+  double get wheelDeltaY => _wheelDeltaY;
+
+  /// Whether the window is currently focused according to pumped focus events.
+  bool get hasWindowFocus => _hasWindowFocus;
 
   /// Appends a single [event] to the pending queue.
   void enqueue(Sdl3InputEvent event) => _queue.addLast(event);
@@ -454,6 +499,7 @@ final class Sdl3EventPump {
     final kindIndex = bytes.getUint32(0, endian);
     if (kindIndex >= Sdl3EventKind.values.length) return null;
 
+    final kind = Sdl3EventKind.values[kindIndex];
     final mouseButton = bytes.getInt32(4, endian);
     final x = bytes.getFloat64(8, endian);
     final y = bytes.getFloat64(16, endian);
@@ -472,23 +518,34 @@ final class Sdl3EventPump {
     }
 
     return Sdl3InputEvent(
-      kind: Sdl3EventKind.values[kindIndex],
+      kind: kind,
       keyCode: keyCode,
       x: x,
       y: y,
       mouseButton: mouseButton,
+      wheelX: kind == Sdl3EventKind.mouseWheel ? x : 0.0,
+      wheelY: kind == Sdl3EventKind.mouseWheel ? y : 0.0,
+      width: kind == Sdl3EventKind.windowResize ? x.round() : 0,
+      height: kind == Sdl3EventKind.windowResize ? y.round() : 0,
+      repeat: kind == Sdl3EventKind.keyRepeat,
     );
   }
 
-  /// Drains all queued events into [input] and returns `true` while the host
-  /// should continue running (`!quitRequested`), or `false` if quit was
-  /// requested.
-  bool pumpInto(ScriptedInput input) {
+  /// Drains all queued events into [input], forwarding resize events to
+  /// [onResize], and returns `true` while the host should continue running
+  /// (`!quitRequested`), or `false` if quit was requested.
+  bool pumpInto(
+    ScriptedInput input, {
+    void Function(int width, int height)? onResize,
+  }) {
+    _wheelDeltaX = 0.0;
+    _wheelDeltaY = 0.0;
     while (_queue.isNotEmpty) {
       final event = _queue.removeFirst();
       _pumpedCount++;
       switch (event.kind) {
         case Sdl3EventKind.keyDown:
+        case Sdl3EventKind.keyRepeat:
           if (event.keyCode.isNotEmpty) {
             input.press(event.keyCode);
           }
@@ -513,6 +570,17 @@ final class Sdl3EventPump {
             input.pointerReleased = true;
           }
           input.pointerDown = false;
+        case Sdl3EventKind.mouseWheel:
+          _wheelDeltaX += event.wheelX;
+          _wheelDeltaY += event.wheelY;
+        case Sdl3EventKind.windowResize:
+          if (event.width > 0 && event.height > 0) {
+            onResize?.call(event.width, event.height);
+          }
+        case Sdl3EventKind.windowFocus:
+          _hasWindowFocus = true;
+        case Sdl3EventKind.windowBlur:
+          _hasWindowFocus = false;
         case Sdl3EventKind.quit:
           _quitRequested = true;
       }
@@ -521,8 +589,12 @@ final class Sdl3EventPump {
   }
 }
 
+/// Backward-compatible / TODO alias for [NativeDesktopBridge].
+typedef Sdl3NativeBridge = NativeDesktopBridge;
+
 /// High-level desktop host bridge coordinating [NativeEngineRunner],
-/// [NativeGlTransport], and [Sdl3EventPump] into a single frame loop entrypoint.
+/// [NativeGlTransport], [Sdl3EventPump], and an optional [NativeWindowBackend]
+/// into a single frame loop entrypoint.
 final class NativeDesktopBridge {
   /// Booted native engine runner driving the scene and renderer.
   final NativeEngineRunner runner;
@@ -533,29 +605,63 @@ final class NativeDesktopBridge {
   /// Event pump feeding desktop input and quit events into `runner.host.input`.
   final Sdl3EventPump eventPump;
 
-  /// Creates a [NativeDesktopBridge] wrapping [runner], [transport], and an
-  /// optional [eventPump].
+  /// Optional native window backend (for example `Sdl3WindowBackend`) used for
+  /// OS event pumping, resize forwarding, quit detection, and buffer swapping.
+  final NativeWindowBackend? windowBackend;
+
+  /// Creates a [NativeDesktopBridge] wrapping [runner], [transport], an
+  /// optional [eventPump], and an optional [windowBackend] (defaulting to
+  /// `runner.host.windowBackend`).
   NativeDesktopBridge({
     required this.runner,
     required this.transport,
     Sdl3EventPump? eventPump,
-  }) : eventPump = eventPump ?? Sdl3EventPump();
+    NativeWindowBackend? windowBackend,
+  }) : eventPump = eventPump ?? Sdl3EventPump(),
+       windowBackend = windowBackend ?? runner.host.windowBackend;
 
-  /// Whether [eventPump] has received a [Sdl3EventKind.quit] event.
-  bool get isQuitRequested => eventPump.quitRequested;
+  /// Whether either [eventPump] or [windowBackend] has received a quit request.
+  bool get isQuitRequested =>
+      eventPump.quitRequested || (windowBackend?.quitRequested ?? false);
 
-  /// Pumps queued events from [eventPump] into `runner.host.input` and, if
-  /// not quit, renders a single frame of duration [dt].
+  /// Pumps queued events from [windowBackend] and [eventPump] into
+  /// `runner.host.input`, forwards resize events through `runner.resize`,
+  /// renders a single frame of duration [dt], and swaps buffers via
+  /// [windowBackend].
   ///
   /// Returns `null` when quit has been requested.
   FrameStats? stepAndRender(double dt) {
-    final running = eventPump.pumpInto(runner.host.input);
+    void handleResize(int width, int height) {
+      if (width <= 0 || height <= 0) return;
+      runner
+          .resize(width, height)
+          .then<void>(
+            (_) {},
+            onError: (Object error, StackTrace stack) {
+              runner.host.reportError(error, stack);
+            },
+          );
+    }
+
+    final backend = windowBackend;
+    backend?.pumpEvents(runner.host.input, onResize: handleResize);
+
+    final running = eventPump.pumpInto(
+      runner.host.input,
+      onResize: handleResize,
+    );
     if (!running || isQuitRequested) {
       return null;
     }
-    return runner.renderFrame(dt);
+
+    final stats = runner.renderFrame(dt);
+    backend?.swapBuffers();
+    return stats;
   }
 
-  /// Disposes the underlying [runner] and releases its GPU/engine resources.
-  void dispose() => runner.dispose();
+  /// Disposes the underlying [runner] and releases its GPU/window resources.
+  void dispose() {
+    runner.dispose();
+    windowBackend?.dispose();
+  }
 }
