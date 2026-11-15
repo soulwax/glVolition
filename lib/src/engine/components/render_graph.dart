@@ -1,5 +1,8 @@
 part of '../../engine.dart';
 
+/// Convenience alias matching Wave 12 subsystem contract.
+typedef RenderGraph = RenderGraphComponent;
+
 /// Declarative render/compute pass DAG, barriers & transient aliasing manager (`voxgraph`) (E83-2).
 final class RenderGraphComponent extends Component {
   int viewportWidth;
@@ -7,6 +10,16 @@ final class RenderGraphComponent extends Component {
   bool enableTransientAliasing;
   bool includePostProcessPass;
   bool includeUnusedDebugPass;
+
+  final Map<String, RenderPassAnchor> passAnchors = {};
+  final Map<String, ShaderOverride> passShaders = {};
+  final Map<String, Map<String, ShaderUniform>> passUniforms = {};
+  final Map<String, Map<String, TextureHandle>> passTextures = {};
+  final Map<String, int> passPriorities = {};
+  final Set<String> disabledPasses = {};
+  final List<RenderPassDecl> customPasses = [];
+  final Set<String> _declaredPassIds = {};
+  Graphics? _lastGfx;
 
   graph.CompiledRenderGraph? _lastCompiled;
   graph.TransientAliasingPlan? _lastAliasingPlan;
@@ -136,6 +149,134 @@ final class RenderGraphComponent extends Component {
     }
 
     return compileBuilder(b);
+  }
+
+  /// Registers an explicit custom [RenderPassDecl] to be reconciled onto the renderer.
+  void addCustomPass(RenderPassDecl pass) => customPasses.add(pass);
+
+  /// Removes an explicit custom [RenderPassDecl] by [id].
+  void removeCustomPass(String id) =>
+      customPasses.removeWhere((p) => p.id == id);
+
+  RenderPassAnchor _resolveAnchor(String passName) {
+    if (passAnchors.containsKey(passName)) return passAnchors[passName]!;
+    final lower = passName.toLowerCase();
+    if (lower.contains('shadow')) return RenderPassAnchor.afterShadow;
+    if (lower.contains('depth')) return RenderPassAnchor.beforeDepth;
+    if (lower.contains('bloom')) return RenderPassAnchor.beforeGrade;
+    if (lower.contains('tone') || lower.contains('present')) {
+      return RenderPassAnchor.beforePresent;
+    }
+    if (lower.contains('resolve')) return RenderPassAnchor.afterResolve;
+    return RenderPassAnchor.afterWorld;
+  }
+
+  /// Converts all scheduled render graph passes and user custom passes into
+  /// Pixeldart host [RenderPassDecl] descriptors (`R3`).
+  List<RenderPassDecl> toRenderPassDecls() {
+    final comp = compiled;
+    final results = <RenderPassDecl>[];
+
+    for (final pass in comp.scheduledPasses) {
+      final attachments = <RenderPassAttachmentDecl>[];
+      for (final access in pass.accesses) {
+        final res = comp.resourcesByIndex[access.resourceIndex];
+        if (res == null) continue;
+        final format = switch (res.desc.format) {
+          graph.RenderResourceFormat.rgba8 => RenderPassTargetFormat.rgba8,
+          graph.RenderResourceFormat.rgba16f => RenderPassTargetFormat.rgba16f,
+          graph.RenderResourceFormat.rgba32f => RenderPassTargetFormat.rgba16f,
+          graph.RenderResourceFormat.d32f => RenderPassTargetFormat.depth32f,
+          graph.RenderResourceFormat.r32u => RenderPassTargetFormat.rgba8,
+        };
+        final accessKind = access.isWrite
+            ? RenderPassAccess.write
+            : RenderPassAccess.read;
+        final scale = viewportWidth > 0
+            ? (res.desc.width / viewportWidth)
+            : 1.0;
+        attachments.add(
+          RenderPassAttachmentDecl(
+            name: res.name,
+            format: format,
+            access: accessKind,
+            transient: !res.desc.external,
+            scale: scale,
+          ),
+        );
+      }
+
+      final dependsOn = <String>[];
+      for (final readIdx in pass.readResourceIndices) {
+        for (final prior in comp.scheduledPasses) {
+          if (prior.id == pass.id) break;
+          if (prior.writtenResourceIndices.contains(readIdx)) {
+            if (!dependsOn.contains(prior.name)) {
+              dependsOn.add(prior.name);
+            }
+          }
+        }
+      }
+
+      final decl = RenderPassDecl(
+        id: pass.name,
+        anchor: _resolveAnchor(pass.name),
+        attachments: attachments,
+        dependsOn: dependsOn,
+        shader: passShaders[pass.name],
+        uniforms: passUniforms[pass.name] ?? const {},
+        textures: passTextures[pass.name] ?? const {},
+        priority: passPriorities[pass.name] ?? 0,
+        enabled: !disabledPasses.contains(pass.name),
+      );
+      results.add(decl);
+    }
+
+    results.addAll(customPasses);
+    return results;
+  }
+
+  /// Declares all compiled graph passes and custom passes onto [gfx], reconciling
+  /// and removing any previously declared passes that are no longer active.
+  void syncToRenderer(Graphics gfx) {
+    _lastGfx = gfx;
+    final decls = toRenderPassDecls();
+    final currentIds = <String>{};
+
+    for (final decl in decls) {
+      currentIds.add(decl.id);
+      gfx.declareRenderPass(decl);
+    }
+
+    final toRemove = _declaredPassIds.difference(currentIds);
+    for (final id in toRemove) {
+      gfx.removeDeclaredRenderPass(id);
+    }
+
+    _declaredPassIds
+      ..clear()
+      ..addAll(currentIds);
+  }
+
+  /// Removes all declared render passes from [gfx].
+  void clearDeclaredPasses([Graphics? gfx]) {
+    final g = gfx ?? _lastGfx;
+    if (g != null) {
+      for (final id in _declaredPassIds) {
+        g.removeDeclaredRenderPass(id);
+      }
+    }
+    _declaredPassIds.clear();
+  }
+
+  @override
+  void onDisable() {
+    clearDeclaredPasses(_lastGfx);
+  }
+
+  @override
+  void onDestroy() {
+    clearDeclaredPasses(_lastGfx);
   }
 }
 

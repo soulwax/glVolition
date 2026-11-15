@@ -1,11 +1,18 @@
 part of '../../engine.dart';
 
+/// Convenience alias matching Wave 12 subsystem contract.
+typedef DrawBatcher = DrawBatcherComponent;
+
 /// Draw-call state sorter, spatial cell cluster builder & indirect draw table component (`voxbatch`) (E88-2).
 final class DrawBatcherComponent extends Behaviour {
   double cellSize;
   int maxInstancesPerCluster;
   bool autoRebuildOnUpdate;
   bool paused;
+
+  final List<MeshHandle> meshes = [];
+  final List<MaterialHandle> materials = [];
+  SubmittedIndirectBatch? lastSubmittedBatch;
 
   batch.BatchSortResult sortResult = const batch.BatchSortResult(
     sortedItems: [],
@@ -20,7 +27,12 @@ final class DrawBatcherComponent extends Behaviour {
     this.maxInstancesPerCluster = 256,
     this.autoRebuildOnUpdate = true,
     this.paused = false,
-  });
+    List<MeshHandle>? meshes,
+    List<MaterialHandle>? materials,
+  }) {
+    if (meshes != null) this.meshes.addAll(meshes);
+    if (materials != null) this.materials.addAll(materials);
+  }
 
   static final spec = ComponentSpec<DrawBatcherComponent>(
     'DrawBatcherComponent',
@@ -50,12 +62,20 @@ final class DrawBatcherComponent extends Behaviour {
     List<batch.RenderBatchItem>? customItems,
   }) {
     final items = <batch.RenderBatchItem>[];
+    final gatheredMeshes = <MeshHandle>[];
+    final gatheredMaterials = <MaterialHandle>[];
     if (customItems != null) {
       items.addAll(customItems);
     } else if (isAttached && scene.isLoaded) {
       final camPos = Camera.of(scene)?.transform.position ?? Vec3.zero;
       for (final mr in scene.findObjectsOfType<MeshRenderer>()) {
         if (!mr.isActiveAndEnabled) continue;
+        if (mr.mesh != null && !gatheredMeshes.contains(mr.mesh!)) {
+          gatheredMeshes.add(mr.mesh!);
+        }
+        if (mr.material != null && !gatheredMaterials.contains(mr.material!)) {
+          gatheredMaterials.add(mr.material!);
+        }
         final pos = mr.transform.position;
         final dist = (pos - camPos).length;
         final idxCount = mr.meshData?.indices?.length ?? 36;
@@ -76,6 +96,8 @@ final class DrawBatcherComponent extends Behaviour {
           ),
         );
       }
+      if (meshes.isEmpty) meshes.addAll(gatheredMeshes);
+      if (materials.isEmpty) materials.addAll(gatheredMaterials);
     }
 
     sortResult = batch.RenderBatchSorter.sort(items);
@@ -92,6 +114,28 @@ final class DrawBatcherComponent extends Behaviour {
   void update() {
     if (paused || !autoRebuildOnUpdate) return;
     rebuildFromScene();
+  }
+
+  /// Builds a [SubmittedIndirectBatch] and dispatches it via [Graphics.submitIndirectBatch].
+  SubmittedIndirectBatch syncToRenderer(
+    Graphics gfx, {
+    String passId = RenderingShaderContracts.indirectBatchPassId,
+  }) {
+    if (drawTable.stats.totalInputObjects == 0 &&
+        isAttached &&
+        scene.isLoaded) {
+      rebuildFromScene();
+    }
+    final submission = SubmittedIndirectBatch(
+      passId: passId,
+      meshes: List<MeshHandle>.unmodifiable(meshes),
+      materials: List<MaterialHandle>.unmodifiable(materials),
+      instanceCount: drawTable.stats.totalInputObjects,
+      drawCommandCount: drawTable.stats.drawCommandCount,
+    );
+    lastSubmittedBatch = submission;
+    gfx.submitIndirectBatch(submission);
+    return submission;
   }
 }
 

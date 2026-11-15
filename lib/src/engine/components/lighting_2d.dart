@@ -84,6 +84,43 @@ class Light2DComponent extends Component {
   void _onDisableInternal() {
     scene._unregisterLight2D(this);
   }
+
+  /// Syncs 2D lighting state to renderer via scene-level [Lighting2DComponent]
+  /// or standalone pass declaration.
+  void syncToRenderer(Graphics gfx) {
+    if (isAttached) {
+      final comp = scene.findObjectsOfType<Lighting2DComponent>().firstOrNull;
+      if (comp != null) {
+        comp.syncToRenderer(gfx);
+        return;
+      }
+    }
+    final uniforms = <String, ShaderUniform>{
+      RenderingShaderContracts.lighting2dAmbientUniform:
+          const ShaderUniform.vec3(0.05, 0.05, 0.05),
+      RenderingShaderContracts.lighting2dLightCountUniform: ShaderUniform.int(
+        isActiveAndEnabled ? 1 : 0,
+      ),
+      RenderingShaderContracts.lighting2dCasterCountUniform: ShaderUniform.int(
+        isAttached ? scene.gatherShadowSegments2D().length : 0,
+      ),
+    };
+    final pass = RenderPassDecl(
+      id: RenderingShaderContracts.lighting2dPassId,
+      anchor: RenderPassAnchor.afterWorld,
+      attachments: const [
+        RenderPassAttachmentDecl(
+          name: 'lighting2d_target',
+          format: RenderPassTargetFormat.rgba8,
+          access: RenderPassAccess.write,
+          transient: true,
+        ),
+      ],
+      uniforms: uniforms,
+      enabled: isActiveAndEnabled,
+    );
+    gfx.declareRenderPass(pass);
+  }
 }
 
 /// 2D Shadow Caster component that generates occluding segments for 2D lighting and visibility polygons (E35).
@@ -211,4 +248,119 @@ class FogOfWar2DComponent extends Component {
   bool isVisible(Vec2 worldPos) => _fog.isVisible(_toLightVec2(worldPos));
 
   bool isExplored(Vec2 worldPos) => _fog.isExplored(_toLightVec2(worldPos));
+}
+
+/// Convenience alias matching Wave 12 subsystem contract.
+typedef Lighting2D = Lighting2DComponent;
+
+/// 2D lightmap composition pass & overlay shader manager (`R3`) (E35).
+final class Lighting2DComponent extends Behaviour {
+  LinearColor ambientColor;
+  int lightmapWidth;
+  int lightmapHeight;
+  TextureHandle? lightmapTexture;
+  int priority;
+  Graphics? _lastGfx;
+
+  Lighting2DComponent({
+    this.ambientColor = const LinearColor(0.05, 0.05, 0.05),
+    this.lightmapWidth = 512,
+    this.lightmapHeight = 512,
+    this.lightmapTexture,
+    this.priority = 10,
+  });
+
+  static final spec = ComponentSpec<Lighting2DComponent>(
+    'Lighting2DComponent',
+    Lighting2DComponent.new,
+    [
+      Field.color(
+        'ambientColor',
+        (c) => c.ambientColor,
+        (c, v) => c.ambientColor = v,
+      ),
+      Field.integer(
+        'lightmapWidth',
+        (c) => c.lightmapWidth,
+        (c, v) => c.lightmapWidth = v,
+      ),
+      Field.integer(
+        'lightmapHeight',
+        (c) => c.lightmapHeight,
+        (c, v) => c.lightmapHeight = v,
+      ),
+      Field.integer('priority', (c) => c.priority, (c, v) => c.priority = v),
+    ],
+  );
+
+  /// Composes 2D lightmap and shadow caster parameters and registers/updates
+  /// the custom overlay pass on [gfx].
+  void syncToRenderer(Graphics gfx) {
+    _lastGfx = gfx;
+    if (!isActiveAndEnabled) {
+      gfx.removeDeclaredRenderPass(RenderingShaderContracts.lighting2dPassId);
+      return;
+    }
+
+    final lights = isAttached ? scene._lights2D : const <Light2DComponent>[];
+    final activeLightCount = lights.where((l) => l.isActiveAndEnabled).length;
+    final segments = isAttached
+        ? scene.gatherShadowSegments2D()
+        : const <vlight.Segment2D>[];
+
+    final uniforms = <String, ShaderUniform>{
+      RenderingShaderContracts.lighting2dAmbientUniform: ShaderUniform.vec3(
+        ambientColor.r,
+        ambientColor.g,
+        ambientColor.b,
+      ),
+      RenderingShaderContracts.lighting2dLightCountUniform: ShaderUniform.int(
+        activeLightCount,
+      ),
+      RenderingShaderContracts.lighting2dCasterCountUniform: ShaderUniform.int(
+        segments.length,
+      ),
+    };
+
+    final textures = <String, TextureHandle>{};
+    if (lightmapTexture != null) {
+      textures[RenderingShaderContracts.lighting2dLightmapTexture] =
+          lightmapTexture!;
+    }
+
+    final pass = RenderPassDecl(
+      id: RenderingShaderContracts.lighting2dPassId,
+      anchor: RenderPassAnchor.afterWorld,
+      attachments: const [
+        RenderPassAttachmentDecl(
+          name: 'lighting2d_target',
+          format: RenderPassTargetFormat.rgba8,
+          access: RenderPassAccess.write,
+          transient: true,
+        ),
+      ],
+      uniforms: uniforms,
+      textures: textures,
+      priority: priority,
+      enabled: true,
+    );
+
+    gfx.declareRenderPass(pass);
+  }
+
+  /// Removes the declared 2D lighting overlay pass from [gfx].
+  void cleanup([Graphics? gfx]) {
+    final g = gfx ?? _lastGfx;
+    g?.removeDeclaredRenderPass(RenderingShaderContracts.lighting2dPassId);
+  }
+
+  @override
+  void onDisable() {
+    cleanup(_lastGfx);
+  }
+
+  @override
+  void onDestroy() {
+    cleanup(_lastGfx);
+  }
 }

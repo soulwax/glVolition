@@ -1,5 +1,68 @@
 part of '../../engine.dart';
 
+/// Extension methods adding convenient typed float/vec3 shader uniform helpers
+/// to [Graphics] for decoupled render systems.
+extension GraphicsShaderHelpers on Graphics {
+  void setShaderFloat(
+    Object targetOrName, [
+    Object? nameOrValue,
+    double? maybeValue,
+  ]) {
+    final ShaderTarget target;
+    final String name;
+    final double value;
+    if (targetOrName is ShaderTarget) {
+      target = targetOrName;
+      name = nameOrValue as String;
+      value = (maybeValue as num).toDouble();
+    } else {
+      target = ShaderSlot.shadowedWorld;
+      name = targetOrName as String;
+      value = (nameOrValue as num).toDouble();
+    }
+    setShaderUniform(target, name, ShaderUniform.float(value));
+  }
+
+  void setShaderVec3(
+    Object targetOrName, [
+    Object? nameOrValue,
+    Object? maybeValue,
+  ]) {
+    final ShaderTarget target;
+    final String name;
+    final Vec3 value;
+    if (targetOrName is ShaderTarget) {
+      target = targetOrName;
+      name = nameOrValue as String;
+      value = maybeValue is Vec3
+          ? maybeValue
+          : Vec3(
+              (maybeValue as dynamic).x as double,
+              (maybeValue as dynamic).y as double,
+              (maybeValue as dynamic).z as double,
+            );
+    } else {
+      target = ShaderSlot.shadowedWorld;
+      name = targetOrName as String;
+      value = nameOrValue is Vec3
+          ? nameOrValue
+          : Vec3(
+              (nameOrValue as dynamic).x as double,
+              (nameOrValue as dynamic).y as double,
+              (nameOrValue as dynamic).z as double,
+            );
+    }
+    setShaderUniform(
+      target,
+      name,
+      ShaderUniform.vec3(value.x, value.y, value.z),
+    );
+  }
+}
+
+/// Convenience alias matching Wave 12 subsystem contract.
+typedef LightProbeGi = LightProbeVolumeComponent;
+
 /// 3D tetrahedral light-probe Global Illumination volume & L2 SH3 irradiance sampler (`voxprobe`) (E68-2).
 final class LightProbeVolumeComponent extends Behaviour {
   Vec3 minCorner;
@@ -12,6 +75,8 @@ final class LightProbeVolumeComponent extends Behaviour {
   LinearColor groundColor;
   bool autoSyncSky;
   bool checkColliderOcclusion;
+  double intensity;
+  ShaderTarget targetSlot;
 
   /// Optional custom probe interior-wall test returning true when inside solid geometry.
   bool Function(Vec3 worldPos)? occlusionPredicate;
@@ -27,6 +92,7 @@ final class LightProbeVolumeComponent extends Behaviour {
   int _builtNy = -1;
   int _builtNz = -1;
   int _bakeGeneration = 0;
+  Graphics? _lastGfx;
 
   LightProbeVolumeComponent({
     this.minCorner = const Vec3(-10.0, 0.0, -10.0),
@@ -39,6 +105,8 @@ final class LightProbeVolumeComponent extends Behaviour {
     this.groundColor = const LinearColor(0.14, 0.12, 0.1),
     this.autoSyncSky = true,
     this.checkColliderOcclusion = false,
+    this.intensity = 1.0,
+    this.targetSlot = ShaderSlot.shadowedWorld,
     this.occlusionPredicate,
     this.shadowRayPredicate,
   });
@@ -73,6 +141,7 @@ final class LightProbeVolumeComponent extends Behaviour {
         (p) => p.checkColliderOcclusion,
         (p, v) => p.checkColliderOcclusion = v,
       ),
+      Field.number('intensity', (p) => p.intensity, (p, v) => p.intensity = v),
     ],
   );
 
@@ -240,6 +309,65 @@ final class LightProbeVolumeComponent extends Behaviour {
 
   Float32List sampleUniformSH27(Vec3 worldPos) =>
       grid.sampleAt(_toProbeVec3(worldPos)).toFlatArray27();
+
+  /// Evaluates and uploads Order-2 SH3 9-band spherical harmonic coefficients
+  /// and origin/intensity uniforms into [gfx] on [target] (defaults to [targetSlot]).
+  void syncToRenderer(Graphics gfx, {ShaderTarget? target}) {
+    _lastGfx = gfx;
+    final slot = target ?? targetSlot;
+    if (!isActiveAndEnabled) {
+      gfx.setShaderFloat(slot, RenderingShaderContracts.sh3EnabledUniform, 0.0);
+      return;
+    }
+
+    final sampleOrigin = isAttached
+        ? transform.position
+        : (minCorner + maxCorner) * 0.5;
+    final sh = grid.sampleAt(_toProbeVec3(sampleOrigin));
+
+    gfx.setShaderFloat(slot, RenderingShaderContracts.sh3EnabledUniform, 1.0);
+    gfx.setShaderVec3(
+      slot,
+      RenderingShaderContracts.sh3OriginUniform,
+      sampleOrigin,
+    );
+    gfx.setShaderFloat(
+      slot,
+      RenderingShaderContracts.sh3IntensityUniform,
+      intensity,
+    );
+
+    for (var i = 0; i < RenderingShaderContracts.sh3CoefficientCount; i++) {
+      final c = sh.coeffs[i];
+      gfx.setShaderVec3(
+        slot,
+        RenderingShaderContracts.sh3CoefficientUniform(i),
+        Vec3(c.r, c.g, c.b),
+      );
+    }
+  }
+
+  /// Clears SH3 uniform active state from [gfx].
+  void cleanup([Graphics? gfx, ShaderTarget? target]) {
+    final g = gfx ?? _lastGfx;
+    if (g != null) {
+      g.setShaderFloat(
+        target ?? targetSlot,
+        RenderingShaderContracts.sh3EnabledUniform,
+        0.0,
+      );
+    }
+  }
+
+  @override
+  void onDisable() {
+    cleanup(_lastGfx);
+  }
+
+  @override
+  void onDestroy() {
+    cleanup(_lastGfx);
+  }
 }
 
 /// Persistent UI interaction state for [ProbeGiInspectorUI.render].
