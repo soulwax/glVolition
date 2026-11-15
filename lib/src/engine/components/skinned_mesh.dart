@@ -11,8 +11,8 @@ final class SkinnedMeshRenderer extends Component {
   SceneNode? _leaf;
 
   SkinnedMeshRenderer({
-    MeshHandle? this._mesh,
-    MaterialHandle? this._material,
+    this._mesh,
+    this._material,
     this.skin,
     Float32List? initialPalette,
   }) : _jointMatrices =
