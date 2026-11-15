@@ -131,6 +131,7 @@ final class WebEngineHost implements EngineHost {
     web.window.removeEventListener('beforeunload', _onBeforeUnload);
     _inspector?.dispose();
     _engine?.dispose();
+    graphics.disposeRenderTargets();
     input.dispose();
     audio.dispose();
     app.dispose();

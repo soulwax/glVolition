@@ -99,6 +99,11 @@ final class RecordingGlesDevice implements GpuDevice, GpuContextGeneration {
   GpuObject? _boundElementBuffer;
   DrawStateDescriptor? lastAppliedDrawState;
   final Map<int, GpuObject> _sampledSinceUseProgram = {};
+  int activeViewportX = 0;
+  int activeViewportY = 0;
+  int activeViewportWidth = 0;
+  int activeViewportHeight = 0;
+  final List<({int x, int y, int width, int height})> viewportLog = [];
 
   int timerBeginCalls = 0;
   int timerEndCalls = 0;
@@ -431,6 +436,18 @@ final class RecordingGlesDevice implements GpuDevice, GpuContextGeneration {
         : '${(target as _NativeGpuObject).id}';
     drawLog.add('bindTarget($label)');
     onCommand?.call('bindTarget', [label]);
+  }
+
+  /// Sets the active GL viewport rectangle and logs it for verification.
+  void setViewport(int x, int y, int width, int height) {
+    _requireReady();
+    activeViewportX = x;
+    activeViewportY = y;
+    activeViewportWidth = width;
+    activeViewportHeight = height;
+    viewportLog.add((x: x, y: y, width: width, height: height));
+    drawLog.add('setViewport($x, $y, $width, $height)');
+    onCommand?.call('setViewport', [x, y, width, height]);
   }
 
   @override
@@ -965,17 +982,96 @@ final class NativeEngineHost implements EngineHost {
     }
 
     _elapsedSeconds += dt;
-    eng.step(dt);
+    graphics._queuedCameraPasses.clear();
+    graphics.lastFramePassStats.clear();
+    graphics._collectingFramePasses = true;
+    try {
+      eng.step(dt);
+    } finally {
+      graphics._collectingFramePasses = false;
+    }
 
     sceneRoot.syncToWorld(world);
-
-    final camCtrl = graphics.camera;
-    if (camCtrl != null) {
-      camCtrl.update(dt);
-    }
     graphics.shakeEngine.update(dt);
 
-    final aspect = _surface.pixelWidth / _surface.pixelHeight;
+    final updatedControllers = <CameraController>{};
+    final queuedPasses = graphics._queuedCameraPasses;
+    final FrameStats frameStats;
+    if (queuedPasses.isEmpty) {
+      if (graphics._activeViewportWidth > 0) {
+        graphics.setViewport(0, 0, _surface.pixelWidth, _surface.pixelHeight);
+      }
+      frameStats = _executeRenderPass(
+        eng: eng,
+        dt: dt,
+        camCtrl: graphics.camera,
+        visibilityMask: graphics.visibilityMask,
+        viewportWidth: _surface.pixelWidth,
+        viewportHeight: _surface.pixelHeight,
+        updateEmitters: true,
+        updatedControllers: updatedControllers,
+      );
+    } else {
+      final primaryMask = graphics.visibilityMask;
+      final passes = List<CameraRenderDescriptor>.of(queuedPasses);
+      queuedPasses.clear();
+      final statsList = <FrameStats>[];
+      for (var i = 0; i < passes.length; i++) {
+        final pass = passes[i];
+        final vp = graphics._resolvePixelViewport(
+          pass.normalizedViewportRect,
+          pass.target,
+        );
+        graphics._applyTargetAndClear(pass, pass.target);
+        graphics.setViewport(vp.x, vp.y, vp.width, vp.height);
+        graphics.visibilityMask = pass.visibilityMask;
+        final passStats = _executeRenderPass(
+          eng: eng,
+          dt: dt,
+          camCtrl: pass.camera ?? graphics.camera,
+          visibilityMask: pass.visibilityMask,
+          viewportWidth: vp.width,
+          viewportHeight: vp.height,
+          updateEmitters: i == 0,
+          updatedControllers: updatedControllers,
+        );
+        graphics._boundRenderTarget = null;
+        graphics.renderedCameraPasses.add(pass);
+        graphics.lastFramePassStats.add((descriptor: pass, stats: passStats));
+        statsList.add(passStats);
+      }
+      graphics.visibilityMask = primaryMask;
+      frameStats = _mergeFrameStats(statsList);
+    }
+
+    if (audio case final NativeAudioDevice nativeAudio) {
+      final audioFrames = dt > 0
+          ? (dt * nativeAudio.config.sampleRate).round().clamp(
+              1,
+              nativeAudio.config.sampleRate,
+            )
+          : nativeAudio.config.framesPerBuffer;
+      nativeAudio.pumpAudio(frames: audioFrames);
+    }
+    input.endFrame();
+    return frameStats;
+  }
+
+  FrameStats _executeRenderPass({
+    required Engine eng,
+    required double dt,
+    required CameraController? camCtrl,
+    required int visibilityMask,
+    required int viewportWidth,
+    required int viewportHeight,
+    required bool updateEmitters,
+    required Set<CameraController> updatedControllers,
+  }) {
+    if (camCtrl != null && updatedControllers.add(camCtrl)) {
+      camCtrl.update(dt);
+    }
+
+    final aspect = viewportHeight > 0 ? viewportWidth / viewportHeight : 1.0;
     var cameraView = camCtrl != null
         ? camCtrl.toCameraView(aspect)
         : CameraView.look(
@@ -994,35 +1090,83 @@ final class NativeEngineHost implements EngineHost {
       environment: graphics.environment,
       post: graphics.post,
       timeSeconds: _elapsedSeconds,
-      visibilityMask: graphics.visibilityMask,
+      visibilityMask: visibilityMask,
     );
 
     final encoder = renderer.beginFrame(world, frameInput);
     try {
       for (var i = 0; i < graphics._emitters.length; i++) {
         final emitter = graphics._emitters[i];
-        emitter.update(dt);
+        if (updateEmitters) {
+          emitter.update(dt);
+        }
         emitter.submit(encoder, frameInput);
       }
       eng.encodeFrame(encoder, frameInput);
-      final stats = renderer.endFrame();
-      if (audio case final NativeAudioDevice nativeAudio) {
-        final audioFrames = dt > 0
-            ? (dt * nativeAudio.config.sampleRate).round().clamp(
-                1,
-                nativeAudio.config.sampleRate,
-              )
-            : nativeAudio.config.framesPerBuffer;
-        nativeAudio.pumpAudio(frames: audioFrames);
-      }
-      input.endFrame();
-      return stats;
+      return renderer.endFrame();
     } catch (error) {
       try {
         renderer.abortFrame();
       } catch (_) {}
       rethrow;
     }
+  }
+
+  static FrameStats _mergeFrameStats(List<FrameStats> statsList) {
+    if (statsList.length == 1) return statsList.first;
+    final last = statsList.last;
+    var pointLightsDropped = 0;
+    var drawCalls = 0;
+    var trianglesSubmitted = 0;
+    var trianglesCulled = 0;
+    var instancesSubmitted = 0;
+    var instancesCulled = 0;
+    var peakGpuBytes = 0;
+    var resourceCreateCount = 0;
+    var resourceDeleteCount = 0;
+    final mergedPasses = <String, FramePassStats>{};
+    for (final s in statsList) {
+      if (s.pointLightsDropped > pointLightsDropped) {
+        pointLightsDropped = s.pointLightsDropped;
+      }
+      drawCalls += s.drawCalls;
+      trianglesSubmitted += s.trianglesSubmitted;
+      trianglesCulled += s.trianglesCulled;
+      instancesSubmitted += s.instancesSubmitted;
+      instancesCulled += s.instancesCulled;
+      if (s.peakGpuBytes > peakGpuBytes) peakGpuBytes = s.peakGpuBytes;
+      resourceCreateCount += s.resourceCreateCount;
+      resourceDeleteCount += s.resourceDeleteCount;
+      for (final entry in s.passStats.entries) {
+        final prev = mergedPasses[entry.key];
+        final cur = entry.value;
+        mergedPasses[entry.key] = prev == null
+            ? cur
+            : FramePassStats(
+                drawCalls: prev.drawCalls + cur.drawCalls,
+                trianglesSubmitted:
+                    prev.trianglesSubmitted + cur.trianglesSubmitted,
+                trianglesCulled: prev.trianglesCulled + cur.trianglesCulled,
+                instancesSubmitted:
+                    prev.instancesSubmitted + cur.instancesSubmitted,
+                instancesCulled: prev.instancesCulled + cur.instancesCulled,
+              );
+      }
+    }
+    return FrameStats(
+      frameIndex: last.frameIndex,
+      pointLightsDropped: pointLightsDropped,
+      drawCalls: drawCalls,
+      trianglesSubmitted: trianglesSubmitted,
+      trianglesCulled: trianglesCulled,
+      instancesSubmitted: instancesSubmitted,
+      instancesCulled: instancesCulled,
+      liveGpuBytes: last.liveGpuBytes,
+      peakGpuBytes: peakGpuBytes,
+      resourceCreateCount: resourceCreateCount,
+      resourceDeleteCount: resourceDeleteCount,
+      passStats: Map<String, FramePassStats>.unmodifiable(mergedPasses),
+    );
   }
 
   /// Resizes the native surface and reconfigures internal render targets.
@@ -1066,6 +1210,7 @@ final class NativeEngineHost implements EngineHost {
     if (audio case final DisposableNativeAudioDevice disposableAudio) {
       disposableAudio.dispose();
     }
+    graphics._dispose();
     sceneRoot.removeFromWorld(world);
     world.dispose();
     renderer.dispose();
@@ -1112,6 +1257,10 @@ final class NativeGraphics implements Graphics {
   final Map<MaterialHandle, MaterialDefinition> _materialDefinitions = {};
   final Map<ShaderTarget, Map<String, ShaderUniform>> _shaderUniforms = {};
   final Map<ShaderTarget, Map<String, TextureHandle>> _shaderTextures = {};
+  final Map<MeshHandle, MeshData> updatedMeshes = {};
+  final Map<MeshHandle, Float32List> skinningPalettes = {};
+  final Map<String, RenderPassDecl> declaredRenderPasses = {};
+  final List<SubmittedIndirectBatch> indirectBatches = [];
   Map<ShaderSlot, ShaderOverride> _shaderOverrides = const {};
   Map<String, ShaderOverride> _postEffects = const {};
   int _visibilityMask = -1;
@@ -1344,7 +1493,13 @@ final class NativeGraphics implements Graphics {
 
   int _nextRenderTargetSlot = 1;
   final Set<RenderTargetHandle> liveRenderTargets = {};
+  final Map<RenderTargetHandle, GpuObject> _gpuTargets = {};
   final List<CameraRenderDescriptor> renderedCameraPasses = [];
+  final List<CameraRenderDescriptor> _queuedCameraPasses = [];
+  final List<({CameraRenderDescriptor descriptor, FrameStats stats})>
+  lastFramePassStats = [];
+  RenderTargetHandle? _boundRenderTarget;
+  bool _collectingFramePasses = false;
   int activeViewportX = 0;
   int activeViewportY = 0;
   int _activeViewportWidth = 0;
@@ -1354,6 +1509,79 @@ final class NativeGraphics implements Graphics {
       _activeViewportWidth > 0 ? _activeViewportWidth : viewportWidth;
   int get activeViewportHeight =>
       _activeViewportHeight > 0 ? _activeViewportHeight : viewportHeight;
+
+  GpuObject? gpuTargetFor(RenderTargetHandle handle) => _gpuTargets[handle];
+
+  ({int x, int y, int width, int height}) _resolvePixelViewport(
+    Vec4 rect,
+    RenderTargetHandle? target,
+  ) {
+    final tw = target?.width ?? viewportWidth;
+    final th = target?.height ?? viewportHeight;
+    final maxW = tw > 0 ? tw : 1;
+    final maxH = th > 0 ? th : 1;
+    return (
+      x: (rect.x * tw).round(),
+      y: (rect.y * th).round(),
+      width: (rect.z * tw).round().clamp(1, maxW),
+      height: (rect.w * th).round().clamp(1, maxH),
+    );
+  }
+
+  void _bindTargetHandle(RenderTargetHandle? target) {
+    if (_host.device.status != GpuDeviceStatus.ready) {
+      _boundRenderTarget = null;
+      return;
+    }
+    if (target == null) {
+      _host.device.bindTarget(null);
+      _boundRenderTarget = null;
+      return;
+    }
+    if (!liveRenderTargets.contains(target)) {
+      throw StateError(
+        'NativeGraphics: RenderTargetHandle(${target.slot}) has been released',
+      );
+    }
+    final gpuTarget = _gpuTargets.putIfAbsent(
+      target,
+      () => _host.device.createTarget(
+        GpuTargetDescriptor(
+          width: target.width,
+          height: target.height,
+          hasDepth: true,
+        ),
+      ),
+    );
+    _host.device.bindTarget(gpuTarget);
+    _boundRenderTarget = target;
+  }
+
+  void _applyTargetAndClear(
+    CameraRenderDescriptor descriptor,
+    RenderTargetHandle? target,
+  ) {
+    _bindTargetHandle(target);
+    if (target == null || _host.device.status != GpuDeviceStatus.ready) return;
+    final clearMask = switch ((descriptor.clearColor, descriptor.clearDepth)) {
+      (true, true) => ClearMask.colorAndDepth,
+      (true, false) => ClearMask.colorOnly,
+      (false, true) => ClearMask.depthOnly,
+      (false, false) => null,
+    };
+    if (clearMask != null) {
+      final c = environment.clearColor;
+      _host.device.clear(clearMask, r: c.r, g: c.g, b: c.b, a: 1.0);
+    }
+  }
+
+  void _dispose() {
+    for (final handle in liveRenderTargets.toList()) {
+      releaseRenderTarget(handle);
+    }
+    _queuedCameraPasses.clear();
+    _boundRenderTarget = null;
+  }
 
   @override
   Ray? screenRay(double x, double y) {
@@ -1394,24 +1622,45 @@ final class NativeGraphics implements Graphics {
       debugLabel: debugLabel,
     );
     liveRenderTargets.add(handle);
+    if (_host.device.status == GpuDeviceStatus.ready) {
+      _gpuTargets[handle] = _host.device.createTarget(
+        GpuTargetDescriptor(width: width, height: height, hasDepth: true),
+      );
+    }
     return handle;
   }
 
   @override
   void releaseRenderTarget(RenderTargetHandle handle) {
     if (liveRenderTargets.remove(handle)) {
+      final gpuTarget = _gpuTargets.remove(handle);
+      if (gpuTarget != null && _host.device.status == GpuDeviceStatus.ready) {
+        if (_boundRenderTarget == handle) {
+          _host.device.bindTarget(null);
+          _boundRenderTarget = null;
+        }
+        _host.device.deleteTarget(gpuTarget);
+      }
       releaseTexture(handle.colorTexture);
     }
   }
 
-  @override
-  void setViewport(int x, int y, int width, int height) {
+  void _setViewportState(int x, int y, int width, int height) {
     activeViewportX = x;
     activeViewportY = y;
     _activeViewportWidth = width;
     _activeViewportHeight = height;
+  }
+
+  @override
+  void setViewport(int x, int y, int width, int height) {
+    _setViewportState(x, y, width, height);
     if (_host.device case final Gles3FfiDevice gles3) {
       gles3.setViewport(x, y, width, height);
+    } else if (_host.device case final RecordingGlesDevice recording) {
+      if (recording.status == GpuDeviceStatus.ready) {
+        recording.setViewport(x, y, width, height);
+      }
     }
   }
 
@@ -1420,16 +1669,45 @@ final class NativeGraphics implements Graphics {
     RenderTargetHandle? target, {
     required CameraRenderDescriptor descriptor,
   }) {
-    final rect = descriptor.normalizedViewportRect;
-    final tw = target?.width ?? viewportWidth;
-    final th = target?.height ?? viewportHeight;
-    final pxX = (rect.x * tw).round();
-    final pxY = (rect.y * th).round();
-    final pxW = (rect.z * tw).round().clamp(1, tw > 0 ? tw : 1);
-    final pxH = (rect.w * th).round().clamp(1, th > 0 ? th : 1);
-    setViewport(pxX, pxY, pxW, pxH);
+    final vp = _resolvePixelViewport(descriptor.normalizedViewportRect, target);
     visibilityMask = descriptor.visibilityMask;
-    renderedCameraPasses.add(descriptor);
+    if (_collectingFramePasses) {
+      _setViewportState(vp.x, vp.y, vp.width, vp.height);
+      _queuedCameraPasses.add(descriptor);
+    } else {
+      _applyTargetAndClear(descriptor, target);
+      setViewport(vp.x, vp.y, vp.width, vp.height);
+      renderedCameraPasses.add(descriptor);
+    }
+  }
+
+  @override
+  void updateMeshVertices(MeshHandle handle, MeshData data) {
+    updatedMeshes[handle] = data;
+  }
+
+  @override
+  void setSkinningPalette(
+    MeshHandle mesh,
+    Float32List jointMatrices, {
+    int jointCount = 0,
+  }) {
+    skinningPalettes[mesh] = Float32List.fromList(jointMatrices);
+  }
+
+  @override
+  void declareRenderPass(RenderPassDecl pass) {
+    declaredRenderPasses[pass.id] = pass;
+  }
+
+  @override
+  void removeDeclaredRenderPass(String passId) {
+    declaredRenderPasses.remove(passId);
+  }
+
+  @override
+  void submitIndirectBatch(SubmittedIndirectBatch batch) {
+    indirectBatches.add(batch);
   }
 }
 

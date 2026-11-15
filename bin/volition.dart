@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:voxlog/voxlog.dart';
 
+import '../tool/asset_packer.dart';
 import '../tool/package_native.dart';
 
 final log = voxlog.stdoutColor('volition', level: LogLevel.info);
@@ -85,6 +86,8 @@ Future<void> main(List<String> args) async {
       await _runBuild(rest);
     case 'dist':
       await _runDist(rest);
+    case 'pack':
+      await _runPack(rest);
     default:
       log.error('Unknown command "$cmd".');
       _printUsage();
@@ -101,6 +104,7 @@ Usage:
   dart run gl_volition:volition serve <entry.dart> [--port 8080] [--root <dir>]
   dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows|linux|macos|native|exe|webview] [--version <ver>] [--name <name>] [--out <dir>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
   dart run gl_volition:volition dist [entry.dart] [--target all|windows|linux|macos|native|exe|webview|js|wasm] [--version <ver>] [--name <name>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
+  dart run gl_volition:volition pack [pack|obj2qmesh|cube2lut|validate] [--in <dir>] [--out <bundle.pak>] [--cook-dir <dir>] [--manifest <sidecar.json>] [--no-compress] [--xor-key <int>] [--dry-run]
 
 Targets:
   windows|linux|macos|native|exe  Native AOT executable + runtime DLLs/SOs/Dylibs + assets/.pak
@@ -110,6 +114,17 @@ Targets:
 Outputs default to a versioned, named folder structure under ./dist:
   ./dist/<version>/<name>/<target>/
 ''');
+}
+
+Future<void> _runPack(List<String> args) async {
+  final code = await runAssetPackerCli(
+    args,
+    log: stdout.writeln,
+    onError: log.error,
+  );
+  if (code != 0) {
+    exit(code);
+  }
 }
 
 Future<void> _runServe(List<String> args) async {

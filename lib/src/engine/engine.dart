@@ -29,6 +29,9 @@ final class Engine {
   final Time time = Time();
   late final InputActions input = InputActions(host.input);
   late final AssetCatalog catalog = AssetCatalog._(this);
+  late final StreamingAssetLoader streamingAssets = StreamingAssetLoader(
+    source: host.assets,
+  );
   late final EditorSession editor = EditorSession(this);
   late final SceneManager scenes = SceneManager._(this);
   late final SaveSystem saves = SaveSystem._(this);
@@ -146,6 +149,9 @@ final class Engine {
       time._inFixedStep = false;
 
       _scene._updateStep();
+      if (streamingAssets.pendingCount > 0) {
+        unawaited(streamingAssets.processFrameBudget());
+      }
       _scene._flushDestroyed();
       _scene._syncToRenderer(host.graphics);
     } finally {

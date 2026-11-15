@@ -6,4 +6,5 @@ export 'gl_volition.dart';
 export 'package:pixeldart/pixeldart.dart';
 
 export 'src/web/inspector_overlay.dart';
+export 'src/web/web_async_decode.dart';
 export 'src/web/web_host.dart';

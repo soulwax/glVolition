@@ -15,17 +15,44 @@ final class Prefab {
   const Prefab.builder(this.name, this._build);
 
   /// Creates a prefab from a serialized GameObject JSON map and a
-  /// [ComponentRegistry].
+  /// [ComponentRegistry], migrating legacy schema versions via [SceneMigrator].
   factory Prefab.fromJson(
     Map<String, Object?> json, {
     ComponentRegistry? registry,
+    SceneMigrator? migrator,
   }) {
-    final name = (json['name'] as String?) ?? 'Prefab';
+    final effectiveMigrator =
+        migrator ??
+        SceneMigrator(currentVersion: SceneSerializer.schemaVersion);
+    final migrated = effectiveMigrator
+        .migrate(json, kind: ScenePayloadKind.prefab)
+        .data;
+    final name = migrated['name'] as String;
     final reg = registry ?? ComponentRegistry.defaults();
     return Prefab.builder(name, (root) {
-      SceneSerializer._populateGameObjectFromJson(root, json, reg, const {});
+      final requestedName = root.name;
+      SceneSerializer._populateGameObjectFromJson(
+        root,
+        migrated,
+        reg,
+        const {},
+      );
+      if (requestedName != name) {
+        root.name = requestedName;
+      }
     });
   }
+
+  /// Decodes a JSON object string and creates a [Prefab] via [Prefab.fromJson].
+  factory Prefab.fromJsonString(
+    String json, {
+    ComponentRegistry? registry,
+    SceneMigrator? migrator,
+  }) => Prefab.fromJson(
+    SceneMigrator.decodeJsonObject(json),
+    registry: registry,
+    migrator: migrator,
+  );
 
   /// Creates a [Prefab] from a loaded [ModelAsset] hierarchy so every mesh
   /// node becomes a [GameObject] with [MeshFilter] + [MeshRenderer] (E14-1).

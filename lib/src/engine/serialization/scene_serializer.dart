@@ -4,7 +4,7 @@ part of '../../engine.dart';
 /// [RenderSettings], registered components, and prefab instances with field
 /// overrides) to and from JSON maps (E3-3).
 abstract final class SceneSerializer {
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   static String toJsonString(Scene scene, {ComponentRegistry? registry}) =>
       jsonEncode(toJson(scene, registry: registry));
@@ -13,10 +13,12 @@ abstract final class SceneSerializer {
     String json, {
     ComponentRegistry? registry,
     Map<String, Prefab> prefabs = const {},
+    SceneMigrator? migrator,
   }) => fromJson(
-    jsonDecode(json) as Map<String, Object?>,
+    SceneMigrator.decodeJsonObject(json),
     registry: registry,
     prefabs: prefabs,
+    migrator: migrator,
   );
 
   static Map<String, Object?> toJson(
@@ -94,15 +96,17 @@ abstract final class SceneSerializer {
     Map<String, Object?> data, {
     ComponentRegistry? registry,
     Map<String, Prefab> prefabs = const {},
+    SceneMigrator? migrator,
   }) {
-    final version = (data['schemaVersion'] as num?)?.toInt() ?? 1;
-    if (version != schemaVersion) {
-      throw FormatException('Unsupported scene schemaVersion: $version');
-    }
+    final effectiveMigrator =
+        migrator ?? SceneMigrator(currentVersion: schemaVersion);
+    final migrated = effectiveMigrator
+        .migrate(data, kind: ScenePayloadKind.scene)
+        .data;
     final reg = registry ?? ComponentRegistry.defaults();
-    final scene = Scene((data['name'] as String?) ?? 'Scene');
+    final scene = Scene((migrated['name'] as String?) ?? 'Scene');
 
-    final rsMap = data['renderSettings'] as Map<String, Object?>?;
+    final rsMap = migrated['renderSettings'] as Map<String, Object?>?;
     if (rsMap != null) {
       final rs = scene.renderSettings;
       if (rsMap['clearColor'] != null) {
@@ -165,7 +169,7 @@ abstract final class SceneSerializer {
       }
     }
 
-    final objects = (data['objects'] as List<Object?>?) ?? const [];
+    final objects = (migrated['objects'] as List<Object?>?) ?? const [];
     for (final raw in objects) {
       _buildObjectFromJson(
         scene,

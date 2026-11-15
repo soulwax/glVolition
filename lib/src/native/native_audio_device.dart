@@ -1075,12 +1075,28 @@ final class _VoiceState {
   bool loop = false;
   double pan = 0.0;
   double lowPassCutoffHz = 20000.0;
+  double lowPassResonance = 0.70710678;
   double reverbWet = 0.0;
   bool playing = false;
   bool paused = false;
 
-  double lpfL = 0.0;
-  double lpfR = 0.0;
+  double _lpfB0 = 1.0;
+  double _lpfB1 = 0.0;
+  double _lpfB2 = 0.0;
+  double _lpfA1 = 0.0;
+  double _lpfA2 = 0.0;
+  double _cachedLpfCutoff = -1.0;
+  double _cachedLpfQ = -1.0;
+  int _cachedLpfRate = -1;
+
+  double _lpfX1L = 0.0;
+  double _lpfX2L = 0.0;
+  double _lpfY1L = 0.0;
+  double _lpfY2L = 0.0;
+  double _lpfX1R = 0.0;
+  double _lpfX2R = 0.0;
+  double _lpfY1R = 0.0;
+  double _lpfY2R = 0.0;
 
   Float32List? _delayL;
   Float32List? _delayR;
@@ -1088,12 +1104,87 @@ final class _VoiceState {
   int _delayPosR = 0;
 
   void resetDspState() {
-    lpfL = 0.0;
-    lpfR = 0.0;
+    _lpfX1L = 0.0;
+    _lpfX2L = 0.0;
+    _lpfY1L = 0.0;
+    _lpfY2L = 0.0;
+    _lpfX1R = 0.0;
+    _lpfX2R = 0.0;
+    _lpfY1R = 0.0;
+    _lpfY2R = 0.0;
     _delayPosL = 0;
     _delayPosR = 0;
     _delayL?.fillRange(0, _delayL!.length, 0.0);
     _delayR?.fillRange(0, _delayR!.length, 0.0);
+  }
+
+  void ensureLowPassCoefficients(double cutoffHz, double q, int sampleRate) {
+    final nyquistGuard = math.max(40.0, sampleRate * 0.49);
+    final clampedFreq = cutoffHz.clamp(20.0, nyquistGuard);
+    final clampedQ = q.clamp(0.1, 20.0);
+    if (clampedFreq == _cachedLpfCutoff &&
+        clampedQ == _cachedLpfQ &&
+        sampleRate == _cachedLpfRate) {
+      return;
+    }
+    _cachedLpfCutoff = clampedFreq;
+    _cachedLpfQ = clampedQ;
+    _cachedLpfRate = sampleRate;
+
+    final omega = 2.0 * math.pi * (clampedFreq / sampleRate);
+    final cosW = math.cos(omega);
+    final sinW = math.sin(omega);
+    final alpha = sinW / (2.0 * clampedQ);
+    final invA0 = 1.0 / (1.0 + alpha);
+
+    _lpfB0 = ((1.0 - cosW) * 0.5) * invA0;
+    _lpfB1 = (1.0 - cosW) * invA0;
+    _lpfB2 = _lpfB0;
+    _lpfA1 = (-2.0 * cosW) * invA0;
+    _lpfA2 = (1.0 - alpha) * invA0;
+  }
+
+  (double, double) processLowPass(double inL, double inR) {
+    final outL =
+        _lpfB0 * inL +
+        _lpfB1 * _lpfX1L +
+        _lpfB2 * _lpfX2L -
+        _lpfA1 * _lpfY1L -
+        _lpfA2 * _lpfY2L;
+    _lpfX2L = _lpfX1L;
+    _lpfX1L = inL;
+    _lpfY2L = _lpfY1L;
+    _lpfY1L = outL;
+
+    final outR =
+        _lpfB0 * inR +
+        _lpfB1 * _lpfX1R +
+        _lpfB2 * _lpfX2R -
+        _lpfA1 * _lpfY1R -
+        _lpfA2 * _lpfY2R;
+    _lpfX2R = _lpfX1R;
+    _lpfX1R = inR;
+    _lpfY2R = _lpfY1R;
+    _lpfY1R = outR;
+
+    return (outL, outR);
+  }
+
+  void trackBypassLowPass(double inL, double inR) {
+    // Track the low-frequency DC envelope across sample pairs so switching
+    // from bypass (>= 18 kHz) into a sharp LPF cutoff does not inject raw
+    // Nyquist oscillation into the Direct Form I feedback state.
+    final avgL = 0.5 * (inL + _lpfX1L);
+    final avgR = 0.5 * (inR + _lpfX1R);
+    _lpfX2L = _lpfX1L;
+    _lpfX1L = inL;
+    _lpfY2L = _lpfY1L;
+    _lpfY1L += 0.1 * (avgL - _lpfY1L);
+
+    _lpfX2R = _lpfX1R;
+    _lpfX1R = inR;
+    _lpfY2R = _lpfY1R;
+    _lpfY1R += 0.1 * (avgR - _lpfY1R);
   }
 
   (double, double) processReverb(
@@ -1156,19 +1247,29 @@ final class NativeAudioChannel implements AudioChannel {
   double get lowPassCutoffHz => _voice.lowPassCutoffHz;
   set lowPassCutoffHz(double value) => _voice.lowPassCutoffHz = value;
 
+  double get lowPassResonance => _voice.lowPassResonance;
+  set lowPassResonance(double value) => _voice.lowPassResonance = value.isFinite
+      ? value.clamp(0.1, 20.0)
+      : 0.70710678;
+
   double get reverbWet => _voice.reverbWet;
   set reverbWet(double value) => _voice.reverbWet = value;
 
   @override
-  void setPan(double pan) => this.pan = pan.clamp(-1.0, 1.0);
+  void setPan(double pan) =>
+      this.pan = pan.isFinite ? pan.clamp(-1.0, 1.0) : 0.0;
 
   @override
   void setLowPass(double cutoffHz, {double resonance = 0.707}) {
-    lowPassCutoffHz = cutoffHz;
+    lowPassCutoffHz = cutoffHz.isFinite
+        ? cutoffHz.clamp(20.0, 24000.0)
+        : 20000.0;
+    lowPassResonance = resonance;
   }
 
   @override
-  void setReverbSend(double wet) => reverbWet = wet.clamp(0.0, 1.0);
+  void setReverbSend(double wet) =>
+      reverbWet = wet.isFinite ? wet.clamp(0.0, 1.0) : 0.0;
 
   @override
   bool get isPlaying => _voice.playing && !_voice.paused && !_disposed;
@@ -1482,13 +1583,12 @@ final class NativeAudioDevice implements DisposableNativeAudioDevice {
     final cutoff = voice.lowPassCutoffHz.isFinite
         ? voice.lowPassCutoffHz.clamp(20.0, 24000.0)
         : 20000.0;
+    final resonance = voice.lowPassResonance.isFinite
+        ? voice.lowPassResonance.clamp(0.1, 20.0)
+        : 0.70710678;
     final useLpf = cutoff < 18000.0;
-    final double lpfAlpha;
     if (useLpf) {
-      final omega = 2.0 * math.pi * cutoff;
-      lpfAlpha = omega / (omega + outputSampleRate);
-    } else {
-      lpfAlpha = 1.0;
+      voice.ensureLowPassCoefficients(cutoff, resonance, outputSampleRate);
     }
 
     final wet = voice.reverbWet.isFinite
@@ -1499,8 +1599,6 @@ final class NativeAudioDevice implements DisposableNativeAudioDevice {
     final samples = clip.samples;
     final chCount = clip.channels;
     var cursor = voice.cursor;
-    var lpfL = voice.lpfL;
-    var lpfR = voice.lpfR;
 
     for (var f = 0; f < frameCount; f++) {
       if (cursor >= clipFrames) {
@@ -1539,13 +1637,9 @@ final class NativeAudioDevice implements DisposableNativeAudioDevice {
       }
 
       if (useLpf) {
-        lpfL += lpfAlpha * (sampleL - lpfL);
-        lpfR += lpfAlpha * (sampleR - lpfR);
-        sampleL = lpfL;
-        sampleR = lpfR;
+        (sampleL, sampleR) = voice.processLowPass(sampleL, sampleR);
       } else {
-        lpfL = sampleL;
-        lpfR = sampleR;
+        voice.trackBypassLowPass(sampleL, sampleR);
       }
 
       if (useReverb) {
@@ -1574,8 +1668,6 @@ final class NativeAudioDevice implements DisposableNativeAudioDevice {
     }
 
     voice.cursor = cursor;
-    voice.lpfL = lpfL;
-    voice.lpfR = lpfR;
   }
 
   static void _softClampBuffer(Float32List buffer) {

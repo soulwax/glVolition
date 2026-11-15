@@ -1,81 +1,17 @@
 part of '../../engine.dart';
 
-final class _EmptySpecResources implements ResourceLibrary {
-  const _EmptySpecResources();
+ModelAsset _defaultEmptyModelAsset([ResourceLibrary? resources]) =>
+    ModelAsset.fromGlb(
+      GlbResult(
+        rootNode: SceneNode.group(name: 'empty'),
+        meshes: const [],
+        materials: const [],
+      ),
+      resources ?? MemoryResourceLibrary(),
+      name: 'empty',
+    );
 
-  @override
-  MeshHandle registerMesh(MeshData data, {String? debugLabel}) =>
-      MeshHandle.invalid;
-
-  @override
-  void releaseMesh(MeshHandle handle) {}
-
-  @override
-  MaterialHandle registerMaterial(MaterialDefinition definition) =>
-      MaterialHandle.invalid;
-
-  @override
-  void releaseMaterial(MaterialHandle handle) {}
-
-  @override
-  ModelBinding bindModel(ModelDefinition definition) =>
-      ModelBinding(definition, const []);
-
-  @override
-  TextureHandle registerTexture({
-    required int width,
-    required int height,
-    int layers = 1,
-    bool hasMips = false,
-    GpuTextureFilter minFilter = GpuTextureFilter.linear,
-    GpuTextureFilter magFilter = GpuTextureFilter.linear,
-    GpuTextureWrap wrap = GpuTextureWrap.clampToEdge,
-    double anisotropy = 1,
-    Uint8List? pixels,
-    String? debugLabel,
-  }) => TextureHandle.invalid;
-
-  @override
-  void updateTexturePixels(TextureHandle handle, Uint8List pixels) {}
-
-  @override
-  void finalizeTextureMips(TextureHandle handle) {}
-
-  @override
-  AnisotropyDecision anisotropyOf(TextureHandle handle) =>
-      const AnisotropyDecision(
-        requested: 1,
-        effective: 1,
-        maxSupported: 1,
-        extensionAvailable: false,
-      );
-
-  @override
-  void releaseTexture(TextureHandle handle) {}
-
-  @override
-  get textureResidency => throw UnsupportedError(
-    '_EmptySpecResources does not provide texture residency management.',
-  );
-
-  @override
-  get materialResidency => throw UnsupportedError(
-    '_EmptySpecResources does not provide material residency management.',
-  );
-
-  @override
-  void dispose() {}
-}
-
-ModelAsset _defaultEmptyModelAsset() => ModelAsset.fromGlb(
-  GlbResult(
-    rootNode: SceneNode.group(name: 'empty'),
-    meshes: const [],
-    materials: const [],
-  ),
-  const _EmptySpecResources(),
-  name: 'empty',
-);
+void _noopFieldSetter<T, V>(T _, V __) {}
 
 /// Registers [ComponentSpec] descriptors for all extended engine components
 /// beyond the core built-ins in `component_spec.dart` (E103).
@@ -94,7 +30,32 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
     ComponentSpec<ModelRenderer>(
       'ModelRenderer',
       () => ModelRenderer(_defaultEmptyModelAsset()),
-      const [],
+      [
+        Field.text('modelName', (c) => c.model.name, _noopFieldSetter),
+        Field.boolean('centerOrigin', (c) => c.centerOrigin, _noopFieldSetter),
+        Field.vec3(
+          'localOffsetPos',
+          (c) => c.localOffset.translation,
+          _noopFieldSetter,
+        ),
+        Field.quat(
+          'localOffsetRot',
+          (c) => c.localOffset.rotation,
+          _noopFieldSetter,
+        ),
+        Field.number(
+          'localOffsetScale',
+          (c) => c.localOffset.scale,
+          _noopFieldSetter,
+        ),
+        Field.vec3('boundsMin', (c) => c.model.bounds.min, _noopFieldSetter),
+        Field.vec3('boundsMax', (c) => c.model.bounds.max, _noopFieldSetter),
+        Field.number(
+          'boundingRadius',
+          (c) => c.boundingRadius,
+          _noopFieldSetter,
+        ),
+      ],
     ),
   );
 

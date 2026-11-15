@@ -237,6 +237,25 @@ abstract interface class Graphics {
     RenderTargetHandle? target, {
     required CameraRenderDescriptor descriptor,
   });
+
+  /// Re-uploads dynamic vertex/normal/bounds buffers (e.g. soft bodies).
+  void updateMeshVertices(MeshHandle handle, MeshData data);
+
+  /// Binds or updates the GPU bone-matrix palette for skeletal skinning.
+  void setSkinningPalette(
+    MeshHandle mesh,
+    Float32List jointMatrices, {
+    int jointCount = 0,
+  });
+
+  /// Registers or updates a host-declared `R3` render graph pass.
+  void declareRenderPass(RenderPassDecl pass);
+
+  /// Unregisters a previously declared `R3` render graph pass.
+  void removeDeclaredRenderPass(String passId);
+
+  /// Submits a clustered indirect draw batch descriptor from `DrawBatcher`.
+  void submitIndirectBatch(SubmittedIndirectBatch batch);
 }
 
 /// Computes a canonical structural signature for a shader override and

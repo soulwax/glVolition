@@ -141,7 +141,7 @@
     - Patch `PixeldartApp._frame` (`vendor/pixeldart/lib/rendering/webgl/pixeldart_app.dart:1194-1199`) to accept/apply `visibilityMask` into `sequencer.next(...)` (resolving Wave 7 Web caveat).
   - **DoneWhen:** `dart analyze` + `dart test` + `vendor/pixeldart` tests pass with zero warnings.
 
-- [ ] **[P2-W10-A] Web & Native Input Parity (Wheel, Multi-Touch, PointerLock, Gamepad) + `InputManagerComponent` Wiring**
+- [x] **[P2-W10-A] Web & Native Input Parity (Wheel, Multi-Touch, PointerLock, Gamepad) + `InputManagerComponent` Wiring**
   - **Priority:** P1
   - **DependsOn:** `[P2-W10-0]`
   - **Owns:** `lib/src/web/web_input.dart`, `lib/src/native/native_input.dart`, `lib/src/engine/components/input_manager.dart`, `test/engine/input_parity_test.dart`
@@ -152,7 +152,7 @@
     - Connect `InputManagerComponent` action maps, axis bindings, runtime rebinding persistence, and virtual touch overlays cleanly to live `Input`.
   - **DoneWhen:** `dart test test/engine/input_parity_test.dart` + `dart compile js example/prism_pulse/main.dart` pass.
 
-- [ ] **[P2-W10-B] Web Audio API `AudioContext` DSP Graph & Spatial Mixer Integration**
+- [x] **[P2-W10-B] Web Audio API `AudioContext` DSP Graph & Spatial Mixer Integration**
   - **Priority:** P1
   - **DependsOn:** `[P2-W10-0]`
   - **Owns:** `lib/src/web/web_audio.dart`, `lib/src/native/native_audio_device.dart`, `lib/src/engine/components/audio_dsp.dart`, `lib/src/engine/components/audio_source.dart`, `test/engine/audio_dsp_test.dart`
@@ -162,7 +162,7 @@
     - Wire `AudioListener`, `AudioSource`, `AudioMixer`, `AudioReverbZone`, `AudioLowPassFilterComponent`, and `SpatialAudioDspExt` so zone proximity/occlusion parameters drive live `AudioChannel` pan, cutoff Hz, and reverb send on Web, Native, and Headless.
   - **DoneWhen:** `dart test test/engine/audio_dsp_test.dart` verifies gain attenuation, stereo pan, lowpass cutoff, and reverb send updates into `HeadlessAudio` & `NativeAudioDevice`, and `dart compile js` compiles cleanly.
 
-- [ ] **[P2-W10-C] Multi-Camera Viewport Sorting & Render-to-Texture Pipeline**
+- [x] **[P2-W10-C] Multi-Camera Viewport Sorting & Render-to-Texture Pipeline**
   - **Priority:** P1
   - **DependsOn:** `[P2-W10-0]`
   - **Owns:** `lib/src/web/web_graphics.dart`, `lib/src/native/native_host.dart`, `lib/src/engine/components/camera.dart`, `lib/src/engine/scene.dart`, `test/engine/multi_camera_test.dart`
@@ -172,7 +172,7 @@
     - Implement multi-pass viewport/scissor & render-target switching in `web_graphics.dart` and `native_host.dart` (+ `RecordingGlesDevice` viewport command assertions).
   - **DoneWhen:** `dart test test/engine/multi_camera_test.dart` proves depth ordering (2+ active cameras + PIP minimap target) and per-camera `visibilityMask` isolation across Headless and Native recording hosts.
 
-- [ ] **[P2-W10-M] Coordinator Merge: Push `vendor/pixeldart` `visibilityMask` Submodule Commit & Verify Parity**
+- [x] **[P2-W10-M] Coordinator Merge: Push `vendor/pixeldart` `visibilityMask` Submodule Commit & Verify Parity**
   - **Priority:** P0
   - **DependsOn:** `[P2-W10-A]`, `[P2-W10-B]`, `[P2-W10-C]`
   - **Owns:** Submodule gitlink sync + `tool/verify_all.dart` run
@@ -184,7 +184,7 @@
 
 **Wave Exit Gate:** Scenes load `.glb`/`.qmesh`/textures/LUTs natively from `.pak` archives, `ModelRenderer` serializes real `AssetCatalog` keys, `v1` scenes migrate cleanly to current schema, and background async streaming passes memory/eviction tests.
 
-- [ ] **[P3-W11-0] Coordinator Freeze: Asset Handles, Ref-Counting & Migration Interfaces**
+- [x] **[P3-W11-0] Coordinator Freeze: Asset Handles, Ref-Counting & Migration Interfaces**
   - **Priority:** P0
   - **DependsOn:** `[P2-W10-M]`
   - **Owns:** `lib/src/engine/assets/asset_types.dart`, `lib/src/engine/serialization/scene_migration.dart`
@@ -192,7 +192,7 @@
   - **Scope:** Define `AssetHandle<T>` (`acquire`/`release`), eviction callback contracts, and `SceneMigrationStep` interface (`fromVersion`, `toVersion`, `migrate(Map<String, Object?>)`).
   - **DoneWhen:** `dart analyze` passes.
 
-- [ ] **[P3-W11-A] Direct `VfsAssetLoader.loadModel`, Ref-Counted `AssetCatalog` Unloading & `ModelRenderer` Spec Fix**
+- [x] **[P3-W11-A] Direct `VfsAssetLoader.loadModel`, Ref-Counted `AssetCatalog` Unloading & `ModelRenderer` Spec Fix**
   - **Priority:** P0
   - **DependsOn:** `[P3-W11-0]`
   - **Owns:** `lib/src/engine/assets/pak_vfs.dart`, `lib/src/engine/assets/asset_catalog.dart`, `lib/src/engine/serialization/component_spec_extra.dart`, `test/assets/asset_catalog_vfs_test.dart`
@@ -203,7 +203,7 @@
     - Fix `ModelRenderer` `ComponentSpec` (`component_spec_extra.dart:44-49`) so `assetId` / asset key serializes/deserializes against `AssetCatalog` instead of constructing an empty dummy `ModelAsset` with `const []` fields.
   - **DoneWhen:** `dart test test/assets/asset_catalog_vfs_test.dart` passes round-trip `.pak` model loads without fallback and verifies ref-count drops to 0 cleanly dispose resources.
 
-- [ ] **[P3-W11-B] `volition pack` CLI Bundler, `OBJ -> QMSH` Integration, Catalog Validator & LUT Asset Loader**
+- [x] **[P3-W11-B] `volition pack` CLI Bundler, `OBJ -> QMSH` Integration, Catalog Validator & LUT Asset Loader**
   - **Priority:** P1
   - **DependsOn:** `[P3-W11-0]`
   - **Owns:** `tool/asset_packer.dart`, `bin/volition.dart`, `vendor/pixeldart/lib/assets/**`, `vendor/pixeldart/tools/assets/**`, `test/assets/packer_qmesh_test.dart`
@@ -214,7 +214,7 @@
     - Build a real color-grading `.cube`/image LUT asset + loader (`TODO.md` carry-over) usable by `pixeldart` post-processing & `.pak` archives.
   - **DoneWhen:** `dart test test/assets/packer_qmesh_test.dart` generates an OBJ -> QMSH package, packs a `.pak` archive, validates sidecars, and loads the LUT asset cleanly.
 
-- [ ] **[P3-W11-C] Versioned `SceneSerializer` & `Prefab` Schema Migration Pipeline**
+- [x] **[P3-W11-C] Versioned `SceneSerializer` & `Prefab` Schema Migration Pipeline**
   - **Priority:** P1
   - **DependsOn:** `[P3-W11-0]`
   - **Owns:** `lib/src/engine/serialization/scene_serializer.dart`, `lib/src/engine/serialization/scene_migration.dart`, `lib/src/engine/prefab.dart`, `test/serialization/scene_migration_test.dart`
@@ -224,7 +224,7 @@
     - Add unknown-component preservation / warning diagnostics (`strictMode` toggle) and matching migration support in `Prefab`.
   - **DoneWhen:** `dart test test/serialization/scene_migration_test.dart` migrates recorded `v1` scene and prefab JSON fixtures forward cleanly and rejects only genuinely corrupted or future-unsupported schemas.
 
-- [ ] **[P3-W11-D] Background Isolate / Micro-Budgeted Streaming Asset Loader**
+- [x] **[P3-W11-D] Background Isolate / Micro-Budgeted Streaming Asset Loader**
   - **Priority:** P1
   - **DependsOn:** `[P3-W11-0]`
   - **Owns:** `lib/src/engine/assets/streaming_loader.dart`, `lib/src/native/native_async_decode.dart`, `lib/src/web/web_async_decode.dart`, `test/assets/streaming_loader_test.dart`
@@ -233,7 +233,7 @@
     - Build priority-queued `StreamingAssetLoader` with configurable per-frame upload millisecond budget and host-pluggable worker decoding (`Isolate.run` via `native_async_decode.dart` on Native, cooperative chunked async decode on Web/Headless so `lib/src/engine/**` stays pure Dart).
   - **DoneWhen:** `dart test test/assets/streaming_loader_test.dart` verifies cancellation, priority preemption, and bounded per-tick completion work under heavy queues.
 
-- [ ] **[P3-W11-M] Coordinator Merge: Wire `StreamingAssetLoader` Into `Scene` & Push `pixeldart` Tools**
+- [x] **[P3-W11-M] Coordinator Merge: Wire `StreamingAssetLoader` Into `Scene` & Push `pixeldart` Tools**
   - **Priority:** P0
   - **DependsOn:** `[P3-W11-A]`, `[P3-W11-B]`, `[P3-W11-C]`, `[P3-W11-D]`
   - **Owns:** `lib/src/engine/scene.dart`, submodule gitlink check
@@ -245,7 +245,7 @@
 
 **Wave Exit Gate:** All remaining `pixeldart` `R1–R7` & renderer roadmap items verified in Browser Lab (golden PNG/SSIM, 180w/600m budget table, telemetry/no-black-frame gates), GPU skeletal animation deforms GLB characters, and CPU-only GI/2D-lighting/soft-body/batcher subsystems drive GPU output.
 
-- [ ] **[P4-W12-0] Coordinator Freeze: `R3` Declared Graph Pass API, `SkinData` & GI/2D Uniform Contracts**
+- [x] **[P4-W12-0] Coordinator Freeze: `R3` Declared Graph Pass API, `SkinData` & GI/2D Uniform Contracts**
   - **Priority:** P0
   - **DependsOn:** `[P3-W11-M]`
   - **Owns:** `vendor/pixeldart/lib/rendering/api/**`, `lib/src/engine/components/skinned_mesh.dart`

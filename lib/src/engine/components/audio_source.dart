@@ -11,11 +11,38 @@ final class AudioListener extends Component {
   /// Returns the most recently enabled [AudioListener] in [scene], if any.
   static AudioListener? of(Scene scene) => scene._audioListeners.lastOrNull;
 
-  @override
-  void _onEnableInternal() => scene._audioListeners.add(this);
+  /// Pushes the active listener (or fallback [Camera]) pose in [scene] to
+  /// `engine.audio.setListenerPose`.
+  static void _syncPoseForScene(Scene scene) {
+    if (!scene.isLoaded) return;
+    final active = of(scene);
+    final TransformComponent? t =
+        active?.transform ?? Camera.of(scene)?.transform;
+    scene.engine.audio.setListenerPose(
+      position: t?.position ?? Vec3.zero,
+      forward: t?.forward ?? kForward,
+      up: t?.up ?? kUp,
+    );
+  }
+
+  /// Immediately pushes this listener scene's current pose to the audio device.
+  void syncPose() {
+    if (isAttached && scene.isLoaded) {
+      _syncPoseForScene(scene);
+    }
+  }
 
   @override
-  void _onDisableInternal() => scene._audioListeners.remove(this);
+  void _onEnableInternal() {
+    scene._audioListeners.add(this);
+    _syncPoseForScene(scene);
+  }
+
+  @override
+  void _onDisableInternal() {
+    scene._audioListeners.remove(this);
+    _syncPoseForScene(scene);
+  }
 }
 
 /// Named mix bus (`master`, `sfx`, `music`, `ambient`) with independent volume
@@ -139,8 +166,19 @@ final class AudioSource extends Component {
   double minDistance;
   double maxDistance;
 
+  /// Scales how strongly active [AudioReverbZone]s feed this source's reverb
+  /// send when no explicit [reverbSend] override is set (`0.0`..`1.0+`).
+  double reverbZoneMix;
+
   AudioChannel? _channel;
   double _lastEvaluatedPan = 0.0;
+  double _lastEvaluatedLowPassCutoffHz = 20000.0;
+  double _lastEvaluatedLowPassResonance = 0.70710678;
+  double _lastEvaluatedReverbSend = 0.0;
+  double? _lowPassCutoffOverride;
+  double? _lowPassResonanceOverride;
+  double? _reverbSendOverride;
+  double _occlusion = 0.0;
   _AudioFade? _activeFade;
   _AudioCrossFade? _activeCrossFade;
 
@@ -154,7 +192,15 @@ final class AudioSource extends Component {
     this.spatialBlend = 0.0,
     this.minDistance = 1.0,
     this.maxDistance = 50.0,
-  }) {
+    this.reverbZoneMix = 1.0,
+    double? lowPassCutoffHz,
+    double? lowPassResonance,
+    double? reverbSend,
+    double occlusion = 0.0,
+  }) : _lowPassCutoffOverride = lowPassCutoffHz,
+       _lowPassResonanceOverride = lowPassResonance,
+       _reverbSendOverride = reverbSend,
+       _occlusion = occlusion.isFinite ? occlusion.clamp(0.0, 1.0) : 0.0 {
     _volume = volume;
     _pitch = pitch;
   }
@@ -170,6 +216,46 @@ final class AudioSource extends Component {
     _pitch = value;
     _channel?.pitch = value;
   }
+
+  /// Optional explicit low-pass cutoff override in Hz (`null` uses attached
+  /// [AudioLowPassFilterComponent] or bypassed `20000` Hz).
+  double? get lowPassCutoffHz => _lowPassCutoffOverride;
+  set lowPassCutoffHz(double? value) {
+    _lowPassCutoffOverride = value;
+    _syncChannelVolume();
+  }
+
+  /// Optional explicit biquad resonance (`Q`) override for the channel low-pass
+  /// filter (`null` uses attached [AudioLowPassFilterComponent.q] or `0.7071`).
+  double? get lowPassResonance => _lowPassResonanceOverride;
+  set lowPassResonance(double? value) {
+    _lowPassResonanceOverride = value;
+    _syncChannelVolume();
+  }
+
+  /// Optional explicit wet reverb send override (`0.0`..`1.0`); `null` derives
+  /// wet send from nearby [AudioReverbZone]s scaled by [reverbZoneMix].
+  double? get reverbSend => _reverbSendOverride;
+  set reverbSend(double? value) {
+    _reverbSendOverride = value;
+    _syncChannelVolume();
+  }
+
+  /// Additional wall/obstacle muffling (`0.0` = open .. `1.0` = heavily muffled).
+  double get occlusion => _occlusion;
+  set occlusion(double value) {
+    _occlusion = value.isFinite ? value.clamp(0.0, 1.0) : 0.0;
+    _syncChannelVolume();
+  }
+
+  /// Most recent low-pass cutoff frequency (Hz) sent to the audio channel.
+  double get currentLowPassCutoffHz => _lastEvaluatedLowPassCutoffHz;
+
+  /// Most recent low-pass filter resonance (`Q`) sent to the audio channel.
+  double get currentLowPassResonance => _lastEvaluatedLowPassResonance;
+
+  /// Most recent wet reverb send (`0.0`..`1.0`) sent to the audio channel.
+  double get currentReverbSend => _lastEvaluatedReverbSend;
 
   bool get isPlaying => _channel?.isPlaying ?? false;
   bool get isFading => _activeFade != null || _activeCrossFade != null;
@@ -309,18 +395,140 @@ final class AudioSource extends Component {
     return (volume: baseGain * blendedAtten, pan: pan);
   }
 
+  /// Evaluates spatial gain, stereo pan, low-pass cutoff/resonance, and
+  /// environmental reverb wet send for the attached [GameObject] and active
+  /// listener.
+  ({
+    double volume,
+    double pan,
+    double lowPassCutoffHz,
+    double lowPassResonance,
+    double reverbSend,
+  })
+  evaluateDsp({
+    Vec3? sourcePosition,
+    Vec3? listenerPosition,
+    Vec3? listenerRight,
+  }) {
+    final spatial = evaluateSpatial(
+      sourcePosition: sourcePosition,
+      listenerPosition: listenerPosition,
+      listenerRight: listenerRight,
+    );
+
+    final attachedLoaded = isAttached && scene.isLoaded;
+    final listener = attachedLoaded ? AudioListener.of(scene) : null;
+    final TransformComponent? listenerTransform =
+        listener?.transform ??
+        (attachedLoaded ? Camera.of(scene)?.transform : null);
+    final dstPos = listenerPosition ?? listenerTransform?.position ?? Vec3.zero;
+
+    var cutoff = 20000.0;
+    var resonance = 0.70710678;
+
+    void applyFilterComponent(AudioLowPassFilterComponent? comp) {
+      if (comp == null || !comp.isActiveAndEnabled) return;
+      final c = comp.cutoffFrequency.isFinite
+          ? comp.cutoffFrequency.clamp(20.0, 20000.0)
+          : 20000.0;
+      final q = comp.q.isFinite ? comp.q.clamp(0.1, 20.0) : 0.70710678;
+      if (c <= cutoff) {
+        cutoff = c;
+        resonance = q;
+      }
+    }
+
+    if (isAttached) {
+      applyFilterComponent(
+        gameObject.getComponent<AudioLowPassFilterComponent>(),
+      );
+    }
+    if (listener != null && listener.isAttached) {
+      applyFilterComponent(
+        listener.gameObject.getComponent<AudioLowPassFilterComponent>(),
+      );
+    }
+
+    final overrideCutoff = _lowPassCutoffOverride;
+    if (overrideCutoff != null && overrideCutoff.isFinite) {
+      final c = overrideCutoff.clamp(20.0, 20000.0);
+      if (c < cutoff) cutoff = c;
+    }
+
+    if (_occlusion > 0.0) {
+      final occCutoff = 20000.0 * math.pow(0.01, _occlusion.clamp(0.0, 1.0));
+      if (occCutoff < cutoff) cutoff = occCutoff;
+    }
+
+    final overrideQ = _lowPassResonanceOverride;
+    if (overrideQ != null && overrideQ.isFinite) {
+      resonance = overrideQ.clamp(0.1, 20.0);
+    }
+
+    cutoff = cutoff.clamp(20.0, 20000.0);
+    resonance = resonance.clamp(0.1, 20.0);
+
+    final double reverb;
+    final overrideReverb = _reverbSendOverride;
+    if (overrideReverb != null) {
+      reverb = overrideReverb.isFinite ? overrideReverb.clamp(0.0, 1.0) : 0.0;
+    } else if (attachedLoaded) {
+      final zoneMix = AudioReverbZone.sampleNearestWetMix(scene, dstPos);
+      reverb = (zoneMix * reverbZoneMix).clamp(0.0, 1.0);
+    } else {
+      reverb = 0.0;
+    }
+
+    _lastEvaluatedLowPassCutoffHz = cutoff;
+    _lastEvaluatedLowPassResonance = resonance;
+    _lastEvaluatedReverbSend = reverb;
+
+    return (
+      volume: spatial.volume,
+      pan: spatial.pan,
+      lowPassCutoffHz: cutoff,
+      lowPassResonance: resonance,
+      reverbSend: reverb,
+    );
+  }
+
+  ({
+    double volume,
+    double pan,
+    double lowPassCutoffHz,
+    double lowPassResonance,
+    double reverbSend,
+  })
+  _pushChannelDsp(AudioChannel ch) {
+    if (isAttached && scene.isLoaded) {
+      AudioListener._syncPoseForScene(scene);
+    }
+    final eval = evaluateDsp();
+    ch.volume = eval.volume;
+    ch.setPan(eval.pan);
+    ch.setLowPass(eval.lowPassCutoffHz, resonance: eval.lowPassResonance);
+    ch.setReverbSend(eval.reverbSend);
+    return eval;
+  }
+
   void _syncChannelVolume() {
     final ch = _channel;
     if (ch == null) return;
-    ch.volume = evaluateSpatial().volume;
+    _pushChannelDsp(ch);
   }
 
   void play([AudioClip? overrideClip]) {
     final c = overrideClip ?? clip;
     if (c == null) return;
     clip = c;
+    if (isAttached && scene.isLoaded) {
+      AudioListener._syncPoseForScene(scene);
+    }
     final ch = _channel ??= engine.audio.createChannel();
-    final eval = evaluateSpatial();
+    final eval = evaluateDsp();
+    ch.setPan(eval.pan);
+    ch.setLowPass(eval.lowPassCutoffHz, resonance: eval.lowPassResonance);
+    ch.setReverbSend(eval.reverbSend);
     ch.play(c, volume: eval.volume, pitch: _pitch, loop: loop);
   }
 
@@ -368,7 +576,10 @@ final class AudioSource extends Component {
     double volumeScale = 1.0,
     double pitch = 1.0,
   }) {
-    final eval = evaluateSpatial();
+    if (isAttached && scene.isLoaded) {
+      AudioListener._syncPoseForScene(scene);
+    }
+    final eval = evaluateDsp();
     engine.audio.playOneShot(
       oneShot,
       volume: eval.volume * volumeScale,

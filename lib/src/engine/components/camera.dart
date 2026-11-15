@@ -26,6 +26,19 @@ final class Camera extends Component {
   /// Depth ordering for multi-camera rendering. Cameras with lower depth render first (E22-3).
   int depth;
 
+  /// Optional offscreen render target; `null` renders to the default backbuffer.
+  RenderTargetHandle? targetTexture;
+
+  /// Whether to clear the color buffer before rendering this camera pass.
+  bool clearColor;
+
+  /// Whether to clear the depth buffer before rendering this camera pass.
+  bool clearDepth;
+
+  /// Alias for [targetTexture].
+  RenderTargetHandle? get renderTarget => targetTexture;
+  set renderTarget(RenderTargetHandle? value) => targetTexture = value;
+
   /// Deterministic trauma-based camera shake evaluator (E12-1).
   final CameraShakeEngine shakeEngine = CameraShakeEngine();
 
@@ -42,6 +55,9 @@ final class Camera extends Component {
     this.cullingMask = -1,
     this.normalizedViewportRect = const Vec4(0, 0, 1, 1),
     this.depth = 0,
+    this.targetTexture,
+    this.clearColor = true,
+    this.clearDepth = true,
   });
 
   factory Camera.ortho({
@@ -52,6 +68,9 @@ final class Camera extends Component {
     int cullingMask = -1,
     Vec4 normalizedViewportRect = const Vec4(0, 0, 1, 1),
     int depth = 0,
+    RenderTargetHandle? targetTexture,
+    bool clearColor = true,
+    bool clearDepth = true,
   }) => Camera(
     orthographic: true,
     orthoHeight: orthoHeight,
@@ -61,9 +80,26 @@ final class Camera extends Component {
     cullingMask: cullingMask,
     normalizedViewportRect: normalizedViewportRect,
     depth: depth,
+    targetTexture: targetTexture,
+    clearColor: clearColor,
+    clearDepth: clearDepth,
   );
 
   CameraController get controller => customController ?? _transformController;
+
+  /// Builds a [CameraRenderDescriptor] snapshot of this camera's pass configuration.
+  CameraRenderDescriptor toRenderDescriptor() {
+    if (isAttached) _sync();
+    return CameraRenderDescriptor(
+      camera: controller,
+      visibilityMask: cullingMask,
+      normalizedViewportRect: normalizedViewportRect,
+      depth: depth,
+      clearColor: clearColor,
+      clearDepth: clearDepth,
+      target: targetTexture,
+    );
+  }
 
   /// The active camera with the highest [depth] in [scene] (ties resolve to
   /// the most recently enabled camera), or `null` if none are active.

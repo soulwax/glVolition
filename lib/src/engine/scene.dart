@@ -78,6 +78,32 @@ final class Scene {
 
   List<GameObject> get rootGameObjects => List.unmodifiable(_roots);
 
+  /// Active enabled [Camera] components in this scene, stably sorted by
+  /// [Camera.depth] ascending (ties preserve activation order).
+  List<Camera> get sortedActiveCameras {
+    final indexed = <(int index, Camera camera)>[];
+    for (var i = 0; i < _cameras.length; i++) {
+      final cam = _cameras[i];
+      if (cam._active) {
+        indexed.add((i, cam));
+      }
+    }
+    indexed.sort((a, b) {
+      final cmp = a.$2.depth.compareTo(b.$2.depth);
+      return cmp != 0 ? cmp : a.$1.compareTo(b.$1);
+    });
+    return [for (final entry in indexed) entry.$2];
+  }
+
+  /// Collects synchronized [CameraRenderDescriptor]s in deterministic depth order.
+  List<CameraRenderDescriptor> collectCameraPassDescriptors() {
+    final cameras = sortedActiveCameras;
+    return [for (final cam in cameras) cam.toRenderDescriptor()];
+  }
+
+  static bool _hasCustomViewport(Vec4 rect) =>
+      rect.x != 0 || rect.y != 0 || rect.z != 1 || rect.w != 1;
+
   /// Creates an empty [GameObject] in this scene.
   GameObject createGameObject(
     String name, {
@@ -633,18 +659,46 @@ final class Scene {
         src._syncChannelVolume();
       }
     }
-    final mainCam = Camera.of(this);
-    if (mainCam != null && _engine != null) {
-      mainCam.shakeEngine.update(_engine!.time.deltaTime);
+    final activeCameras = sortedActiveCameras;
+    if (_engine != null) {
+      final dt = _engine!.time.deltaTime;
+      for (final cam in activeCameras) {
+        cam.shakeEngine.update(dt);
+      }
     }
     final freeLook = _engine != null && _engine!.editor.isFreeLookEnabled;
     if (freeLook) {
       graphics.camera = _engine!.editor.freeLookCamera;
-    } else if (mainCam != null) {
-      mainCam._sync();
-      graphics.camera = mainCam.controller;
+      graphics.visibilityMask = -1;
+    } else if (activeCameras.isEmpty) {
+      graphics.visibilityMask = -1;
+    } else {
+      Camera? lastScreenCam;
+      var hasCustomViewportOrTarget = false;
+      for (final cam in activeCameras) {
+        if (cam.targetTexture != null) {
+          hasCustomViewportOrTarget = true;
+        } else {
+          lastScreenCam = cam;
+          if (_hasCustomViewport(cam.normalizedViewportRect)) {
+            hasCustomViewportOrTarget = true;
+          }
+        }
+      }
+      final primaryCam = lastScreenCam ?? activeCameras.last;
+      if (activeCameras.length > 1 || hasCustomViewportOrTarget) {
+        for (final cam in activeCameras) {
+          graphics.renderFrameToTarget(
+            cam.targetTexture,
+            descriptor: cam.toRenderDescriptor(),
+          );
+        }
+      } else {
+        primaryCam._sync();
+      }
+      graphics.camera = primaryCam.controller;
+      graphics.visibilityMask = primaryCam.cullingMask;
     }
-    graphics.visibilityMask = freeLook ? -1 : (mainCam?.cullingMask ?? -1);
 
     DirectionalLight? sun;
     final points = <PointLight>[];

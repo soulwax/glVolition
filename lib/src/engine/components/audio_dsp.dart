@@ -4,6 +4,9 @@ dsp.DspVec3 _toDspVec3(Vec3 v) => dsp.DspVec3(v.x, v.y, v.z);
 
 /// Spatial 3D environmental reverb zone (cave, cathedral, room) (E36).
 class AudioReverbZone extends Component {
+  static final Expando<List<AudioReverbZone>> _sceneZones =
+      Expando<List<AudioReverbZone>>('audioReverbZones');
+
   double minDistance;
   double maxDistance;
   final dsp.SchroederReverb reverb;
@@ -24,6 +27,42 @@ class AudioReverbZone extends Component {
 
   double get wet => reverb.wet;
   set wet(double val) => reverb.wet = val;
+
+  /// Returns an unmodifiable snapshot of active [AudioReverbZone]s in [scene].
+  static List<AudioReverbZone> activeIn(Scene scene) =>
+      List<AudioReverbZone>.unmodifiable(_sceneZones[scene] ?? const []);
+
+  /// Evaluates the wet mix from the nearest active [AudioReverbZone] containing
+  /// [listenerPosition] in [scene], or `0.0` when outside all zones.
+  static double sampleNearestWetMix(Scene scene, Vec3 listenerPosition) {
+    final zones = _sceneZones[scene];
+    if (zones == null || zones.isEmpty) return 0.0;
+    var bestDistSq = double.infinity;
+    var bestMix = 0.0;
+    for (final zone in zones) {
+      if (!zone.isActiveAndEnabled) continue;
+      final dist = (zone.transform.position - listenerPosition).length;
+      if (dist > zone.minDistance && dist >= zone.maxDistance) continue;
+      final distSq = dist * dist;
+      final mix = zone.calculateReverbMix(listenerPosition);
+      if (distSq < bestDistSq || (distSq == bestDistSq && mix > bestMix)) {
+        bestDistSq = distSq;
+        bestMix = mix;
+      }
+    }
+    return bestMix.clamp(0.0, 1.0);
+  }
+
+  @override
+  void _onEnableInternal() {
+    final zones = _sceneZones[scene] ??= <AudioReverbZone>[];
+    if (!zones.contains(this)) zones.add(this);
+  }
+
+  @override
+  void _onDisableInternal() {
+    _sceneZones[scene]?.remove(this);
+  }
 
   /// Calculates the wet reverberation mix factor for a listener at [listenerPosition].
   /// Inside [minDistance], wet mix is 100% of zone [wet]. Between [minDistance] and
@@ -78,9 +117,12 @@ extension SpatialAudioDspExt on AudioSource {
     final activeListener =
         listener ??
         (isAttached && scene.isLoaded ? AudioListener.of(scene) : null);
-    final listenerPos = activeListener?.transform.position ?? Vec3.zero;
-    final listenerForward = activeListener?.transform.forward ?? kForward;
-    final listenerRight = activeListener?.transform.right ?? kRight;
+    final TransformComponent? listenerTransform =
+        activeListener?.transform ??
+        (isAttached && scene.isLoaded ? Camera.of(scene)?.transform : null);
+    final listenerPos = listenerTransform?.position ?? Vec3.zero;
+    final listenerForward = listenerTransform?.forward ?? kForward;
+    final listenerRight = listenerTransform?.right ?? kRight;
 
     return dsp.SpatialAudio3D.calculate(
       sourcePosition: _toDspVec3(transform.position),

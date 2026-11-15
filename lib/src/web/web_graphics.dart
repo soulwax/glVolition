@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 
+import 'package:pixeldart/pixeldart_advanced.dart';
+import 'package:pixeldart/rendering/webgl/device_api.dart';
 import 'package:pixeldart/rendering/webgl/pixeldart_app.dart';
+import 'package:pixeldart/rendering/webgl/webgl2_device.dart';
 
 import '../../rocket.dart';
 
@@ -8,7 +11,13 @@ import '../../rocket.dart';
 final class WebGraphics implements Graphics {
   final PixeldartApp _app;
   final Set<RenderTargetHandle> _renderTargets = {};
+  final Map<RenderTargetHandle, GpuObject> _gpuTargets = {};
   final List<CameraRenderDescriptor> renderedPasses = [];
+  final Map<MeshHandle, MeshData> updatedMeshes = {};
+  final Map<MeshHandle, Float32List> skinningPalettes = {};
+  final Map<String, RenderPassDecl> declaredRenderPasses = {};
+  final List<SubmittedIndirectBatch> indirectBatches = [];
+  RenderTargetHandle? _activeTarget;
   int _nextTargetSlot = 1;
   int _activeViewportX = 0;
   int _activeViewportY = 0;
@@ -17,12 +26,21 @@ final class WebGraphics implements Graphics {
 
   WebGraphics(this._app);
 
+  Set<RenderTargetHandle> get liveRenderTargets =>
+      Set<RenderTargetHandle>.unmodifiable(_renderTargets);
+  List<CameraRenderDescriptor> get renderedCameraPasses =>
+      List<CameraRenderDescriptor>.unmodifiable(renderedPasses);
+  RenderTargetHandle? get activeTarget => _activeTarget;
   int get activeViewportX => _activeViewportX;
   int get activeViewportY => _activeViewportY;
   int get activeViewportWidth =>
       _activeViewportWidth > 0 ? _activeViewportWidth : viewportWidth;
   int get activeViewportHeight =>
       _activeViewportHeight > 0 ? _activeViewportHeight : viewportHeight;
+
+  GpuDevice? get _device => _app.renderer is SceneRendererImpl
+      ? (_app.renderer as SceneRendererImpl).device
+      : null;
 
   @override
   int get visibilityMask => _app.visibilityMask;
@@ -205,6 +223,61 @@ final class WebGraphics implements Graphics {
     return _app.screenRay(clientX, clientY);
   }
 
+  ({int x, int y, int width, int height}) _resolvePixelViewport(
+    Vec4 rect,
+    RenderTargetHandle? target,
+  ) {
+    final tw = target?.width ?? viewportWidth;
+    final th = target?.height ?? viewportHeight;
+    final maxW = tw > 0 ? tw : 1;
+    final maxH = th > 0 ? th : 1;
+    return (
+      x: (rect.x * tw).round(),
+      y: (rect.y * th).round(),
+      width: (rect.z * tw).round().clamp(1, maxW),
+      height: (rect.w * th).round().clamp(1, maxH),
+    );
+  }
+
+  void _bindTargetHandle(RenderTargetHandle? target) {
+    final dev = _device;
+    if (dev == null || dev.status != GpuDeviceStatus.ready) {
+      _activeTarget = target;
+      return;
+    }
+    if (target == null) {
+      dev.bindTarget(null);
+      _activeTarget = null;
+      return;
+    }
+    if (!_renderTargets.contains(target)) {
+      throw StateError(
+        'WebGraphics: RenderTargetHandle(${target.slot}) has been released',
+      );
+    }
+    final gpuTarget = _gpuTargets.putIfAbsent(
+      target,
+      () => dev.createTarget(
+        GpuTargetDescriptor(
+          width: target.width,
+          height: target.height,
+          hasDepth: true,
+        ),
+      ),
+    );
+    dev.bindTarget(gpuTarget);
+    _activeTarget = target;
+  }
+
+  void clearRenderedPasses() => renderedPasses.clear();
+
+  void disposeRenderTargets() {
+    for (final handle in _renderTargets.toList()) {
+      releaseRenderTarget(handle);
+    }
+    _activeTarget = null;
+  }
+
   @override
   RenderTargetHandle createRenderTarget({
     required int width,
@@ -224,12 +297,31 @@ final class WebGraphics implements Graphics {
       debugLabel: debugLabel,
     );
     _renderTargets.add(handle);
+    final dev = _device;
+    if (dev != null && dev.status == GpuDeviceStatus.ready) {
+      _gpuTargets[handle] = dev.createTarget(
+        GpuTargetDescriptor(width: width, height: height, hasDepth: true),
+      );
+    }
     return handle;
   }
 
   @override
   void releaseRenderTarget(RenderTargetHandle handle) {
     if (_renderTargets.remove(handle)) {
+      final gpuTarget = _gpuTargets.remove(handle);
+      final dev = _device;
+      if (gpuTarget != null &&
+          dev != null &&
+          dev.status == GpuDeviceStatus.ready) {
+        if (_activeTarget == handle) {
+          dev.bindTarget(null);
+          _activeTarget = null;
+        }
+        dev.deleteTarget(gpuTarget);
+      } else if (_activeTarget == handle) {
+        _activeTarget = null;
+      }
       releaseTexture(handle.colorTexture);
     }
   }
@@ -240,6 +332,10 @@ final class WebGraphics implements Graphics {
     _activeViewportY = y;
     _activeViewportWidth = width;
     _activeViewportHeight = height;
+    final dev = _device;
+    if (dev is WebGl2Device && dev.status == GpuDeviceStatus.ready) {
+      dev.gl.viewport(x, y, width, height);
+    }
   }
 
   @override
@@ -247,15 +343,58 @@ final class WebGraphics implements Graphics {
     RenderTargetHandle? target, {
     required CameraRenderDescriptor descriptor,
   }) {
-    final rect = descriptor.normalizedViewportRect;
-    final tw = target?.width ?? viewportWidth;
-    final th = target?.height ?? viewportHeight;
-    final pxX = (rect.x * tw).round();
-    final pxY = (rect.y * th).round();
-    final pxW = (rect.z * tw).round().clamp(1, tw > 0 ? tw : 1);
-    final pxH = (rect.w * th).round().clamp(1, th > 0 ? th : 1);
-    setViewport(pxX, pxY, pxW, pxH);
+    final vp = _resolvePixelViewport(descriptor.normalizedViewportRect, target);
+    _bindTargetHandle(target);
+    setViewport(vp.x, vp.y, vp.width, vp.height);
+    final dev = _device;
+    if (target != null && dev != null && dev.status == GpuDeviceStatus.ready) {
+      final clearMask = switch ((
+        descriptor.clearColor,
+        descriptor.clearDepth,
+      )) {
+        (true, true) => ClearMask.colorAndDepth,
+        (true, false) => ClearMask.colorOnly,
+        (false, true) => ClearMask.depthOnly,
+        (false, false) => null,
+      };
+      if (clearMask != null) {
+        final c = environment.clearColor;
+        dev.clear(clearMask, r: c.r, g: c.g, b: c.b, a: 1.0);
+      }
+    }
+    if (descriptor.camera != null) {
+      _app.cameraController = descriptor.camera;
+    }
     visibilityMask = descriptor.visibilityMask;
     renderedPasses.add(descriptor);
+  }
+
+  @override
+  void updateMeshVertices(MeshHandle handle, MeshData data) {
+    updatedMeshes[handle] = data;
+  }
+
+  @override
+  void setSkinningPalette(
+    MeshHandle mesh,
+    Float32List jointMatrices, {
+    int jointCount = 0,
+  }) {
+    skinningPalettes[mesh] = Float32List.fromList(jointMatrices);
+  }
+
+  @override
+  void declareRenderPass(RenderPassDecl pass) {
+    declaredRenderPasses[pass.id] = pass;
+  }
+
+  @override
+  void removeDeclaredRenderPass(String passId) {
+    declaredRenderPasses.remove(passId);
+  }
+
+  @override
+  void submitIndirectBatch(SubmittedIndirectBatch batch) {
+    indirectBatches.add(batch);
   }
 }

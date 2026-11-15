@@ -208,6 +208,12 @@ final class HeadlessGraphics implements Graphics {
   int activeViewportHeight = 720;
   final Map<ShaderTarget, Map<String, ShaderUniform>> shaderUniforms = {};
   final Map<ShaderTarget, Map<String, TextureHandle>> shaderTextures = {};
+  final Map<MeshHandle, MeshData> updatedMeshes = {};
+  int meshUploadCount = 0;
+  final Map<MeshHandle, Float32List> skinningPalettes = {};
+  final Map<MeshHandle, int> skinningJointCounts = {};
+  final Map<String, RenderPassDecl> declaredRenderPasses = {};
+  final List<SubmittedIndirectBatch> indirectBatches = [];
   Map<ShaderSlot, ShaderOverride> shaderOverrides = const {};
   Map<String, ShaderOverride> postEffects = const {};
   int configureCalls = 0;
@@ -363,6 +369,47 @@ final class HeadlessGraphics implements Graphics {
     visibilityMask = descriptor.visibilityMask;
     renderedCameraPasses.add(descriptor);
   }
+
+  @override
+  void updateMeshVertices(MeshHandle handle, MeshData data) {
+    updatedMeshes[handle] = data;
+    meshUploadCount++;
+  }
+
+  @override
+  void setSkinningPalette(
+    MeshHandle mesh,
+    Float32List jointMatrices, {
+    int jointCount = 0,
+  }) {
+    skinningPalettes[mesh] = Float32List.fromList(jointMatrices);
+    skinningJointCounts[mesh] = jointCount > 0
+        ? jointCount
+        : (jointMatrices.length ~/ 16);
+  }
+
+  @override
+  void declareRenderPass(RenderPassDecl pass) {
+    declaredRenderPasses[pass.id] = pass;
+    if (pass.uniforms.isNotEmpty) {
+      final uniforms = shaderUniforms.putIfAbsent(ShaderSlot.grade, () => {});
+      uniforms.addAll(pass.uniforms);
+    }
+    if (pass.textures.isNotEmpty) {
+      final textures = shaderTextures.putIfAbsent(ShaderSlot.grade, () => {});
+      textures.addAll(pass.textures);
+    }
+  }
+
+  @override
+  void removeDeclaredRenderPass(String passId) {
+    declaredRenderPasses.remove(passId);
+  }
+
+  @override
+  void submitIndirectBatch(SubmittedIndirectBatch batch) {
+    indirectBatches.add(batch);
+  }
 }
 
 final class _NoAssets implements AssetLoader {
@@ -391,7 +438,7 @@ final class _SilentClip implements AudioClip {
 }
 
 /// Inspectable mock channel backing [SilentAudio] / [HeadlessAudio].
-final class _SilentChannel implements AudioChannel {
+final class SilentAudioChannel implements AudioChannel {
   @override
   bool isPlaying = false;
   bool _loop = false;
@@ -451,7 +498,7 @@ final class SilentAudio implements AudioDevice {
   final List<String> played = [];
 
   /// Channels created on this device, retained for DSP inspection in tests.
-  final List<_SilentChannel> channels = [];
+  final List<SilentAudioChannel> channels = [];
 
   Vec3 listenerPosition = const Vec3(0, 0, 0);
   Vec3 listenerForward = const Vec3(0, 0, -1);
@@ -462,8 +509,8 @@ final class SilentAudio implements AudioDevice {
       _SilentClip(path);
 
   @override
-  AudioChannel createChannel() {
-    final ch = _SilentChannel();
+  SilentAudioChannel createChannel() {
+    final ch = SilentAudioChannel();
     channels.add(ch);
     return ch;
   }

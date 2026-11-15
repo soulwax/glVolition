@@ -53,6 +53,23 @@ const List<String> _kRebindScanControls = [
   'Digit7',
   'Digit8',
   'Digit9',
+  'MouseLeft',
+  'GamepadButton0',
+  'GamepadButton1',
+  'GamepadButton2',
+  'GamepadButton3',
+  'GamepadButton4',
+  'GamepadButton5',
+  'GamepadButton6',
+  'GamepadButton7',
+  'GamepadButton8',
+  'GamepadButton9',
+  'GamepadButton10',
+  'GamepadButton11',
+  'GamepadButton12',
+  'GamepadButton13',
+  'GamepadButton14',
+  'GamepadButton15',
 ];
 
 /// Component hosting contextual [pad.InputActionAsset] maps, deadzone pipelines,
@@ -103,9 +120,55 @@ final class InputManagerComponent extends Behaviour {
     return Vec2(v.x, v.y);
   }
 
-  /// Registers additional physical control names (e.g. `'MouseLeft'`, `'GamepadA'`) to poll from raw [Input].
+  /// Registers additional physical control names (e.g. `'MouseLeft'`, `'GamepadButton0'`) to poll from raw [Input].
   void watchControls(Iterable<String> controls) =>
       _watchedControls.addAll(controls);
+
+  Input? get _rawOrNull => isAttached ? engine.input.raw : null;
+
+  /// Horizontal scroll wheel delta accumulated for the current frame.
+  double get wheelDeltaX => _rawOrNull?.wheelDeltaX ?? 0.0;
+
+  /// Vertical scroll wheel delta accumulated for the current frame.
+  double get wheelDeltaY => _rawOrNull?.wheelDeltaY ?? 0.0;
+
+  /// Scroll wheel delta vector (`wheelDeltaX`, `wheelDeltaY`) for the current frame.
+  Vec2 get wheelDelta => Vec2(wheelDeltaX, wheelDeltaY);
+
+  /// Horizontal relative pointer motion delta accumulated for the current frame.
+  double get pointerDeltaX => _rawOrNull?.pointerDeltaX ?? 0.0;
+
+  /// Vertical relative pointer motion delta accumulated for the current frame.
+  double get pointerDeltaY => _rawOrNull?.pointerDeltaY ?? 0.0;
+
+  /// Relative pointer delta vector (`pointerDeltaX`, `pointerDeltaY`) for the current frame.
+  Vec2 get pointerDelta => Vec2(pointerDeltaX, pointerDeltaY);
+
+  /// Whether pointer lock / relative mouse mode is currently engaged.
+  bool get pointerLocked => _rawOrNull?.pointerLocked ?? false;
+
+  /// Requests OS/browser pointer lock (relative mouse mode).
+  void requestPointerLock() => _rawOrNull?.requestPointerLock();
+
+  /// Exits OS/browser pointer lock (relative mouse mode).
+  void exitPointerLock() => _rawOrNull?.exitPointerLock();
+
+  /// Active multi-touch contacts in drawing-buffer pixel coordinates.
+  List<TouchPoint> get touches => _rawOrNull?.touches ?? const <TouchPoint>[];
+
+  /// Number of currently connected hardware/scripted gamepads.
+  int get gamepadCount => _rawOrNull?.gamepadCount ?? 0;
+
+  /// Normalized axis value in `[-1.0, 1.0]` for [gamepadIndex] and [axisIndex].
+  double gamepadAxis(int gamepadIndex, int axisIndex) =>
+      _rawOrNull?.gamepadAxis(gamepadIndex, axisIndex) ?? 0.0;
+
+  /// True while [buttonIndex] on [gamepadIndex] is pressed.
+  bool gamepadButtonDown(int gamepadIndex, int buttonIndex) =>
+      _rawOrNull?.gamepadButtonDown(gamepadIndex, buttonIndex) ?? false;
+
+  /// Printable characters entered during the current frame.
+  String get textInputBuffer => _rawOrNull?.textInputBuffer ?? '';
 
   /// Queues multi-touch pointers for [virtualGamepad] to evaluate during the next frame update.
   void feedVirtualPointers(List<pad.VirtualTouchPointer> pointers) {
@@ -128,12 +191,102 @@ final class InputManagerComponent extends Behaviour {
     return true;
   }
 
+  static const int _standardGamepadAxisCount = 6;
+  static const int _standardGamepadButtonCount = 16;
+
+  static ({int gamepadIndex, int index})? _parseGamepadControl(
+    String code,
+    String token,
+  ) {
+    if (!code.startsWith('Gamepad')) return null;
+    final rest = code.substring('Gamepad'.length);
+    final tokenPos = rest.indexOf(token);
+    if (tokenPos < 0) return null;
+    final padPart = rest.substring(0, tokenPos);
+    final idxPart = rest.substring(tokenPos + token.length);
+    final gamepadIndex = padPart.isEmpty ? 0 : int.tryParse(padPart);
+    final itemIndex = int.tryParse(idxPart);
+    if (gamepadIndex == null ||
+        gamepadIndex < 0 ||
+        itemIndex == null ||
+        itemIndex < 0) {
+      return null;
+    }
+    return (gamepadIndex: gamepadIndex, index: itemIndex);
+  }
+
+  static bool _readPhysicalControlDown(Input raw, String code) {
+    if (code == 'MouseLeft') return raw.pointerDown;
+    if (code == 'MouseWheelX') return raw.wheelDeltaX != 0.0;
+    if (code == 'MouseWheelY') return raw.wheelDeltaY != 0.0;
+
+    final gamepadBtn = _parseGamepadControl(code, 'Button');
+    if (gamepadBtn != null) {
+      if (gamepadBtn.gamepadIndex >= raw.gamepadCount) return false;
+      return raw.gamepadButtonDown(gamepadBtn.gamepadIndex, gamepadBtn.index);
+    }
+
+    return raw.isDown(code);
+  }
+
+  void _syncPhysicalAxes(
+    Input raw,
+    Set<String> axesToPoll,
+    Set<String> virtualAxisNames,
+  ) {
+    for (final axisName in axesToPoll) {
+      if (virtualAxisNames.contains(axisName)) continue;
+      if (axisName == 'MouseWheelX') {
+        snapshot.setAxis(axisName, raw.wheelDeltaX);
+        continue;
+      }
+      if (axisName == 'MouseWheelY') {
+        snapshot.setAxis(axisName, raw.wheelDeltaY);
+        continue;
+      }
+      if (axisName == 'PointerDeltaX') {
+        snapshot.setAxis(axisName, raw.pointerDeltaX);
+        continue;
+      }
+      if (axisName == 'PointerDeltaY') {
+        snapshot.setAxis(axisName, raw.pointerDeltaY);
+        continue;
+      }
+
+      final gamepadAxisRef = _parseGamepadControl(axisName, 'Axis');
+      if (gamepadAxisRef != null) {
+        final value = gamepadAxisRef.gamepadIndex < raw.gamepadCount
+            ? raw.gamepadAxis(gamepadAxisRef.gamepadIndex, gamepadAxisRef.index)
+            : 0.0;
+        snapshot.setAxis(axisName, value);
+      }
+    }
+  }
+
   void _syncRawControls(Input raw) {
     final controlsToPoll = <String>{..._watchedControls};
+    final axesToPoll = <String>{
+      'MouseWheelX',
+      'MouseWheelY',
+      'PointerDeltaX',
+      'PointerDeltaY',
+      for (var i = 0; i < _standardGamepadAxisCount; i++) 'GamepadAxis$i',
+    };
+
+    for (var i = 0; i < _standardGamepadButtonCount; i++) {
+      controlsToPoll.add('GamepadButton$i');
+    }
+
     for (final map in actions.maps) {
       for (final act in map.actions) {
         for (final binding in act.bindings) {
           controlsToPoll.addAll(binding.referencedControls);
+          if (binding is pad.Axis1DBinding && binding.analogAxis != null) {
+            axesToPoll.add(binding.analogAxis!);
+          } else if (binding is pad.Vector2Binding) {
+            if (binding.analogX != null) axesToPoll.add(binding.analogX!);
+            if (binding.analogY != null) axesToPoll.add(binding.analogY!);
+          }
         }
       }
     }
@@ -142,26 +295,30 @@ final class InputManagerComponent extends Behaviour {
       controlsToPoll.addAll(_kRebindScanControls);
     }
 
-    // Track virtual button control names separately so virtual gamepad buttons aren't clobbered by missing physical presses
+    // Track virtual gamepad control/axis names so inactive physical inputs do not clobber virtual touch values.
     final virtualControlNames = <String>{};
-    if (virtualGamepad != null && virtualGamepad!.enabled) {
-      for (final btn in virtualGamepad!.buttons) {
+    final virtualAxisNames = <String>{};
+    final vpad = virtualGamepad;
+    if (vpad != null && vpad.enabled) {
+      for (final btn in vpad.buttons) {
         virtualControlNames.add(btn.controlName);
+      }
+      for (final stick in vpad.sticks) {
+        virtualAxisNames
+          ..add(stick.axisXName)
+          ..add(stick.axisYName);
       }
     }
 
     for (final code in controlsToPoll) {
-      if (virtualControlNames.contains(code) && raw.isDown(code) == false) {
-        // Leave virtual button handling to VirtualGamepad below
+      final physicalDown = _readPhysicalControlDown(raw, code);
+      if (virtualControlNames.contains(code) && !physicalDown) {
         continue;
       }
-      snapshot.setDown(code, raw.isDown(code));
+      snapshot.setDown(code, physicalDown);
     }
 
-    // Poll pointer buttons too if bound
-    if (controlsToPoll.contains('MouseLeft')) {
-      snapshot.setDown('MouseLeft', raw.pointerDown);
-    }
+    _syncPhysicalAxes(raw, axesToPoll, virtualAxisNames);
   }
 
   @override
@@ -173,9 +330,19 @@ final class InputManagerComponent extends Behaviour {
 
     final vpad = virtualGamepad;
     if (vpad != null && vpad.enabled) {
-      final ptrs =
-          _queuedVirtualPointers ??
-          [
+      final List<pad.VirtualTouchPointer> ptrs;
+      if (_queuedVirtualPointers != null) {
+        ptrs = _queuedVirtualPointers!;
+        _queuedVirtualPointers = null;
+      } else {
+        final rawTouches = raw.touches;
+        if (rawTouches.isNotEmpty) {
+          ptrs = [
+            for (final t in rawTouches)
+              pad.VirtualTouchPointer(id: t.id, x: t.x, y: t.y, isDown: true),
+          ];
+        } else {
+          ptrs = [
             pad.VirtualTouchPointer(
               id: 0,
               x: raw.pointerX,
@@ -183,7 +350,10 @@ final class InputManagerComponent extends Behaviour {
               isDown: raw.pointerDown,
             ),
           ];
+        }
+      }
       vpad.update(ptrs, snapshot);
+    } else {
       _queuedVirtualPointers = null;
     }
 
