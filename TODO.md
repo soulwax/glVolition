@@ -255,7 +255,7 @@
     - Freeze shader slot/uniform names used by `LightProbeVolumeComponent` (SH3), `Lighting2DComponent` (2D lightmap overlay), and dynamic deformed mesh upload hooks.
   - **DoneWhen:** Both root `dart analyze` and `vendor/pixeldart` `dart analyze` pass.
 
-- [ ] **[P4-W12-A] `pixeldart` Browser Lab (`R7`), Golden + Perf Baseline Gates & `Procession` Dense Trees Fix**
+- [x] **[P4-W12-A] `pixeldart` Browser Lab (`R7`), Golden + Perf Baseline Gates & `Procession` Dense Trees Fix**
   - **Priority:** P0
   - **DependsOn:** `[P4-W12-0]`
   - **Owns:** `vendor/pixeldart/web/renderer_test/**`, `vendor/pixeldart/.github/screenshots/**`, `vendor/pixeldart/tools/renderer/run_shader_lab.mjs`, `example/procession/**`, `tool/renderer_bench.dart`
@@ -267,7 +267,7 @@
     - Run `QMSH` geometry end-to-end through the live GPU WebGL path (`R1`/`R2` browser verification).
   - **DoneWhen:** Automated Browser Lab harness runs headless Chromium / WebGL2 checks, compares against golden references, prints ratified budget compliance table, and fails on black frame or >threshold SSIM drift.
 
-- [ ] **[P4-W12-B1] `pixeldart` Core Pipeline: `frame_arena`, `dynamic_batch`, Safe-Graph Reconcile & Diagnostics**
+- [x] **[P4-W12-B1] `pixeldart` Core Pipeline: `frame_arena`, `dynamic_batch`, Safe-Graph Reconcile & Diagnostics**
   - **Priority:** P0
   - **DependsOn:** `[P4-W12-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/core/**`, `vendor/pixeldart/tools/renderer/test_*_core*.dart`, `vendor/pixeldart/tools/renderer/test_render_graph*.dart`, `vendor/pixeldart/tools/renderer/test_no_allocation_trace.dart`, `vendor/pixeldart/tools/renderer/test_rf11_runtime_reference_audit.dart`
@@ -279,7 +279,7 @@
     - Fix `vendor/pixeldart/tools/renderer/test_rf11_runtime_reference_audit.dart` host-project detection so submodule checkouts inside `gl_volition/vendor/pixeldart` skip legacy `quarantine`-only `web/` checks cleanly rather than throwing `PathNotFoundException`.
   - **DoneWhen:** `dart run tools/renderer/test_all.dart` inside `vendor/pixeldart` passes all core, audit, & zero-allocation trace tests (133/133).
 
-- [ ] **[P4-W12-B2] `pixeldart` WebGL2 Passes: Instancing >16 Cap, Stencil, Decals, Shadows, MSAA & Linear/sRGB Audit**
+- [x] **[P4-W12-B2] `pixeldart` WebGL2 Passes: Instancing >16 Cap, Stencil, Decals, Shadows, MSAA & Linear/sRGB Audit**
   - **Priority:** P0
   - **DependsOn:** `[P4-W12-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/webgl/**`, `vendor/pixeldart/lib/rendering/passes/**`, `vendor/pixeldart/shaders/**`, `vendor/pixeldart/tools/renderer/test_webgl*.dart`, `vendor/pixeldart/tools/renderer/test_msaa*.dart`, `vendor/pixeldart/tools/renderer/test_directional_shadow.dart`
@@ -290,7 +290,7 @@
     - Implement genuine stencil buffer state and decal rendering stage (currently `0` references in `lib/rendering/`), texture array groups, soft particles, fixed low internal resolution scaling, affine UV option in textured/safe world, vertex lighting fallback, `R4` anisotropy quality/cost benchmark, `R5` MSAA resize/restore correctness & cost, and a complete `Linear / sRGB` shader & render-target audit (`tools/renderer/shaders.dart` regenerated and `--check` clean).
   - **DoneWhen:** `dart run tools/renderer/shaders.dart --check` + `dart run tools/renderer/check_boundary.dart` + `dart run tools/renderer/test_all.dart` inside `vendor/pixeldart` pass cleanly.
 
-- [ ] **[P4-W12-C] Skeletal GPU Skinning Pipeline (`Animator` + `GlbSkinDecoder` + `SkinnedMeshRenderer`)**
+- [x] **[P4-W12-C] Skeletal GPU Skinning Pipeline (`Animator` + `GlbSkinDecoder` + `SkinnedMeshRenderer`)**
   - **Priority:** P1
   - **DependsOn:** `[P4-W12-0]`
   - **Owns:** `lib/src/engine/assets/glb_skin_decoder.dart`, `lib/src/engine/components/animator.dart`, `lib/src/engine/components/skinned_mesh.dart`, `test/engine/skinning_test.dart`
@@ -300,7 +300,7 @@
     - Extend `Animator` to evaluate hierarchical bone keyframe tracks, cross-fade blends, and joint palettes feeding `SkinnedMeshRenderer` GPU matrix uniforms/buffers.
   - **DoneWhen:** `dart test test/engine/skinning_test.dart` verifies known bone hierarchy FK + inverse-bind deformation accuracy against reference skinning math and `HeadlessGraphics` uniform palette uploads.
 
-- [ ] **[P4-W12-D] Wire Decoupled GPU Systems (`LightProbeGI`, `Lighting2D`, `SoftBodyXPbd`, `DrawBatcher`, `RenderGraph`)**
+- [x] **[P4-W12-D] Wire Decoupled GPU Systems (`LightProbeGI`, `Lighting2D`, `SoftBodyXPbd`, `DrawBatcher`, `RenderGraph`)**
   - **Priority:** P1
   - **DependsOn:** `[P4-W12-0]`
   - **Owns:** `lib/src/engine/components/light_probe_gi.dart`, `lib/src/engine/components/lighting_2d.dart`, `lib/src/engine/components/soft_body_xpbd.dart`, `lib/src/engine/components/draw_batcher.dart`, `lib/src/engine/components/render_graph.dart`, `test/engine/render_wiring_test.dart`
@@ -312,7 +312,7 @@
     - Connect `DrawBatcherComponent` (`IndirectDrawTable`) and `RenderGraphComponent` to declared renderer batching/pass execution.
   - **DoneWhen:** `dart test test/engine/render_wiring_test.dart` proves each subsystem modifies real `Graphics` shader uniforms, dynamic mesh vertex positions, or declared render passes.
 
-- [ ] **[P4-W12-M] Coordinator Merge: Integrate Wave 12 Into `Scene`, `ComponentSpec` & Submodule Commit**
+- [x] **[P4-W12-M] Coordinator Merge: Integrate Wave 12 Into `Scene`, `ComponentSpec` & Submodule Commit**
   - **Priority:** P0
   - **DependsOn:** `[P4-W12-A]`, `[P4-W12-B1]`, `[P4-W12-B2]`, `[P4-W12-C]`, `[P4-W12-D]`
   - **Owns:** `lib/gl_volition.dart`, `lib/src/engine/scene.dart`, `lib/src/engine/serialization/component_spec.dart`
@@ -324,21 +324,21 @@
 
 **Wave Exit Gate:** `PhysicsWorld` steps 1,000+ colliders in sub-linear spatial broadphase, rotated `BoxCollider` uses true OBB SAT, `MeshCollider`/`HeightfieldCollider` + rotational dynamics/joints/CCD pass stress suites, and 600-frame deterministic + comfort tests are green.
 
-- [ ] **[P5-W13-0] Coordinator Pre-Split: Modularize `physics.dart` & Freeze Narrowphase/Broadphase Interfaces**
+- [x] **[P5-W13-0] Coordinator Pre-Split: Modularize `physics.dart` & Freeze Narrowphase/Broadphase Interfaces**
   - **Priority:** P0
   - **DependsOn:** `[P4-W12-M]`
   - **Owns:** `lib/src/engine/components/physics.dart` (barrel export), `lib/src/engine/components/physics_broadphase.dart`, `lib/src/engine/components/physics_colliders.dart`, `lib/src/engine/components/physics_solver.dart`, `lib/src/engine/components/physics_world.dart`
   - **Scope:** Split the single `physics.dart` file cleanly into modular collaborators while keeping all public symbol exports identical (`lib/src/engine/components/physics.dart` re-exports all split files) so existing callers suffer zero breakage.
   - **DoneWhen:** `dart analyze` + existing `test/physics/**` pass 100% unchanged after split.
 
-- [ ] **[P5-W13-A] Spatial Broadphase Acceleration Replacing `O(N^2)` `PhysicsWorld` Loops**
+- [x] **[P5-W13-A] Spatial Broadphase Acceleration Replacing `O(N^2)` `PhysicsWorld` Loops**
   - **Priority:** P1
   - **DependsOn:** `[P5-W13-0]`
   - **Owns:** `lib/src/engine/components/physics_broadphase.dart`, `lib/src/engine/components/broadphase_world.dart`, `test/physics/broadphase_test.dart`
   - **Scope:** Replace quadratic pairwise iteration and linear `raycast`/`raycastAll`/`overlapSphere`/`overlapBox`/`sphereCast` scans with uniform spatial hash / BVH broadphase backed cleanly by `BroadphaseWorldComponent`.
   - **DoneWhen:** `dart test test/physics/broadphase_test.dart` proves exact hit parity against brute-force reference plus benchmark speedups on 1,500+ colliders.
 
-- [ ] **[P5-W13-B] True SAT OBB `BoxCollider`, BVH `MeshCollider` & `HeightfieldCollider`**
+- [x] **[P5-W13-B] True SAT OBB `BoxCollider`, BVH `MeshCollider` & `HeightfieldCollider`**
   - **Priority:** P1
   - **DependsOn:** `[P5-W13-0]`
   - **Owns:** `lib/src/engine/components/physics_colliders.dart`, `test/physics/colliders_test.dart`
@@ -347,7 +347,7 @@
     - Add BVH-accelerated static concave `MeshCollider` and grid `HeightfieldCollider` for terrain.
   - **DoneWhen:** `dart test test/physics/colliders_test.dart` verifies rotated box edges/corners, triangle mesh raycasts, and terrain contacts accurately.
 
-- [ ] **[P5-W13-C] Rotational `RigidBody` Inertia, Torque/Friction, Joints, Sleeping & Swept CCD**
+- [x] **[P5-W13-C] Rotational `RigidBody` Inertia, Torque/Friction, Joints, Sleeping & Swept CCD**
   - **Priority:** P1
   - **DependsOn:** `[P5-W13-0]`
   - **Owns:** `lib/src/engine/components/physics_solver.dart`, `lib/src/engine/components/constraints.dart`, `lib/src/engine/components/physics_world.dart`, `test/physics/solver_ccd_test.dart`
@@ -355,7 +355,7 @@
     - Add inertia tensors, angular velocity/impulse, static/dynamic friction, restitution, warm-started sequential impulse solver iterations, island sleeping, hinge/ball/fixed joints, and swept TOI CCD in `RigidBody._step()` so high-velocity projectiles never tunnel thin walls.
   - **DoneWhen:** `dart test test/physics/solver_ccd_test.dart` verifies box stack stability, non-tunneling fast projectiles at >500 units/sec, angular toppling torque, and sleeping island wakeups.
 
-- [ ] **[P5-W13-D] 600-Frame Temporal Determinism, Live `reducedMotion` & Comfort Stability Gates**
+- [x] **[P5-W13-D] 600-Frame Temporal Determinism, Live `reducedMotion` & Comfort Stability Gates**
   - **Priority:** P1
   - **DependsOn:** `[P5-W13-0]`
   - **Owns:** `test/determinism/temporal_determinism_test.dart`, `test/determinism/comfort_stability_test.dart`
@@ -370,7 +370,7 @@
 
 **Wave Exit Gate:** Cross-platform `WebSocket` + native UDP/reliable channels transport packets cleanly, and `Engine.step` drives live multi-client entity replication + rollback reconciliation under synthetic loss/jitter.
 
-- [ ] **[P6-W14-0] Coordinator Freeze: Production `NetTransport` TLS/Auth/Metrics & Engine Sync Hooks**
+- [x] **[P6-W14-0] Coordinator Freeze: Production `NetTransport` TLS/Auth/Metrics & Engine Sync Hooks**
   - **Priority:** P1
   - **DependsOn:** `[P5-W13-D]`
   - **Owns:** `vendor/voxnet/lib/src/transport/transport.dart`, `lib/src/engine/network/network_config.dart`

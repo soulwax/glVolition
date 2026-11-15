@@ -62,6 +62,8 @@ final class Scene {
   final List<VolumetricLightSource> _volumetricSources = [];
   final List<ThermalSourceComponent> _thermalSources = [];
   final List<ShaderOverrideComponent> _shaderOverrides = [];
+  final List<SkinnedMeshRenderer> _skinnedMeshes = [];
+  final List<RenderGraphComponent> _renderGraphs = [];
   final SpriteBatch _worldSprites = SpriteBatch(
     initialCapacity: 2048,
     sort: SpriteSort.layerThenY,
@@ -585,6 +587,11 @@ final class Scene {
           c.gameObject.activeInHierarchy &&
           c._enabledSelf) {
         c._active = true;
+        if (c is SkinnedMeshRenderer && !_skinnedMeshes.contains(c)) {
+          _skinnedMeshes.add(c);
+        } else if (c is RenderGraphComponent && !_renderGraphs.contains(c)) {
+          _renderGraphs.add(c);
+        }
         c._onEnableInternal();
         _guard(c.onEnable);
         if (c is Behaviour && !c._started && !c._startQueued) {
@@ -816,6 +823,34 @@ final class Scene {
         );
       }
     }
+    for (final sm in _skinnedMeshes) {
+      if (sm._active) sm.syncToRenderer(graphics);
+    }
+    var hasActiveLighting2D = false;
+    for (final b in _behaviours) {
+      if (!b._active) continue;
+      if (b is LightProbeVolumeComponent) {
+        b.syncToRenderer(graphics);
+      } else if (b is Lighting2DComponent) {
+        hasActiveLighting2D = true;
+        b.syncToRenderer(graphics);
+      } else if (b is SoftBodyXpbdComponent) {
+        b.syncToRenderer(graphics);
+      } else if (b is DrawBatcherComponent) {
+        b.syncToRenderer(graphics);
+      }
+    }
+    if (!hasActiveLighting2D) {
+      for (final l2d in _lights2D) {
+        if (l2d._active) {
+          l2d.syncToRenderer(graphics);
+          break;
+        }
+      }
+    }
+    for (final rg in _renderGraphs) {
+      if (rg._active) rg.syncToRenderer(graphics);
+    }
   }
 
   /// Evaluates the combined thermal dissolution (`0..1`) at [worldPosition]
@@ -953,6 +988,11 @@ final class Scene {
     }
     c._onDestroyInternal();
     c._destroyed = true;
+    if (c is SkinnedMeshRenderer) {
+      _skinnedMeshes.remove(c);
+    } else if (c is RenderGraphComponent) {
+      _renderGraphs.remove(c);
+    }
     if (c is Behaviour) {
       _behaviours.remove(c);
       _pendingStart.remove(c);

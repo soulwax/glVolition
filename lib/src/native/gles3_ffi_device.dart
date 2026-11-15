@@ -1321,6 +1321,9 @@ final class Gles3FfiDevice implements GpuDevice, GpuContextGeneration {
     ClearMask.colorOnly => GL_COLOR_BUFFER_BIT,
     ClearMask.colorAndDepth => GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
     ClearMask.depthOnly => GL_DEPTH_BUFFER_BIT,
+    ClearMask.colorDepthStencil =>
+      GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,
+    ClearMask.stencilOnly => GL_STENCIL_BUFFER_BIT,
   };
 
   @override

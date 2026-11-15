@@ -29,7 +29,14 @@ final class BroadphaseWorldComponent extends Behaviour {
        _builtSapAxis = sapAxis {
     grid = broad.SpatialHashGrid3D(cellSize: _builtCellSize);
     sap = broad.SweepAndPrune1D(axis: _builtSapAxis);
+    broadphase = SpatialPhysicsBroadphase(cellSize: _builtCellSize);
   }
+
+  /// Spatial broadphase adapter that can be assigned directly to [PhysicsWorld.broadphase].
+  late final SpatialPhysicsBroadphase broadphase;
+
+  /// Exposes this component as a [PhysicsBroadphase] for [PhysicsWorld.broadphase].
+  PhysicsBroadphase asPhysicsBroadphase() => broadphase;
 
   static final spec = ComponentSpec<BroadphaseWorldComponent>(
     'BroadphaseWorldComponent',
@@ -84,6 +91,7 @@ final class BroadphaseWorldComponent extends Behaviour {
     if ((safe - _builtCellSize).abs() > 1e-6) {
       _builtCellSize = safe;
       grid = broad.SpatialHashGrid3D(cellSize: _builtCellSize);
+      broadphase.cellSize = safe;
       syncFromScene();
     }
   }
@@ -110,6 +118,7 @@ final class BroadphaseWorldComponent extends Behaviour {
   void clear() {
     grid.clear();
     sap.clear();
+    broadphase.clear();
     _idToCollider.clear();
     _colliderToId.clear();
     _lastPairs = const [];
@@ -121,6 +130,7 @@ final class BroadphaseWorldComponent extends Behaviour {
     if ((safeCell - _builtCellSize).abs() > 1e-6) {
       _builtCellSize = safeCell;
       grid = broad.SpatialHashGrid3D(cellSize: _builtCellSize);
+      broadphase.cellSize = safeCell;
     }
     if (sapAxis != _builtSapAxis) {
       _builtSapAxis = sapAxis;
@@ -129,11 +139,14 @@ final class BroadphaseWorldComponent extends Behaviour {
 
     grid.clear();
     sap.clear();
+    broadphase.clear();
     _idToCollider.clear();
     _colliderToId.clear();
 
     if (isAttached && scene.isLoaded) {
-      for (final col in scene.findObjectsOfType<Collider>()) {
+      final sceneColliders = scene.findObjectsOfType<Collider>();
+      broadphase.sync(sceneColliders);
+      for (final col in sceneColliders) {
         if (!col.isActiveAndEnabled) continue;
         final id = _idForCollider(col);
         final isStatic = col.getComponent<RigidBody>()?.isKinematic ?? false;

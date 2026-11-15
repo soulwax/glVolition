@@ -180,6 +180,7 @@ void registerProcessionSpecs(ComponentRegistry registry) {
 Scene buildProcessionScene({
   double designWidth = 320,
   double designHeight = 180,
+  int denseTreeCount = 78,
 }) {
   final scene = Scene('Procession');
 
@@ -209,6 +210,45 @@ Scene buildProcessionScene({
   );
   final tilemap = TilemapComponent(layer, solidTiles: const {1});
   scene.createGameObject('GroundTilemap', components: [tilemap]);
+
+  // Dense trees framing & draw budget (R7 carry-over / W12-B2 instancing verification).
+  // Underplant groves on north and south borders and behind the sanctuary to verify
+  // instancing streaming beyond the legacy 16-instance uniform limit without clipping.
+  final treeCoords = <(double, double)>[];
+  // Northern dense treeline
+  for (var x = 16.0; x <= 304.0; x += 18.0) {
+    treeCoords.add((x, 14.0));
+    treeCoords.add((x + 9.0, 26.0));
+  }
+  // Southern dense treeline
+  for (var x = 16.0; x <= 304.0; x += 18.0) {
+    treeCoords.add((x, 142.0));
+    treeCoords.add((x + 9.0, 154.0));
+  }
+  // East sanctuary grove
+  for (var y = 48.0; y <= 112.0; y += 16.0) {
+    treeCoords.add((280.0, y));
+    treeCoords.add((296.0, y + 8.0));
+  }
+  final count = math.min(denseTreeCount, treeCoords.length);
+  for (var i = 0; i < count; i++) {
+    final (tx, ty) = treeCoords[i];
+    scene.createGameObject(
+      'Tree_$i',
+      position: Vec3(tx, ty, 0),
+      components: [
+        SpriteRenderer(
+          region: SpriteRegion.white,
+          width: 14,
+          height: 20,
+          originX: 0.5,
+          originY: 0.9,
+          color: (i % 2 == 0) ? 0x2E6B38FF : 0x22552BFF,
+          layer: 1,
+        ),
+      ],
+    );
+  }
 
   // Leader with torch
   scene.createGameObject(

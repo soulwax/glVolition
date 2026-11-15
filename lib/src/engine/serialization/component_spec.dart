@@ -613,6 +613,13 @@ final class ComponentRegistry {
     register<ShaderOverrideComponent>(ShaderOverrideComponent.spec);
     register<SceneStreamZone>(SceneStreamZone.spec);
     register<ShadowCasterLodComponent>(ShadowCasterLodComponent.spec);
+    register<SkinnedMeshRenderer>(SkinnedMeshRenderer.spec);
+    register<Lighting2DComponent>(Lighting2DComponent.spec);
+    register<MeshCollider>(MeshCollider.spec);
+    register<HeightfieldCollider>(HeightfieldCollider.spec);
+    register<FixedJoint>(FixedJoint.spec);
+    register<BallJoint>(BallJoint.spec);
+    register<HingeJoint>(HingeJoint.spec);
     registerExtendedDefaultSpecs(this);
   }
 }
