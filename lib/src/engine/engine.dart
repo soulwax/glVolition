@@ -153,6 +153,7 @@ final class Engine {
         unawaited(streamingAssets.processFrameBudget());
       }
       _scene._flushDestroyed();
+      _scene.network.postStepSync();
       _scene._syncToRenderer(host.graphics);
     } finally {
       time._inFixedStep = false;

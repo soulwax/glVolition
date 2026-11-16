@@ -215,3 +215,4 @@ part 'engine/components/shader_override.dart';
 part 'engine/components/scene_stream_zone.dart';
 part 'engine/components/shadow_caster_lod.dart';
 part 'engine/serialization/component_spec_extra.dart';
+part 'engine/editor_commands.dart';

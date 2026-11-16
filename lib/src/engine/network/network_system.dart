@@ -37,6 +37,10 @@ class NetworkTransform extends Component {
   final net.SnapshotBuffer<Quat> rotationBuffer = net.SnapshotBuffer<Quat>();
   final net.PredictionHistory<Vec3, Vec3> prediction =
       net.PredictionHistory<Vec3, Vec3>();
+  final net.DeltaCompressor deltaCompressor = net.DeltaCompressor();
+
+  Vec3? _lastReplicatedPos;
+  Quat? _lastReplicatedRot;
 
   NetworkTransform({
     this.interpolationDelaySeconds = 0.05,
@@ -46,6 +50,10 @@ class NetworkTransform extends Component {
   });
 
   NetworkIdentity? get identity => gameObject.getComponent<NetworkIdentity>();
+
+  void recordPrediction(int tick, Vec3 velocity, Vec3 state) {
+    prediction.record(tick, velocity, state);
+  }
 
   void receiveSnapshot({
     required int tick,
@@ -63,15 +71,20 @@ class NetworkTransform extends Component {
 
     final id = identity;
     if (id != null && id.isOwner && !id.isServer && enablePrediction) {
-      // Reconcile client-side prediction against authoritative server position
-      prediction.reconcile(
+      final thresholdSq = scene.network.config.divergenceThresholdSq;
+      final dt = scene.engine.time.fixedDeltaTime;
+      final res = prediction.reconcile(
         serverTick: tick,
         authoritativeState: position,
-        hasDiverged: (pred, auth) =>
-            (pred - auth).lengthSquared > 0.04, // >20cm drift
-        simulateStep: (cur, vel, t) =>
-            cur + vel * (scene.engine.time.fixedDeltaTime),
+        hasDiverged: (pred, auth) => (pred - auth).lengthSquared > thresholdSq,
+        simulateStep: (cur, vel, t) => cur + vel * dt,
       );
+      if (res != null && res.rolledBack) {
+        final correctionDelta = res.correctedState - transform.position;
+        transform.position = res.correctedState;
+        scene.network.stats.rollbackReconciliations++;
+        scene.network.hook?.onSnapshotReconcile(id, tick, correctionDelta);
+      }
     }
   }
 
@@ -116,6 +129,14 @@ class NetworkManager {
 
   int currentTick = 0;
   int currentNetworkTimeMs = 0;
+  int _lastHeartbeatMs = 0;
+  int _lastBroadcastTick = -1;
+
+  NetworkSyncConfig config = const NetworkSyncConfig();
+  final NetworkSyncStats stats = NetworkSyncStats();
+  final NetworkClockSync clockSync = NetworkClockSync();
+  NetworkTickHook? hook;
+  void Function(int senderPeerId, int tick, Uint8List inputData)? onClientInput;
 
   final net.RpcManager rpc = net.RpcManager();
   final Map<int, NetworkIdentity> _identities = {};
@@ -135,18 +156,47 @@ class NetworkManager {
     net.MessageRegistry.register(net.RpcMsg.kTypeId, net.RpcMsg.deserialize);
   }
 
-  void startServer({net.NetTransport? serverTransport}) {
+  void startServer({
+    net.NetTransport? serverTransport,
+    NetworkSyncConfig? config,
+    NetworkTickHook? hook,
+  }) {
     localPeerId = 0;
     isServer = true;
     isClient = false;
     transport = serverTransport;
+    if (config != null) this.config = config;
+    if (hook != null) this.hook = hook;
+    _lastBroadcastTick = -1;
+    _lastHeartbeatMs = 0;
+    stats.reset();
+    clockSync.reset();
   }
 
-  void startClient(int peerId, {net.NetTransport? clientTransport}) {
+  void startClient(
+    int peerId, {
+    net.NetTransport? clientTransport,
+    NetworkSyncConfig? config,
+    NetworkTickHook? hook,
+  }) {
     localPeerId = peerId;
     isServer = false;
     isClient = true;
     transport = clientTransport;
+    if (config != null) this.config = config;
+    if (hook != null) this.hook = hook;
+    _lastBroadcastTick = -1;
+    _lastHeartbeatMs = 0;
+    stats.reset();
+    clockSync.reset();
+  }
+
+  void stop() {
+    transport?.close();
+    transport = null;
+    _identities.clear();
+    stats.reset();
+    clockSync.reset();
   }
 
   void _registerIdentity(NetworkIdentity identity) {
@@ -174,6 +224,7 @@ class NetworkManager {
       payload: payload,
     );
     final bytes = net.MessageRegistry.serialize(msg);
+    stats.rpcsSent++;
 
     if (recipientId == -1) {
       t.broadcast(bytes);
@@ -182,55 +233,126 @@ class NetworkManager {
     }
   }
 
+  void sendInput(int tick, Uint8List inputData, {int recipientId = 0}) {
+    final t = transport;
+    if (t == null) return;
+
+    final msg = net.InputMsg(tick, inputData);
+    final bytes = net.MessageRegistry.serialize(msg);
+    t.send(recipientId, bytes);
+    stats.inputsSent++;
+  }
+
+  void postStepSync() {
+    final t = transport;
+    if (t == null || !isServer) return;
+    if (_lastBroadcastTick == currentTick) return;
+    _lastBroadcastTick = currentTick;
+
+    for (final id in _identities.values) {
+      final netTransform = id.gameObject.getComponent<NetworkTransform>();
+      if (netTransform == null) continue;
+
+      final pos = id.transform.position;
+      final rot = id.transform.rotation;
+
+      if (config.enableDeltaCompression) {
+        final lastPos = netTransform._lastReplicatedPos;
+        final lastRot = netTransform._lastReplicatedRot;
+        if (lastPos != null && lastRot != null) {
+          final posDiff = (pos - lastPos).lengthSquared;
+          final rotDiff =
+              (rot.x - lastRot.x).abs() +
+              (rot.y - lastRot.y).abs() +
+              (rot.z - lastRot.z).abs() +
+              (rot.w - lastRot.w).abs();
+          if (posDiff < 1e-6 && rotDiff < 1e-6) {
+            stats.snapshotsDeltaSkipped++;
+            continue;
+          }
+        }
+      }
+
+      netTransform._lastReplicatedPos = pos;
+      netTransform._lastReplicatedRot = rot;
+
+      final snapMsg = net.EntitySnapshotMsg(
+        tick: currentTick,
+        netId: id.netId,
+        x: pos.x,
+        y: pos.y,
+        z: pos.z,
+        qx: rot.x,
+        qy: rot.y,
+        qz: rot.z,
+        qw: rot.w,
+      );
+      t.broadcast(net.MessageRegistry.serialize(snapMsg));
+      stats.snapshotsSent++;
+    }
+  }
+
   void _step(double dt) {
     currentTick++;
     currentNetworkTimeMs += (dt * 1000).round();
 
-    final t = transport;
-    if (t == null) return;
+    hook?.onPreFixedTick(this, currentTick, dt);
 
-    // 1. Poll incoming transport packets
-    final packets = t.poll(currentNetworkTimeMs);
-    for (final pkt in packets) {
-      final msg = net.MessageRegistry.deserialize(pkt.data);
-      if (msg is net.EntitySnapshotMsg) {
-        final id = _identities[msg.netId];
-        if (id != null) {
-          final netTransform = id.gameObject.getComponent<NetworkTransform>();
-          if (netTransform != null) {
-            netTransform.receiveSnapshot(
-              tick: msg.tick,
-              timestampMs: pkt.timestampMs,
-              position: Vec3(msg.x, msg.y, msg.z),
-              rotation: Quat(msg.qx, msg.qy, msg.qz, msg.qw),
-              velocity: Vec3(msg.vx, msg.vy, msg.vz),
+    final t = transport;
+    if (t != null) {
+      // 1. Poll incoming transport packets
+      final packets = t.poll(currentNetworkTimeMs);
+      stats.packetsPolled += packets.length;
+      for (final pkt in packets) {
+        final msg = net.MessageRegistry.deserialize(pkt.data);
+        if (msg is net.PingMsg) {
+          if (isServer) {
+            final pong = net.PongMsg(
+              msg.clientTimestampMs,
+              currentNetworkTimeMs,
+            );
+            t.send(pkt.senderId, net.MessageRegistry.serialize(pong));
+          }
+        } else if (msg is net.PongMsg) {
+          if (isClient) {
+            clockSync.updateFromPong(
+              clientSentTimeMs: msg.clientTimestampMs,
+              serverTimeMs: msg.serverTimestampMs,
+              clientReceivedTimeMs: currentNetworkTimeMs,
             );
           }
+        } else if (msg is net.InputMsg) {
+          onClientInput?.call(pkt.senderId, msg.tick, msg.inputData);
+        } else if (msg is net.EntitySnapshotMsg) {
+          stats.snapshotsApplied++;
+          final id = _identities[msg.netId];
+          if (id != null) {
+            final netTransform = id.gameObject.getComponent<NetworkTransform>();
+            if (netTransform != null) {
+              netTransform.receiveSnapshot(
+                tick: msg.tick,
+                timestampMs: pkt.timestampMs,
+                position: Vec3(msg.x, msg.y, msg.z),
+                rotation: Quat(msg.qx, msg.qy, msg.qz, msg.qw),
+                velocity: Vec3(msg.vx, msg.vy, msg.vz),
+              );
+            }
+          }
+        } else if (msg is net.RpcMsg) {
+          stats.rpcsDispatched++;
+          rpc.dispatch(pkt.senderId, msg.methodName, msg.payload);
         }
-      } else if (msg is net.RpcMsg) {
-        rpc.dispatch(pkt.senderId, msg.methodName, msg.payload);
       }
-    }
 
-    // 2. Server broadcast authoritative snapshots
-    if (isServer) {
-      for (final id in _identities.values) {
-        final netTransform = id.gameObject.getComponent<NetworkTransform>();
-        if (netTransform != null) {
-          final pos = id.transform.position;
-          final rot = id.transform.rotation;
-          final snapMsg = net.EntitySnapshotMsg(
-            tick: currentTick,
-            netId: id.netId,
-            x: pos.x,
-            y: pos.y,
-            z: pos.z,
-            qx: rot.x,
-            qy: rot.y,
-            qz: rot.z,
-            qw: rot.w,
+      // Heartbeat ping for client
+      if (isClient && config.heartbeatIntervalMs > 0) {
+        if (currentNetworkTimeMs - _lastHeartbeatMs >=
+            config.heartbeatIntervalMs) {
+          _lastHeartbeatMs = currentNetworkTimeMs;
+          t.send(
+            0,
+            net.MessageRegistry.serialize(net.PingMsg(currentNetworkTimeMs)),
           );
-          t.broadcast(net.MessageRegistry.serialize(snapMsg));
         }
       }
     }
@@ -242,5 +364,7 @@ class NetworkManager {
         netTransform.updateInterpolation(currentNetworkTimeMs);
       }
     }
+
+    hook?.onPostFixedTick(this, currentTick, dt);
   }
 }

@@ -378,21 +378,21 @@
   - **Scope:** Extend `NetTransport` with connection states, TLS/token header options, RTT/loss telemetry counters, and `NetworkClockSync` / tick-hook config interfaces.
   - **DoneWhen:** `vendor/voxnet` and root `dart analyze` pass.
 
-- [ ] **[P6-W14-A] Cross-Platform `WebSocketNetTransport` (`dart:io` + `package:web`)**
+- [x] **[P6-W14-A] Cross-Platform `WebSocketNetTransport` (`dart:io` + `package:web`)**
   - **Priority:** P1
   - **DependsOn:** `[P6-W14-0]`
   - **Owns:** `vendor/voxnet/lib/src/transport/websocket_transport.dart`, `vendor/voxnet/lib/src/transport/websocket_transport_io.dart`, `vendor/voxnet/lib/src/transport/websocket_transport_web.dart`, `vendor/voxnet/test/websocket_transport_test.dart`
   - **Scope:** Implement WebSocket client/server (IO) + browser client (`package:web`) with binary framing, heartbeat pings, exponential reconnect backoff, and session token auth.
   - **DoneWhen:** `vendor/voxnet` WebSocket loopback integration tests pass on VM + compile cleanly to JS (`dart compile js`).
 
-- [ ] **[P6-W14-B] Native UDP / Reliable-Unreliable Channel Transport (`dart:io` `RawDatagramSocket` / FFI)**
+- [x] **[P6-W14-B] Native UDP / Reliable-Unreliable Channel Transport (`dart:io` `RawDatagramSocket` / FFI)**
   - **Priority:** P1
   - **DependsOn:** `[P6-W14-0]`
   - **Owns:** `vendor/voxnet/lib/src/transport/udp_transport.dart`, `vendor/voxnet/lib/src/transport/reliable_channel.dart`, `vendor/voxnet/test/udp_transport_test.dart`
   - **Scope:** Implement sequenced/acknowledged reliable + unreliable/unordered channels over UDP (`RawDatagramSocket` / FFI wrapper), congestion windowing, MTU fragmentation, and synthetic jitter/loss fault injector for tests.
   - **DoneWhen:** `vendor/voxnet` `dart test test/udp_transport_test.dart` passes under 10% simulated packet drop & reordering.
 
-- [ ] **[P6-W14-C] Automatic `NetworkManager` Tick/Replication Sync & Multi-Client Rollback Test Harness**
+- [x] **[P6-W14-C] Automatic `NetworkManager` Tick/Replication Sync & Multi-Client Rollback Test Harness**
   - **Priority:** P1
   - **DependsOn:** `[P6-W14-0]`, `[P6-W14-A]`, `[P6-W14-B]`
   - **Owns:** `lib/src/engine/network/network_system.dart`, `test/network/multiplayer_sync_test.dart`
@@ -400,7 +400,7 @@
   - **Scope:** Implement delta-compressed snapshot sync, client input prediction, rollback reconciliation hooks in `NetworkManager`, and an automated multi-process/multi-socket integration test over real `ws://` & UDP loopback.
   - **DoneWhen:** `dart test test/network/multiplayer_sync_test.dart` verifies converging multi-client state over real loopback sockets with synthetic latency.
 
-- [ ] **[P6-W14-M] Coordinator Merge: Hook `NetworkManager` Step Into `Engine.step` & Push `voxnet` Gitlink**
+- [x] **[P6-W14-M] Coordinator Merge: Hook `NetworkManager` Step Into `Engine.step` & Push `voxnet` Gitlink**
   - **Priority:** P0
   - **DependsOn:** `[P6-W14-A]`, `[P6-W14-B]`, `[P6-W14-C]`
   - **Owns:** `lib/src/engine.dart`, `vendor/voxnet` submodule commit/gitlink
@@ -412,7 +412,7 @@
 
 **Wave Exit Gate:** Delta undo/redo handles 1,000+ object edits smoothly, 3D viewport gizmos pick/drag live transforms, full telemetry/transient stress checks pass, `volition doctor` + `volition create` + `--target server` work, and package publication strategy is finalized.
 
-- [ ] **[P7-W15-A] Compact `EditorCommand` Delta Undo/Redo Replacing Full-Scene JSON Snapshots**
+- [x] **[P7-W15-A] Compact `EditorCommand` Delta Undo/Redo Replacing Full-Scene JSON Snapshots**
   - **Priority:** P2
   - **DependsOn:** `[P6-W14-M]`
   - **Owns:** `lib/src/engine/editor_commands.dart`, `lib/src/engine/editor_session.dart`, `test/engine/editor_undo_delta_test.dart`
