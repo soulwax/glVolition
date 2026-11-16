@@ -353,6 +353,38 @@ final class InspectorOverlay {
       return;
     }
 
+    // Prefab variant & overrides section
+    final prefabInst = go.getComponent<PrefabInstanceComponent>();
+    if (prefabInst != null) {
+      final pRow = web.document.createElement('div') as web.HTMLDivElement;
+      pRow.style.cssText =
+          'display:flex;align-items:center;justify-content:space-between;'
+          'background:#1c1833;border:1px solid #4a3e75;border-radius:4px;'
+          'padding:4px 8px;margin-bottom:8px;font-size:11px;';
+      final pBadge = web.document.createElement('span') as web.HTMLSpanElement
+        ..textContent = 'Prefab: ${prefabInst.prefabName}'
+        ..style.cssText = 'color:#ffcf56;font-weight:bold;';
+      pRow.append(pBadge);
+
+      if (prefabInst.overrides.isNotEmpty) {
+        final revBtn =
+            web.document.createElement('button') as web.HTMLButtonElement
+              ..textContent = 'Revert (${prefabInst.overrides.length})'
+              ..style.cssText =
+                  'background:#3d2b56;color:#e8d5ff;border:1px solid #6b4c96;'
+                  'border-radius:3px;padding:2px 6px;cursor:pointer;font-size:10px;';
+        revBtn.addEventListener(
+          'click',
+          ((web.Event _) {
+            prefabInst.revertAll();
+            refresh();
+          }).toJS,
+        );
+        pRow.append(revBtn);
+      }
+      container.append(pRow);
+    }
+
     // Transform section
     final tTitle = web.document.createElement('div') as web.HTMLDivElement
       ..textContent = 'Transform (${go.name})';

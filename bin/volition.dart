@@ -88,6 +88,10 @@ Future<void> main(List<String> args) async {
       await _runDist(rest);
     case 'pack':
       await _runPack(rest);
+    case 'doctor':
+      await _runDoctor(rest);
+    case 'create':
+      await _runCreate(rest);
     default:
       log.error('Unknown command "$cmd".');
       _printUsage();
@@ -101,13 +105,16 @@ glVolition CLI (volition)
 
 Usage:
   dart run gl_volition:volition test [test-args...]
+  dart run gl_volition:volition doctor
+  dart run gl_volition:volition create <project-name> [--template 2d|3d|multiplayer] [--out <dir>]
   dart run gl_volition:volition serve <entry.dart> [--port 8080] [--root <dir>]
-  dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows|linux|macos|native|exe|webview] [--version <ver>] [--name <name>] [--out <dir>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
-  dart run gl_volition:volition dist [entry.dart] [--target all|windows|linux|macos|native|exe|webview|js|wasm] [--version <ver>] [--name <name>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
+  dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows|linux|macos|native|exe|webview|server] [--version <ver>] [--name <name>] [--out <dir>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
+  dart run gl_volition:volition dist [entry.dart] [--target all|windows|linux|macos|native|exe|webview|js|wasm|server] [--version <ver>] [--name <name>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
   dart run gl_volition:volition pack [pack|obj2qmesh|cube2lut|validate] [--in <dir>] [--out <bundle.pak>] [--cook-dir <dir>] [--manifest <sidecar.json>] [--no-compress] [--xor-key <int>] [--dry-run]
 
 Targets:
   windows|linux|macos|native|exe  Native AOT executable + runtime DLLs/SOs/Dylibs + assets/.pak
+  server                          Dedicated headless multiplayer server executable (zero GPU/window)
   webview                         .NET 10 WinForms WebView2 desktop host wrapper
   js|wasm                         Web browser bundles
 
@@ -462,6 +469,52 @@ Future<void> _runBuild(List<String> args) async {
     return;
   }
 
+  if (normalizedTarget == 'server') {
+    final serverOutDir = outPath ?? '$distRoot/$version/$name/server';
+    final serverExeName = Platform.isWindows
+        ? '${name}_server.exe'
+        : '${name}_server';
+    final serverExePath = '$serverOutDir/$serverExeName';
+
+    if (dryRun) {
+      stdout.writeln(
+        'DRY RUN: compile exe ${entryFile.path} -> $serverExePath',
+      );
+      return;
+    }
+
+    final outDirObj = Directory(serverOutDir);
+    if (!outDirObj.existsSync()) {
+      outDirObj.createSync(recursive: true);
+    }
+
+    log.info(
+      'Compiling dedicated headless server ($name) to $serverExePath...',
+    );
+    final proc = await Process.start(_dartExecutable, [
+      'compile',
+      'exe',
+      entryFile.path,
+      '-o',
+      serverExePath,
+    ], mode: ProcessStartMode.inheritStdio);
+    final code = await proc.exitCode;
+    if (code != 0) {
+      log.error('Dedicated server compilation failed with exit code $code.');
+      exit(code);
+    }
+
+    _writeDistVersion(version, distRoot: distRoot);
+    final file = File(serverExePath);
+    final sizeKb = file.existsSync()
+        ? (file.lengthSync() / 1024).toStringAsFixed(1)
+        : '?';
+    log.info(
+      'Dedicated server built successfully: $serverExePath ($sizeKb KB)',
+    );
+    return;
+  }
+
   if (normalizedTarget != 'js' && normalizedTarget != 'wasm') {
     log.error(
       'Unsupported --target "$target" '
@@ -729,4 +782,225 @@ String _mimeType(String path) {
   if (lower.endsWith('.wav')) return 'audio/wav';
   if (lower.endsWith('.ogg')) return 'audio/ogg';
   return 'application/octet-stream';
+}
+
+Future<void> _runDoctor(List<String> args) async {
+  stdout.writeln('glVolition Doctor — Environment & Toolchain Diagnostics\n');
+
+  // 1. Dart SDK
+  final dartVer = Platform.version.split(' ').first;
+  stdout.writeln('[✓] Dart SDK: $dartVer on ${Platform.operatingSystem}');
+
+  // 2. Web / Chrome
+  var chromeFound = false;
+  String? chromePath;
+  if (Platform.isWindows) {
+    final candidates = [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      '${Platform.environment['LOCALAPPDATA']}\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    ];
+    for (final c in candidates) {
+      if (File(c).existsSync()) {
+        chromeFound = true;
+        chromePath = c;
+        break;
+      }
+    }
+  } else {
+    final res = await Process.run('which', [
+      'google-chrome',
+      'chromium',
+      'google-chrome-stable',
+    ]);
+    if (res.exitCode == 0 && (res.stdout as String).trim().isNotEmpty) {
+      chromeFound = true;
+      chromePath = (res.stdout as String).trim().split('\n').first;
+    }
+  }
+  if (chromeFound) {
+    stdout.writeln('[✓] Web / Chrome: found at $chromePath');
+  } else {
+    stdout.writeln(
+      '[!] Web / Chrome: no standard Chrome/Edge browser found (optional for WebGL testing)',
+    );
+  }
+
+  // 3. C/C++ Host Compiler
+  var compilerFound = false;
+  String? compilerDesc;
+  if (Platform.isWindows) {
+    final whichCl = await Process.run('where', ['cl.exe']);
+    if (whichCl.exitCode == 0) {
+      compilerFound = true;
+      compilerDesc =
+          'MSVC cl.exe (${(whichCl.stdout as String).trim().split('\n').first})';
+    } else {
+      final whichClang = await Process.run('where', ['clang.exe']);
+      if (whichClang.exitCode == 0) {
+        compilerFound = true;
+        compilerDesc =
+            'Clang (${(whichClang.stdout as String).trim().split('\n').first})';
+      }
+    }
+  } else {
+    final whichClang = await Process.run('which', ['clang', 'gcc']);
+    if (whichClang.exitCode == 0) {
+      compilerFound = true;
+      compilerDesc = (whichClang.stdout as String).trim();
+    }
+  }
+  if (compilerFound) {
+    stdout.writeln('[✓] C/C++ Host Compiler: found $compilerDesc');
+  } else {
+    stdout.writeln(
+      '[!] C/C++ Host Compiler: not found in PATH (optional for native FFI extension rebuilding)',
+    );
+  }
+
+  // 4. Native Runtime Libraries (SDL3 / GLES)
+  final nativeDirs = [
+    'bin/native',
+    'bin/native/windows',
+    'bin/native/linux',
+    'bin/native/macos',
+  ];
+  var sdlFound = false;
+  for (final dir in nativeDirs) {
+    if (Directory(dir).existsSync()) {
+      final entries = Directory(dir).listSync();
+      if (entries.any((e) => e.path.toLowerCase().contains('sdl3'))) {
+        sdlFound = true;
+        stdout.writeln(
+          '[✓] Native Libraries (SDL3/GLES): found runtime binaries in $dir',
+        );
+        break;
+      }
+    }
+  }
+  if (!sdlFound) {
+    stdout.writeln(
+      '[!] Native Libraries: SDL3 runtime binary not in bin/native (required for native desktop host)',
+    );
+  }
+
+  // 5. Shader Toolchain
+  final shaderScript = File('vendor/pixeldart/tools/renderer/shaders.dart');
+  if (shaderScript.existsSync()) {
+    stdout.writeln(
+      '[✓] Shader Toolchain: pixeldart WGSL/GLSL shader pipeline ready (${shaderScript.path})',
+    );
+  } else {
+    stdout.writeln(
+      '[!] Shader Toolchain: tools/renderer/shaders.dart not found',
+    );
+  }
+
+  stdout.writeln('\nDoctor inspection completed.');
+}
+
+Future<void> _runCreate(List<String> args) async {
+  if (args.isEmpty || args.first.startsWith('-')) {
+    stdout.writeln(
+      'Usage: volition create <project-name> [--template 2d|3d|multiplayer] [--out <dir>]',
+    );
+    return;
+  }
+
+  final projectName = args.first;
+  var template = '3d';
+  String? outDir;
+
+  for (var i = 1; i < args.length; i++) {
+    final a = args[i];
+    if (a == '--template' && i + 1 < args.length) {
+      template = args[++i].toLowerCase();
+    } else if (a == '--out' && i + 1 < args.length) {
+      outDir = args[++i];
+    }
+  }
+
+  final targetDir = Directory(outDir ?? projectName);
+  if (targetDir.existsSync()) {
+    stdout.writeln('Error: Directory ${targetDir.path} already exists.');
+    exit(1);
+  }
+  targetDir.createSync(recursive: true);
+
+  final pubspecContent =
+      '''
+name: $projectName
+description: A new glVolition game.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  gl_volition:
+    path: ${Directory.current.path.replaceAll('\\', '/')}
+''';
+  File('${targetDir.path}/pubspec.yaml').writeAsStringSync(pubspecContent);
+
+  final libDir = Directory('${targetDir.path}/lib')..createSync();
+  final binDir = Directory('${targetDir.path}/bin')..createSync();
+
+  String mainContent;
+  switch (template) {
+    case '2d':
+      mainContent = '''
+import 'package:gl_volition/gl_volition.dart';
+
+void main() {
+  final engine = Engine(HeadlessHost());
+  final player = engine.scene.createGameObject('Player', position: Vec3.zero);
+  player.addComponent(RigidBody2D());
+  player.addComponent(BoxCollider2D(size: const Vec2(1.0, 1.0)));
+  print('glVolition 2D Game initialized.');
+}
+''';
+    case 'multiplayer':
+      mainContent = '''
+import 'package:gl_volition/gl_volition.dart';
+
+void main() async {
+  final engine = Engine(HeadlessHost());
+  engine.scene.network.startServer();
+  print('glVolition Multiplayer Server initialized.');
+}
+''';
+    case '3d':
+    default:
+      mainContent = '''
+import 'package:gl_volition/gl_volition.dart';
+
+void main() {
+  final engine = Engine(HeadlessHost());
+  engine.scene.createGameObject('Cube', position: const Vec3(0, 1, 0));
+  engine.scene.createGameObject('Light').addComponent(Light.directional());
+  print('glVolition 3D Game initialized.');
+}
+''';
+  }
+
+  File('${libDir.path}/main.dart').writeAsStringSync(mainContent);
+  File('${binDir.path}/server.dart').writeAsStringSync('''
+import 'package:gl_volition/gl_volition_native.dart';
+
+void main(List<String> args) async {
+  final server = DedicatedServerHost(port: 7777);
+  await server.start();
+}
+''');
+
+  stdout.writeln(
+    'Created new glVolition project "$projectName" (template: $template) in ${targetDir.path}',
+  );
+  stdout.writeln('Next steps:');
+  stdout.writeln('  cd ${targetDir.path}');
+  stdout.writeln('  dart pub get');
+  stdout.writeln('  dart run bin/server.dart');
 }

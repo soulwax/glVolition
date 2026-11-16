@@ -6,57 +6,66 @@ import 'package:test/test.dart';
 
 void main() {
   group('P7-W15-A — EditorCommand Delta Undo/Redo System', () {
-    test('TransformMoveCommand modifies local transform and restores on undo', () {
-      final engine = Engine(HeadlessHost());
-      final go = engine.scene.createGameObject('Prop', position: const Vec3(1.0, 2.0, 3.0));
+    test(
+      'TransformMoveCommand modifies local transform and restores on undo',
+      () {
+        final engine = Engine(HeadlessHost());
+        final go = engine.scene.createGameObject(
+          'Prop',
+          position: const Vec3(1.0, 2.0, 3.0),
+        );
 
-      final cmd = TransformMoveCommand(
-        targetName: 'Prop',
-        oldPosition: const Vec3(1.0, 2.0, 3.0),
-        newPosition: const Vec3(10.0, 20.0, 30.0),
-        newScale: 2.5,
-        oldScale: 1.0,
-      );
+        final cmd = TransformMoveCommand(
+          targetName: 'Prop',
+          oldPosition: const Vec3(1.0, 2.0, 3.0),
+          newPosition: const Vec3(10.0, 20.0, 30.0),
+          newScale: 2.5,
+          oldScale: 1.0,
+        );
 
-      engine.editor.executeCommand(cmd);
-      expect(go.transform.localPosition.x, closeTo(10.0, 1e-4));
-      expect(go.transform.localScale, closeTo(2.5, 1e-4));
+        engine.editor.executeCommand(cmd);
+        expect(go.transform.localPosition.x, closeTo(10.0, 1e-4));
+        expect(go.transform.localScale, closeTo(2.5, 1e-4));
 
-      expect(engine.editor.undo(), isTrue);
-      expect(go.transform.localPosition.x, closeTo(1.0, 1e-4));
-      expect(go.transform.localScale, closeTo(1.0, 1e-4));
+        expect(engine.editor.undo(), isTrue);
+        expect(go.transform.localPosition.x, closeTo(1.0, 1e-4));
+        expect(go.transform.localScale, closeTo(1.0, 1e-4));
 
-      expect(engine.editor.redo(), isTrue);
-      expect(go.transform.localPosition.x, closeTo(10.0, 1e-4));
-      expect(go.transform.localScale, closeTo(2.5, 1e-4));
-    });
+        expect(engine.editor.redo(), isTrue);
+        expect(go.transform.localPosition.x, closeTo(10.0, 1e-4));
+        expect(go.transform.localScale, closeTo(2.5, 1e-4));
+      },
+    );
 
-    test('AddGameObjectCommand and RemoveGameObjectCommand manipulate scene hierarchy', () {
-      final engine = Engine(HeadlessHost());
+    test(
+      'AddGameObjectCommand and RemoveGameObjectCommand manipulate scene hierarchy',
+      () {
+        final engine = Engine(HeadlessHost());
 
-      final addCmd = AddGameObjectCommand(
-        objectName: 'Tree',
-        position: const Vec3(5.0, 0.0, -5.0),
-      );
+        final addCmd = AddGameObjectCommand(
+          objectName: 'Tree',
+          position: const Vec3(5.0, 0.0, -5.0),
+        );
 
-      engine.editor.executeCommand(addCmd);
-      expect(engine.scene.find('Tree'), isNotNull);
-      expect(engine.editor.selected?.name, equals('Tree'));
+        engine.editor.executeCommand(addCmd);
+        expect(engine.scene.find('Tree'), isNotNull);
+        expect(engine.editor.selected?.name, equals('Tree'));
 
-      expect(engine.editor.undo(), isTrue);
-      expect(engine.scene.find('Tree'), isNull);
+        expect(engine.editor.undo(), isTrue);
+        expect(engine.scene.find('Tree'), isNull);
 
-      expect(engine.editor.redo(), isTrue);
-      expect(engine.scene.find('Tree'), isNotNull);
+        expect(engine.editor.redo(), isTrue);
+        expect(engine.scene.find('Tree'), isNotNull);
 
-      // Now remove it
-      final removeCmd = RemoveGameObjectCommand(objectName: 'Tree');
-      engine.editor.executeCommand(removeCmd);
-      expect(engine.scene.find('Tree'), isNull);
+        // Now remove it
+        final removeCmd = RemoveGameObjectCommand(objectName: 'Tree');
+        engine.editor.executeCommand(removeCmd);
+        expect(engine.scene.find('Tree'), isNull);
 
-      expect(engine.editor.undo(), isTrue);
-      expect(engine.scene.find('Tree'), isNotNull);
-    });
+        expect(engine.editor.undo(), isTrue);
+        expect(engine.scene.find('Tree'), isNotNull);
+      },
+    );
 
     test('ReparentCommand attaches and detaches parent cleanly', () {
       final engine = Engine(HeadlessHost());

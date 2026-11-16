@@ -216,3 +216,5 @@ part 'engine/components/scene_stream_zone.dart';
 part 'engine/components/shadow_caster_lod.dart';
 part 'engine/serialization/component_spec_extra.dart';
 part 'engine/editor_commands.dart';
+part 'engine/gizmos/viewport_gizmos.dart';
+part 'engine/diagnostics/telemetry_snapshot.dart';

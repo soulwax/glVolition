@@ -457,6 +457,44 @@ final class EngineWorkbenchComponent extends Behaviour {
       ),
     ];
 
+    final prefabInst = target.getComponent<PrefabInstanceComponent>();
+    if (prefabInst != null) {
+      rows.add(_InspectorRow.header('Prefab: ${prefabInst.prefabName}'));
+      if (prefabInst.overrides.isEmpty) {
+        rows.add(
+          _InspectorRow.text(label: 'Status', read: () => 'Synced with Prefab'),
+        );
+      } else {
+        for (final ov in prefabInst.overrides) {
+          rows.add(
+            _InspectorRow.text(
+              label: '[Override] ${ov.propertyName}',
+              read: () => '${ov.overrideValue}',
+            ),
+          );
+        }
+      }
+    }
+
+    if (isAttached) {
+      final gz = scene.viewportGizmos;
+      rows.add(_InspectorRow.header('Viewport Gizmo'));
+      rows.add(
+        _InspectorRow.text(
+          label: 'Mode',
+          read: () => gz.mode.name.toUpperCase(),
+        ),
+      );
+      rows.add(
+        _InspectorRow.boolean(
+          id: 'wb_gz_snap',
+          label: 'Snap',
+          read: () => gz.snapEnabled,
+          write: (v) => gz.snapEnabled = v,
+        ),
+      );
+    }
+
     var compIndex = 0;
     for (final c in target.components) {
       if (c is TransformComponent || c.isDestroyed) continue;
@@ -469,6 +507,7 @@ final class EngineWorkbenchComponent extends Behaviour {
 
       rows.add(_InspectorRow.header(spec.typeName));
       for (final field in spec.fields) {
+        final dynamic dField = field;
         final fieldId = 'c${compIndex}_${spec.typeName}_${field.name}';
         switch (field.kind) {
           case FieldKind.boolean:
@@ -476,8 +515,8 @@ final class EngineWorkbenchComponent extends Behaviour {
               _InspectorRow.boolean(
                 id: fieldId,
                 label: field.name,
-                read: () => field.getter(c) as bool,
-                write: (v) => field.setter(c, v),
+                read: () => dField.getter(c) as bool,
+                write: (v) => dField.setter(c, v),
               ),
             );
           case FieldKind.number:
@@ -485,8 +524,8 @@ final class EngineWorkbenchComponent extends Behaviour {
               _InspectorRow.number(
                 id: fieldId,
                 label: field.name,
-                read: () => (field.getter(c) as num).toDouble(),
-                write: (v) => field.setter(c, v),
+                read: () => (dField.getter(c) as num).toDouble(),
+                write: (v) => dField.setter(c, v),
                 step: 0.1,
               ),
             );
@@ -495,15 +534,15 @@ final class EngineWorkbenchComponent extends Behaviour {
               _InspectorRow.integer(
                 id: fieldId,
                 label: field.name,
-                read: () => (field.getter(c) as num).toInt(),
-                write: (v) => field.setter(c, v),
+                read: () => (dField.getter(c) as num).toInt(),
+                write: (v) => dField.setter(c, v),
               ),
             );
           case FieldKind.text:
             rows.add(
               _InspectorRow.text(
                 label: field.name,
-                read: () => field.getter(c).toString(),
+                read: () => dField.getter(c).toString(),
               ),
             );
           case FieldKind.vec3:
@@ -511,7 +550,7 @@ final class EngineWorkbenchComponent extends Behaviour {
               _InspectorRow.text(
                 label: field.name,
                 read: () {
-                  final v = field.getter(c) as Vec3;
+                  final v = dField.getter(c) as Vec3;
                   return '(${v.x.toStringAsFixed(1)}, ${v.y.toStringAsFixed(1)}, ${v.z.toStringAsFixed(1)})';
                 },
               ),
@@ -521,7 +560,7 @@ final class EngineWorkbenchComponent extends Behaviour {
               _InspectorRow.text(
                 label: field.name,
                 read: () {
-                  final q = field.getter(c) as Quat;
+                  final q = dField.getter(c) as Quat;
                   return '(${q.x.toStringAsFixed(2)}, ${q.y.toStringAsFixed(2)}, ${q.z.toStringAsFixed(2)}, ${q.w.toStringAsFixed(2)})';
                 },
               ),
@@ -530,14 +569,14 @@ final class EngineWorkbenchComponent extends Behaviour {
             rows.add(
               _InspectorRow.color(
                 label: field.name,
-                read: () => field.getter(c) as LinearColor,
+                read: () => dField.getter(c) as LinearColor,
               ),
             );
           case FieldKind.enumeration:
             rows.add(
               _InspectorRow.text(
                 label: field.name,
-                read: () => (field.getter(c) as Enum).name,
+                read: () => (dField.getter(c) as Enum).name,
               ),
             );
         }

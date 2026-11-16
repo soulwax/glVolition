@@ -420,7 +420,7 @@
   - **Scope:** Replace `EditorSession._captureHistoryEntry` (`:80-94`) full-scene JSON dumps with composable reversible `EditorCommand` objects (property set, transform move, add/remove object/component, reparent, transaction batch).
   - **DoneWhen:** `dart test test/engine/editor_undo_delta_test.dart` demonstrates multi-step undo/redo memory/time scaling O(delta) vs O(scene) on a 1,000-entity scene.
 
-- [ ] **[P7-W15-B] Live 3D Viewport Gizmos, Unified Workbench/Inspector Picker & Prefab Variant UI**
+- [x] **[P7-W15-B] Live 3D Viewport Gizmos, Unified Workbench/Inspector Picker & Prefab Variant UI**
   - **Priority:** P2
   - **DependsOn:** `[P6-W14-M]`
   - **Owns:** `lib/src/engine/gizmos/viewport_gizmos.dart`, `lib/src/engine/components/engine_workbench.dart`, `lib/src/web/inspector_overlay.dart`, `test/engine/gizmos_workbench_test.dart`
@@ -430,7 +430,7 @@
     - Add `AssetCatalog` visual resource picker and prefab-variant override badges/revert controls unified cleanly between `EngineWorkbenchComponent` (`voxui`) and `InspectorOverlay` (Web DOM).
   - **DoneWhen:** `dart test test/engine/gizmos_workbench_test.dart` verifies gizmo axis hit-testing, snapped dragging, and prefab override inspection; `dart compile js` builds cleanly.
 
-- [ ] **[P7-W15-C] CLI DX (`volition create`, `doctor`, `--target server`), Transient Stress, Telemetry & Package Split Decision**
+- [x] **[P7-W15-C] CLI DX (`volition create`, `doctor`, `--target server`), Transient Stress, Telemetry & Package Split Decision**
   - **Priority:** P1
   - **DependsOn:** `[P6-W14-M]`
   - **Owns:** `bin/volition.dart`, `lib/src/engine/diagnostics/telemetry_snapshot.dart`, `lib/src/native/server_host.dart`, `test/engine/diagnostics_cli_test.dart`
@@ -441,7 +441,7 @@
     - Document package publication architecture decision (`publish_to: none` monorepo vs split `pub.dev` releases for `gl_volition`, `pixeldart`, `vox*`) in a brief ADR section of `PLAN.md` during merge.
   - **DoneWhen:** `dart test test/engine/diagnostics_cli_test.dart` passes; `volition doctor` exits cleanly with accurate environment table; dedicated `--target server` AOT binary runs headless server tick loop.
 
-- [ ] **[P7-W15-M] Coordinator Final Sign-Off & Production Release Verification**
+- [x] **[P7-W15-M] Coordinator Final Sign-Off & Production Release Verification**
   - **Priority:** P0
   - **DependsOn:** `[P7-W15-A]`, `[P7-W15-B]`, `[P7-W15-C]`
   - **Owns:** `PLAN.md`, `ENGINE.md`, `TODO.md` status archive

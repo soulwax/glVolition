@@ -38,6 +38,7 @@ final class Scene {
   late final Physics2DWorld physics2D = Physics2DWorld._(this);
   late final NetworkManager network = NetworkManager._(this);
   late final Gizmos gizmos = Gizmos._(this);
+  late final ViewportGizmos viewportGizmos = ViewportGizmos(this);
 
   Engine? _engine;
   final List<GameObject> _roots = [];

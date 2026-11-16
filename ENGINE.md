@@ -1472,6 +1472,112 @@ Goal: wrap pixeldart's keyframe animation, splines, procedural terrain, Gerstner
 
 ---
 
+## E104–E106: Graphics Abstraction & Visibility Pipeline (Wave 7)
+
+- [x] **E104. Typed Shader, Texture & Uniform Contracts.**
+  - _Owner:_ `lib/src/engine/host.dart`, `headless.dart`, `native_host.dart`, `web_host.dart`.
+- [x] **E105. Layer Visibility Bitmask (`visibilityMask`).**
+  - _Owner:_ `lib/src/engine/components/camera.dart`, `lib/src/engine/scene.dart`.
+- [x] **E106. Multi-Platform Graphics Verification.**
+  - _Verify:_ Headless and native VM test assertions.
+
+---
+
+## E107: Engineering Hygiene, Boundary Enforcement & Sharded Test Suites (Phase 0 / Wave 8)
+
+- [x] **E107-1. Pure-Dart Core Boundary Enforcement Tool (`tool/check_boundaries.dart`).**
+  - Scans engine files to guarantee zero platform leaks (`dart:io`, `dart:ffi`, `package:web`).
+- [x] **E107-2. Monolithic Test Sharding & Unified Verification (`tool/verify_all.dart`).**
+  - Shards monolith into targeted subdirectories (`test/engine`, `test/physics`, `test/assets`, `test/network`, `test/native`).
+  - Added unified CI runner verifying format, boundaries, analysis, and tests across all modules.
+
+---
+
+## E108: Native Desktop OS Runtime (SDL3 + GLES3 FFI + PCM Audio + AOT) (Phase 1 / Wave 9)
+
+- [x] **E108-1. SDL3 FFI Windowing & Event Pump (`lib/src/native/native_ffi_transport.dart`).**
+  - Real window creation, resize, native keyboard/mouse events, and GLES context lifecycle.
+- [x] **E108-2. Dual-Track Native Graphics: Hardware `RealGlesDevice` & Deterministic `RecordingGlesDevice`.**
+  - Real OpenGL ES 3.0 / ANGLE function pointer invocation alongside software verification device.
+- [x] **E108-3. Hardware PCM Audio Device.**
+  - Low-latency circular buffer audio stream replacing `SilentAudio` on native desktop builds.
+- [x] **E108-4. Standalone Native AOT Packaging Toolchain (`tool/package_native.dart`).**
+  - Bundles SDL3 DLLs, `.pak` archives, and compiled native executables.
+
+---
+
+## E109: Cross-Platform Host Contract Parity (Input, Web Audio DSP, Multi-Camera) (Phase 2 / Wave 10)
+
+- [x] **E109-1. Web & Native Input Parity (`lib/src/web/web_input.dart`).**
+  - Support for mouse wheel, multi-touch gestures, pointer-lock raw deltas, and gamepads.
+- [x] **E109-2. Web Audio API Graph DSP (`lib/src/web/web_audio.dart`).**
+  - Real-time spatial audio panning (`StereoPannerNode`), low-pass filter (`BiquadFilterNode`), and convolution reverb.
+- [x] **E109-3. Multi-Camera Viewport Rects & Render-to-Texture.**
+  - Normalized viewport rects, depth ordering, clear flags, and offscreen render targets.
+
+---
+
+## E110: Production Asset Pipeline, .pak VFS Binary Decoders & Scene Migrations (Phase 3 / Wave 11)
+
+- [x] **E110-1. Direct .pak Binary Model & Texture Decoders (`lib/src/engine/pak_vfs.dart`).**
+  - Direct decoding of `.glb` and `.qmesh` geometry from VFS byte archives.
+- [x] **E110-2. Reference-Counted Asset Lifetime Management (`AssetCatalog`).**
+  - Acquire/release semantics, deterministic GPU resource disposal, and cache eviction.
+- [x] **E110-3. Versioned Scene & Prefab Schema Migration (`SceneMigrationPipeline`).**
+  - Forward-compatible scene schema migrations with automatic patch up-graders.
+
+---
+
+## E111: PixelDart WebGL2 Forward+ Renderer, GPU Skinning & Browser Lab Goldens (Phase 4 / Wave 12)
+
+- [x] **E111-1. GPU Skeletal Skinning (`lib/src/engine/components/skinning.dart`).**
+  - Joint hierarchy, inverse bind matrices, and dual-quaternion / matrix palette uploads.
+- [x] **E111-2. Advanced Renderer Features (Decals, Stencils, Cascaded Directional Shadows).**
+  - Stencil buffer state management, projective surface decals, and multi-caster shadow maps.
+- [x] **E111-3. Browser Lab Goldens & Performance Ratification (`tool/renderer_bench.dart`).**
+  - 180-warmup / 600-measured frame benchmark proving 60 FPS, 0 B/frame steady allocations, and SSIM >= 0.98.
+
+---
+
+## E112: Production Physics Engine: SAT OBB, BVH Meshes, Rotational Solver & CCD (Phase 5 / Wave 13)
+
+- [x] **E112-1. Spatial Broadphase Acceleration (`SpatialHashBroadphase`).**
+  - 26x to 127x speedups on 1,500+ colliders vs brute-force linear collision checks.
+- [x] **E112-2. True SAT OBB, BVH Triangle Meshes & Heightfield Colliders.**
+  - 15-axis Separating Axis Theorem for rotated boxes, AABB-BVH tree mesh queries, and bicubic terrain heights.
+- [x] **E112-3. Rotational Solver, Mechanical Constraints, Island Sleeping & Swept CCD.**
+  - Inertia tensors, angular impulse solver, hinge/ball/fixed joints, and continuous collision detection for fast projectiles.
+- [x] **E112-4. 600-Frame Determinism & Comfort Stability Gates.**
+  - Bit-identical state replay across physics/AI/animations, live `reducedMotion`, and luminance flash rate safety checks.
+
+---
+
+## E113: Production Multiplayer Networking (`voxnet` + Engine Sync) (Phase 6 / Wave 14)
+
+- [x] **E113-1. Cross-Platform `WebSocketNetTransport` (`vendor/voxnet`).**
+  - Unified WebSocket transport supporting `dart:io` server/client and `package:web` browser clients.
+- [x] **E113-2. Native UDP & Reliable Channel Transport (`RawDatagramSocket`).**
+  - Sequenced, acknowledged reliable multi-channel packets over UDP with synthetic packet-loss injection.
+- [x] **E113-3. Automated Replication, Delta Compression, Rollback Reconciliation & Engine Step Sync.**
+  - Integrated into `Engine.step` and `NetworkManager`, verified across real loopback sockets.
+
+---
+
+## E114: Production Editor UX, Diagnostics, Server Host & CLI Tooling (Phase 7 / Wave 15)
+
+- [x] **E114-1. Compact `EditorCommand` Delta Undo/Redo (`lib/src/engine/editor_commands.dart`).**
+  - $O(\text{delta})$ memory and execution scaling replacing full-scene JSON dumps.
+- [x] **E114-2. Live 3D Viewport Transform Gizmos & Prefab Variant UI (`lib/src/engine/gizmos/viewport_gizmos.dart`).**
+  - Translate/rotate/scale gizmo raycast dragging, asset catalog resource picker, and prefab override badges.
+- [x] **E114-3. Engine Telemetry Snapshot & Diagnostics (`lib/src/engine/diagnostics/telemetry_snapshot.dart`).**
+  - Complete runtime JSON metrics export, transient particle/decal stress testing, and uncaught crash telemetry hooks.
+- [x] **E114-4. Dedicated Headless Server Host (`lib/src/native/server_host.dart`).**
+  - Lightweight `DedicatedServerHost` zero-GPU headless multiplayer server loop.
+- [x] **E114-5. CLI DX: `volition create`, `volition doctor`, and `--target server` (`bin/volition.dart`).**
+  - Environment toolchain verification table, template project generator, and headless server compilation.
+
+---
+
 ## Subagent Dispatch & Ownership Matrix
 
 1. **Coordinator Locks Shared Hub Files:** Only the Coordinator modifies `pubspec.yaml`, `.gitmodules`, `lib/gl_volition.dart`, `lib/src/engine.dart`, `lib/src/engine/serialization/component_spec.dart`, `tool/generate_logos.dart`, `ENGINE.md`, and `test/subsystems_test.dart`.

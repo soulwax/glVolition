@@ -1151,4 +1151,5 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
       ),
     ]),
   );
+  registry.register<PrefabInstanceComponent>(PrefabInstanceComponent.spec);
 }

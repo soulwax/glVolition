@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_initializing_formals
 part of '../engine.dart';
 
 /// Base contract for reversible undo/redo operations in [EditorSession] (P7-W15-A).
@@ -114,7 +115,6 @@ class SetPropertyCommand<T> implements EditorCommand {
   final T newValue;
   final void Function(Component component, T value)? _applier;
 
-  // ignore: prefer_initializing_formals
   SetPropertyCommand({
     this.name = 'Set Property',
     required this.targetName,
@@ -172,7 +172,9 @@ class AddGameObjectCommand implements EditorCommand {
   @override
   void execute(EditorSession session) {
     if (session.engine.scene.find(objectName) != null) return;
-    final parent = parentName != null ? session.engine.scene.find(parentName!) : null;
+    final parent = parentName != null
+        ? session.engine.scene.find(parentName!)
+        : null;
     final go = session.engine.scene.createGameObject(
       objectName,
       parent: parent,
@@ -229,7 +231,9 @@ class RemoveGameObjectCommand implements EditorCommand {
   void undo(EditorSession session) {
     if (_serializedJson == null) return;
     final data = jsonDecode(_serializedJson!) as Map<String, Object?>;
-    final parent = _parentName != null ? session.engine.scene.find(_parentName!) : null;
+    final parent = _parentName != null
+        ? session.engine.scene.find(_parentName!)
+        : null;
     final restored = SceneSerializer._buildObjectFromJson(
       session.engine.scene,
       parent,
@@ -260,7 +264,9 @@ class ReparentCommand implements EditorCommand {
   void execute(EditorSession session) {
     final target = session.engine.scene.find(targetName);
     if (target == null) return;
-    final newParent = newParentName != null ? session.engine.scene.find(newParentName!) : null;
+    final newParent = newParentName != null
+        ? session.engine.scene.find(newParentName!)
+        : null;
     target.setParent(newParent);
   }
 
@@ -268,7 +274,9 @@ class ReparentCommand implements EditorCommand {
   void undo(EditorSession session) {
     final target = session.engine.scene.find(targetName);
     if (target == null) return;
-    final oldParent = oldParentName != null ? session.engine.scene.find(oldParentName!) : null;
+    final oldParent = oldParentName != null
+        ? session.engine.scene.find(oldParentName!)
+        : null;
     target.setParent(oldParent);
   }
 }

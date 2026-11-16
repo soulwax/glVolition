@@ -17,3 +17,4 @@ export 'src/native/sdl3_bindings.dart';
 export 'src/native/gles3_bindings.dart';
 export 'src/native/gles3_ffi_device.dart';
 export 'src/native/native_audio_device.dart';
+export 'src/native/server_host.dart';
