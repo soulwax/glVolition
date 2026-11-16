@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:voxlog/voxlog.dart';
 
 import '../tool/asset_packer.dart';
+import '../tool/cli_gui_server.dart';
+import '../tool/cli_service.dart';
 import '../tool/package_native.dart';
 
 final log = voxlog.stdoutColor('volition', level: LogLevel.info);
@@ -27,6 +29,7 @@ Future<void> main(List<String> args) async {
         '  [3] dist   - Package complete distribution (CLI + Game targets)',
       );
       stdout.writeln('  [4] test   - Run engine test suite');
+      stdout.writeln('  [5] gui    - Launch glVolition Studio GUI');
       stdout.writeln('  [q] exit');
       stdout.writeln('--------------------------------------------------');
       stdout.write('Select an option [1]: ');
@@ -58,6 +61,8 @@ Future<void> main(List<String> args) async {
         stdout.writeln('\nTests exited with code $code. Press Enter to exit.');
         stdin.readLineSync();
         exit(code);
+      } else if (input == '5') {
+        await _runGui(const []);
       } else {
         final parts = input.split(RegExp(r'\s+'));
         await main(parts);
@@ -92,6 +97,8 @@ Future<void> main(List<String> args) async {
       await _runDoctor(rest);
     case 'create':
       await _runCreate(rest);
+    case 'gui':
+      await _runGui(rest);
     default:
       log.error('Unknown command "$cmd".');
       _printUsage();
@@ -106,6 +113,7 @@ glVolition CLI (volition)
 Usage:
   dart run gl_volition:volition test [test-args...]
   dart run gl_volition:volition doctor
+  dart run gl_volition:volition gui [--port 8090] [--no-open]
   dart run gl_volition:volition create <project-name> [--template 2d|3d|multiplayer] [--out <dir>]
   dart run gl_volition:volition serve <entry.dart> [--port 8080] [--root <dir>]
   dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows|linux|macos|native|exe|webview|server] [--version <ver>] [--name <name>] [--out <dir>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
@@ -1003,4 +1011,58 @@ void main(List<String> args) async {
   stdout.writeln('  cd ${targetDir.path}');
   stdout.writeln('  dart pub get');
   stdout.writeln('  dart run bin/server.dart');
+}
+
+Future<void> _runGui(List<String> args) async {
+  var port = 8090;
+  var openBrowser = true;
+
+  for (var i = 0; i < args.length; i++) {
+    final a = args[i];
+    if (a == '--port' && i + 1 < args.length) {
+      port = int.parse(args[++i]);
+    } else if (a == '--no-open') {
+      openBrowser = false;
+    } else if (a == '--help' || a == '-h') {
+      stdout.writeln(
+        'Usage: dart run gl_volition:volition gui [--port 8090] [--no-open]',
+      );
+      return;
+    }
+  }
+
+  final service = VolitionCliService();
+  final server = VolitionGuiServer(service: service);
+  final url = await server.start(port: port);
+
+  log.info('glVolition Studio GUI listening at $url');
+  stdout.writeln('Press Ctrl+C to stop glVolition Studio.');
+
+  if (openBrowser) {
+    final browser = await service.findBrowserExecutable();
+    if (browser != null) {
+      await Process.start(browser, [
+        '--app=$url',
+      ], mode: ProcessStartMode.detached);
+    } else if (Platform.isWindows) {
+      await Process.start('cmd', [
+        '/c',
+        'start',
+        '',
+        url.toString(),
+      ], mode: ProcessStartMode.detached);
+    } else if (Platform.isMacOS) {
+      await Process.start('open', [
+        url.toString(),
+      ], mode: ProcessStartMode.detached);
+    } else {
+      await Process.start('xdg-open', [
+        url.toString(),
+      ], mode: ProcessStartMode.detached);
+    }
+  }
+
+  await ProcessSignal.sigint.watch().first;
+  log.info('Shutting down glVolition Studio...');
+  await server.stop();
 }

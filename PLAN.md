@@ -197,3 +197,14 @@ All planned milestones across Phases 0 through 7 (Waves 8 through 15) are **100%
 - **Phase 7 (Wave 15)**: Production editor UX (compact `EditorCommand` delta undo/redo, 3D viewport transform gizmos, prefab variant UI), runtime telemetry & diagnostics snapshot, `DedicatedServerHost`, and `volition doctor`/`create`/`--target server` CLI.
 
 Verified clean on Dart 3.14.0 across unified test suites (382 root tests, 140 pixeldart test scripts, 33 voxnet tests), 100% boundary compliance (0 violations on 154 scanned files), 0 analyzer issues, and 10/10 performance budget compliance on `tool/renderer_bench.dart`.
+
+---
+
+## 7. Phase 8 (Wave 16) — Volition Studio GUI (`volition gui`)
+
+- **Objective**: Provide a cross-platform graphical Studio interface for the `volition` CLI (`doctor`, `create`, `build`, `dist`, `pack`, `serve`, `test`, `verify_all`, `renderer_bench`), backed by a shared service layer so CLI and GUI share 100% of build/pack/diagnostic logic.
+- **Key Deliverables**:
+  - Extract structured `VolitionCliService` (`tool/cli_service.dart`) returning typed reports (`DoctorReport`) and cancelable streaming task sessions (`CliTaskSession`).
+  - Implement local HTTP + WebSocket RPC daemon (`tool/cli_gui_server.dart`) serving the embedded Studio SPA (`tool/cli_gui_assets.dart`) with real-time `stdout`/`stderr` streaming and live dev-server control.
+  - Wire `volition gui [--port <p>] [--no-open]` into `bin/volition.dart` (launching browser app-mode or headless server).
+  - Verify via automated unit/RPC integration tests (`test/engine/cli_gui_test.dart`) and `tool/verify_all.dart`.

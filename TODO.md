@@ -449,6 +449,41 @@
 
 ---
 
+## Wave 16 (Phase 8) — Volition Studio GUI (`volition gui`)
+
+**Wave Exit Gate:** `volition gui` launches a cross-platform Studio UI exposing `doctor`, `create`, `build`, `dist`, `pack`, `serve`, `test`, `verify_all`, and `renderer_bench` over a shared `VolitionCliService` + WebSocket RPC backend, with automated tests passing and `verify_all.dart` green.
+
+- [x] **[P8-W16-0] Shared `VolitionCliService` Contract & Doctor/Entrypoint Discovery**
+  - **Priority:** P1
+  - **DependsOn:** `[P7-W15-M]`
+  - **Owns:** `tool/cli_service.dart`
+  - **Reads:** `bin/volition.dart`, `tool/asset_packer.dart`, `tool/package_native.dart`
+  - **Scope:** Define `VolitionCliService`, `DoctorReport`, `DoctorCheckItem`, `CliTaskSession`, and `CliLogEvent` supporting `runDoctor()`, `discoverEntries()`, `runCommandStream()`, `startServe()`, `stopServe()`, and `cancelTask()`.
+  - **DoneWhen:** `dart analyze` passes cleanly.
+
+- [x] **[P8-W16-A] Local Studio HTTP + WebSocket RPC Server (`VolitionGuiServer`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P8-W16-0]`
+  - **Owns:** `tool/cli_gui_server.dart`
+  - **Scope:** Serve the Studio SPA over localhost HTTP, bridge WebSocket JSON-RPC commands to `VolitionCliService`, stream real-time `stdout`/`stderr` task logs, and manage live `serve` process lifecycle with clean shutdown.
+  - **DoneWhen:** `dart analyze` passes cleanly.
+
+- [x] **[P8-W16-B] Embedded Studio Web UI (`tool/cli_gui_assets.dart`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P8-W16-0]`
+  - **Owns:** `tool/cli_gui_assets.dart`
+  - **Scope:** Build self-contained, AOT-safe responsive Studio SPA with panels for Doctor, Create Project, Build & Dist, Asset Packer, Live Dev Server, and Tests & Gates, plus a cancelable streaming console.
+  - **DoneWhen:** Embedded HTML/CSS/JS compiles cleanly with zero external runtime dependencies.
+
+- [x] **[P8-W16-C] `volition gui` CLI Wiring, Docs & RPC Integration Tests**
+  - **Priority:** P1
+  - **DependsOn:** `[P8-W16-A]`, `[P8-W16-B]`
+  - **Owns:** `bin/volition.dart`, `README.md`, `test/engine/cli_gui_test.dart`
+  - **Scope:** Add `volition gui [--port 8090] [--no-open]` to `bin/volition.dart`, document `volition gui` in `README.md`, and verify service + HTTP/WebSocket RPC flows in `test/engine/cli_gui_test.dart`.
+  - **DoneWhen:** `dart test test/engine/cli_gui_test.dart` and `dart run tool/verify_all.dart --check-format --skip-wasm` pass.
+
+---
+
 ## Carry-Over Index: Legacy `pixeldart` `PLAN.md` & `TODO.md` Traceability
 
 Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is tracked explicitly here so zero renderer debt is dropped:
