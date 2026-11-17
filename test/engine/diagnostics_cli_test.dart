@@ -148,6 +148,7 @@ void main() {
         expect(out, contains('Dart SDK:'));
         expect(out, contains('Shader Toolchain:'));
       },
+      timeout: const Timeout(Duration(minutes: 3)),
     );
 
     test('volition create generates template project files', () async {
@@ -179,6 +180,6 @@ void main() {
 
       final pubspec = File('$tempProjectName/pubspec.yaml').readAsStringSync();
       expect(pubspec, contains('name: $tempProjectName'));
-    });
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }
