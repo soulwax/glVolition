@@ -5,7 +5,7 @@ part of '../engine.dart';
 final class GameObject {
   Scene _scene;
   String name;
-  String tag;
+  String _tag;
 
   int _layer;
 
@@ -22,7 +22,7 @@ final class GameObject {
   bool _destroyRequested = false;
   bool _destroyed = false;
 
-  GameObject._(this._scene, this.name, {this.tag = 'Untagged', int layer = 0})
+  GameObject._(this._scene, this.name, this._tag, {int layer = 0})
     : _layer = layer,
       node = SceneNode.group(name: name) {
     if (layer < 0 || layer > 31) throw RangeError.range(layer, 0, 31, 'layer');
@@ -32,6 +32,16 @@ final class GameObject {
   }
 
   Scene get scene => _scene;
+
+  /// Tag string used for fast indexed scene queries.
+  String get tag => _tag;
+
+  set tag(String value) {
+    if (_tag == value) return;
+    final oldTag = _tag;
+    _tag = value;
+    _scene._onObjectTagChanged(this, oldTag, value);
+  }
 
   /// 0..31, used by physics layer filtering, visibility masks, and queries.
   int get layer => _layer;
@@ -49,6 +59,7 @@ final class GameObject {
   }
 
   void _detachFromSceneForMigration(Scene outgoing) {
+    outgoing._unregisterObjectIndex(this);
     for (final c in _components) {
       if (c is! TransformComponent && c._active) {
         c._active = false;
@@ -58,6 +69,19 @@ final class GameObject {
         outgoing._behaviours.remove(c);
         outgoing._pendingStart.remove(c);
       }
+      if (c is SkinnedMeshRenderer) {
+        outgoing._skinnedMeshes.remove(c);
+      } else if (c is RenderGraphComponent) {
+        outgoing._renderGraphs.remove(c);
+      } else if (c is LightProbeVolumeComponent) {
+        outgoing._lightProbeVolumes.remove(c);
+      } else if (c is Lighting2DComponent) {
+        outgoing._lighting2Ds.remove(c);
+      } else if (c is SoftBodyXpbdComponent) {
+        outgoing._softBodies.remove(c);
+      } else if (c is DrawBatcherComponent) {
+        outgoing._drawBatchers.remove(c);
+      }
     }
     for (final child in _children) {
       child._detachFromSceneForMigration(outgoing);
@@ -66,6 +90,7 @@ final class GameObject {
 
   void _attachToSceneAfterMigration(Scene incoming) {
     _scene = incoming;
+    incoming._registerObjectIndex(this);
     for (final c in _components) {
       if (c is Behaviour) {
         incoming._registerBehaviour(c);

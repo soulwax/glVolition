@@ -112,7 +112,7 @@ glVolition CLI (volition)
 
 Usage:
   dart run gl_volition:volition test [test-args...]
-  dart run gl_volition:volition doctor
+  dart run gl_volition:volition doctor [--json]
   dart run gl_volition:volition gui [--port 8090] [--no-open]
   dart run gl_volition:volition create <project-name> [--template 2d|3d|multiplayer] [--out <dir>]
   dart run gl_volition:volition serve <entry.dart> [--port 8080] [--root <dir>]
@@ -793,120 +793,26 @@ String _mimeType(String path) {
 }
 
 Future<void> _runDoctor(List<String> args) async {
-  stdout.writeln('glVolition Doctor — Environment & Toolchain Diagnostics\n');
-
-  // 1. Dart SDK
-  final dartVer = Platform.version.split(' ').first;
-  stdout.writeln('[✓] Dart SDK: $dartVer on ${Platform.operatingSystem}');
-
-  // 2. Web / Chrome
-  var chromeFound = false;
-  String? chromePath;
-  if (Platform.isWindows) {
-    final candidates = [
-      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      '${Platform.environment['LOCALAPPDATA']}\\Google\\Chrome\\Application\\chrome.exe',
-      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-    ];
-    for (final c in candidates) {
-      if (File(c).existsSync()) {
-        chromeFound = true;
-        chromePath = c;
-        break;
-      }
+  final asJson = args.contains('--json');
+  final service = VolitionCliService();
+  try {
+    final report = await service.runDoctor();
+    if (asJson) {
+      stdout.writeln(
+        const JsonEncoder.withIndent('  ').convert(report.toJson()),
+      );
+      return;
     }
-  } else {
-    final res = await Process.run('which', [
-      'google-chrome',
-      'chromium',
-      'google-chrome-stable',
-    ]);
-    if (res.exitCode == 0 && (res.stdout as String).trim().isNotEmpty) {
-      chromeFound = true;
-      chromePath = (res.stdout as String).trim().split('\n').first;
-    }
-  }
-  if (chromeFound) {
-    stdout.writeln('[✓] Web / Chrome: found at $chromePath');
-  } else {
-    stdout.writeln(
-      '[!] Web / Chrome: no standard Chrome/Edge browser found (optional for WebGL testing)',
-    );
-  }
 
-  // 3. C/C++ Host Compiler
-  var compilerFound = false;
-  String? compilerDesc;
-  if (Platform.isWindows) {
-    final whichCl = await Process.run('where', ['cl.exe']);
-    if (whichCl.exitCode == 0) {
-      compilerFound = true;
-      compilerDesc =
-          'MSVC cl.exe (${(whichCl.stdout as String).trim().split('\n').first})';
-    } else {
-      final whichClang = await Process.run('where', ['clang.exe']);
-      if (whichClang.exitCode == 0) {
-        compilerFound = true;
-        compilerDesc =
-            'Clang (${(whichClang.stdout as String).trim().split('\n').first})';
-      }
+    stdout.writeln('glVolition Doctor — Environment & Toolchain Diagnostics\n');
+    for (final c in report.checks) {
+      final icon = c.status == DoctorStatus.ok ? '✓' : '!';
+      stdout.writeln('[$icon] ${c.name}: ${c.detail}');
     }
-  } else {
-    final whichClang = await Process.run('which', ['clang', 'gcc']);
-    if (whichClang.exitCode == 0) {
-      compilerFound = true;
-      compilerDesc = (whichClang.stdout as String).trim();
-    }
+    stdout.writeln('\nDoctor inspection completed.');
+  } finally {
+    await service.dispose();
   }
-  if (compilerFound) {
-    stdout.writeln('[✓] C/C++ Host Compiler: found $compilerDesc');
-  } else {
-    stdout.writeln(
-      '[!] C/C++ Host Compiler: not found in PATH (optional for native FFI extension rebuilding)',
-    );
-  }
-
-  // 4. Native Runtime Libraries (SDL3 / GLES)
-  final nativeDirs = [
-    'bin/native',
-    'bin/native/windows',
-    'bin/native/linux',
-    'bin/native/macos',
-  ];
-  var sdlFound = false;
-  for (final dir in nativeDirs) {
-    if (Directory(dir).existsSync()) {
-      final entries = Directory(dir).listSync();
-      if (entries.any((e) => e.path.toLowerCase().contains('sdl3'))) {
-        sdlFound = true;
-        stdout.writeln(
-          '[✓] Native Libraries (SDL3/GLES): found runtime binaries in $dir',
-        );
-        break;
-      }
-    }
-  }
-  if (!sdlFound) {
-    stdout.writeln(
-      '[!] Native Libraries: SDL3 runtime binary not in bin/native (required for native desktop host)',
-    );
-  }
-
-  // 5. Shader Toolchain
-  final shaderScript = File('vendor/pixeldart/tools/renderer/shaders.dart');
-  if (shaderScript.existsSync()) {
-    stdout.writeln(
-      '[✓] Shader Toolchain: pixeldart WGSL/GLSL shader pipeline ready (${shaderScript.path})',
-    );
-  } else {
-    stdout.writeln(
-      '[!] Shader Toolchain: tools/renderer/shaders.dart not found',
-    );
-  }
-
-  stdout.writeln('\nDoctor inspection completed.');
 }
 
 Future<void> _runCreate(List<String> args) async {
@@ -1002,6 +908,23 @@ void main(List<String> args) async {
   final server = DedicatedServerHost(port: 7777);
   await server.start();
 }
+''');
+  File('${targetDir.path}/index.html').writeAsStringSync('''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>$projectName</title>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0d1117; }
+    canvas#game-canvas { display: block; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <script defer src="main.dart.js"></script>
+</body>
+</html>
 ''');
 
   stdout.writeln(

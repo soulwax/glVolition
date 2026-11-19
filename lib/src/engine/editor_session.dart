@@ -12,7 +12,7 @@ final class EditorSession {
   final Engine engine;
   final Map<String, Prefab> prefabs;
 
-  GameObject? selected;
+  final List<GameObject> _selection = [];
   Map<String, Object?>? _playModeSnapshot;
   bool _inPlayMode = true;
   bool _freeLookEnabled = false;
@@ -30,6 +30,171 @@ final class EditorSession {
   );
 
   EditorSession(this.engine, {this.prefabs = const {}, this.maxUndoSteps = 32});
+
+  /// Primary selected object (most recently added in multi-selection).
+  GameObject? get selected {
+    _pruneDestroyedSelection();
+    return _selection.isEmpty ? null : _selection.last;
+  }
+
+  set selected(GameObject? value) {
+    _selection.clear();
+    if (value != null && !value.isDestroyed && !value._destroyRequested) {
+      _selection.add(value);
+    }
+  }
+
+  /// Immutable list of all currently selected live objects (P9-W17-C).
+  List<GameObject> get selectedObjects {
+    _pruneDestroyedSelection();
+    return List.unmodifiable(_selection);
+  }
+
+  int get selectionCount {
+    _pruneDestroyedSelection();
+    return _selection.length;
+  }
+
+  bool isSelected(GameObject object) =>
+      !object.isDestroyed &&
+      !object._destroyRequested &&
+      _selection.contains(object);
+
+  void _pruneDestroyedSelection() {
+    _selection.removeWhere((go) => go.isDestroyed || go._destroyRequested);
+  }
+
+  /// Updates the active selection with optional additive or toggle semantics.
+  void select(
+    GameObject? object, {
+    bool additive = false,
+    bool toggle = false,
+  }) {
+    _pruneDestroyedSelection();
+    if (object == null || object.isDestroyed || object._destroyRequested) {
+      if (!additive && !toggle) _selection.clear();
+      return;
+    }
+    if (toggle) {
+      if (!_selection.remove(object)) {
+        _selection.add(object);
+      }
+    } else if (additive) {
+      if (!_selection.contains(object)) {
+        _selection.add(object);
+      }
+    } else {
+      _selection
+        ..clear()
+        ..add(object);
+    }
+  }
+
+  /// Replaces the current selection with all valid objects in [objects].
+  void selectAll(Iterable<GameObject> objects) {
+    _selection.clear();
+    for (final go in objects) {
+      if (!go.isDestroyed &&
+          !go._destroyRequested &&
+          !_selection.contains(go)) {
+        _selection.add(go);
+      }
+    }
+  }
+
+  void clearSelection() => _selection.clear();
+
+  /// Average world-space position of all currently selected objects.
+  Vec3? get selectionCentroid {
+    _pruneDestroyedSelection();
+    if (_selection.isEmpty) return null;
+    var sum = Vec3.zero;
+    for (final go in _selection) {
+      sum = sum + go.transform.position;
+    }
+    return sum * (1.0 / _selection.length);
+  }
+
+  /// Combined world-space AABB encompassing all currently selected objects.
+  Aabb? get selectionWorldBounds {
+    _pruneDestroyedSelection();
+    if (_selection.isEmpty) return null;
+    var minX = double.infinity, minY = double.infinity, minZ = double.infinity;
+    var maxX = double.negativeInfinity,
+        maxY = double.negativeInfinity,
+        maxZ = double.negativeInfinity;
+
+    void expand(Vec3 p) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.z < minZ) minZ = p.z;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+      if (p.z > maxZ) maxZ = p.z;
+    }
+
+    for (final go in _selection) {
+      final col = go.getComponent<Collider>();
+      final mr = go.getComponent<MeshRenderer>();
+      if (col != null) {
+        final b = col.worldBounds;
+        expand(b.min);
+        expand(b.max);
+      } else if (mr != null) {
+        final b = mr.worldAabb;
+        expand(Vec3(b.min.x, b.min.y, b.min.z));
+        expand(Vec3(b.max.x, b.max.y, b.max.z));
+      } else {
+        final p = go.transform.position;
+        final ext = 0.5 * go.transform.lossyScale.abs();
+        final half = Vec3(ext, ext, ext);
+        expand(p - half);
+        expand(p + half);
+      }
+    }
+    return Aabb(Vec3(minX, minY, minZ), Vec3(maxX, maxY, maxZ));
+  }
+
+  /// Frames [freeLookCamera] around the current selection's combined world bounds.
+  bool focusSelection({double padding = 1.4}) {
+    final bounds = selectionWorldBounds;
+    if (bounds == null) return false;
+    final center = (bounds.min + bounds.max) * 0.5;
+    final extent = (bounds.max - bounds.min).length;
+    freeLookCamera.target = center;
+    freeLookCamera.distance = math.max(2.0, extent * padding);
+    return true;
+  }
+
+  /// Filters scene hierarchy objects by optional name substring, tag, layer,
+  /// or attached component type.
+  List<GameObject> searchHierarchy({
+    String? nameQuery,
+    String? tag,
+    int? layer,
+    Type? componentType,
+    bool includeInactive = true,
+  }) {
+    final needle = nameQuery?.trim().toLowerCase();
+    final results = <GameObject>[];
+    for (final go in engine.scene._allObjects(
+      includeInactive: includeInactive,
+    )) {
+      if (needle != null &&
+          needle.isNotEmpty &&
+          !go.name.toLowerCase().contains(needle)) {
+        continue;
+      }
+      if (tag != null && go.tag != tag) continue;
+      if (layer != null && go.layer != layer) continue;
+      if (componentType != null &&
+          !go.components.any((c) => c.runtimeType == componentType)) {
+        continue;
+      }
+      results.add(go);
+    }
+    return results;
+  }
 
   bool get isPlaying => _inPlayMode;
   bool get isFreeLookEnabled => _freeLookEnabled;

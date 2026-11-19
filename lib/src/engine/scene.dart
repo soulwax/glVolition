@@ -65,6 +65,12 @@ final class Scene {
   final List<ShaderOverrideComponent> _shaderOverrides = [];
   final List<SkinnedMeshRenderer> _skinnedMeshes = [];
   final List<RenderGraphComponent> _renderGraphs = [];
+  final List<LightProbeVolumeComponent> _lightProbeVolumes = [];
+  final List<Lighting2DComponent> _lighting2Ds = [];
+  final List<SoftBodyXpbdComponent> _softBodies = [];
+  final List<DrawBatcherComponent> _drawBatchers = [];
+  final Map<SceneNode, GameObject> _nodeOwners = {};
+  final Map<String, List<GameObject>> _objectsByTag = {};
   final SpriteBatch _worldSprites = SpriteBatch(
     initialCapacity: 2048,
     sort: SpriteSort.layerThenY,
@@ -107,6 +113,30 @@ final class Scene {
   static bool _hasCustomViewport(Vec4 rect) =>
       rect.x != 0 || rect.y != 0 || rect.z != 1 || rect.w != 1;
 
+  void _registerObjectIndex(GameObject go) {
+    _nodeOwners[go.node] = go;
+    _objectsByTag.putIfAbsent(go._tag, () => []).add(go);
+  }
+
+  void _unregisterObjectIndex(GameObject go) {
+    _nodeOwners.remove(go.node);
+    final list = _objectsByTag[go._tag];
+    if (list != null) {
+      list.remove(go);
+      if (list.isEmpty) _objectsByTag.remove(go._tag);
+    }
+  }
+
+  void _onObjectTagChanged(GameObject go, String oldTag, String newTag) {
+    if (go._destroyed) return;
+    final oldList = _objectsByTag[oldTag];
+    if (oldList != null) {
+      oldList.remove(go);
+      if (oldList.isEmpty) _objectsByTag.remove(oldTag);
+    }
+    _objectsByTag.putIfAbsent(newTag, () => []).add(go);
+  }
+
   /// Creates an empty [GameObject] in this scene.
   GameObject createGameObject(
     String name, {
@@ -119,7 +149,8 @@ final class Scene {
     bool active = true,
     List<Component> components = const [],
   }) {
-    final go = GameObject._(this, name, tag: tag, layer: layer);
+    final go = GameObject._(this, name, tag, layer: layer);
+    _registerObjectIndex(go);
     if (!active) {
       go._activeSelf = false;
       go.node.visible = false;
@@ -281,8 +312,69 @@ final class Scene {
       findGameObjectsWithTag(tag).firstOrNull;
 
   Iterable<GameObject> findGameObjectsWithTag(String tag) sync* {
-    for (final go in _allObjects(includeInactive: false)) {
-      if (go.tag == tag) yield go;
+    final list = _objectsByTag[tag];
+    if (list == null || list.isEmpty) return;
+    for (var i = 0; i < list.length; i++) {
+      final go = list[i];
+      if (!go._destroyRequested && go.activeInHierarchy) {
+        yield go;
+      }
+    }
+  }
+
+  /// Queries active [GameObject]s that have an enabled/attached component [A],
+  /// optionally filtered by [tag] and 32-bit [layerMask].
+  Iterable<(GameObject, A)> query<A extends Component>({
+    String? tag,
+    int layerMask = -1,
+    bool includeInactive = false,
+  }) sync* {
+    final Iterable<GameObject> candidates = tag != null
+        ? (_objectsByTag[tag] ?? const <GameObject>[])
+        : _allObjects(includeInactive: includeInactive);
+    for (final go in candidates) {
+      if (go._destroyRequested || go._destroyed) continue;
+      if (!includeInactive && !go.activeInHierarchy) continue;
+      if ((layerMask & (1 << go.layer)) == 0) continue;
+      final a = go.getComponent<A>();
+      if (a != null && (includeInactive || a._active)) {
+        yield (go, a);
+      }
+    }
+  }
+
+  /// Queries active [GameObject]s that have components [A] and [B].
+  Iterable<(GameObject, A, B)> query2<
+    A extends Component,
+    B extends Component
+  >({String? tag, int layerMask = -1, bool includeInactive = false}) sync* {
+    for (final (go, a) in query<A>(
+      tag: tag,
+      layerMask: layerMask,
+      includeInactive: includeInactive,
+    )) {
+      final b = go.getComponent<B>();
+      if (b != null && (includeInactive || b._active)) {
+        yield (go, a, b);
+      }
+    }
+  }
+
+  /// Queries active [GameObject]s that have components [A], [B], and [C].
+  Iterable<(GameObject, A, B, C)> query3<
+    A extends Component,
+    B extends Component,
+    C extends Component
+  >({String? tag, int layerMask = -1, bool includeInactive = false}) sync* {
+    for (final (go, a, b) in query2<A, B>(
+      tag: tag,
+      layerMask: layerMask,
+      includeInactive: includeInactive,
+    )) {
+      final c = go.getComponent<C>();
+      if (c != null && (includeInactive || c._active)) {
+        yield (go, a, b, c);
+      }
     }
   }
 
@@ -532,13 +624,11 @@ final class Scene {
   }
 
   GameObject? _ownerOf(SceneNode target) {
-    final byNode = <SceneNode, GameObject>{};
-    for (final go in _allObjects(includeInactive: true)) {
-      byNode[go.node] = go;
-    }
     for (SceneNode? n = target; n != null; n = n.parent) {
-      final found = byNode[n];
-      if (found != null) return found;
+      final found = _nodeOwners[n];
+      if (found != null && !found._destroyRequested && !found._destroyed) {
+        return found;
+      }
     }
     return null;
   }
@@ -592,6 +682,15 @@ final class Scene {
           _skinnedMeshes.add(c);
         } else if (c is RenderGraphComponent && !_renderGraphs.contains(c)) {
           _renderGraphs.add(c);
+        } else if (c is LightProbeVolumeComponent &&
+            !_lightProbeVolumes.contains(c)) {
+          _lightProbeVolumes.add(c);
+        } else if (c is Lighting2DComponent && !_lighting2Ds.contains(c)) {
+          _lighting2Ds.add(c);
+        } else if (c is SoftBodyXpbdComponent && !_softBodies.contains(c)) {
+          _softBodies.add(c);
+        } else if (c is DrawBatcherComponent && !_drawBatchers.contains(c)) {
+          _drawBatchers.add(c);
         }
         c._onEnableInternal();
         _guard(c.onEnable);
@@ -827,19 +926,21 @@ final class Scene {
     for (final sm in _skinnedMeshes) {
       if (sm._active) sm.syncToRenderer(graphics);
     }
+    for (final probe in _lightProbeVolumes) {
+      if (probe._active) probe.syncToRenderer(graphics);
+    }
     var hasActiveLighting2D = false;
-    for (final b in _behaviours) {
-      if (!b._active) continue;
-      if (b is LightProbeVolumeComponent) {
-        b.syncToRenderer(graphics);
-      } else if (b is Lighting2DComponent) {
+    for (final lighting in _lighting2Ds) {
+      if (lighting._active) {
         hasActiveLighting2D = true;
-        b.syncToRenderer(graphics);
-      } else if (b is SoftBodyXpbdComponent) {
-        b.syncToRenderer(graphics);
-      } else if (b is DrawBatcherComponent) {
-        b.syncToRenderer(graphics);
+        lighting.syncToRenderer(graphics);
       }
+    }
+    for (final softBody in _softBodies) {
+      if (softBody._active) softBody.syncToRenderer(graphics);
+    }
+    for (final batcher in _drawBatchers) {
+      if (batcher._active) batcher.syncToRenderer(graphics);
     }
     if (!hasActiveLighting2D) {
       for (final l2d in _lights2D) {
@@ -960,6 +1061,7 @@ final class Scene {
 
   void _destroyObjectImmediate(GameObject go) {
     if (go._destroyed) return;
+    _unregisterObjectIndex(go);
     TweenManager.instance.killTarget(go);
     TweenManager.instance.killTarget(go.transform);
     for (final child in List.of(go._children)) {
@@ -993,6 +1095,14 @@ final class Scene {
       _skinnedMeshes.remove(c);
     } else if (c is RenderGraphComponent) {
       _renderGraphs.remove(c);
+    } else if (c is LightProbeVolumeComponent) {
+      _lightProbeVolumes.remove(c);
+    } else if (c is Lighting2DComponent) {
+      _lighting2Ds.remove(c);
+    } else if (c is SoftBodyXpbdComponent) {
+      _softBodies.remove(c);
+    } else if (c is DrawBatcherComponent) {
+      _drawBatchers.remove(c);
     }
     if (c is Behaviour) {
       _behaviours.remove(c);

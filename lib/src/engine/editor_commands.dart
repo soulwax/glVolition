@@ -306,3 +306,136 @@ class CompoundCommand implements EditorCommand {
     }
   }
 }
+
+/// Reversible batch translation and scale delta command across multiple
+/// named [GameObject]s (P9-W17-C).
+class BatchTransformDeltaCommand implements EditorCommand {
+  @override
+  final String name;
+  final List<String> targetNames;
+  final Vec3 positionDelta;
+  final double scaleFactor;
+
+  final Map<String, Vec3> _initialPositions = {};
+  final Map<String, double> _initialScales = {};
+  bool _capturedInitial = false;
+
+  BatchTransformDeltaCommand({
+    this.name = 'Batch Transform',
+    required List<String> targetNames,
+    this.positionDelta = Vec3.zero,
+    this.scaleFactor = 1.0,
+  }) : targetNames = List.unmodifiable(targetNames);
+
+  @override
+  void execute(EditorSession session) {
+    for (final targetName in targetNames) {
+      final go = session.engine.scene.find(targetName);
+      if (go == null) continue;
+      if (!_capturedInitial) {
+        _initialPositions[targetName] = go.transform.localPosition;
+        _initialScales[targetName] = go.transform.localScale;
+      }
+      final basePos =
+          _initialPositions[targetName] ?? go.transform.localPosition;
+      final baseScale = _initialScales[targetName] ?? go.transform.localScale;
+      go.transform.localPosition = basePos + positionDelta;
+      if (scaleFactor != 1.0) {
+        go.transform.localScale = baseScale * scaleFactor;
+      }
+    }
+    _capturedInitial = true;
+  }
+
+  @override
+  void undo(EditorSession session) {
+    for (final targetName in targetNames) {
+      final go = session.engine.scene.find(targetName);
+      if (go == null) continue;
+      final oldPos = _initialPositions[targetName];
+      if (oldPos != null) {
+        go.transform.localPosition = oldPos;
+      }
+      final oldScale = _initialScales[targetName];
+      if (oldScale != null && scaleFactor != 1.0) {
+        go.transform.localScale = oldScale;
+      }
+    }
+  }
+}
+
+/// Reversible batch `setActive` toggle across multiple named [GameObject]s
+/// preserving each target's prior active state on undo (P9-W17-C).
+class BatchSetActiveCommand implements EditorCommand {
+  @override
+  final String name;
+  final List<String> targetNames;
+  final bool active;
+  final Map<String, bool> _previousActive = {};
+
+  BatchSetActiveCommand({
+    this.name = 'Batch Set Active',
+    required List<String> targetNames,
+    required this.active,
+  }) : targetNames = List.unmodifiable(targetNames);
+
+  @override
+  void execute(EditorSession session) {
+    for (final targetName in targetNames) {
+      final go = session.engine.scene.find(targetName);
+      if (go == null) continue;
+      _previousActive.putIfAbsent(targetName, () => go.activeSelf);
+      go.setActive(active);
+    }
+  }
+
+  @override
+  void undo(EditorSession session) {
+    for (final targetName in targetNames) {
+      final go = session.engine.scene.find(targetName);
+      final prev = _previousActive[targetName];
+      if (go != null && prev != null) {
+        go.setActive(prev);
+      }
+    }
+  }
+}
+
+/// Reversible batch deletion command across multiple named [GameObject]s,
+/// restoring both subtrees and editor multi-selection on undo (P9-W17-C).
+class BatchDeleteCommand implements EditorCommand {
+  @override
+  final String name;
+  final List<String> targetNames;
+  late final List<RemoveGameObjectCommand> _deleteCommands = [
+    for (final n in targetNames) RemoveGameObjectCommand(objectName: n),
+  ];
+
+  BatchDeleteCommand({
+    this.name = 'Batch Delete',
+    required List<String> targetNames,
+  }) : targetNames = List.unmodifiable(targetNames);
+
+  @override
+  void execute(EditorSession session) {
+    for (final cmd in _deleteCommands) {
+      cmd.execute(session);
+    }
+    session.clearSelection();
+  }
+
+  @override
+  void undo(EditorSession session) {
+    for (var i = _deleteCommands.length - 1; i >= 0; i--) {
+      _deleteCommands[i].undo(session);
+    }
+    final restored = <GameObject>[];
+    for (final targetName in targetNames) {
+      final go = session.engine.scene.find(targetName);
+      if (go != null) {
+        restored.add(go);
+      }
+    }
+    session.selectAll(restored);
+  }
+}

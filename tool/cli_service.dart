@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:voxpack/voxpack.dart';
+
 import 'package_native.dart';
 
 /// Health status of a single environment check in [DoctorReport].
@@ -379,6 +381,158 @@ class VolitionCliService {
 
     entries.sort();
     return entries;
+  }
+
+  /// Discovers inspectable `.pak` archives and `*scene*.json` files in
+  /// [workingDirectory] (skipping `.git`, `.dart_tool`, and `vendor`).
+  Map<String, List<String>> discoverInspectableFiles() {
+    final scenes = <String>[];
+    final paks = <String>[];
+    final rootDir = Directory(workingDirectory);
+    if (!rootDir.existsSync()) {
+      return {'scenes': scenes, 'paks': paks};
+    }
+
+    final rootNorm = rootDir.absolute.path
+        .replaceAll('\\', '/')
+        .replaceAll(RegExp(r'/+$'), '');
+
+    void walk(Directory dir) {
+      List<FileSystemEntity> children;
+      try {
+        children = dir.listSync(followLinks: false);
+      } catch (_) {
+        return;
+      }
+      for (final entity in children) {
+        final fullNorm = entity.absolute.path.replaceAll('\\', '/');
+        if (!fullNorm.startsWith('$rootNorm/')) continue;
+        final rel = fullNorm.substring(rootNorm.length + 1);
+        final baseName = rel.split('/').last;
+        if (entity is Directory) {
+          if (baseName == '.git' ||
+              baseName == '.dart_tool' ||
+              baseName == 'vendor') {
+            continue;
+          }
+          walk(entity);
+        } else if (entity is File) {
+          final lower = baseName.toLowerCase();
+          if (lower.endsWith('.pak')) {
+            paks.add(rel);
+          } else if (lower.endsWith('.json') && lower.contains('scene')) {
+            scenes.add(rel);
+          }
+        }
+      }
+    }
+
+    walk(rootDir);
+    scenes.sort();
+    paks.sort();
+    return {'scenes': scenes, 'paks': paks};
+  }
+
+  /// Parses a `.pak` VFS archive or Scene JSON file and returns structured
+  /// inspection metadata for `volition gui` and diagnostic tooling.
+  Map<String, Object?> inspectArtifact(String relativePath, {int? xorKey}) {
+    final rawFile = File(relativePath);
+    final file = rawFile.isAbsolute
+        ? rawFile
+        : File(
+            '$workingDirectory${Platform.pathSeparator}${relativePath.replaceAll('/', Platform.pathSeparator)}',
+          );
+    if (!file.existsSync()) {
+      throw FileSystemException('Artifact not found', file.path);
+    }
+
+    final normalizedPath = relativePath.replaceAll('\\', '/');
+    final lower = normalizedPath.toLowerCase();
+
+    if (lower.endsWith('.pak')) {
+      final bytes = file.readAsBytesSync();
+      final archive = PakArchive.parse(
+        bytes,
+        xorKey: xorKey,
+        verifyTocChecksum: true,
+      );
+      var totalRawBytes = 0;
+      var totalStoredBytes = 0;
+      for (final e in archive.entries) {
+        totalRawBytes += e.rawSize;
+        totalStoredBytes += e.storedSize;
+      }
+      return {
+        'kind': 'pak',
+        'path': normalizedPath,
+        'fileSizeBytes': bytes.length,
+        'entryCount': archive.entries.length,
+        'totalRawBytes': totalRawBytes,
+        'totalStoredBytes': totalStoredBytes,
+        'entries': [
+          for (final e in archive.entries)
+            {
+              'path': e.path,
+              'rawSize': e.rawSize,
+              'storedSize': e.storedSize,
+              'compressed': e.isCompressed,
+              'masked': e.isMasked,
+              'crc32': e.crc32,
+            },
+        ],
+      };
+    }
+
+    if (lower.endsWith('.json')) {
+      final decoded = jsonDecode(file.readAsStringSync());
+      if (decoded is! Map) {
+        throw const FormatException('Expected top-level JSON object for scene');
+      }
+      final data = decoded.cast<String, Object?>();
+      final roots = (data['objects'] as List<Object?>?) ?? const [];
+      var totalObjects = 0;
+      final componentCounts = <String, int>{};
+
+      void countNode(Object? raw) {
+        if (raw is! Map) return;
+        totalObjects++;
+        final comps = raw['components'];
+        if (comps is List) {
+          for (final c in comps) {
+            if (c is Map && c['type'] is String) {
+              final t = c['type'] as String;
+              componentCounts[t] = (componentCounts[t] ?? 0) + 1;
+            }
+          }
+        }
+        final children = raw['children'];
+        if (children is List) {
+          for (final child in children) {
+            countNode(child);
+          }
+        }
+      }
+
+      for (final root in roots) {
+        countNode(root);
+      }
+
+      return {
+        'kind': 'scene',
+        'path': normalizedPath,
+        'fileSizeBytes': file.lengthSync(),
+        'schemaVersion': (data['schemaVersion'] as num?)?.toInt() ?? 1,
+        'sceneName': (data['name'] as String?) ?? 'Scene',
+        'rootObjectCount': roots.length,
+        'totalObjectCount': totalObjects,
+        'componentCounts': componentCounts,
+        'hasRenderSettings': data['renderSettings'] is Map,
+      };
+    }
+
+    throw FormatException(
+      'Unsupported artifact format for "$relativePath" (expected .pak or .json).',
+    );
   }
 
   /// Spawns a `volition` CLI subcommand (`create`, `build`, `dist`, `pack`, `test`).

@@ -161,6 +161,9 @@ const String volitionGuiIndexHtml = r'''<!DOCTYPE html>
   }
   .serve-link { color: #58a6ff; text-decoration: none; font-family: var(--mono); font-size: 13px; }
   .serve-link:hover { text-decoration: underline; }
+  .inspect-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--mono); margin-top: 10px; }
+  .inspect-table th, .inspect-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .inspect-table th { color: var(--muted); font-family: var(--sans); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -182,6 +185,7 @@ const String volitionGuiIndexHtml = r'''<!DOCTYPE html>
     <button class="nav-btn" data-view="build">Build &amp; Release</button>
     <button class="nav-btn" data-view="pack">Asset Packer</button>
     <button class="nav-btn" data-view="serve">Live Dev Server</button>
+    <button class="nav-btn" data-view="inspector">Scene &amp; Pak Inspector</button>
     <button class="nav-btn" data-view="tests">Tests &amp; Quality Gates</button>
     <div class="nav-footer">
       <div>Workspace: <span id="wsPath" style="color:var(--text);word-break:break-all;">.</span></div>
@@ -333,6 +337,31 @@ const String volitionGuiIndexHtml = r'''<!DOCTYPE html>
       </div>
     </section>
 
+    <!-- SCENE & PAK INSPECTOR -->
+    <section id="view-inspector" class="view">
+      <h2>Scene JSON &amp; `.pak` Archive Inspector</h2>
+      <p class="subtitle">Inspect compressed VFS `.pak` tables (CRC32, raw vs stored bytes) or exported `scene.json` entity &amp; component histograms.</p>
+      <div class="card">
+        <label for="inspectFileSelect">Discovered Artifacts</label>
+        <div class="row" style="margin-bottom:12px;">
+          <select id="inspectFileSelect" style="flex:1;margin:0;" onchange="if(this.value)document.getElementById('inspectPath').value=this.value"></select>
+          <button class="secondary" onclick="refreshInspectables()">Refresh Files</button>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label for="inspectPath">Artifact Path (`.pak` or `*.json`)</label>
+            <input id="inspectPath" placeholder="e.g. build/game.pak or assets/scene.json"/>
+          </div>
+          <div>
+            <label for="inspectXor">XOR Key (optional int for `.pak`)</label>
+            <input id="inspectXor" placeholder="Leave empty if unmasked"/>
+          </div>
+        </div>
+        <button class="primary" onclick="runInspect()">Inspect Artifact</button>
+      </div>
+      <div id="inspectorResult" class="card" style="color:var(--muted);">Select or enter a `.pak` or scene `.json` artifact to inspect.</div>
+    </section>
+
     <!-- TESTS & GATES -->
     <section id="view-tests" class="view">
       <h2>Tests &amp; Verification Gates</h2>
@@ -394,6 +423,7 @@ function connect() {
     sendRpc('init', {});
     runDoctor();
     refreshEntries();
+    refreshInspectables();
   };
   ws.onclose = () => {
     dot.className = 'dot err';
@@ -419,6 +449,10 @@ function handleServerMessage(msg) {
     renderDoctor(msg.report);
   } else if (msg.type === 'entries.result') {
     renderEntries(msg.entries || []);
+  } else if (msg.type === 'inspector.list.result') {
+    renderInspectables(msg.files || {});
+  } else if (msg.type === 'inspector.inspect.result') {
+    renderInspectReport(msg.report);
   } else if (msg.type === 'task.update') {
     const t = msg.task;
     if (t.state === 'running') {
@@ -524,6 +558,70 @@ function escapeHtml(s) {
 
 function runDoctor() { sendRpc('doctor.run', {}); }
 function refreshEntries() { sendRpc('entries.list', {}); }
+function refreshInspectables() { sendRpc('inspector.list', {}); }
+
+function renderInspectables(files) {
+  const sel = document.getElementById('inspectFileSelect');
+  const paks = files.paks || [];
+  const scenes = files.scenes || [];
+  const opts = ['<option value="">-- Select discovered artifact --</option>'];
+  for (const p of paks) opts.push(`<option value="${escapeHtml(p)}">[PAK] ${escapeHtml(p)}</option>`);
+  for (const s of scenes) opts.push(`<option value="${escapeHtml(s)}">[SCENE] ${escapeHtml(s)}</option>`);
+  sel.innerHTML = opts.join('');
+}
+
+function runInspect() {
+  sendRpc('inspector.inspect', {
+    path: document.getElementById('inspectPath').value.trim(),
+    xorKey: document.getElementById('inspectXor').value.trim(),
+  });
+}
+
+function renderInspectReport(report) {
+  const el = document.getElementById('inspectorResult');
+  if (!report) return;
+  if (report.kind === 'pak') {
+    const ratio = report.totalRawBytes > 0
+      ? ((report.totalStoredBytes / report.totalRawBytes) * 100).toFixed(1) + '%'
+      : '100%';
+    const rows = (report.entries || []).map(e => `
+      <tr>
+        <td>${escapeHtml(e.path)}</td>
+        <td>${e.rawSize} B</td>
+        <td>${e.storedSize} B</td>
+        <td>${e.compressed ? 'RLE' : 'raw'}${e.masked ? '+XOR' : ''}</td>
+        <td>0x${Number(e.crc32 >>> 0).toString(16).toUpperCase().padStart(8, '0')}</td>
+      </tr>
+    `).join('');
+    el.style.color = 'var(--text)';
+    el.innerHTML = `
+      <div><strong>PAK Archive:</strong> ${escapeHtml(report.path)} (${report.fileSizeBytes} B)</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px;">
+        Entries: ${report.entryCount} | Raw: ${report.totalRawBytes} B | Stored: ${report.totalStoredBytes} B (${ratio})
+      </div>
+      <table class="inspect-table">
+        <thead><tr><th>Virtual Path</th><th>Raw</th><th>Stored</th><th>Encoding</th><th>CRC32</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  } else if (report.kind === 'scene') {
+    const compEntries = Object.entries(report.componentCounts || {});
+    const rows = compEntries.map(([k, v]) => `
+      <tr><td>${escapeHtml(k)}</td><td>${v}</td></tr>
+    `).join('');
+    el.style.color = 'var(--text)';
+    el.innerHTML = `
+      <div><strong>Scene:</strong> ${escapeHtml(report.sceneName)} (schema v${report.schemaVersion})</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px;">
+        Path: ${escapeHtml(report.path)} | Size: ${report.fileSizeBytes} B | Roots: ${report.rootObjectCount} | Total Objects: ${report.totalObjectCount} | RenderSettings: ${report.hasRenderSettings ? 'yes' : 'no'}
+      </div>
+      <table class="inspect-table">
+        <thead><tr><th>Component Type</th><th>Count</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="2" style="color:var(--muted);">No serialized components</td></tr>'}</tbody>
+      </table>
+    `;
+  }
+}
 
 function runCreate() {
   sendRpc('create.run', {

@@ -208,3 +208,14 @@ Verified clean on Dart 3.14.0 across unified test suites (382 root tests, 140 pi
   - Implement local HTTP + WebSocket RPC daemon (`tool/cli_gui_server.dart`) serving the embedded Studio SPA (`tool/cli_gui_assets.dart`) with real-time `stdout`/`stderr` streaming and live dev-server control.
   - Wire `volition gui [--port <p>] [--no-open]` into `bin/volition.dart` (launching browser app-mode or headless server).
   - Verify via automated unit/RPC integration tests (`test/engine/cli_gui_test.dart`) and `tool/verify_all.dart`.
+
+---
+
+## 8. Phase 9 (Wave 17) — Indexed Scene Queries, Deterministic Input Replay, Multi-Selection Editor & Studio Inspector
+
+- **Objective**: Eliminate remaining $O(N)$ scene lookups during gameplay and rendering, establish bit-exact cross-platform input replay verification, upgrade `EditorSession` to full multi-object workflows, and expose live `.pak` / `scene.json` artifact inspection in Volition Studio and CLI tooling.
+- **Key Deliverables**:
+  - **Indexed Scene Graph & Archetype Queries (`[P9-W17-A]`)**: Maintain live `_objectsByTag` and `_nodeOwners` indexes on `Scene`, typed `query<A>`, `query2<A, B>`, `query3<A, B, C>` iterators with layer mask filtering, and direct typed component lists in `_syncToRenderer` avoiding full `_behaviours` walks.
+  - **Deterministic Input Replay Tapes (`[P9-W17-B]`)**: Implement `InputFrameSample`, `InputTape`, `InputTapeRecorder`, `ReplayInputDriver`, 53-bit `SceneStateHasher`, and `EngineReplayHarness` in `lib/src/engine/replay/input_tape.dart` for zero-drift cross-platform regression verification.
+  - **Multi-Selection Editor UX & Batch Commands (`[P9-W17-C]`)**: Upgrade `EditorSession` with `select` (additive/toggle), `selectAll`, `selectionCentroid`, `selectionWorldBounds`, `focusSelection`, and `searchHierarchy`, plus undoable `BatchTransformDeltaCommand`, `BatchSetActiveCommand`, and `BatchDeleteCommand`.
+  - **Studio `.pak` / Scene Inspector & Unified CLI (`[P9-W17-D]`)**: Add `discoverInspectableFiles` / `inspectArtifact` and WebSocket RPC (`inspector.list`, `inspector.inspect`) to Volition Studio, route `volition doctor [--json]` through `VolitionCliService`, and generate ready-to-serve `index.html` shells in `volition create`.

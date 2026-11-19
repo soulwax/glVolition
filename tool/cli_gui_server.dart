@@ -224,6 +224,30 @@ class VolitionGuiServer {
         case 'gate.run':
           final gate = (params['gate'] as String? ?? '').trim();
           await _startGate(gate);
+        case 'inspector.list':
+          _send(ws, {
+            'id': id,
+            'type': 'inspector.list.result',
+            'files': service.discoverInspectableFiles(),
+          });
+        case 'inspector.inspect':
+          final path = (params['path'] as String? ?? '').trim();
+          final xorRaw = (params['xorKey'] as String? ?? '').trim();
+          final xorKey = xorRaw.isEmpty ? null : int.tryParse(xorRaw);
+          if (path.isEmpty) {
+            _send(ws, {
+              'id': id,
+              'type': 'error',
+              'message': 'Artifact path is required.',
+            });
+            return;
+          }
+          final report = service.inspectArtifact(path, xorKey: xorKey);
+          _send(ws, {
+            'id': id,
+            'type': 'inspector.inspect.result',
+            'report': report,
+          });
         case 'task.cancel':
           final taskId = params['taskId'] as String? ?? '';
           service.cancelTask(taskId);

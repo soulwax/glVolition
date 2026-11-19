@@ -151,6 +151,25 @@ void main() {
       timeout: const Timeout(Duration(minutes: 3)),
     );
 
+    test(
+      'volition doctor --json emits valid JSON diagnostics report',
+      () async {
+        final res = await Process.run(Platform.resolvedExecutable, [
+          'run',
+          'bin/volition.dart',
+          'doctor',
+          '--json',
+        ]);
+
+        expect(res.exitCode, equals(0));
+        final decoded =
+            jsonDecode(res.stdout.toString()) as Map<String, dynamic>;
+        expect(decoded['checks'], isA<List<Object?>>());
+        expect((decoded['checks'] as List).length, greaterThanOrEqualTo(5));
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
     test('volition create generates template project files', () async {
       const tempProjectName = 'test_cli_project';
       final tempDir = Directory(tempProjectName);
@@ -177,9 +196,12 @@ void main() {
       expect(File('$tempProjectName/pubspec.yaml').existsSync(), isTrue);
       expect(File('$tempProjectName/lib/main.dart').existsSync(), isTrue);
       expect(File('$tempProjectName/bin/server.dart').existsSync(), isTrue);
+      expect(File('$tempProjectName/index.html').existsSync(), isTrue);
 
       final pubspec = File('$tempProjectName/pubspec.yaml').readAsStringSync();
       expect(pubspec, contains('name: $tempProjectName'));
+      final indexHtml = File('$tempProjectName/index.html').readAsStringSync();
+      expect(indexHtml, contains('<canvas id="game-canvas">'));
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }

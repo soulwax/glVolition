@@ -484,6 +484,40 @@
 
 ---
 
+## Wave 17 (Phase 9) — Indexed Scene Queries, Replay Tapes, Multi-Selection Editor & Studio Inspector
+
+**Wave Exit Gate:** Indexed `Scene` lookups and typed `query`/`query2`/`query3` archetypes operate without full-scene allocations, `InputTape` deterministically replays multi-modal inputs against 53-bit `SceneStateHasher` checkpoints, `EditorSession` multi-selection and batch undo commands pass regression suites, and Studio inspects `.pak` & `scene.json` artifacts cleanly with `verify_all.dart` green.
+
+- [x] **[P9-W17-A] Indexed Scene Graph Lookups, Component Archetype Queries & Zero-Tree-Walk Renderer Sync**
+  - **Priority:** P1
+  - **DependsOn:** `[P8-W16-C]`
+  - **Owns:** `lib/src/engine/game_object.dart`, `lib/src/engine/scene.dart`, `test/engine/scene_index_query_test.dart`
+  - **Scope:** Maintain live `_objectsByTag`, `_nodeOwners`, and typed renderer component lists in `Scene`, reactively update `_objectsByTag` via `GameObject.tag` setter, eliminate full-scene tree walks in `_ownerOf` and `_behaviours` type checks in `_syncToRenderer`, and expose `query<A>`, `query2<A, B>`, `query3<A, B, C>`.
+  - **DoneWhen:** `dart test test/engine/scene_index_query_test.dart` passes; `tool/check_boundaries.dart` reports 0 violations.
+
+- [x] **[P9-W17-B] Deterministic Input Recorder, Frame Replay Tapes & Scene State Checksum Verifier (`InputTape`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P8-W16-C]`
+  - **Owns:** `lib/src/engine/replay/input_tape.dart`, `lib/src/engine.dart`, `test/engine/input_tape_replay_test.dart`
+  - **Scope:** Implement pure-Dart `InputFrameSample`, `InputTape`, 53-bit cross-platform `SceneStateHasher`, `InputTapeRecorder`, `ReplayInputDriver`, and `EngineReplayHarness` for JSON-round-trippable deterministic gameplay verification.
+  - **DoneWhen:** `dart test test/engine/input_tape_replay_test.dart` verifies bit-identical replay and tamper detection across 60 frames.
+
+- [x] **[P9-W17-C] Multi-Selection Editor UX, Camera Framing (`focusSelection`), Hierarchy Search & Batch Commands**
+  - **Priority:** P1
+  - **DependsOn:** `[P8-W16-C]`
+  - **Owns:** `lib/src/engine/editor_session.dart`, `lib/src/engine/editor_commands.dart`, `test/engine/editor_multiselection_test.dart`
+  - **Scope:** Upgrade `EditorSession` to multi-selection (`select`, `selectAll`, `clearSelection`, `selectionCentroid`, `selectionWorldBounds`, `focusSelection`, `searchHierarchy`) while preserving single-selection compatibility, and add `BatchTransformDeltaCommand`, `BatchSetActiveCommand`, and `BatchDeleteCommand`.
+  - **DoneWhen:** `dart test test/engine/editor_multiselection_test.dart` passes.
+
+- [x] **[P9-W17-D] Studio Scene & `.pak` Archive Inspector Panel + Unified CLI `doctor --json` / `create` Web Template**
+  - **Priority:** P1
+  - **DependsOn:** `[P9-W17-A]`, `[P9-W17-B]`, `[P9-W17-C]`
+  - **Owns:** `tool/cli_service.dart`, `tool/cli_gui_server.dart`, `tool/cli_gui_assets.dart`, `bin/volition.dart`, `test/engine/cli_gui_test.dart`, `test/engine/diagnostics_cli_test.dart`, `PLAN.md`, `TODO.md`
+  - **Scope:** Add `discoverInspectableFiles` / `inspectArtifact` and WebSocket RPC (`inspector.list`, `inspector.inspect`) to Volition Studio, delegate `volition doctor [--json]` through `VolitionCliService`, and generate `index.html` in `volition create`.
+  - **DoneWhen:** `dart test test/engine/cli_gui_test.dart test/engine/diagnostics_cli_test.dart` and `dart run tool/verify_all.dart --check-format --skip-wasm` pass.
+
+---
+
 ## Carry-Over Index: Legacy `pixeldart` `PLAN.md` & `TODO.md` Traceability
 
 Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is tracked explicitly here so zero renderer debt is dropped:
