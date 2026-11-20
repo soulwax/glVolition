@@ -119,4 +119,77 @@ extension BehaviourTweenExt on Behaviour {
       onComplete: onComplete,
     );
   }
+
+  /// Tweens this [GameObject]'s `transform.localRotation` to [targetLocalRot]
+  /// using spherical linear interpolation ([Quat.slerp]) (P12-W20-D).
+  Coroutine tweenRotation(
+    Quat targetLocalRot, {
+    required double duration,
+    Curve curve = Curves.easeOutCubic,
+    double delay = 0.0,
+    bool pingPong = false,
+    int loops = 1,
+    bool unscaledTime = false,
+    void Function()? onComplete,
+  }) {
+    final startRot = transform.localRotation;
+    return tween(
+      0.0,
+      1.0,
+      duration: duration,
+      curve: curve,
+      delay: delay,
+      pingPong: pingPong,
+      loops: loops,
+      unscaledTime: unscaledTime,
+      onUpdate: (t) =>
+          transform.localRotation = Quat.slerp(startRot, targetLocalRot, t),
+      onComplete: onComplete,
+    );
+  }
+
+  /// Tweens a [LinearColor] from [from] to [to] over [duration] seconds
+  /// (P12-W20-D).
+  Coroutine tweenColor(
+    LinearColor from,
+    LinearColor to, {
+    required double duration,
+    required void Function(LinearColor value) onUpdate,
+    Curve curve = Curves.easeInOutQuad,
+    double delay = 0.0,
+    bool pingPong = false,
+    int loops = 1,
+    bool unscaledTime = false,
+    void Function()? onComplete,
+  }) => tween(
+    0.0,
+    1.0,
+    duration: duration,
+    curve: curve,
+    delay: delay,
+    pingPong: pingPong,
+    loops: loops,
+    unscaledTime: unscaledTime,
+    onUpdate: (t) => onUpdate(
+      LinearColor(
+        from.r + (to.r - from.r) * t,
+        from.g + (to.g - from.g) * t,
+        from.b + (to.b - from.b) * t,
+      ),
+    ),
+    onComplete: onComplete,
+  );
+
+  /// Executes a list of coroutine/tween step factories sequentially, awaiting
+  /// each step via [WaitForCoroutine] before starting the next (P12-W20-D).
+  Coroutine tweenSequence(
+    List<Coroutine Function()> steps, {
+    void Function()? onComplete,
+  }) => startCoroutine(() sync* {
+    for (final step in steps) {
+      final co = step();
+      yield WaitForCoroutine(co);
+    }
+    onComplete?.call();
+  });
 }

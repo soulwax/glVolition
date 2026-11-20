@@ -596,6 +596,40 @@
 
 ---
 
+## Wave 20 (Phase 12) — Hitstop Clock, Guarded/Triggered FSM, AudioMixer Snapshots/Ducking & Tween Sequences
+
+**Wave Exit Gate:** Hitstop clock freeze/resume, guarded/timed/triggered `StateMachine`, `AudioMixer` snapshot transitions & bus ducking, and `tweenRotation`/`tweenColor`/`tweenSequence` pass `wave20_game_feel_test.dart` and full 10-gate `verify_all.dart`.
+
+- [x] **[P12-W20-A] Hitstop / Freeze-Frame Clock (`Time`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P11-W19-D]`
+  - **Owns:** `lib/src/engine/time.dart`, `test/engine/wave20_game_feel_test.dart`
+  - **Scope:** Add `triggerHitstop`, `cancelHitstop`, `isInHitstop`, and `hitstopRemaining` on `Time` without mutating user `timeScale`.
+  - **DoneWhen:** `dart test test/engine/wave20_game_feel_test.dart` passes.
+
+- [x] **[P12-W20-B] Guarded, Triggered & Timed `StateMachine<S>` Transitions**
+  - **Priority:** P1
+  - **DependsOn:** `[P11-W19-D]`
+  - **Owns:** `lib/src/engine/state_machine.dart`, `test/engine/wave20_game_feel_test.dart`
+  - **Scope:** Add `addTransition`, `addAnyTransition`, `addTrigger`, `fireTrigger`, and `revertToPreviousState`.
+  - **DoneWhen:** `dart test test/engine/wave20_game_feel_test.dart` passes.
+
+- [x] **[P12-W20-C] `AudioMixer` Snapshots, Smooth Blending & Bus Ducking**
+  - **Priority:** P1
+  - **DependsOn:** `[P11-W19-D]`
+  - **Owns:** `lib/src/engine/components/audio_source.dart`, `lib/src/engine/scene.dart`, `test/engine/wave20_game_feel_test.dart`
+  - **Scope:** Add `AudioMixerSnapshot`, `defineSnapshot`, `captureSnapshot`, `applySnapshot`, and `duckBus`, automatically stepped in `Scene._syncToRenderer`.
+  - **DoneWhen:** `dart test test/engine/wave20_game_feel_test.dart` passes.
+
+- [x] **[P12-W20-D] Rotation, Color & Sequence Tweens (`BehaviourTweenExt`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P11-W19-D]`
+  - **Owns:** `lib/src/engine/tween.dart`, `test/engine/wave20_game_feel_test.dart`
+  - **Scope:** Add `tweenRotation`, `tweenColor`, and `tweenSequence` using `Quat.slerp` and `WaitForCoroutine`.
+  - **DoneWhen:** `dart test test/engine/wave20_game_feel_test.dart` and `dart run tool/verify_all.dart --check-format --skip-wasm` pass.
+
+---
+
 ## Carry-Over Index: Legacy `pixeldart` `PLAN.md` & `TODO.md` Traceability
 
 Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is tracked explicitly here so zero renderer debt is dropped:

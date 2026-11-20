@@ -55,8 +55,74 @@ final class AudioBus {
   AudioBus(this.name, {this.volume = 1.0, this.muted = false});
 }
 
+/// Named mix preset capturing per-bus volumes and mute states for [AudioMixer]
+/// (P12-W20-C).
+final class AudioMixerSnapshot {
+  final String name;
+  final Map<String, double> busVolumes;
+  final Map<String, bool> busMutes;
+
+  AudioMixerSnapshot({
+    required this.name,
+    Map<String, double> busVolumes = const {},
+    Map<String, bool> busMutes = const {},
+  }) : busVolumes = Map.unmodifiable(busVolumes),
+       busMutes = Map.unmodifiable(busMutes);
+}
+
+final class _AudioSnapshotBlend {
+  final AudioMixerSnapshot target;
+  final Map<String, double> startVolumes;
+  final double duration;
+  double elapsed = 0.0;
+
+  _AudioSnapshotBlend({
+    required this.target,
+    required this.startVolumes,
+    required this.duration,
+  });
+
+  bool get isComplete => elapsed >= duration;
+}
+
+final class _AudioBusDuck {
+  final String busName;
+  final double targetGain;
+  final double attackSeconds;
+  final double holdSeconds;
+  final double releaseSeconds;
+  double elapsed = 0.0;
+
+  _AudioBusDuck({
+    required this.busName,
+    required this.targetGain,
+    required this.attackSeconds,
+    required this.holdSeconds,
+    required this.releaseSeconds,
+  });
+
+  double get totalDuration => attackSeconds + holdSeconds + releaseSeconds;
+  bool get isComplete => elapsed >= totalDuration;
+
+  double get currentMultiplier {
+    if (elapsed < attackSeconds) {
+      final t = attackSeconds <= 0 ? 1.0 : (elapsed / attackSeconds);
+      return 1.0 + (targetGain - 1.0) * t.clamp(0.0, 1.0);
+    }
+    final afterAttack = elapsed - attackSeconds;
+    if (afterAttack < holdSeconds) {
+      return targetGain;
+    }
+    final afterHold = afterAttack - holdSeconds;
+    if (releaseSeconds <= 0) return 1.0;
+    final t = (afterHold / releaseSeconds).clamp(0.0, 1.0);
+    return targetGain + (1.0 - targetGain) * t;
+  }
+}
+
 /// Scene-level audio bus mixer supporting `master`, `sfx`, `music`, and
-/// `ambient` buses (plus any custom named bus).
+/// `ambient` buses (plus custom named buses), named [AudioMixerSnapshot]
+/// crossfades, and dynamic bus ducking (E10-1, P12-W20-C).
 final class AudioMixer {
   final Map<String, AudioBus> _buses = {
     'master': AudioBus('master'),
@@ -64,16 +130,125 @@ final class AudioMixer {
     'music': AudioBus('music'),
     'ambient': AudioBus('ambient'),
   };
+  final Map<String, AudioMixerSnapshot> _snapshots = {};
+  final List<_AudioBusDuck> _ducks = [];
+  _AudioSnapshotBlend? _activeBlend;
+  String? _activeSnapshotName;
 
   AudioBus bus(String name) => _buses.putIfAbsent(name, () => AudioBus(name));
+
+  String? get activeSnapshotName => _activeSnapshotName;
+  Iterable<String> get snapshotNames => _snapshots.keys;
+
+  /// Registers a named [snapshot] preset on this mixer.
+  void defineSnapshot(AudioMixerSnapshot snapshot) {
+    _snapshots[snapshot.name] = snapshot;
+  }
+
+  /// Captures the current volumes and mute flags of all buses into a named
+  /// [AudioMixerSnapshot] and registers it.
+  AudioMixerSnapshot captureSnapshot(String name) {
+    final snap = AudioMixerSnapshot(
+      name: name,
+      busVolumes: {for (final e in _buses.entries) e.key: e.value.volume},
+      busMutes: {for (final e in _buses.entries) e.key: e.value.muted},
+    );
+    _snapshots[name] = snap;
+    return snap;
+  }
+
+  /// Applies the registered snapshot [name] immediately or over
+  /// [transitionSeconds] of unscaled time.
+  bool applySnapshot(String name, {double transitionSeconds = 0.0}) {
+    final snap = _snapshots[name];
+    if (snap == null) return false;
+    _activeSnapshotName = name;
+    for (final e in snap.busMutes.entries) {
+      bus(e.key).muted = e.value;
+    }
+    if (transitionSeconds <= 0.0) {
+      _activeBlend = null;
+      for (final e in snap.busVolumes.entries) {
+        bus(e.key).volume = e.value;
+      }
+      return true;
+    }
+    final starts = <String, double>{
+      for (final key in snap.busVolumes.keys) key: bus(key).volume,
+    };
+    _activeBlend = _AudioSnapshotBlend(
+      target: snap,
+      startVolumes: starts,
+      duration: transitionSeconds,
+    );
+    return true;
+  }
+
+  /// Temporarily ducks [busName] down to [targetGain] (e.g. `0.25` during
+  /// voice-over or explosions) with attack/hold/release envelopes.
+  void duckBus(
+    String busName, {
+    double targetGain = 0.25,
+    double holdSeconds = 0.5,
+    double attackSeconds = 0.05,
+    double releaseSeconds = 0.25,
+  }) {
+    _ducks.add(
+      _AudioBusDuck(
+        busName: busName,
+        targetGain: targetGain.clamp(0.0, 1.0),
+        attackSeconds: math.max(0.0, attackSeconds),
+        holdSeconds: math.max(0.0, holdSeconds),
+        releaseSeconds: math.max(0.0, releaseSeconds),
+      ),
+    );
+  }
+
+  void _step(double unscaledDt) {
+    if (unscaledDt <= 0) return;
+    final blend = _activeBlend;
+    if (blend != null) {
+      blend.elapsed += unscaledDt;
+      final t = (blend.elapsed / blend.duration).clamp(0.0, 1.0);
+      for (final e in blend.target.busVolumes.entries) {
+        final start = blend.startVolumes[e.key] ?? bus(e.key).volume;
+        bus(e.key).volume = start + (e.value - start) * t;
+      }
+      if (blend.isComplete) {
+        _activeBlend = null;
+      }
+    }
+    if (_ducks.isNotEmpty) {
+      for (var i = _ducks.length - 1; i >= 0; i--) {
+        final duck = _ducks[i];
+        duck.elapsed += unscaledDt;
+        if (duck.isComplete) {
+          _ducks.removeAt(i);
+        }
+      }
+    }
+  }
+
+  double _duckMultiplierFor(String busName) {
+    var mult = 1.0;
+    for (final duck in _ducks) {
+      if (duck.busName == busName) {
+        final m = duck.currentMultiplier;
+        if (m < mult) mult = m;
+      }
+    }
+    return mult;
+  }
 
   double effectiveBusGain(String busName) {
     final master = bus('master');
     if (master.muted) return 0.0;
-    if (busName == 'master') return master.volume.clamp(0.0, 2.0);
+    final masterGain = master.volume * _duckMultiplierFor('master');
+    if (busName == 'master') return masterGain.clamp(0.0, 2.0);
     final b = bus(busName);
     if (b.muted) return 0.0;
-    return (master.volume * b.volume).clamp(0.0, 2.0);
+    final busGain = b.volume * _duckMultiplierFor(busName);
+    return (masterGain * busGain).clamp(0.0, 2.0);
   }
 }
 

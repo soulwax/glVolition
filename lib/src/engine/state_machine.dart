@@ -8,11 +8,30 @@ final class _StateCallbacks {
   const _StateCallbacks({this.onEnter, this.onUpdate, this.onExit});
 }
 
-/// Declarative finite state machine [Behaviour] parameterized over state type [S] (E9-4).
+final class _StateTransitionRule<S> {
+  final S? from; // null means "any state"
+  final S to;
+  final bool Function()? guard;
+  final double? afterSeconds;
+  final int priority;
+  final String? trigger;
+
+  const _StateTransitionRule({
+    required this.from,
+    required this.to,
+    this.guard,
+    this.afterSeconds,
+    this.priority = 0,
+    this.trigger,
+  });
+}
+
+/// Declarative finite state machine [Behaviour] parameterized over state type [S]
+/// (E9-4, P12-W20-B).
 ///
 /// Tracks [currentState], [previousState], and [stateTime] (seconds spent in the
-/// active state), and invokes registered `onEnter`, `onUpdate(dt)`, and `onExit`
-/// callbacks on state transitions and per-frame updates.
+/// active state), invokes `onEnter`/`onUpdate`/`onExit`, and evaluates guarded,
+/// timed, and named-trigger transitions automatically.
 final class StateMachine<S> extends Behaviour {
   S _current;
   S? _previous;
@@ -20,6 +39,8 @@ final class StateMachine<S> extends Behaviour {
   bool _enteredInitial = false;
   final Map<S, _StateCallbacks> _states = {};
   final List<void Function(S from, S to)> _transitionListeners = [];
+  final List<_StateTransitionRule<S>> _autoTransitions = [];
+  final List<_StateTransitionRule<S>> _triggerTransitions = [];
 
   StateMachine(S initialState) : _current = initialState;
 
@@ -46,6 +67,102 @@ final class StateMachine<S> extends Behaviour {
     return this;
   }
 
+  /// Registers an automatic transition from [from] to [to] evaluated during
+  /// [update] when [when] returns `true` and/or [stateTime] reaches
+  /// [afterSeconds]. Higher [priority] rules are evaluated first.
+  StateMachine<S> addTransition(
+    S from,
+    S to, {
+    bool Function()? when,
+    double? afterSeconds,
+    int priority = 0,
+  }) {
+    _insertRule(
+      _autoTransitions,
+      _StateTransitionRule<S>(
+        from: from,
+        to: to,
+        guard: when,
+        afterSeconds: afterSeconds,
+        priority: priority,
+      ),
+    );
+    return this;
+  }
+
+  /// Registers a global transition from any state (other than [to]) into [to]
+  /// when [when] returns `true`.
+  StateMachine<S> addAnyTransition(
+    S to, {
+    required bool Function() when,
+    int priority = 0,
+  }) {
+    _insertRule(
+      _autoTransitions,
+      _StateTransitionRule<S>(
+        from: null,
+        to: to,
+        guard: when,
+        priority: priority,
+      ),
+    );
+    return this;
+  }
+
+  /// Registers a named trigger transition from [from] (or any state when
+  /// [from] is `null`) into [to], fired via [fireTrigger].
+  StateMachine<S> addTrigger(
+    String triggerName,
+    S? from,
+    S to, {
+    bool Function()? when,
+    int priority = 0,
+  }) {
+    _insertRule(
+      _triggerTransitions,
+      _StateTransitionRule<S>(
+        from: from,
+        to: to,
+        guard: when,
+        priority: priority,
+        trigger: triggerName,
+      ),
+    );
+    return this;
+  }
+
+  static void _insertRule<S>(
+    List<_StateTransitionRule<S>> list,
+    _StateTransitionRule<S> rule,
+  ) {
+    var idx = list.length;
+    while (idx > 0 && list[idx - 1].priority < rule.priority) {
+      idx--;
+    }
+    list.insert(idx, rule);
+  }
+
+  /// Fires a named [triggerName], executing the highest-priority matching
+  /// trigger rule for [currentState]. Returns `true` if a transition occurred.
+  bool fireTrigger(String triggerName) {
+    for (final rule in _triggerTransitions) {
+      if (rule.trigger != triggerName) continue;
+      if (rule.from != null && rule.from != _current) continue;
+      if (rule.to == _current) continue;
+      if (rule.guard != null && !rule.guard!()) continue;
+      return transitionTo(rule.to);
+    }
+    return false;
+  }
+
+  /// Transitions back to [previousState], returning `false` when no previous
+  /// state has been recorded.
+  bool revertToPreviousState() {
+    final prev = _previous;
+    if (prev == null) return false;
+    return transitionTo(prev);
+  }
+
   /// Subscribes [listener] to state transitions `(from, to)`.
   void onTransition(void Function(S from, S to) listener) {
     _transitionListeners.add(listener);
@@ -70,6 +187,19 @@ final class StateMachine<S> extends Behaviour {
     return true;
   }
 
+  bool _evaluateAutoTransitions() {
+    for (final rule in _autoTransitions) {
+      if (rule.from != null && rule.from != _current) continue;
+      if (rule.to == _current) continue;
+      if (rule.afterSeconds != null && _stateTime < rule.afterSeconds!) {
+        continue;
+      }
+      if (rule.guard != null && !rule.guard!()) continue;
+      return transitionTo(rule.to);
+    }
+    return false;
+  }
+
   @override
   void start() {
     if (!_enteredInitial) {
@@ -86,6 +216,8 @@ final class StateMachine<S> extends Behaviour {
     }
     final dt = time.deltaTime;
     _stateTime += dt;
-    _states[_current]?.onUpdate?.call(dt);
+    if (!_evaluateAutoTransitions()) {
+      _states[_current]?.onUpdate?.call(dt);
+    }
   }
 }

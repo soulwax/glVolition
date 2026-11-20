@@ -760,6 +760,9 @@ final class Scene {
     for (final line in _lines) {
       if (line._active) line._syncRibbon();
     }
+    if (_engine != null) {
+      audioMixer._step(_engine!.time.unscaledDeltaTime);
+    }
     for (final src in _audioSources) {
       if (src._active) {
         if (_engine != null) src._stepFade(_engine!.time.deltaTime);

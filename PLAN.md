@@ -241,3 +241,14 @@ Verified clean on Dart 3.14.0 across unified test suites (382 root tests, 140 pi
   - **Prioritized Events & Composable Coroutines (`[P11-W19-B]`)**: Extend `SceneEvents` with priority ordering, `once<E>`, `emitDeferred<E>`/`flushDeferred()`, and `listenerCount<E>()`; add `WaitWhile`, `WaitForFrames`, and `WaitForCoroutine` yield instructions (`lib/src/engine/events_coroutines.dart`).
   - **Runtime Developer Console (`[P11-W19-C]`)**: Add `DebugConsole` and built-in engine commands (`help`, `stats`, `pause`, `resume`, `timescale`, `entities`, `tp`, `active`, `clear`) with quoted-arg parsing, history, and prefix autocompletion on `DebugController` (`lib/src/engine/debug_controller.dart`).
   - **Scoped Sub-Frame Profiler Spans (`[P11-W19-D]`)**: Add real `Stopwatch`-backed `beginSpan`/`endSpan`/`measureSpan` and `exportTelemetryJson()` to `FrameProfilerComponent` (`lib/src/engine/components/frame_profiler.dart`).
+
+---
+
+## 11. Phase 12 (Wave 20) — Game-Feel & Core Runtime Ergonomics (Hitstop Clock, Guarded FSM, AudioMixer Snapshots/Ducking & Tween Sequences)
+
+- **Objective**: Deliver high-leverage game-feel primitives across timing, state machines, audio mixing, and coroutine animation without adding platform dependencies.
+- **Key Deliverables**:
+  - **Hitstop / Freeze-Frame Clock (`[P12-W20-A]`)**: Add `triggerHitstop()`, `cancelHitstop()`, `isInHitstop`, and `hitstopRemaining` to `Time` (`lib/src/engine/time.dart`) preserving underlying `timeScale`.
+  - **Guarded, Triggered & Timed `StateMachine<S>` (`[P12-W20-B]`)**: Add `addTransition`, `addAnyTransition`, `addTrigger`, `fireTrigger`, and `revertToPreviousState` (`lib/src/engine/state_machine.dart`).
+  - **AudioMixer Snapshots & Bus Ducking (`[P12-W20-C]`)**: Add `AudioMixerSnapshot`, `defineSnapshot`, `captureSnapshot`, `applySnapshot` with smooth interpolation, and `duckBus` (`lib/src/engine/components/audio_source.dart`, stepped automatically in `Scene._syncToRenderer`).
+  - **Rotation, Color & Sequence Tweens (`[P12-W20-D]`)**: Add `tweenRotation`, `tweenColor`, and `tweenSequence` on `BehaviourTweenExt` (`lib/src/engine/tween.dart`).

@@ -16,6 +16,8 @@ final class Time {
   int maxFixedStepsPerFrame = 8;
 
   double _timeScale = 1;
+  double _hitstopRemaining = 0;
+  double _hitstopScale = 0;
 
   double _time = 0;
   double _unscaledTime = 0;
@@ -54,6 +56,28 @@ final class Time {
   double get fixedTime => _fixedTime;
   int get frameCount => _frameCount;
   bool get inFixedTimeStep => _inFixedStep;
+
+  /// Whether a hitstop / impact freeze-frame is currently active (P12-W20-A).
+  bool get isInHitstop => _hitstopRemaining > 0.0;
+
+  /// Unscaled real-time seconds remaining in the active hitstop, or `0.0`.
+  double get hitstopRemaining => _hitstopRemaining;
+
+  /// Temporarily scales simulation time by [frozenScale] (default `0.0`) for
+  /// [unscaledSeconds] of real wall time without mutating [timeScale].
+  void triggerHitstop(double unscaledSeconds, {double frozenScale = 0.0}) {
+    if (!unscaledSeconds.isFinite || unscaledSeconds <= 0) return;
+    if (unscaledSeconds > _hitstopRemaining) {
+      _hitstopRemaining = unscaledSeconds;
+    }
+    _hitstopScale = frozenScale.clamp(0.0, 1.0);
+  }
+
+  /// Immediately ends any active hitstop freeze-frame.
+  void cancelHitstop() {
+    _hitstopRemaining = 0.0;
+    _hitstopScale = 0.0;
+  }
 
   /// How far the clock is between the last fixed step and the next, 0..1.
   /// Use it to interpolate rendered positions of fixed-step bodies.
@@ -141,7 +165,14 @@ final class Time {
     final raw = rawDelta.isFinite && rawDelta > 0 ? rawDelta : 0.0;
     _unscaledDeltaTime = math.min(raw, maximumDeltaTime);
     _unscaledTime += _unscaledDeltaTime;
-    _deltaTime = _unscaledDeltaTime * _timeScale;
+
+    var effectiveScale = _timeScale;
+    if (_hitstopRemaining > 0.0) {
+      effectiveScale = _timeScale * _hitstopScale;
+      _hitstopRemaining = math.max(0.0, _hitstopRemaining - _unscaledDeltaTime);
+    }
+
+    _deltaTime = _unscaledDeltaTime * effectiveScale;
     _time += _deltaTime;
     _accumulator += _deltaTime;
     _frameCount++;
