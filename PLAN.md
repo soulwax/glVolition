@@ -151,6 +151,7 @@ However, **several critical runtime subsystems are still software recorders, CPU
    - `lib/gl_volition.dart`, `lib/gl_volition_web.dart`, `lib/gl_volition_native.dart`
    - `lib/src/engine.dart`, `lib/src/engine/serialization/component_spec.dart`, `tool/generate_logos.dart`
    - `.github/workflows/*` (outside dedicated CI worker W8-B)
+   - Studio Track hubs: `lib/src/studio/protocol/**`, `lib/src/studio/studio.dart` (barrel), `tool/studio/studio_bundle.g.dart`, `vendor/pixeldart/lib/rendering/webgl/device_api.dart` (outside `[Sx-0]` freezes)
    - Root git commits / `vendor/*` gitlink updates (Coordinator-only after verifying submodule clean state)
 4. **Mandatory Worker Report & Verification**:
    - Every worker ends with exact changed paths, exported symbols, edge cases/caveats, and output of `dart analyze`, targeted `dart test <suite>`, and any compile/boundary check required by `DoneWhen`.
@@ -264,6 +265,26 @@ Verified clean on Dart 3.14.0 across unified test suites (382 root tests, 140 pi
   - **Platformer-Grade `CharacterController` (`[P13-W21-A]`)**: Add `coyoteTime`, `jumpBufferTime`, `queueJump()`, `consumeBufferedJump()`, `groundNormal`, `groundObject`, and automatic moving-platform carry delta (`lib/src/engine/components/character_controller.dart`).
   - **Exact 2D Spatial Queries & Raycast (`[P13-W21-B]`)**: Add cell-coherent `update()`, `queryCircleExact()`, `findNearest()`, and DDA `queryRay()` to `SpatialGrid2D` (`lib/src/engine/spatial_grid_2d.dart`).
   - **Single-Pass Camera Frustum Batching (`[P13-W21-C]`)**: Add `isPointVisible()`, `isAabbVisible()`, and `collectVisibleMeshes()` honoring `cullingMask` with a single frustum extraction per frame (`lib/src/engine/components/camera.dart`).
+
+---
+
+## 13. Phase 14 (Wave 22) — Animation Event Markers, Anti-Popping LOD Hysteresis & Timed Particle Burst Schedules
+
+- **Objective**: Complete key visual-gameplay synchronization features: timestamped animation events, hysteresis-stabilized LOD tiers, and scheduled particle burst timelines.
+- **Key Deliverables**:
+  - **Animation Event Markers (`[P14-W22-A]`)**: Add `AnimationEventMarker`, `SkeletalClip.events`, `Animator.addClipEvent()`, and `Animator.onEvent()` firing accurately across normal and looped playback (`lib/src/engine/components/animator.dart`).
+  - **LOD Hysteresis, Quality Bias & Forced Override (`[P14-W22-B]`)**: Extend `LodGroup` with `hysteresis`, `lodBias`, and `forcedLevelIndex` (`lib/src/engine/components/lod_billboard.dart`).
+  - **Timed Particle Burst Schedules (`[P14-W22-C]`)**: Add `ParticleBurst`, `play()`/`pause()`/`stop()`, and automatic burst timeline firing on `ParticleSystem` (`lib/src/engine/components/particle_system.dart`, stepped in `Scene._syncToRenderer`).
+
+---
+
+## 13. Phase 14 (Wave 22) — Animation Event Markers, Anti-Popping LOD Hysteresis & Timed Particle Burst Schedules
+
+- **Objective**: Complete key visual-gameplay synchronization features: timestamped animation events, hysteresis-stabilized LOD tiers, and scheduled particle burst timelines.
+- **Key Deliverables**:
+  - **Animation Event Markers (`[P14-W22-A]`)**: Add `AnimationEventMarker`, `SkeletalClip.events`, `Animator.addClipEvent()`, and `Animator.onEvent()` firing accurately across normal and looped playback (`lib/src/engine/components/animator.dart`).
+  - **LOD Hysteresis, Quality Bias & Forced Override (`[P14-W22-B]`)**: Extend `LodGroup` with `hysteresis`, `lodBias`, and `forcedLevelIndex` (`lib/src/engine/components/lod_billboard.dart`).
+  - **Timed Particle Burst Schedules (`[P14-W22-C]`)**: Add `ParticleBurst`, `play()`/`pause()`/`stop()`, and automatic burst timeline firing on `ParticleSystem` (`lib/src/engine/components/particle_system.dart`, stepped in `Scene._syncToRenderer`).
 
 ---
 
@@ -442,6 +463,11 @@ S1 ──┬──> S2 ──┬──> S5 ──> S6 ──> S7 ──┐
 **ADR-4 — GUID asset identity with sidecar metadata.**
 - *Decision*: Adopt Unity-style `.vmeta` sidecars (GUID, importer id and version, import settings, content hash) committed next to each asset. A derived, git-ignored `.volition/library/` cache holds import outputs and thumbnails.
 - *Consequences*: Rename-safe references, incremental reimport, and reproducible builds from source assets plus metas.
+
+**ADR-5 — Dart is the scripting language (Unity's C# role); visual graphs for designers; no second runtime.**
+- *Context*: A Unity-like engine needs a gameplay scripting story across web (JS/wasm), native AOT and server targets, while staying deterministic for input-tape replay and rollback netcode.
+- *Decision*: Gameplay scripts are plain Dart `Behaviour`/`Component` subclasses, exposed to the editor via `@Serialized`-style annotations and `volition codegen` (`[S5-0]`, `[S5-A]`), with hot reload in development (`[S5-B]`). Designers use the `voxgraph`-based node editors (`[S7-B]`), which are data and therefore work in shipped builds. No Lua, JS or other embedded runtime is added.
+- *Consequences*: No binding layer for the 74 modules and no marshalling cost; full analyzer and type support; one language and number model for determinism (scripts must respect dart2js 53-bit `int` semantics, as `SceneStateHasher` already does). Shipped AOT/dart2js builds cannot load new Dart code, so player modding is out of scope. If it is wanted later, the preferred route is a sandboxed `dart_eval` layer with a fixed exposed API (a future `[S5-E]`), not a second language.
 
 ### 13.10 Key Risks & Mitigations
 

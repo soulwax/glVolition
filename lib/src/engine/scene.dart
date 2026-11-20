@@ -754,8 +754,10 @@ final class Scene {
   }
 
   void _syncToRenderer(Graphics graphics) {
+    final particleDt = _engine?.time.deltaTime ?? 0.0;
     for (final p in _particles) {
       p._syncTransform();
+      if (p._active) p._stepBursts(particleDt);
     }
     for (final line in _lines) {
       if (line._active) line._syncRibbon();

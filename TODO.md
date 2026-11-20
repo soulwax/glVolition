@@ -657,6 +657,519 @@
 
 ---
 
+## Wave 22 (Phase 14) — Animation Event Markers, LOD Hysteresis & Timed Particle Burst Schedules
+
+**Wave Exit Gate:** Skeletal animation event markers across looped & one-shot clips, anti-popping `LodGroup` hysteresis/bias/forced-override, and timed `ParticleBurstSchedule` schedules pass `wave22_animation_lod_particles_test.dart` and full 10-gate `verify_all.dart`.
+
+- [x] **[P14-W22-A] Skeletal Animation Event Markers (`AnimationEventMarker` on `SkeletalClip` & `Animator`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P13-W21-C]`
+  - **Owns:** `lib/src/engine/components/animator.dart`, `test/engine/wave22_animation_lod_particles_test.dart`
+  - **Scope:** Add `AnimationEventMarker`, `SkeletalClip.events`, `Animator.addClipEvent`, `Animator.onEvent`, and wrap-safe timestamp crossing dispatch.
+  - **DoneWhen:** `dart test test/engine/wave22_animation_lod_particles_test.dart` passes.
+
+- [x] **[P14-W22-B] Anti-Popping `LodGroup` Hysteresis, Quality `lodBias` & `forcedLevelIndex`**
+  - **Priority:** P1
+  - **DependsOn:** `[P13-W21-C]`
+  - **Owns:** `lib/src/engine/components/lod_billboard.dart`, `test/engine/wave22_animation_lod_particles_test.dart`
+  - **Scope:** Add `hysteresis`, `lodBias`, and `forcedLevelIndex` to `LodGroup` with `ComponentSpec` fields.
+  - **DoneWhen:** `dart test test/engine/wave22_animation_lod_particles_test.dart` passes.
+
+- [x] **[P14-W22-C] Timed `ParticleBurstSchedule` Schedules & Playback Controls on `ParticleSystem`**
+  - **Priority:** P1
+  - **DependsOn:** `[P13-W21-C]`
+  - **Owns:** `lib/src/engine/components/particle_system.dart`, `lib/src/engine/scene.dart`, `test/engine/wave22_animation_lod_particles_test.dart`
+  - **Scope:** Add `ParticleBurstSchedule`, `play`/`pause`/`stop`, and automatic burst timeline firing in `Scene._syncToRenderer`.
+  - **DoneWhen:** `dart test test/engine/wave22_animation_lod_particles_test.dart` and `dart run tool/verify_all.dart --check-format --skip-wasm` pass.
+
+---
+
+## Volition Studio Track (`S1`–`S8`) — Unity-Class Engine & Renderer Upgrade
+
+> **Plan:** [PLAN.md §13](PLAN.md#13-unity-class-engine-roadmap--volition-studio-track-phases-s1s8). **North star:** Volition Studio + the `volition` CLI is where every `vendor/*` submodule comes together.
+> **IDs:** `[Sx-0]` Coordinator freeze → `[Sx-A..F]` parallel workers → `[Sx-M]` Coordinator merge. This track's IDs stay separate from the numbered `[Px-Wy-z]` waves; interleave only with disjoint `Owns`.
+> **Track-wide DoneWhen rules (PLAN §13.3, Invariants 6–10):** `dart analyze`, `dart run tool/check_boundaries.dart` (now covering `lib/src/studio/**`), and targeted tests are always required. Renderer tasks also require `dart run tools/renderer/shaders.dart --check` and `dart run tools/renderer/test_all.dart` inside `vendor/pixeldart`, a Browser Lab golden for visual changes, and a native readback golden when a GPU is present (otherwise reported as **skipped**, never as passing). Every performance claim is a measured number.
+
+---
+
+## Phase S1 — Ground-Truth Debt Closure & Foundations (GPU Device v2, GUID Assets, Module Registry)
+
+**Exit Gate:** No fixed `uniform mat4 …[N]` arrays in world/shadow/depth shaders; device API v2 is implemented on WebGL2, `Gles3FfiDevice` and `RecordingGlesDevice`; GUID references survive rename/move; the module registry inventories 74/74 packages; the boundary checker covers `lib/src/studio/**`.
+
+- [ ] **[S1-0] Coordinator Freeze: GPU Device API v2, Studio Protocol v2, Project FS & Editor Boundaries**
+  - **Priority:** P0
+  - **DependsOn:** none (current `main`)
+  - **Owns:** `vendor/pixeldart/lib/rendering/webgl/device_api.dart`, `vendor/pixeldart/lib/rendering/api/capabilities.dart`, `lib/src/studio/protocol/**`, `lib/src/studio/project/project_fs.dart`, `lib/src/studio/studio.dart`, `tool/check_boundaries.dart`
+  - **Scope:**
+    - Device API v2 (signatures only plus capability bits): uniform buffers (`createUniformBuffer`, `updateUniformBuffer`, `bindUniformBufferBase`, `uniformBlockBinding`), cubemap textures (6 faces + mips), 2D texture arrays, half-float/float color targets (`EXT_color_buffer_float` / `EXT_color_buffer_half_float` capability), MRT `drawBuffers`, instanced attribute divisors, occlusion queries (`ANY_SAMPLES_PASSED_CONSERVATIVE`), and per-pass timer-query scopes.
+    - Studio Protocol v2: versioned typed envelopes (`StudioRequest`, `StudioResponse`, `StudioEvent`), a method-id registry, error codes, and a JSON codec. Every method declares its CLI mapping, which the `[S2-M]` parity gate checks.
+    - `ProjectFileSystem` interface (`read`, `write`, `list`, `stat`, `watch`, `move`, `delete`) so AssetDatabase logic stays pure Dart.
+    - Extend `tool/check_boundaries.dart` so `lib/src/studio/**` gets the same import bans as `lib/src/engine/**`, and so `lib/src/engine/**` may not import `lib/src/studio/**`.
+  - **DoneWhen:** Root and `vendor/pixeldart` `dart analyze` pass; `dart run tool/check_boundaries.dart` passes and has a test fixture proving a `dart:io` import under `lib/src/studio/` is rejected.
+
+- [ ] **[S1-A] Device API v2 Implementations (WebGL2, `Gles3FfiDevice`, `RecordingGlesDevice`)**
+  - **Priority:** P0
+  - **DependsOn:** `[S1-0]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/webgl/webgl2_device.dart`, `vendor/pixeldart/lib/rendering/webgl/webgl2_device_*.dart`, `vendor/pixeldart/lib/rendering/webgl/state_cache.dart`, `vendor/pixeldart/tools/renderer/test_device_v2.dart`, `lib/src/native/gles3_bindings.dart`, `lib/src/native/gles3_ffi_device.dart`, `lib/src/native/native_host.dart` (`RecordingGlesDevice` only), `test/native/gles3_device_v2_test.dart`
+  - **Scope:** Implement every `[S1-0]` op on all three devices, with state-cache awareness (UBO binding points, texture-array/cube units). Resolve the new GLES3 entry points via FFI with actionable missing-symbol diagnostics, and record commands deterministically for CI.
+  - **DoneWhen:** `test_device_v2.dart` and `test/native/gles3_device_v2_test.dart` assert recorded command streams for each new op and an FFI symbol table containing `glBindBufferBase`, `glUniformBlockBinding`, `glTexImage3D`, `glDrawBuffers`, `glVertexAttribDivisor` and `glBeginQuery`. When hardware is present, a native readback renders a cubemap face and an RGBA16F target.
+
+- [ ] **[S1-B] Uncapped Instancing, UBO Frame Data & 256-Joint Skinning (reopens `[P4-W12-B2]` / `[P4-W12-C]`)**
+  - **Priority:** P0
+  - **DependsOn:** `[S1-0]`
+  - **Owns:** `vendor/pixeldart/shaders/rendering/world/**`, `vendor/pixeldart/shaders/rendering/shadow/**`, `vendor/pixeldart/shaders/rendering/depth/**`, `vendor/pixeldart/lib/rendering/passes/{world,textured_world,shadowed_world,shadow,depth_prepass}.dart`, `vendor/pixeldart/lib/rendering/webgl/instanced_stream.dart`, `vendor/pixeldart/lib/rendering/webgl/generated_shaders.dart`, `vendor/pixeldart/tools/renderer/test_no_fixed_uniform_caps.dart`, `vendor/pixeldart/tools/renderer/test_instancing_uncapped.dart`, `lib/src/engine/components/skinned_mesh.dart`, `test/engine/skinning_256_test.dart`
+  - **Scope:**
+    - Replace `uInstanceModels[16]` / `uInstanceNormalMatrices[16]` (`shadowed_world.vert:13-14`) with per-instance vertex attributes (divisor 1) fed by `InstanceBufferStream` in all world, shadow and depth passes, so the 16-per-draw split disappears.
+    - Move camera/frame data (`uViewProjection`, `uView`, camera position, time, exposure placeholder) into a std140 `FrameBlock` UBO shared across passes.
+    - Replace `uJointMatrices[64]` (`:25`) with a 256-joint std140 UBO palette, falling back to an RGBA32F joint texture when `MAX_UNIFORM_BLOCK_SIZE` is too small. Skin shadow-caster and depth-prepass vertices too. Raise `SkinnedMeshRenderer` capacity constants to match.
+  - **DoneWhen:** `test_no_fixed_uniform_caps.dart` scans `shaders/rendering/{world,shadow,depth}/**` and fails on any `uniform mat4 \w+\[\d+\]`. `test_instancing_uncapped.dart` proves 4,096 instances go out in exactly one recorded `drawElementsInstanced`. `test/engine/skinning_256_test.dart` matches a 200-joint CPU reference within 1e-4. Browser Lab goldens of the instanced forest and skinned character are unchanged (SSIM ≥ 0.99).
+
+- [ ] **[S1-C] Project Format, `.vmeta` GUID Sidecars & `AssetDatabase` with Incremental Import Cache**
+  - **Priority:** P0
+  - **DependsOn:** `[S1-0]`
+  - **Owns:** `lib/src/studio/project/**` (except `project_fs.dart`), `lib/src/studio/assets/**`, `tool/studio/io_project_fs.dart`, `test/studio/asset_database_test.dart`, `test/studio/project_format_test.dart`
+  - **Reads:** `lib/src/engine/assets/**`, `vendor/pixeldart/lib/assets/**`, `tool/asset_packer.dart`
+  - **Scope:**
+    - `volition.project.json`: name, version, enabled modules, scenes in build, tags/layers, physics layer matrix, input actions asset, quality tiers, render pipeline settings asset, build profiles (filled later by `[S8-B]`).
+    - `.vmeta`: GUID (128-bit, injectable RNG), importer id and version, import settings, source content hash, sub-asset ids (GLB meshes/materials/clips).
+    - `AssetDatabase`: initial scan, GUID allocation, move/rename/delete keeping GUIDs, orphan-meta detection, dependency graph, importer registry (texture, glb/obj/qmesh model, audio, LUT, scene, prefab, material, data asset), and an incremental import cache under `.volition/library/` keyed by `(contentHash, importerVersion, settingsHash)`. Reimports are change-driven from `ProjectFileSystem.watch`. Add a `dart:io` adapter (`io_project_fs.dart`).
+  - **DoneWhen:** Tests prove: renaming or moving keeps GUID resolution; unchanged assets are not reimported (counter assertion); changed settings invalidate dependents transitively; an in-memory FS and the IO FS behave identically on a fixture project; GUIDs are deterministic with a seeded RNG.
+
+- [ ] **[S1-D] Studio Module Registry, Maturity Levels & Coverage Gate (74 `vendor/*` Packages)**
+  - **Priority:** P0
+  - **DependsOn:** `[S1-0]`
+  - **Owns:** `lib/src/studio/modules/module_descriptor.dart`, `lib/src/studio/modules/module_registry.dart`, `lib/src/studio/modules/module_inventory.g.dart`, `tool/check_module_coverage.dart`, `test/studio/module_registry_test.dart`
+  - **Reads:** `vendor/*/pubspec.yaml`, `lib/src/engine/components/**`, `lib/src/engine/serialization/component_spec*.dart`
+  - **Scope:**
+    - `StudioModuleDescriptor`: package, version (from pubspec), family (PLAN §13.7), contributed `ComponentSpec` ids, importers, gizmo drawers, custom inspectors, create-menu entries, sample scenes, maturity (`runtime-only` | `inspectable` | `editor-tooled`), and a `requiredMaturity` target.
+    - Generate an inventory of every `vendor/*` package, mapping each to the root component wrapper files that import it. That mapping becomes the `Owns` resolver for `[S6-*]`: `--owners <family>`.
+    - `check_module_coverage.dart` takes `--report` (table + JSON), `--min-maturity <level>` and `--owners <family>`.
+  - **DoneWhen:** `dart run tool/check_module_coverage.dart --report` lists 74/74 packages with family and current maturity; `--min-maturity runtime-only` exits 0; the test fails when a fixture vendor package has no descriptor.
+
+- [ ] **[S1-M] Coordinator Merge: GUID Scene References, Gates in `verify_all`, Barrels & `pixeldart` Commit**
+  - **Priority:** P0
+  - **DependsOn:** `[S1-A]`, `[S1-B]`, `[S1-C]`, `[S1-D]`
+  - **Owns:** `lib/src/engine/serialization/scene_serializer.dart`, `lib/src/engine/serialization/scene_migration.dart`, `lib/gl_volition.dart`, `lib/src/studio/studio.dart`, `tool/verify_all.dart`, `.gitignore` (`.volition/library/`), `vendor/pixeldart` gitlink
+  - **Scope:** Add `AssetRef(guid)` serialization and bump the scene schema, adding a `SceneMigrationStep` that converts path/key references to GUIDs through an injectable resolver (the engine core stays independent of `lib/src/studio`). Add module coverage and the anti-cap test to `verify_all.dart`. Commit and push `vendor/pixeldart` first, then update the gitlink.
+  - **DoneWhen:** `dart run tool/verify_all.dart --check-format --skip-wasm` passes with the new gates listed; old-schema scene fixtures migrate to GUID references.
+
+---
+
+## Phase S2 — Volition Studio Editor Shell (Scene · Game · Hierarchy · Inspector · Project · Console · Play Mode)
+
+**Exit Gate:** The Studio e2e script passes in headless Chromium: open project → click-select → gizmo move → add component → drag material onto mesh → play/stop restores state → save → reload is byte-equal. A 1,000-object scene is interactive within 2 s and an inspector edit round-trips in under 16 ms (measured). Every RPC has a CLI path.
+
+- [ ] **[S2-0] Coordinator Freeze: Panel/Docking Model, `EditorHostBridge`, Command & Menu Registry, `ComponentSpec` Field Metadata**
+  - **Priority:** P0
+  - **DependsOn:** `[S1-M]`
+  - **Owns:** `lib/src/studio/shell/**`, `lib/src/studio/bridge/**`, `lib/src/studio/commands/menu_registry.dart`, `lib/src/engine/serialization/component_spec.dart`, `vendor/pixeldart/lib/rendering/api/editor_overlay.dart`
+  - **Scope:**
+    - Define `StudioPanel` (id, title, state save/restore) and a serializable docking layout tree.
+    - Define `EditorHostBridge` between the in-page engine and the shell: selection, command dispatch, viewport picking, play state, and dirty tracking.
+    - Define the menu/shortcut registry (`GameObject > Create > …`, `Assets > Create > …`, `Window > …`).
+    - Extend `ComponentSpec` field metadata: type, range, step, enum values, tooltip, header, `AssetRef` asset-type filter, hidden flag, read-only flag.
+    - Add a renderer `EditorOverlay` contract for grid, gizmo lines/icons, ID-pick target and selection set.
+  - **DoneWhen:** `dart analyze` passes on root and `vendor/pixeldart`; existing `ComponentSpec` round-trip tests are unchanged.
+
+- [ ] **[S2-A] Dart-Compiled Studio Shell, Bundle Embedding, Legacy Panels Migration & e2e Harness**
+  - **Priority:** P0
+  - **DependsOn:** `[S2-0]`
+  - **Owns:** `lib/src/web/studio/shell/**`, `tool/studio/web/studio_main.dart`, `tool/studio/studio_bundle.dart`, `tool/studio/studio_bundle.g.dart`, `tool/cli_gui_server.dart`, `tool/cli_gui_assets.dart`, `tool/studio/e2e/run_studio_e2e.mjs`, `test/studio/studio_server_test.dart`
+  - **Scope:**
+    - Build a Dart web shell with docking, menu bar, toolbar (play/pause/step, gizmo mode, pivot/local-world, snap) and status bar, persisting layout in project user settings.
+    - `studio_bundle.dart` compiles `studio_main.dart` (`dart compile js -O2`) and emits `studio_bundle.g.dart` so the AOT `volition` binary embeds Studio.
+    - `VolitionGuiServer` serves the bundle and speaks Protocol v2, keeping v1 methods as aliases.
+    - Port the Doctor, Create, Build & Dist, Pack, Tests & Gates, Inspector and Replay panels from `cli_gui_assets.dart` into Build/Tools panels, then reduce `cli_gui_assets.dart` to a no-JS fallback page.
+    - The e2e runner (pattern of `run_shader_lab.mjs`) drives headless Chromium through scripted scenarios.
+  - **DoneWhen:** `test/studio/studio_server_test.dart` passes; `node tool/studio/e2e/run_studio_e2e.mjs --scenario shell-smoke` passes; `dart compile exe bin/volition.dart` serves the embedded bundle with no network access.
+
+- [ ] **[S2-B] Scene View & Game View: Editor Camera, Grid, Gizmo Overlay, ID-Buffer Picking, Selection Outline & Shading Modes**
+  - **Priority:** P0
+  - **DependsOn:** `[S2-0]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/passes/editor_*.dart`, `vendor/pixeldart/shaders/rendering/editor/**`, `vendor/pixeldart/tools/renderer/test_editor_passes.dart`, `lib/src/studio/viewport/**`, `lib/src/web/studio/viewport/**`, `test/studio/viewport_test.dart`
+  - **Reads:** `lib/src/engine/gizmos/viewport_gizmos.dart`, `vendor/pixeldart/lib/rendering/core/debug_views.dart`
+  - **Scope:**
+    - Editor camera: orbit/pan/fly with WASD + RMB, frame-selected (`F`), ortho/2D toggle, and a view gizmo. It stays separate from game `Camera`s.
+    - Infinite fade grid; gizmo/icon overlay pass rendering `ViewportGizmos` handles and component icons.
+    - ID-buffer picking: an R32UI or RGBA8-packed object-id target, rendered on demand at the cursor.
+    - Selection outline (id-edge or stencil).
+    - Shading modes: lit, unlit, wireframe, overdraw, plus `debug_views` (normals, roughness, light heatmap).
+    - Game view renders the scene's `Camera`s at chosen aspect/resolution presets.
+  - **DoneWhen:** `test_editor_passes.dart` and `test/studio/viewport_test.dart` pass (pick ids match the object under the cursor in a recorded fixture); Browser Lab goldens exist for the grid, gizmos and selection outline.
+
+- [ ] **[S2-C] Hierarchy & `ComponentSpec`-Driven Inspector (Multi-Edit, Add Component, Prefab Overrides)**
+  - **Priority:** P0
+  - **DependsOn:** `[S2-0]`
+  - **Owns:** `lib/src/studio/hierarchy/**`, `lib/src/studio/inspector/**`, `lib/src/web/studio/panels/hierarchy_panel.dart`, `lib/src/web/studio/panels/inspector_panel.dart`, `test/studio/inspector_model_test.dart`
+  - **Reads:** `lib/src/engine/editor_session.dart`, `lib/src/engine/editor_commands.dart`, `lib/src/engine/prefab_registry.dart`
+  - **Scope:**
+    - Hierarchy: tree with drag-reparent (undoable), sibling reorder, `searchHierarchy`, multi-select with shift/ctrl, active toggles, and a context menu (rename, duplicate, delete, create child).
+    - Inspector: generic field editors driven by `ComponentSpec` metadata (int/double with range slider, bool, string, enum, Vec2/Vec3, Quat shown as euler, Color, curve, `AssetRef` GUID picker, lists, nested structs). Mixed-value display for multi-object editing, an add-component search menu (`@AddComponentMenu` paths once `[S5-0]` lands), remove/reorder/reset per component, and prefab override badges with apply/revert.
+    - Every mutation goes through `EditorCommand`s, so undo/redo covers all of it.
+  - **DoneWhen:** `test/studio/inspector_model_test.dart` covers each field type, multi-edit mixed values, undo of reparent and field edits, and prefab override apply/revert; the e2e scenario `inspector-edit` passes.
+
+- [ ] **[S2-D] Project Window (GUID Asset Browser, Thumbnails, Drag & Drop, Import Settings) & Console**
+  - **Priority:** P1
+  - **DependsOn:** `[S2-0]`
+  - **Owns:** `lib/src/studio/project_window/**`, `lib/src/studio/console/**`, `lib/src/web/studio/panels/project_panel.dart`, `lib/src/web/studio/panels/console_panel.dart`, `tool/studio/thumbnail_service.dart`, `tool/studio/open_in_editor.dart`, `test/studio/project_window_test.dart`
+  - **Scope:**
+    - Project window: folder tree + asset grid over `AssetDatabase` RPCs, search and type filters, and an `Assets > Create` menu (folder, scene, material, prefab, data asset).
+    - Thumbnails for meshes, materials and textures are rendered offscreen to a render target and cached in `.volition/library/thumbnails/`.
+    - Drag an asset into the Scene view to instantiate it, or onto an inspector `AssetRef` field. The import-settings inspector supports reimport.
+    - Console: capture `voxlog` + `EngineHost.reportError` from the in-page player, with collapse, level filters and search. Clicking a stack frame opens `file:line` through a daemon call (`code -g`, or the configured editor).
+  - **DoneWhen:** `test/studio/project_window_test.dart` passes (create/rename/move through the UI model keeps GUIDs, and the thumbnail cache is reused); the e2e scenario `drag-material` passes.
+
+- [ ] **[S2-M] Coordinator Merge: Play Mode, Scene Save/Load via Daemon, Autosave & Studio ⇄ CLI Parity Gate**
+  - **Priority:** P0
+  - **DependsOn:** `[S2-A]`, `[S2-B]`, `[S2-C]`, `[S2-D]`
+  - **Owns:** `lib/src/engine/editor_session.dart`, `tool/cli_service.dart`, `bin/volition.dart`, `tool/studio/studio_daemon.dart`, `test/studio/cli_parity_test.dart`, `test/studio/play_mode_test.dart`
+  - **Scope:**
+    - Enter/exit play mode using the `EditorSession` snapshot, with pause and single-step, play-mode tint, and Game-view input capture.
+    - Save scenes and prefabs through the daemon as GUID-referenced JSON, with dirty markers, autosave and crash recovery.
+    - Add `volition rpc <method> [--json]` for every Protocol v2 method.
+    - Parity test enumerates the method registry and fails on any method without a CLI mapping.
+  - **DoneWhen:** `test/studio/play_mode_test.dart` and `test/studio/cli_parity_test.dart` pass; the full S2 e2e script passes; `verify_all.dart` is green; the measured 1,000-object open time and inspector round-trip are recorded in the merge report.
+
+---
+
+## Phase S3 — VRP Lighting, Shadows & HDR
+
+**Exit Gate:** The Browser Lab "VRP lights" scene (256 point lights, 4-cascade sun, 8 shadowed spots) matches its goldens; measured 1080p frame time on the `tool/renderer_bench.dart` reference machine is ≤ 16.6 ms on web and native; linear-audit readbacks are within tolerance on both quality tiers.
+
+- [ ] **[S3-0] Coordinator Freeze: Render Pipeline Settings Asset, Light GPU Layout, Shader Keywords & `#include` Support**
+  - **Priority:** P0
+  - **DependsOn:** `[S1-M]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/api/settings.dart`, `vendor/pixeldart/lib/rendering/api/lights.dart`, `vendor/pixeldart/lib/rendering/api/shaders.dart`, `vendor/pixeldart/tools/renderer/shaders.dart`, `vendor/pixeldart/shaders/rendering/include/README.md`, `lib/src/engine/components/light.dart` (fields only)
+  - **Scope:**
+    - `RenderPipelineSettings`, serializable as a project asset: quality tiers; HDR on/off and format; MSAA; render scale; max visible lights; cluster dims; shadow distance, cascade count, split lambda, atlas size, and per-light resolution tiers.
+    - Light data layout: a std140 punctual-light struct plus a directional struct.
+    - Shader keyword/variant contract and `#include "include/…"` resolution in the shader generator (`--check` must cover includes).
+    - Replace the `RuntimeLightBudget` constants with tier-derived limits.
+    - `Light` component fields: range, inner/outer cone, shadows (none/hard/soft), shadow strength, bias, normal bias, culling layers, and intensity in lux/lumen units.
+  - **DoneWhen:** `dart analyze` passes on root and `vendor/pixeldart`; `shaders.dart --check` passes with an include fixture.
+
+- [ ] **[S3-A] Unified Lit Uber-Shader, PBR BRDF & Variant Cache/Warmup**
+  - **Priority:** P0
+  - **DependsOn:** `[S3-0]`
+  - **Owns:** `vendor/pixeldart/shaders/rendering/world/**`, `vendor/pixeldart/shaders/rendering/include/{brdf,surface,lit_common}.glsl`, `vendor/pixeldart/lib/rendering/core/program_library.dart`, `vendor/pixeldart/lib/rendering/core/program_set_planner.dart`, `vendor/pixeldart/lib/rendering/core/program_source.dart`, `vendor/pixeldart/lib/rendering/passes/{world,textured_world,shadowed_world}.dart`, `vendor/pixeldart/tools/renderer/test_lit_variants.dart`
+  - **Scope:**
+    - Merge `safe_world`, `textured_world` and `shadowed_world` into `lit.vert`/`lit.frag` with keywords: `NORMAL_MAP`, `ORM_MAP`, `EMISSIVE`, `LIGHTMAP`, `SKINNED`, `INSTANCED`, `ALPHA_TEST`, `SHADOWS_{OFF,HARD,SOFT}`, `PS1_AFFINE`, `QUANTIZED`, `UNLIT`.
+    - BRDF: GGX D, height-correlated Smith V, Schlick F, a multi-scatter energy compensation term, and clearcoat.
+    - Program variant cache keyed by keyword bitset, with per-scene warmup lists; the legacy PS1/safe looks stay as keyword combinations.
+  - **DoneWhen:** `test_lit_variants.dart` compiles every allowed variant on the recording device and asserts no keyword combination is missing; Browser Lab goldens of the legacy looks stay SSIM ≥ 0.98; furnace test (white env, roughness sweep) energy stays within ±3 %.
+
+- [ ] **[S3-B] Clustered Forward+ Lighting (Froxel Grid, ≥256 Visible Lights, Heatmap)**
+  - **Priority:** P0
+  - **DependsOn:** `[S3-0]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/core/light_clusters.dart`, `vendor/pixeldart/lib/rendering/passes/light_cluster_upload.dart`, `vendor/pixeldart/shaders/rendering/include/clustered_lights.glsl`, `vendor/pixeldart/tools/renderer/test_light_clusters.dart`
+  - **Scope:**
+    - CPU froxel assignment (default 16×9×24, logarithmic depth slices) using sphere/cone vs. froxel-AABB tests, packed into a light-index texture plus a light UBO/texture.
+    - `clustered_lights.glsl` loops over a cluster's lights, and the lit shader includes it.
+    - Light-count heatmap debug view; zero per-frame allocations (frame arena).
+  - **DoneWhen:** `test_light_clusters.dart` proves cluster assignment matches brute force on randomized scenes and that 256 lights stay allocation-free; the Browser Lab 256-light golden passes; the measured CPU cluster build time is recorded.
+
+- [ ] **[S3-C] Shadows: Directional CSM, Spot/Point Shadow Atlas, PCF/PCSS & Priority Resolution**
+  - **Priority:** P0
+  - **DependsOn:** `[S3-0]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/passes/shadow*.dart`, `vendor/pixeldart/lib/rendering/core/shadow_atlas.dart`, `vendor/pixeldart/shaders/rendering/shadow/**`, `vendor/pixeldart/shaders/rendering/include/shadows.glsl`, `vendor/pixeldart/tools/renderer/test_shadow_atlas.dart`, `vendor/pixeldart/tools/renderer/test_directional_shadow.dart`, `lib/src/engine/components/cascaded_shadow_rig.dart`, `test/engine/cascaded_shadow_gpu_test.dart`
+  - **Scope:**
+    - Directional CSM with 2–4 cascades from `optics/cascade_splits.dart`: texel-snapped stable fitting, cascade blend band, per-cascade caster culling, and a cascade debug view.
+    - Shadow atlas for spot lights and point lights (6 faces packed), with resolution chosen by screen-size priority and per-light tier.
+    - Filtering: PCF 3×3/5×5, optional PCSS blocker search, normal-offset + slope bias.
+    - `CascadedShadowRig` drives the GPU path.
+  - **DoneWhen:** `test_shadow_atlas.dart` (packing, no overlap, stable reassignments) and `test/engine/cascaded_shadow_gpu_test.dart` (recorded passes per cascade) pass; Browser Lab goldens exist for the CSM sun, 8 shadowed spots and 2 shadowed points; `RuntimeLightBudget.shadowMaps = 1` has no remaining callers.
+
+- [ ] **[S3-D] HDR Scene Color, Physical Exposure/Auto-Exposure, Tonemappers & HDR Bloom**
+  - **Priority:** P0
+  - **DependsOn:** `[S3-0]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/passes/{present,post_chain,bloom,bloom_resources,grade,grade_resources}.dart`, `vendor/pixeldart/lib/rendering/passes/exposure*.dart`, `vendor/pixeldart/shaders/rendering/post/**`, `vendor/pixeldart/shaders/rendering/bloom/**`, `vendor/pixeldart/shaders/rendering/grade/**`, `vendor/pixeldart/shaders/rendering/exposure/**`, `vendor/pixeldart/tools/renderer/test_hdr_pipeline.dart`
+  - **Scope:**
+    - RGBA16F scene color when capability bits allow it; otherwise RGBA8 with in-shader tonemap (documented tier behavior).
+    - EV100 manual exposure plus auto-exposure (log-luminance downsample chain or histogram, with adaptation speed).
+    - Tonemappers: ACES fitted, AgX, Khronos Neutral.
+    - Bloom on HDR input with threshold/knee; LUT grading after tonemap; sRGB output.
+    - End-to-end linear audit: known emissive patches read back at expected values.
+  - **DoneWhen:** `test_hdr_pipeline.dart` passes on both tiers; Browser Lab linear-audit readback is within ±1/255 of expected; goldens exist for each tonemapper.
+
+- [ ] **[S3-E] Studio Lighting & Quality Windows, Light Inspectors & Gizmos**
+  - **Priority:** P1
+  - **DependsOn:** `[S3-0]`, `[S2-M]`
+  - **Owns:** `lib/src/studio/windows/lighting_window.dart`, `lib/src/studio/windows/quality_window.dart`, `lib/src/studio/gizmos/light_gizmos.dart`, `lib/src/web/studio/panels/lighting_panel.dart`, `test/studio/lighting_window_test.dart`
+  - **Scope:** The Lighting window edits the `RenderPipelineSettings` asset and the environment (ambient, sky, exposure). The Quality window switches tiers live in the Scene and Game views. Light gizmos draw range spheres, spot cones, directional arrows and a cascade-split overlay toggle. The light inspector adds a unit helper (lux/lumen).
+  - **DoneWhen:** `test/studio/lighting_window_test.dart` passes; the e2e scenario `lighting-tier-switch` passes with golden captures of both tiers.
+
+- [ ] **[S3-M] Coordinator Merge: VRP Lighting Integration, `Scene._syncToRenderer` Light Upload & Bench Ratification**
+  - **Priority:** P0
+  - **DependsOn:** `[S3-A]`, `[S3-B]`, `[S3-C]`, `[S3-D]`, `[S3-E]`
+  - **Owns:** `lib/src/engine/scene.dart`, `tool/renderer_bench.dart`, `vendor/pixeldart` gitlink
+  - **Scope:** Route all scene `Light`s into cluster upload; add the "VRP lights" bench scene; record the reference machine (GPU, driver, browser) and measured web and native frame times; push `pixeldart`, then update the gitlink.
+  - **DoneWhen:** Phase S3 exit gate is green and the measured numbers are in the merge report.
+
+---
+
+## Phase S4 — Environment, GI, Materials & Post-Processing v2
+
+**Exit Gate:** Metallic sphere reflects its probe; the baked-lightmap scene golden matches; TAA golden is stable over 600 frames; editing a `.vmat` updates every user live in the Scene view.
+
+- [ ] **[S4-0] Coordinator Freeze: `.vmat` Material Asset, `MaterialPropertyBlock`, Render Queues & Environment/Probe Blocks**
+  - **Priority:** P0
+  - **DependsOn:** `[S3-M]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/api/materials.dart`, `vendor/pixeldart/lib/rendering/api/effects.dart`, `vendor/pixeldart/lib/rendering/api/environment.dart`, `lib/src/engine/assets/asset_types.dart`
+  - **Scope:** `.vmat` schema (shader id, keyword set, typed property values, GUID texture refs, render queue, sorting layer and order); `MaterialPropertyBlock` per renderer; queue ranges matching Unity (Background 1000, Geometry 2000, AlphaTest 2450, Transparent 3000, Overlay 4000); std140 environment block (SH9, exposure, sky) and probe binding contract; Volume profile schema.
+  - **DoneWhen:** `dart analyze` passes on root and `vendor/pixeldart`.
+
+- [ ] **[S4-A] Skybox & Image-Based Lighting (HDR Cubemaps, GGX Prefilter, BRDF LUT, SH9 Ambient)**
+  - **Priority:** P0
+  - **DependsOn:** `[S4-0]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/passes/{skybox,ibl_prefilter}*.dart`, `vendor/pixeldart/shaders/rendering/sky/**`, `vendor/pixeldart/shaders/rendering/include/ibl.glsl`, `vendor/pixeldart/lib/rendering/atmosphere/sky_atmosphere.dart`, `vendor/pixeldart/tools/renderer/test_ibl.dart`, `lib/src/studio/assets/importers/hdri_importer.dart`
+  - **Scope:** Import equirect `.hdr` into a cubemap with mips. Bake the procedural sky (`sky_atmosphere`/`voxsky`) to a cubemap at runtime when the sun moves past a threshold. Add a GGX-prefiltered specular mip chain, a 2D split-sum BRDF LUT and SH9 projection for ambient, plus a skybox pass. Remove the `uReflectionColor` uniform.
+  - **DoneWhen:** `test_ibl.dart` checks SH9 projection against an analytic reference and that the prefilter mip count matches cube size; Browser Lab roughness/metallic sphere-grid golden passes.
+
+- [ ] **[S4-B] Reflection Probes & Per-Object Light-Probe SH**
+  - **Priority:** P1
+  - **DependsOn:** `[S4-0]`
+  - **Owns:** `lib/src/engine/components/reflection_probe.dart`, `lib/src/engine/components/light_probe_gi.dart`, `vendor/pixeldart/lib/rendering/passes/reflection_probe*.dart`, `vendor/pixeldart/shaders/rendering/include/probes.glsl`, `lib/src/studio/gizmos/probe_gizmos.dart`, `test/engine/reflection_probe_test.dart`
+  - **Scope:** `ReflectionProbe` component (baked / on-demand realtime, box projection, blend distance, importance), blending between the two nearest probes, and baked cubemaps stored as GUID assets. `LightProbeVolume` SH3/SH9 is interpolated per renderer and uploaded per object (no longer one global uniform). Studio probe gizmos and a "Bake Probes" command.
+  - **DoneWhen:** `test/engine/reflection_probe_test.dart` covers probe selection, blend weights and box-projection math; the Browser Lab interior/exterior blend golden passes.
+
+- [ ] **[S4-C] Progressive Lightmapper (UV2 Packing, Isolate Path Tracer, Denoise, Bake UI)**
+  - **Priority:** P2
+  - **DependsOn:** `[S4-0]`, `[S2-M]`
+  - **Owns:** `lib/src/studio/baking/**`, `tool/studio/lightmap_baker_io.dart`, `test/studio/lightmapper_test.dart`
+  - **Reads:** `lib/src/engine/components/spatial_bvh.dart`, `vendor/pixeldart/lib/rendering/api/materials.dart`
+  - **Scope:** Generate UV2 charts and pack them (pure Dart), then path-trace direct and one-bounce indirect light over a BVH on isolates (daemon-side) with progressive passes. Denoise with an edge-aware À-trous filter and dilate charts. Write lightmap textures and per-renderer scale/offset that feed the existing `lightmapTexture` material slot. Lighting window gets "Bake / Cancel / Clear" with progress events over Protocol v2, plus CLI `volition bake`.
+  - **DoneWhen:** `test/studio/lightmapper_test.dart` checks chart packing has no overlaps and that the Cornell-box bake matches its reference image within tolerance with deterministic seeds; the measured bake time is recorded.
+
+- [ ] **[S4-D] Post-Processing v2: Motion Vectors, TAA, SSR, GTAO, Motion Blur & Volume Framework**
+  - **Priority:** P1
+  - **DependsOn:** `[S4-0]`
+  - **Owns:** `vendor/pixeldart/lib/rendering/passes/{motion_vectors,taa,ssr,gtao,motion_blur}*.dart`, `vendor/pixeldart/lib/rendering/passes/ssao*.dart`, `vendor/pixeldart/shaders/rendering/{taa,ssr,gtao,motion}/**`, `lib/src/engine/components/post_process_volume.dart`, `vendor/pixeldart/tools/renderer/test_post_v2.dart`
+  - **Scope:** Per-object motion-vector pass (MRT or separate pass, skinned + instanced aware). TAA uses Halton jitter, history reprojection, YCoCg neighborhood clamp and sharpening. SSR uses a Hi-Z trace and falls back to probes. GTAO replaces SSAO behind a setting. Camera and per-object motion blur. A Volume framework (global/local volumes, priority, blend distance, per-effect override flags) drives the whole post stack.
+  - **DoneWhen:** `test_post_v2.dart` covers volume blending math and jitter-sequence determinism; Browser Lab TAA golden is stable across 600 frames (SSIM ≥ 0.99 between frames 300 and 600 on a static camera); SSR and GTAO goldens pass.
+
+- [ ] **[S4-E] Material Assets, Material Inspector with Live Preview, Render Queues & Sorting Layers**
+  - **Priority:** P0
+  - **DependsOn:** `[S4-0]`, `[S2-M]`
+  - **Owns:** `lib/src/studio/assets/importers/material_importer.dart`, `lib/src/studio/inspector/material_inspector.dart`, `lib/src/web/studio/panels/material_preview.dart`, `vendor/pixeldart/lib/rendering/core/material_table.dart`, `vendor/pixeldart/lib/rendering/core/sort_key.dart`, `lib/src/engine/components/renderers.dart`, `test/studio/material_asset_test.dart`
+  - **Scope:** Import `.vmat` into `MaterialDefinition` and hot-update every user on change. The material inspector shows keyword toggles, typed properties and texture GUID pickers, with a live preview sphere/cube/plane rendered offscreen. `MaterialPropertyBlock` on `MeshRenderer`/`SkinnedMeshRenderer`. Render queues and sorting layers feed `sort_key.dart`; transparent objects sort back to front. Material UBOs are cached SRP-batcher style.
+  - **DoneWhen:** `test/studio/material_asset_test.dart` covers hot-update fan-out, property-block override precedence and queue sort order; the e2e scenario `material-edit-live` passes.
+
+- [ ] **[S4-M] Coordinator Merge: Environment/GI/Post Integration & `pixeldart` Commit**
+  - **Priority:** P0
+  - **DependsOn:** `[S4-A]`, `[S4-B]`, `[S4-C]`, `[S4-D]`, `[S4-E]`
+  - **Owns:** `lib/src/engine/scene.dart`, `lib/src/engine/serialization/component_spec_extra.dart`, `lib/gl_volition.dart`, `vendor/pixeldart` gitlink
+  - **Scope:** Register `ReflectionProbe` and Volume specs, route per-object SH and probe data in `_syncToRenderer`, update goldens, and push `pixeldart`.
+  - **DoneWhen:** Phase S4 exit gate is green; `verify_all.dart` passes.
+
+---
+
+## Phase S5 — Scripting Workflow & Editor Extensibility
+
+**Exit Gate:** `@Serialized @Range(0, 10) double speed` shows a slider with no hand-written spec; edit-to-visible reload time is measured and reported (target 3 s); scene, selection and camera survive reload; a nested-prefab edit propagates through two levels.
+
+- [ ] **[S5-0] Coordinator Freeze: Serialization Annotations, `DataAsset` & EditorExtension API**
+  - **Priority:** P0
+  - **DependsOn:** `[S2-M]`
+  - **Owns:** `lib/src/engine/serialization/annotations.dart`, `lib/src/engine/data_asset.dart`, `lib/src/studio/extensions/**`, `lib/gl_volition.dart`
+  - **Scope:**
+    - Annotations: `@Serialized`, `@HideInInspector`, `@Range`, `@Min`, `@Tooltip`, `@Header`, `@Space`, `@Multiline`, `@RequireComponent`, `@DisallowMultipleComponent`, `@ExecuteInEditMode`, `@AddComponentMenu`, `@CreateAssetMenu`.
+    - `DataAsset` base class (ScriptableObject equivalent, `.vasset`, GUID-referenced).
+    - Extension points: `CustomInspector<T>`, `GizmoDrawer<T>`, `MenuItem`, `EditorWindow`, `AssetImporter`, `ContextAction`, `ToolbarTool`.
+  - **DoneWhen:** `dart analyze` passes; the boundary check keeps annotations and `DataAsset` free of platform imports.
+
+- [ ] **[S5-A] `volition codegen`: Analyzer-Based `ComponentSpec` / `DataAsset` Spec Generation**
+  - **Priority:** P0
+  - **DependsOn:** `[S5-0]`
+  - **Owns:** `tool/codegen/**`, `test/studio/codegen_test.dart`
+  - **Scope:** Use `package:analyzer` to scan the project's `lib/` plus module wrappers and emit `*.spec.g.dart` (`ComponentSpec` with field metadata, `@RequireComponent` graph, menu paths). Watch mode with incremental regeneration. Diagnostics report `file:line` for unsupported field types. Generated files are deterministic, so they diff cleanly.
+  - **DoneWhen:** `test/studio/codegen_test.dart` passes on golden source → spec fixtures (all annotation types, generics rejected with a clear diagnostic); regenerating unchanged input produces byte-identical output.
+
+- [ ] **[S5-B] Hot-Reload Loop: In-Studio Player Recompile with State-Preserving Reload + Native VM-Service Reload**
+  - **Priority:** P0
+  - **DependsOn:** `[S5-0]`
+  - **Owns:** `tool/studio/hot_reload/**`, `lib/src/studio/reload/**`, `test/studio/hot_reload_test.dart`
+  - **Scope:**
+    - First benchmark the web recompile strategies on the sample project and record the results: DDC via `build_web_compilers`, `dart compile js -O0`, and `-O1`.
+    - Implement the fastest strategy that is correct, triggered by the project file watcher.
+    - Before reload, serialize the editor state (scene incl. unsaved changes, selection, camera, layout) and restore it after.
+    - Native: `volition run --native --hot` uses the VM service `reloadSources` while keeping engine state.
+  - **DoneWhen:** `test/studio/hot_reload_test.dart` passes (the state snapshot round-trips byte-equal); the benchmark table of the strategies is recorded in the merge report with the chosen default.
+
+- [ ] **[S5-C] Edit-Mode Execution & Extension Host (Discovery, Custom Inspectors, Gizmo Drawers, Menu Items)**
+  - **Priority:** P1
+  - **DependsOn:** `[S5-0]`
+  - **Owns:** `lib/src/studio/extension_host/**`, `lib/src/engine/scene.dart` (edit-mode tick gate only), `example/studio_samples/extension_demo/**`, `test/studio/extension_host_test.dart`
+  - **Scope:** `@ExecuteInEditMode` behaviours tick in edit mode with an `isPlaying` guard. Discover extensions from modules (descriptors) and from the project `editor/` folder. Custom inspectors replace or augment the generic one, gizmo drawers render through `EditorOverlay`, and menu items register in the menu registry. Add a sample extension.
+  - **DoneWhen:** `test/studio/extension_host_test.dart` passes (custom inspector precedence, edit-mode tick, menu registration); the e2e scenario `extension-demo` passes.
+
+- [ ] **[S5-D] Nested Prefabs, Prefab Mode (Isolation Stage) & Variant Chains**
+  - **Priority:** P1
+  - **DependsOn:** `[S5-0]`
+  - **Owns:** `lib/src/engine/prefab.dart`, `lib/src/engine/prefab_registry.dart`, `lib/src/studio/prefab_mode/**`, `test/engine/nested_prefab_test.dart`
+  - **Scope:** Nested prefab instances with layered overrides (outermost wins), variant chains, apply-to-specific-level, and Prefab Mode (open a prefab in an isolated stage with breadcrumbs, then save and propagate). Detect broken references and offer a repair UI model.
+  - **DoneWhen:** `test/engine/nested_prefab_test.dart` covers 2-level propagation, override precedence, variant-of-variant and broken-reference repair.
+
+- [ ] **[S5-M] Coordinator Merge: `volition codegen` / `run --hot` CLI Wiring, Studio "Recompile" & Parity**
+  - **Priority:** P0
+  - **DependsOn:** `[S5-A]`, `[S5-B]`, `[S5-C]`, `[S5-D]`
+  - **Owns:** `bin/volition.dart`, `tool/cli_service.dart`, `lib/src/engine/serialization/component_spec_extra.dart`
+  - **Scope:** Wire the `codegen [--watch]` and `run --native --hot` CLI commands, migrate hand-written specs to generated ones where equivalent, and extend the parity test.
+  - **DoneWhen:** Phase S5 exit gate is green; `verify_all.dart` passes.
+
+---
+
+## Phase S6 — Module Integration Sweep (All 74 Submodules → Studio)
+
+**Exit Gate:** `dart run tool/check_module_coverage.dart --min-maturity inspectable` reports 74/74; each family has a sample scene that opens and plays in Studio; headless smoke tests instantiate every registered component.
+
+**Shared scope for `[S6-A..F]`:** For each package in the family (PLAN §13.7):
+1. Register a `StudioModuleDescriptor`.
+2. Annotate its root component wrapper(s) so `volition codegen` produces specs.
+3. Add `GameObject > Create > <Family> > …` entries.
+4. Add a `GizmoDrawer` for spatial components.
+5. Add a `CustomInspector` where the generic one is inadequate (state it in the report).
+6. Add one family sample scene under `example/studio_samples/<family>/` using GUID assets.
+7. Add a headless smoke test that instantiates and serializes every registered component.
+
+**Owns:** `lib/src/studio/modules/<family>/**`, `test/studio/modules/<family>_test.dart`, `example/studio_samples/<family>/**`, plus annotation-only edits to the wrapper files listed by `dart run tool/check_module_coverage.dart --owners <family>` (resolved in `[S1-D]`). Vendor packages themselves are not modified unless a bug blocks integration. That fix happens inside the submodule first (Invariant 4) and is reported.
+
+- [ ] **[S6-A] Rendering & Visuals Family (17):** `pixeldart`, `voxvfx`, `voxribbon`, `voxdecal`, `voxlight`, `voxshadow`, `voxsky`, `voxcolor`, `voxlens`, `voxcam`, `voxprobe`, `voxatlas`, `voxbatch`, `voxoctree`, `voxsdf`, `voxgreedy`, `voxvox`
+  - **Priority:** P1 · **DependsOn:** `[S5-M]`, `[S4-M]`
+  - **DoneWhen:** `dart test test/studio/modules/rendering_test.dart`; coverage gate `inspectable` passes for this family; sample `example/studio_samples/rendering/` plays in Studio e2e (`module-rendering`).
+
+- [ ] **[S6-B] Physics & Simulation Family (11):** `voxphys`, `voxbroad`, `voxcloth`, `voxfluid`, `voxfracture`, `voxragdoll`, `voxverlet`, `voxwheel`, `voxtraffic`, `voxcrowd`, `voxsteer`
+  - **Priority:** P1 · **DependsOn:** `[S5-M]`
+  - **Extra scope:** Collider gizmos (box/sphere/capsule/mesh/heightfield edit handles), Physics project settings panel (layer matrix, gravity, fixed step), joint gizmos.
+  - **DoneWhen:** `dart test test/studio/modules/physics_test.dart`; gate passes for family; e2e `module-physics`.
+
+- [ ] **[S6-C] Animation & Motion Family (9):** `voxanim`, `voxblend`, `voxik2d`, `voxgait`, `voxtween`, `voxcurve`, `voxseq`, `voxspline3d`, `voxextrude`
+  - **Priority:** P1 · **DependsOn:** `[S5-M]`
+  - **Extra scope:** Curve field editor for the generic inspector (reused by `[S7-A]`), spline point gizmos.
+  - **DoneWhen:** `dart test test/studio/modules/animation_test.dart`; gate passes for family; e2e `module-animation`.
+
+- [ ] **[S6-D] AI, Gameplay & Narrative Family (15):** `voxai`, `voxhtn`, `voxnav3d`, `voxpath`, `voxflow`, `voxgraph`, `voxcircuit`, `voxrule`, `voxitem`, `voxcraft`, `voxquest`, `voxtalk`, `voxstat`, `voxscore`, `voxloc`
+  - **Priority:** P1 · **DependsOn:** `[S5-M]`
+  - **Extra scope:** Convert item/quest/stat/craft/loc definitions to `DataAsset` types with `@CreateAssetMenu`; navmesh agent gizmos.
+  - **DoneWhen:** `dart test test/studio/modules/gameplay_test.dart`; gate passes for family; e2e `module-gameplay`.
+
+- [ ] **[S6-E] World & Procedural Family (10):** `voxbiome`, `voxnoise3d`, `voxproc`, `voxarch`, `voxbuild`, `voxgrid`, `voxhex`, `voxsnap`, `voxgeom`, `voxfoliage`
+  - **Priority:** P1 · **DependsOn:** `[S5-M]`
+  - **Extra scope:** "Generate / Regenerate with seed" context actions that produce undoable scene edits; grid/hex overlays.
+  - **DoneWhen:** `dart test test/studio/modules/world_test.dart`; gate passes for family; e2e `module-world`.
+
+- [ ] **[S6-F] Audio, Input, Net & Infrastructure Family (12):** `voxdsp`, `voxreverb`, `voxsynth`, `voxrhythm`, `voxpad`, `voxnet`, `voxrollback`, `voxecs`, `voxui`, `voxlog`, `voxpack`, `voxalloc`
+  - **Priority:** P1 · **DependsOn:** `[S5-M]`
+  - **Extra scope:** Audio Mixer window (buses, snapshots, ducking from Wave 20) with live meters; Input Actions asset editor (Wave 19 profiles); Network settings + "Play with N clients" launcher (local headless server + extra Studio game views); `voxlog` already feeds Console (verify).
+  - **DoneWhen:** `dart test test/studio/modules/infra_test.dart`; gate passes for family; e2e `module-audio-input-net`.
+
+- [ ] **[S6-M] Coordinator Merge: Raise Coverage Gate to `inspectable` in `verify_all` & Module Catalog**
+  - **Priority:** P0
+  - **DependsOn:** `[S6-A]`, `[S6-B]`, `[S6-C]`, `[S6-D]`, `[S6-E]`, `[S6-F]`
+  - **Owns:** `tool/verify_all.dart`, `lib/src/studio/modules/module_registry.dart`, `lib/src/studio/studio.dart`
+  - **Scope:** Register all family descriptor barrels, raise the gate to `--min-maturity inspectable`, and add a Studio "Modules" panel (package-manager view: enable/disable per project, version, maturity, samples).
+  - **DoneWhen:** Phase S6 exit gate is green.
+
+---
+
+## Phase S7 — Specialized Editor Windows
+
+**Exit Gate:** Each window has an e2e scenario that authors content, saves it as GUID assets, and plays it back in the Game view; the 22 `editor-tooled` modules (PLAN §13.7) pass `--min-maturity editor-tooled`.
+
+- [ ] **[S7-0] Coordinator Freeze: Shared Node-Graph View Model & Timeline/Curve View Model**
+  - **Priority:** P0
+  - **DependsOn:** `[S6-M]`
+  - **Owns:** `lib/src/studio/graph/**`, `lib/src/studio/timeline/**`, `lib/src/web/studio/widgets/{graph_canvas,timeline_canvas,curve_canvas}.dart`
+  - **Scope:** Graph model (nodes, typed ports, edges, groups, comments, minimap, auto-layout, copy/paste, undo through `EditorCommand`s) and timeline model (tracks, clips, keys, tangents, snapping, scrubbing).
+  - **DoneWhen:** `dart analyze` passes; model unit tests in `test/studio/graph_model_test.dart` and `test/studio/timeline_model_test.dart` pass.
+
+- [ ] **[S7-A] Animation Window, Animator Controller Graph & Timeline**
+  - **Priority:** P1 · **DependsOn:** `[S7-0]`
+  - **Owns:** `lib/src/studio/windows/animation/**`, `lib/src/web/studio/panels/animation_*.dart`, `test/studio/animation_windows_test.dart`
+  - **Modules:** `voxanim`, `voxblend`, `voxseq`, `voxcurve`, `voxtween`
+  - **Scope:** Dopesheet and curve editor with record mode (inspector edits become keys). Animator Controller asset: states, transitions with conditions, parameters, layers with masks, and 1D/2D blend trees, compiled to `StateMachine`/`BlendTreeController`. Live state highlighting in play mode. Timeline over `CutsceneSequencer` tracks: animation, audio, activation, signal, camera.
+  - **DoneWhen:** `test/studio/animation_windows_test.dart` passes; e2e `animator-author-play`.
+
+- [ ] **[S7-B] Graph Editors: Flow Graph (Visual Scripting), Dialogue, HTN, Logic Circuits & Rules**
+  - **Priority:** P1 · **DependsOn:** `[S7-0]`
+  - **Owns:** `lib/src/studio/windows/graphs/**`, `lib/src/web/studio/panels/graph_*.dart`, `test/studio/graph_editors_test.dart`
+  - **Modules:** `voxgraph`, `voxflow`, `voxtalk`, `voxhtn`, `voxcircuit`, `voxrule`
+  - **Scope:** One graph canvas, many schemas. Each editor serializes to its module's runtime format as a GUID asset and supports live play-mode debugging (active node highlight, port values, breakpoints for the flow graph).
+  - **DoneWhen:** `test/studio/graph_editors_test.dart` round-trips every schema; e2e `flowgraph-author-play`, `dialogue-author-play`.
+
+- [ ] **[S7-C] World Tools: Terrain Sculpt/Paint, Foliage Brush, NavMesh Bake, Splines & Modular Building**
+  - **Priority:** P1 · **DependsOn:** `[S7-0]`
+  - **Owns:** `lib/src/studio/windows/world_tools/**`, `lib/src/studio/tools/{terrain,foliage,navmesh,spline,snap}_tool.dart`, `test/studio/world_tools_test.dart`
+  - **Modules:** `voxbiome`, `voxfoliage`, `voxnav3d`, `voxspline3d`, `voxsnap`, `voxbuild`
+  - **Scope:** Terrain brushes (raise/lower/smooth/flatten/holes) with splat-layer painting (heightfield and physics collider stay in sync). Foliage paint/erase with density. NavMesh bake settings, visualization and agent types (+ CLI `volition bake --navmesh`). Spline point/tangent editing. Snap/socket placement for modular building. All brush strokes are undoable as compact deltas.
+  - **DoneWhen:** `test/studio/world_tools_test.dart` passes (stroke delta undo, navmesh bake determinism); e2e `terrain-paint-bake`.
+
+- [ ] **[S7-D] 2D Tools: Sprite Editor, Tile Palette & Rule Tiles, 2D Lights/Colliders & Sorting Layers**
+  - **Priority:** P1 · **DependsOn:** `[S7-0]`
+  - **Owns:** `lib/src/studio/windows/tools_2d/**`, `lib/src/web/studio/panels/sprite_editor.dart`, `test/studio/tools_2d_test.dart`
+  - **Modules:** `voxatlas` (+ engine `sprites_2d`, `tilemap`, `lighting_2d`, `physics_2d`)
+  - **Scope:** Sprite slicing (grid/auto), pivots and 9-slice borders, with atlas packing at import. Tile palette with brush/fill/rect/picker and rule tiles. 2D light and shadow-caster shape editing. Physics 2D collider shape editing. Sorting layers UI.
+  - **DoneWhen:** `test/studio/tools_2d_test.dart` passes; e2e `tilemap-author-play`.
+
+- [ ] **[S7-E] UI Builder, Localization Tables & Data Tables (Items, Quests, Stats)**
+  - **Priority:** P1 · **DependsOn:** `[S7-0]`
+  - **Owns:** `lib/src/studio/windows/ui_builder/**`, `lib/src/studio/windows/data_tables/**`, `lib/src/web/studio/panels/{ui_builder,table_editor}.dart`, `test/studio/ui_data_tools_test.dart`
+  - **Modules:** `voxui`, `voxloc`, `voxitem`, `voxquest`, `voxstat`
+  - **Scope:** UI builder over `canvas_ui`/`voxui`: RectTransform anchors, pivots and offsets, layout groups, resolution preview, and event wiring to methods. Localization table editor with CSV import/export and a missing-key report. Spreadsheet-style editors for `DataAsset` collections with validation.
+  - **DoneWhen:** `test/studio/ui_data_tools_test.dart` passes (anchor math across resolutions, CSV round-trip); e2e `ui-builder-play`.
+
+- [ ] **[S7-M] Coordinator Merge: Window Registration, `editor-tooled` Gate & Docs Stubs**
+  - **Priority:** P0
+  - **DependsOn:** `[S7-A]`, `[S7-B]`, `[S7-C]`, `[S7-D]`, `[S7-E]`
+  - **Owns:** `lib/src/studio/studio.dart`, `lib/src/studio/modules/module_registry.dart`, `tool/verify_all.dart`
+  - **Scope:** Register windows under `Window > …`, raise the 22 listed modules' required maturity to `editor-tooled`, and run the full e2e suite.
+  - **DoneWhen:** Phase S7 exit gate is green.
+
+---
+
+## Phase S8 — Player Link, Profiler, Build Profiles & Ship
+
+**Exit Gate:** `volition build --profile web-release|windows-release` reproduces the Studio build byte-for-byte; the profiler shows live GPU pass timings from a native player; the showcase uses at least one module from every family; the release gate re-runs the PLAN §13.1 audit queries with zero reopened items.
+
+- [ ] **[S8-0] Coordinator Freeze: Player Link Protocol**
+  - **Priority:** P0
+  - **DependsOn:** `[S7-M]`
+  - **Owns:** `lib/src/studio/protocol/player_link.dart`, `lib/src/engine/diagnostics/player_link_client.dart`
+  - **Scope:** Handshake (player id, target, build profile), telemetry frames (CPU spans from `FrameProfilerComponent`, GPU pass timings, memory and asset counts, draw/triangle/state-change stats), log stream, remote `DebugConsole` commands, and frame-capture requests and responses. The transport is a pluggable WebSocket via host adapters, so the engine core stays pure.
+  - **DoneWhen:** `dart analyze` and the boundary check pass.
+
+- [ ] **[S8-A] Profiler Window, GPU Per-Pass Timers & Frame Debugger**
+  - **Priority:** P0 · **DependsOn:** `[S8-0]`
+  - **Owns:** `lib/src/studio/windows/profiler/**`, `lib/src/web/studio/panels/profiler_*.dart`, `vendor/pixeldart/lib/rendering/core/frame_telemetry.dart`, `vendor/pixeldart/lib/rendering/core/scene_renderer_timing.dart`, `lib/src/web/player_link_web.dart`, `lib/src/native/player_link_native.dart`, `test/studio/profiler_test.dart`
+  - **Scope:** Attach to the in-Studio player, an external browser tab, a native exe or a dedicated server. CPU timeline/hierarchy view, GPU timer-query scopes per declared render-graph pass (with the `RecordingGlesDevice` path marked as synthetic), memory/asset charts, and a draw-stats graph. Frame debugger: pass list → draw list → state → intermediate target readback thumbnails. Captures can be saved and loaded.
+  - **DoneWhen:** `test/studio/profiler_test.dart` passes (protocol round-trip, capture save/load); a native player with a GPU shows non-synthetic GPU timings (otherwise reported as skipped); e2e `profiler-attach`.
+
+- [ ] **[S8-B] Build Profiles, Reachability Stripping, Module Tree-Shaking & Build Report**
+  - **Priority:** P0 · **DependsOn:** `[S8-0]`
+  - **Owns:** `lib/src/studio/build/**`, `tool/studio/build_pipeline.dart`, `tool/package_native.dart`, `tool/asset_packer.dart`, `test/studio/build_profiles_test.dart`
+  - **Scope:** Build profiles in `volition.project.json` (target `web|wasm|windows|linux|macos|server`, scenes in build, defines, quality tier, compression, dev/release). Build a GUID dependency closure from scenes in build into a per-profile `.pak` with unreferenced assets stripped. Generate a player entrypoint that imports only enabled modules. Emit a build report (size by asset, module and code) as JSON and in the Studio Build window. Builds are deterministic.
+  - **DoneWhen:** `test/studio/build_profiles_test.dart` passes (stripping closure, deterministic `.pak` hash across two builds); `volition build --profile web-release` output hash matches the Studio-triggered build.
+
+- [ ] **[S8-C] Standalone Studio App & Single Distributable**
+  - **Priority:** P1 · **DependsOn:** `[S8-0]`
+  - **Owns:** `bin/volition.dart` (`gui --app` only), `dist.ps1`, `tool/studio/app_window.dart`, `test/studio/app_mode_test.dart`
+  - **Scope:** `volition gui --app` opens Studio in a native window, either through the existing `--target webview` wrapper or a browser in app mode, chosen by `volition doctor` capability. Add a first-run project picker, recent projects and new-from-template. `dist.ps1` emits one bundle: `volition.exe` + embedded Studio + SDL3/ANGLE runtimes.
+  - **DoneWhen:** `test/studio/app_mode_test.dart` passes; `dist.ps1` output launches Studio offline on a clean machine (manual check recorded with screenshot).
+
+- [ ] **[S8-D] Templates, Flagship Showcase & Generated Documentation**
+  - **Priority:** P1 · **DependsOn:** `[S8-0]`
+  - **Owns:** `tool/templates/**`, `example/showcase/**`, `doc/studio/**`, `tool/generate_module_catalog.dart`
+  - **Scope:** Rebuild `volition create --template empty|2d|3d|multiplayer` on the project format with GUID assets. "Volition Showcase" uses VRP (CSM, clustered lights, IBL, TAA) and at least one module from each of the six families, and is built for web and windows. Docs: Studio manual, scripting guide (annotations, codegen, hot reload), VRP guide, and a module catalog generated from the registry.
+  - **DoneWhen:** `volition create` → open in Studio → play → `volition build --profile web-release` passes in e2e `template-roundtrip` for each template; the showcase builds for both targets.
+
+- [ ] **[S8-M] Coordinator Release Gate & Re-Audit**
+  - **Priority:** P0
+  - **DependsOn:** `[S8-A]`, `[S8-B]`, `[S8-C]`, `[S8-D]`
+  - **Owns:** `PLAN.md`, `TODO.md`, `ENGINE.md`, `README.md`, root + submodule gitlinks
+  - **Scope:** Run `verify_all.dart`, Browser Lab, the Studio e2e suite, the module coverage gate (`editor-tooled` for the 22 tooled modules, `inspectable` for all), the CLI parity test, and the native hardware smoke (or record it as skipped). Re-run every PLAN §13.1 audit query and record the results verbatim. Tag a release only if all are green.
+  - **DoneWhen:** The release report lists each gate's raw output and zero reopened audit items.
+
+---
+
 ## Carry-Over Index: Legacy `pixeldart` `PLAN.md` & `TODO.md` Traceability
 
 Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is tracked explicitly here so zero renderer debt is dropped:
@@ -682,3 +1195,9 @@ Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is track
 | Temporal-determinism, Live `reducedMotion`, Luminance/comfort gate, Visual-stability gates | `[P5-W13-D]` | Wave 13 |
 | Performance budget ratification (180w/600m), Telemetry/alloc/no-black-frame, Culling/instancing pixels | `[P4-W12-A]` | Wave 12 |
 | Transient stress story & Package publication decision (`publish_to`) | `[P7-W15-C]` | Wave 15 |
+| **Reopened 2026-11-20:** 16-instance uniform arrays still in `shadowed_world.vert:13-14` | `[S1-B]` | Studio Track S1 |
+| **Reopened 2026-11-20:** 64-joint uniform palette (`shadowed_world.vert:25`) | `[S1-B]` | Studio Track S1 |
+| **Reopened 2026-11-20:** Single shadow map / no GPU CSM / no multi-caster atlas | `[S3-C]` | Studio Track S3 |
+| **Reopened 2026-11-20:** Fixed 1+4+4 light budget, no clustering | `[S3-B]` | Studio Track S3 |
+| **Reopened 2026-11-20:** No HDR targets, cubemaps, UBOs, texture-array shader consumers | `[S1-0]`, `[S1-A]`, `[S3-D]`, `[S4-A]` | Studio Track S1 / S3 / S4 |
+| **Reopened 2026-11-20:** Studio is a CLI dashboard, not an editor | `[S2-*]` | Studio Track S2 |

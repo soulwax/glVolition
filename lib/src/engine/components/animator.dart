@@ -64,19 +64,40 @@ final class BoneTrack {
   }
 }
 
-/// Clip containing hierarchical bone tracks for skeletal animation.
+/// Timestamped event marker fired when an animation clip crosses [time]
+/// (P14-W22-A).
+final class AnimationEventMarker {
+  final double time;
+  final String name;
+  final Object? payload;
+
+  const AnimationEventMarker({
+    required this.time,
+    required this.name,
+    this.payload,
+  });
+}
+
+/// Clip containing hierarchical bone tracks and optional timestamped
+/// [AnimationEventMarker]s for skeletal animation.
 final class SkeletalClip {
   final String name;
   final double duration;
   final LoopMode loopMode;
   final List<BoneTrack> boneTracks;
+  final List<AnimationEventMarker> events;
 
   SkeletalClip({
     required this.name,
     required this.duration,
     this.loopMode = LoopMode.loop,
     List<BoneTrack> boneTracks = const [],
-  }) : boneTracks = List.unmodifiable(boneTracks) {
+    List<AnimationEventMarker> events = const [],
+  }) : boneTracks = List.unmodifiable(boneTracks),
+       events = List.unmodifiable(
+         List<AnimationEventMarker>.from(events)
+           ..sort((a, b) => a.time.compareTo(b.time)),
+       ) {
     if (duration <= 0) {
       throw ArgumentError.value(duration, 'duration', 'Duration must be > 0');
     }
@@ -157,6 +178,9 @@ final class Animator extends Behaviour {
   _ActiveSkeletalInstance? _activeSkeletal;
   _ActiveCrossFade? _crossFade;
   Float32List? _currentPalette;
+  final Map<String, List<AnimationEventMarker>> _extraClipEvents = {};
+  final List<void Function(String clipName, AnimationEventMarker event)>
+  _eventListeners = [];
 
   Animator({
     Iterable<AnimationClip> initialClips = const [],
@@ -182,6 +206,27 @@ final class Animator extends Behaviour {
   void addClip(AnimationClip clip) => clips[clip.name] = clip;
 
   void addSkeletalClip(SkeletalClip clip) => skeletalClips[clip.name] = clip;
+
+  /// Registers an additional [AnimationEventMarker] for [clipName] (P14-W22-A).
+  void addClipEvent(String clipName, AnimationEventMarker event) {
+    final list = _extraClipEvents.putIfAbsent(clipName, () => []);
+    list.add(event);
+    list.sort((a, b) => a.time.compareTo(b.time));
+  }
+
+  /// Subscribes [listener] to receive [AnimationEventMarker] callbacks when
+  /// skeletal clips cross marker timestamps.
+  void onEvent(
+    void Function(String clipName, AnimationEventMarker event) listener,
+  ) {
+    _eventListeners.add(listener);
+  }
+
+  String? get activeSkeletalClipName =>
+      _crossFade?.toInstance.clip.name ?? _activeSkeletal?.clip.name;
+
+  double? get activeSkeletalTime =>
+      _crossFade?.toInstance.currentTime ?? _activeSkeletal?.currentTime;
 
   /// Plays a registered [AnimationClip] or [SkeletalClip] by name.
   void play(String clipName, {double speed = 1.0, double crossFade = 0.0}) {
@@ -324,7 +369,13 @@ final class Animator extends Behaviour {
     final jointCount = currentSkin.jointCount;
 
     if (_crossFade != null) {
+      final prevToTime = _crossFade!.toInstance.currentTime;
       final finished = _crossFade!.update(dt);
+      _dispatchSkeletalEvents(
+        _crossFade!.toInstance.clip,
+        prevToTime,
+        _crossFade!.toInstance.currentTime,
+      );
       final weight = _crossFade!.weight;
 
       final fromPose = _sampleClipPose(_crossFade!.fromInstance, currentSkin);
@@ -355,7 +406,13 @@ final class Animator extends Behaviour {
         _crossFade = null;
       }
     } else if (_activeSkeletal != null) {
+      final prevTime = _activeSkeletal!.currentTime;
       _activeSkeletal!.update(dt);
+      _dispatchSkeletalEvents(
+        _activeSkeletal!.clip,
+        prevTime,
+        _activeSkeletal!.currentTime,
+      );
       final pose = _sampleClipPose(_activeSkeletal!, currentSkin);
       _currentPalette = currentSkin.computeSkinPalette(
         translations: pose.t,
@@ -369,6 +426,41 @@ final class Animator extends Behaviour {
     final pal = _currentPalette;
     if (pal != null && targetRenderer != null) {
       targetRenderer!.setJointPalette(pal);
+    }
+  }
+
+  void _dispatchSkeletalEvents(
+    SkeletalClip clip,
+    double prevRawTime,
+    double nextRawTime,
+  ) {
+    if (_eventListeners.isEmpty || nextRawTime <= prevRawTime) return;
+    final extra = _extraClipEvents[clip.name];
+    if (clip.events.isEmpty && (extra == null || extra.isEmpty)) return;
+
+    final allMarkers = <AnimationEventMarker>[
+      ...clip.events,
+      if (extra != null) ...extra,
+    ];
+    final prevSample = clip.sampleTime(prevRawTime);
+    final nextSample = clip.sampleTime(nextRawTime);
+    final wrapped =
+        clip.loopMode == LoopMode.loop &&
+        ((nextRawTime / clip.duration).floor() >
+            (prevRawTime / clip.duration).floor());
+
+    for (final marker in allMarkers) {
+      final t = marker.time;
+      final crossed = wrapped
+          ? (t > prevSample && t <= clip.duration) ||
+                (t >= 0.0 && t <= nextSample)
+          : (prevRawTime == 0.0 && t == 0.0) ||
+                (t > prevSample && t <= nextSample);
+      if (crossed) {
+        for (final listener in List.of(_eventListeners)) {
+          listener(clip.name, marker);
+        }
+      }
     }
   }
 

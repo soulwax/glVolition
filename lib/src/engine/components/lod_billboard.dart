@@ -9,22 +9,38 @@ final class LodLevel {
 }
 
 /// Switches active child [GameObject] representations by distance to the active
-/// [Camera] (or editor free-look camera), and optionally culls all levels
-/// beyond [cullDistance] (E11-2).
+/// [Camera] (or editor free-look camera), supporting anti-popping [hysteresis],
+/// quality [lodBias], optional [forcedLevelIndex] overrides, and distance
+/// culling beyond [cullDistance] (E11-2, P14-W22-B).
 final class LodGroup extends Behaviour {
   final List<LodLevel> levels;
   double? cullDistance;
+  double hysteresis;
+  double lodBias;
+  int? forcedLevelIndex;
 
   int _activeLevelIndex = -1;
 
-  LodGroup({List<LodLevel> levels = const [], this.cullDistance})
-    : levels = List.of(levels);
+  LodGroup({
+    List<LodLevel> levels = const [],
+    this.cullDistance,
+    this.hysteresis = 0.0,
+    this.lodBias = 1.0,
+    this.forcedLevelIndex,
+  }) : levels = List.of(levels);
 
-  static final spec = ComponentSpec<LodGroup>(
-    'LodGroup',
-    LodGroup.new,
-    const [],
-  );
+  static final spec = ComponentSpec<LodGroup>('LodGroup', LodGroup.new, [
+    Field.number(
+      'hysteresis',
+      (l) => l.hysteresis,
+      (l, v) => l.hysteresis = math.max(0.0, v),
+    ),
+    Field.number(
+      'lodBias',
+      (l) => l.lodBias,
+      (l, v) => l.lodBias = math.max(0.05, v),
+    ),
+  ]);
 
   /// Index of the currently active [LodLevel], or `-1` when culled.
   int get activeLevelIndex => _activeLevelIndex;
@@ -32,17 +48,42 @@ final class LodGroup extends Behaviour {
   @override
   void lateUpdate() {
     if (levels.isEmpty) return;
-    final camPos = _resolveCameraPosition();
-    final dist = (transform.position - camPos).length;
 
-    if (cullDistance != null && dist > cullDistance!) {
-      _activateLevel(-1);
+    final forced = forcedLevelIndex;
+    if (forced != null) {
+      final clamped = forced < 0
+          ? -1
+          : forced.clamp(0, levels.length - 1).toInt();
+      _activateLevel(clamped);
       return;
+    }
+
+    final camPos = _resolveCameraPosition();
+    final bias = math.max(0.05, lodBias);
+    final dist = (transform.position - camPos).length / bias;
+    final h = math.max(0.0, hysteresis);
+
+    if (cullDistance != null) {
+      final cullThreshold = _activeLevelIndex == -1
+          ? math.max(0.0, cullDistance! - h)
+          : cullDistance! + h;
+      if (dist > cullThreshold) {
+        _activateLevel(-1);
+        return;
+      }
     }
 
     var chosen = levels.length - 1;
     for (var i = 0; i < levels.length; i++) {
-      if (dist <= levels[i].maxDistance) {
+      var threshold = levels[i].maxDistance;
+      if (_activeLevelIndex >= 0) {
+        if (i == _activeLevelIndex) {
+          threshold += h;
+        } else if (i < _activeLevelIndex) {
+          threshold = math.max(0.0, threshold - h);
+        }
+      }
+      if (dist <= threshold) {
         chosen = i;
         break;
       }
