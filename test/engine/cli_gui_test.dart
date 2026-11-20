@@ -250,5 +250,135 @@ void main() {
         }
       },
     );
+
+    test(
+      'VolitionCliService, WebSocket RPC tape.verify, and CLI volition replay verify InputTapes',
+      () async {
+        final tempDir = Directory.systemTemp.createTempSync('volition_tape_');
+        addTearDown(() {
+          if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+        });
+
+        // Record a deterministic 15-frame tape with a falling RigidBody
+        final liveInput = ScriptedInput();
+        final recorder = InputTapeRecorder(liveInput);
+        final recHost = HeadlessHost();
+        final recEngine = Engine(recHost);
+        final bodyObj = recEngine.scene.createGameObject(
+          'Ball',
+          position: const Vec3(0, 5, 0),
+        );
+        bodyObj.addComponent(RigidBody(mass: 1.0));
+        final initialScene = SceneSerializer.toJson(recEngine.scene);
+
+        const dt = 0.02;
+        for (var f = 0; f < 15; f++) {
+          if (f == 2) liveInput.press('KeyW');
+          if (f == 5) liveInput.release('KeyW');
+          recEngine.step(dt);
+          recorder.recordFrame(
+            dt,
+            checkpointScene: (f == 0 || f == 14) ? recEngine.scene : null,
+          );
+          liveInput.endFrame();
+        }
+
+        final tape = recorder.toTape(
+          name: 'gravity_smoke',
+          initialSceneJson: initialScene,
+        );
+        final tapeFile = File('${tempDir.path}/gravity_tape.json');
+        tapeFile.writeAsStringSync(tape.toJsonString());
+
+        // Create a tampered copy with an altered checkpoint hash
+        final tamperedMap = Map<String, Object?>.from(tape.toJson());
+        tamperedMap['checkpoints'] = {'14': 123456789};
+        final tamperedFile = File('${tempDir.path}/tampered_tape.json');
+        tamperedFile.writeAsStringSync(jsonEncode(tamperedMap));
+
+        final service = VolitionCliService(workingDirectory: tempDir.path);
+        final server = VolitionGuiServer(service: service);
+        final url = await server.start(port: 0);
+
+        try {
+          final discovered = service.discoverInspectableFiles();
+          expect(discovered['tapes'], contains('gravity_tape.json'));
+
+          final inspect = service.inspectArtifact('gravity_tape.json');
+          expect(inspect['kind'], 'tape');
+          expect(inspect['frameCount'], 15);
+          expect(inspect['checkpointCount'], 2);
+          expect(inspect['distinctKeysUsed'], contains('KeyW'));
+
+          final passResult = service.verifyInputTapeFile('gravity_tape.json');
+          expect(passResult['passed'], isTrue);
+          expect(passResult['framesExecuted'], 15);
+
+          final failResult = service.verifyInputTapeFile('tampered_tape.json');
+          expect(failResult['passed'], isFalse);
+          expect(failResult['mismatches'], isNotEmpty);
+
+          // Verify WebSocket RPC tape.verify
+          final wsUri = url.replace(scheme: 'ws', path: '/ws');
+          final ws = await WebSocket.connect(wsUri.toString());
+          final messages = <Map<String, dynamic>>[];
+          final sub = ws.listen((data) {
+            if (data is String) {
+              messages.add(jsonDecode(data) as Map<String, dynamic>);
+            }
+          });
+
+          ws.add(
+            jsonEncode({
+              'id': 10,
+              'method': 'tape.verify',
+              'params': {'path': 'gravity_tape.json'},
+            }),
+          );
+          final deadline = DateTime.now().add(const Duration(seconds: 15));
+          Map<String, dynamic>? verifyMsg;
+          while (DateTime.now().isBefore(deadline)) {
+            for (final m in messages) {
+              if (m['type'] == 'tape.verify.result') {
+                verifyMsg = m;
+                break;
+              }
+            }
+            if (verifyMsg != null) break;
+            await Future<void>.delayed(const Duration(milliseconds: 25));
+          }
+          expect(verifyMsg, isNotNull);
+          expect((verifyMsg!['result'] as Map)['passed'], isTrue);
+
+          await sub.cancel();
+          await ws.close();
+
+          // Verify CLI `volition replay <tape> --json`
+          final cliPass = await Process.run(Platform.resolvedExecutable, [
+            'run',
+            'bin/volition.dart',
+            'replay',
+            tapeFile.path,
+            '--json',
+          ]);
+          expect(cliPass.exitCode, 0);
+          final cliPassJson =
+              jsonDecode(cliPass.stdout.toString()) as Map<String, dynamic>;
+          expect(cliPassJson['passed'], isTrue);
+
+          final cliFail = await Process.run(Platform.resolvedExecutable, [
+            'run',
+            'bin/volition.dart',
+            'replay',
+            tamperedFile.path,
+            '--json',
+          ]);
+          expect(cliFail.exitCode, 1);
+        } finally {
+          await server.stop();
+        }
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
   });
 }

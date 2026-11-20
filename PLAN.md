@@ -219,3 +219,14 @@ Verified clean on Dart 3.14.0 across unified test suites (382 root tests, 140 pi
   - **Deterministic Input Replay Tapes (`[P9-W17-B]`)**: Implement `InputFrameSample`, `InputTape`, `InputTapeRecorder`, `ReplayInputDriver`, 53-bit `SceneStateHasher`, and `EngineReplayHarness` in `lib/src/engine/replay/input_tape.dart` for zero-drift cross-platform regression verification.
   - **Multi-Selection Editor UX & Batch Commands (`[P9-W17-C]`)**: Upgrade `EditorSession` with `select` (additive/toggle), `selectAll`, `selectionCentroid`, `selectionWorldBounds`, `focusSelection`, and `searchHierarchy`, plus undoable `BatchTransformDeltaCommand`, `BatchSetActiveCommand`, and `BatchDeleteCommand`.
   - **Studio `.pak` / Scene Inspector & Unified CLI (`[P9-W17-D]`)**: Add `discoverInspectableFiles` / `inspectArtifact` and WebSocket RPC (`inspector.list`, `inspector.inspect`) to Volition Studio, route `volition doctor [--json]` through `VolitionCliService`, and generate ready-to-serve `index.html` shells in `volition create`.
+
+---
+
+## 9. Phase 10 (Wave 18) — Advanced 3D Viewport Gizmos, Additive Sub-Scenes & Integrity Save Bundles, Live Prefab Diff/Propagation & CLI/Studio Replay Runner
+
+- **Objective**: Elevate editor, persistence, scene streaming, and regression-testing ergonomics across pure-Dart engine subsystems and CLI/Studio tooling via strictly disjoint parallel subagent execution.
+- **Key Deliverables**:
+  - **Advanced 3D Viewport Gizmos (`[P10-W18-A]`)**: Add `ViewportGizmoSpace` (`world`/`local`), planar dual-axis quad handles (`xy`/`xz`/`yz`), and multi-selection pivot drag (`beginSelectionDrag`/`updateSelectionDrag`/`endSelectionDrag` returning reversible `CompoundCommand`) to `ViewportGizmos`.
+  - **Additive Sub-Scenes & Integrity Save Bundles (`[P10-W18-B]`)**: Extend `SceneManager` with `loadAdditive`/`unloadAdditive`/`isAdditiveLoaded` and `SaveSystem` with CRC32 integrity verification (`verifySlotIntegrity`), `loadDataMigrated`, and signed `exportSlotBundle`/`importSlotBundle`.
+  - **Live Prefab Diffing & Hot-Propagation (`[P10-W18-C]`)**: Auto-attach `PrefabInstanceComponent` in `PrefabRegistry.instantiate`, implement `computeInstanceOverrides`/`extractVariantFromInstance`, and add live `propagatePrefabChanges` preserving per-instance transforms and field overrides.
+  - **Headless Replay CLI & Studio Verification (`[P10-W18-D]`)**: Support `InputTape` inspection (`discoverInspectableFiles()['tapes']`), `verifyInputTapeFile`, WebSocket RPC `tape.verify`, Studio UI tape verification button, and `volition replay <tape.json> [--json]`.

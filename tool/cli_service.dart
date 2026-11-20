@@ -2,9 +2,32 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:voxpack/voxpack.dart';
+import 'package:gl_volition/gl_volition.dart';
 
 import 'package_native.dart';
+
+final class _CliReplayHost implements EngineHost {
+  final HeadlessHost _inner = HeadlessHost();
+
+  @override
+  final Input input;
+
+  _CliReplayHost(this.input);
+
+  @override
+  SceneNode get sceneRoot => _inner.sceneRoot;
+  @override
+  Graphics get graphics => _inner.graphics;
+  @override
+  AssetLoader get assets => _inner.assets;
+  @override
+  AudioDevice get audio => _inner.audio;
+  @override
+  KeyValueStore get storage => _inner.storage;
+  @override
+  void reportError(Object error, StackTrace stack) =>
+      _inner.reportError(error, stack);
+}
 
 /// Health status of a single environment check in [DoctorReport].
 enum DoctorStatus { ok, warning, error }
@@ -383,14 +406,16 @@ class VolitionCliService {
     return entries;
   }
 
-  /// Discovers inspectable `.pak` archives and `*scene*.json` files in
-  /// [workingDirectory] (skipping `.git`, `.dart_tool`, and `vendor`).
+  /// Discovers inspectable `.pak` archives, `*scene*.json` files, and
+  /// `*tape*.json` replay tapes in [workingDirectory] (skipping `.git`,
+  /// `.dart_tool`, and `vendor`).
   Map<String, List<String>> discoverInspectableFiles() {
     final scenes = <String>[];
     final paks = <String>[];
+    final tapes = <String>[];
     final rootDir = Directory(workingDirectory);
     if (!rootDir.existsSync()) {
-      return {'scenes': scenes, 'paks': paks};
+      return {'scenes': scenes, 'paks': paks, 'tapes': tapes};
     }
 
     final rootNorm = rootDir.absolute.path
@@ -420,6 +445,8 @@ class VolitionCliService {
           final lower = baseName.toLowerCase();
           if (lower.endsWith('.pak')) {
             paks.add(rel);
+          } else if (lower.endsWith('.json') && lower.contains('tape')) {
+            tapes.add(rel);
           } else if (lower.endsWith('.json') && lower.contains('scene')) {
             scenes.add(rel);
           }
@@ -430,11 +457,12 @@ class VolitionCliService {
     walk(rootDir);
     scenes.sort();
     paks.sort();
-    return {'scenes': scenes, 'paks': paks};
+    tapes.sort();
+    return {'scenes': scenes, 'paks': paks, 'tapes': tapes};
   }
 
-  /// Parses a `.pak` VFS archive or Scene JSON file and returns structured
-  /// inspection metadata for `volition gui` and diagnostic tooling.
+  /// Parses a `.pak` VFS archive, `InputTape` JSON, or Scene JSON file and
+  /// returns structured inspection metadata for `volition gui` and CLI tools.
   Map<String, Object?> inspectArtifact(String relativePath, {int? xorKey}) {
     final rawFile = File(relativePath);
     final file = rawFile.isAbsolute
@@ -486,9 +514,42 @@ class VolitionCliService {
     if (lower.endsWith('.json')) {
       final decoded = jsonDecode(file.readAsStringSync());
       if (decoded is! Map) {
-        throw const FormatException('Expected top-level JSON object for scene');
+        throw const FormatException('Expected top-level JSON object');
       }
       final data = decoded.cast<String, Object?>();
+
+      if (data['frames'] is List) {
+        final frames = data['frames'] as List<Object?>;
+        var totalDt = 0.0;
+        final distinctKeys = <String>{};
+        for (final rawFrame in frames) {
+          if (rawFrame is! Map) continue;
+          final dt = rawFrame['dt'];
+          if (dt is num) totalDt += dt.toDouble();
+          for (final listKey in const ['keysDown', 'keysPressed']) {
+            final keys = rawFrame[listKey];
+            if (keys is List) {
+              for (final k in keys) {
+                distinctKeys.add(k.toString());
+              }
+            }
+          }
+        }
+        final checkpoints = data['checkpoints'];
+        return {
+          'kind': 'tape',
+          'path': normalizedPath,
+          'fileSizeBytes': file.lengthSync(),
+          'tapeName': (data['name'] as String?) ?? 'input_tape',
+          'schemaVersion': (data['schemaVersion'] as num?)?.toInt() ?? 1,
+          'frameCount': frames.length,
+          'totalDurationSeconds': totalDt,
+          'checkpointCount': checkpoints is Map ? checkpoints.length : 0,
+          'hasInitialScene': data['initialSceneJson'] is Map,
+          'distinctKeysUsed': distinctKeys.toList()..sort(),
+        };
+      }
+
       final roots = (data['objects'] as List<Object?>?) ?? const [];
       var totalObjects = 0;
       final componentCounts = <String, int>{};
@@ -533,6 +594,38 @@ class VolitionCliService {
     throw FormatException(
       'Unsupported artifact format for "$relativePath" (expected .pak or .json).',
     );
+  }
+
+  /// Loads an [InputTape] JSON file and executes headless deterministic replay
+  /// verification via [EngineReplayHarness] (P10-W18-D).
+  Map<String, Object?> verifyInputTapeFile(String relativePath) {
+    final rawFile = File(relativePath);
+    final file = rawFile.isAbsolute
+        ? rawFile
+        : File(
+            '$workingDirectory${Platform.pathSeparator}${relativePath.replaceAll('/', Platform.pathSeparator)}',
+          );
+    if (!file.existsSync()) {
+      throw FileSystemException('InputTape file not found', file.path);
+    }
+    final normalizedPath = relativePath.replaceAll('\\', '/');
+    final tape = InputTape.fromJsonString(file.readAsStringSync());
+    final driver = ReplayInputDriver();
+    final engine = Engine(_CliReplayHost(driver));
+    try {
+      final result = EngineReplayHarness.run(engine, tape, driver: driver);
+      return {
+        'path': normalizedPath,
+        'tapeName': tape.name,
+        'passed': result.passed,
+        'framesExecuted': result.framesExecuted,
+        'finalSceneHash': result.finalSceneHash,
+        'checkpointCount': tape.checkpoints.length,
+        'mismatches': result.mismatches,
+      };
+    } finally {
+      engine.dispose();
+    }
   }
 
   /// Spawns a `volition` CLI subcommand (`create`, `build`, `dist`, `pack`, `test`).

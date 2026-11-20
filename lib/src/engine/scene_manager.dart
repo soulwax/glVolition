@@ -40,6 +40,7 @@ final class SceneManager {
   final Engine _engine;
   final Map<String, Scene Function()> _builders = {};
   final Set<GameObject> _persistentObjects = {};
+  final Map<String, List<GameObject>> _additiveScenes = {};
   String? _activeSceneName;
   SceneTransition? _activeTransition;
 
@@ -47,6 +48,9 @@ final class SceneManager {
 
   String? get activeSceneName => _activeSceneName;
   Iterable<String> get registeredSceneNames => _builders.keys;
+  Iterable<String> get loadedAdditiveScenes =>
+      List.unmodifiable(_additiveScenes.keys);
+  bool isAdditiveLoaded(String name) => _additiveScenes.containsKey(name);
   SceneTransition? get activeTransition => _activeTransition;
   bool get isTransitioning =>
       _activeTransition != null && !_activeTransition!.isComplete;
@@ -77,10 +81,61 @@ final class SceneManager {
           'name',
           'No scene registered with name "$name"',
         ));
+    _additiveScenes.clear();
     _activeSceneName = name;
     final next = builder();
     _engine.loadScene(next);
     return next;
+  }
+
+  /// Instantiates all root [GameObject] hierarchies from registered sub-scene
+  /// [name] additively into the currently active [Scene] (P10-W18-B).
+  ///
+  /// Calling [loadAdditive] for an already-loaded additive scene replaces its
+  /// previous instances cleanly.
+  List<GameObject> loadAdditive(
+    String name, {
+    Map<String, Prefab> prefabs = const {},
+  }) {
+    final builder =
+        _builders[name] ??
+        (throw ArgumentError.value(
+          name,
+          'name',
+          'No scene registered with name "$name"',
+        ));
+    if (_additiveScenes.containsKey(name)) {
+      unloadAdditive(name);
+    }
+    final donor = builder();
+    final spawned = <GameObject>[];
+    for (final root in donor.rootGameObjects) {
+      if (root._destroyRequested || root._destroyed) continue;
+      final json = SceneSerializer._objectToJson(root, _engine.registry);
+      final copy = SceneSerializer._buildObjectFromJson(
+        _engine.scene,
+        null,
+        json,
+        _engine.registry,
+        prefabs,
+      );
+      spawned.add(copy);
+    }
+    _additiveScenes[name] = spawned;
+    return List.unmodifiable(spawned);
+  }
+
+  /// Destroys all root [GameObject]s previously spawned via [loadAdditive] for
+  /// [name]. Returns `true` if [name] was loaded additively.
+  bool unloadAdditive(String name) {
+    final roots = _additiveScenes.remove(name);
+    if (roots == null) return false;
+    for (final go in roots) {
+      if (!go.isDestroyed && identical(go.scene, _engine.scene)) {
+        go.destroy();
+      }
+    }
+    return true;
   }
 
   /// Rebuilds and reloads the currently active named scene.

@@ -99,6 +99,8 @@ Future<void> main(List<String> args) async {
       await _runCreate(rest);
     case 'gui':
       await _runGui(rest);
+    case 'replay':
+      await _runReplay(rest);
     default:
       log.error('Unknown command "$cmd".');
       _printUsage();
@@ -114,6 +116,7 @@ Usage:
   dart run gl_volition:volition test [test-args...]
   dart run gl_volition:volition doctor [--json]
   dart run gl_volition:volition gui [--port 8090] [--no-open]
+  dart run gl_volition:volition replay <tape.json> [--json]
   dart run gl_volition:volition create <project-name> [--template 2d|3d|multiplayer] [--out <dir>]
   dart run gl_volition:volition serve <entry.dart> [--port 8080] [--root <dir>]
   dart run gl_volition:volition build <entry.dart> [--target js|wasm|windows|linux|macos|native|exe|webview|server] [--version <ver>] [--name <name>] [--out <dir>] [--dist <dir>] [--lib-dir <dir>] [--dry-run]
@@ -988,4 +991,49 @@ Future<void> _runGui(List<String> args) async {
   await ProcessSignal.sigint.watch().first;
   log.info('Shutting down glVolition Studio...');
   await server.stop();
+}
+
+Future<void> _runReplay(List<String> args) async {
+  var asJson = false;
+  String? tapePath;
+  for (final a in args) {
+    if (a == '--help' || a == '-h') {
+      stdout.writeln(
+        'Usage: dart run gl_volition:volition replay <tape.json> [--json]',
+      );
+      return;
+    } else if (a == '--json') {
+      asJson = true;
+    } else if (!a.startsWith('-')) {
+      tapePath ??= a;
+    }
+  }
+  if (tapePath == null || tapePath.isEmpty) {
+    stderr.writeln('Usage: volition replay <tape.json> [--json]');
+    exit(64);
+  }
+
+  final service = VolitionCliService();
+  try {
+    final result = service.verifyInputTapeFile(tapePath);
+    final passed = result['passed'] == true;
+    if (asJson) {
+      stdout.writeln(const JsonEncoder.withIndent('  ').convert(result));
+    } else {
+      stdout.writeln(
+        '[${passed ? 'PASS' : 'FAIL'}] Replay "${result['tapeName']}" '
+        '(${result['framesExecuted']} frames, ${result['checkpointCount']} checkpoints, '
+        'hash=${result['finalSceneHash']})',
+      );
+      final mismatches = (result['mismatches'] as List<Object?>?) ?? const [];
+      for (final m in mismatches) {
+        stderr.writeln('  MISMATCH: $m');
+      }
+    }
+    if (!passed) {
+      exit(1);
+    }
+  } finally {
+    await service.dispose();
+  }
 }

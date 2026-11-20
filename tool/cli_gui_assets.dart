@@ -349,17 +349,20 @@ const String volitionGuiIndexHtml = r'''<!DOCTYPE html>
         </div>
         <div class="grid-2">
           <div>
-            <label for="inspectPath">Artifact Path (`.pak` or `*.json`)</label>
-            <input id="inspectPath" placeholder="e.g. build/game.pak or assets/scene.json"/>
+            <label for="inspectPath">Artifact Path (`.pak`, `*scene*.json`, or `*tape*.json`)</label>
+            <input id="inspectPath" placeholder="e.g. build/game.pak, assets/scene.json, or smoke_tape.json"/>
           </div>
           <div>
             <label for="inspectXor">XOR Key (optional int for `.pak`)</label>
             <input id="inspectXor" placeholder="Leave empty if unmasked"/>
           </div>
         </div>
-        <button class="primary" onclick="runInspect()">Inspect Artifact</button>
+        <div class="row">
+          <button class="primary" onclick="runInspect()">Inspect Artifact</button>
+          <button class="secondary" onclick="runTapeVerify()">Verify Replay Tape</button>
+        </div>
       </div>
-      <div id="inspectorResult" class="card" style="color:var(--muted);">Select or enter a `.pak` or scene `.json` artifact to inspect.</div>
+      <div id="inspectorResult" class="card" style="color:var(--muted);">Select or enter a `.pak`, scene `.json`, or replay `*tape*.json` artifact to inspect or verify.</div>
     </section>
 
     <!-- TESTS & GATES -->
@@ -453,6 +456,8 @@ function handleServerMessage(msg) {
     renderInspectables(msg.files || {});
   } else if (msg.type === 'inspector.inspect.result') {
     renderInspectReport(msg.report);
+  } else if (msg.type === 'tape.verify.result') {
+    renderTapeVerifyResult(msg.result);
   } else if (msg.type === 'task.update') {
     const t = msg.task;
     if (t.state === 'running') {
@@ -564,9 +569,11 @@ function renderInspectables(files) {
   const sel = document.getElementById('inspectFileSelect');
   const paks = files.paks || [];
   const scenes = files.scenes || [];
+  const tapes = files.tapes || [];
   const opts = ['<option value="">-- Select discovered artifact --</option>'];
   for (const p of paks) opts.push(`<option value="${escapeHtml(p)}">[PAK] ${escapeHtml(p)}</option>`);
   for (const s of scenes) opts.push(`<option value="${escapeHtml(s)}">[SCENE] ${escapeHtml(s)}</option>`);
+  for (const t of tapes) opts.push(`<option value="${escapeHtml(t)}">[TAPE] ${escapeHtml(t)}</option>`);
   sel.innerHTML = opts.join('');
 }
 
@@ -577,9 +584,46 @@ function runInspect() {
   });
 }
 
+function runTapeVerify() {
+  sendRpc('tape.verify', {
+    path: document.getElementById('inspectPath').value.trim(),
+  });
+}
+
+function renderTapeVerifyResult(res) {
+  const el = document.getElementById('inspectorResult');
+  if (!res) return;
+  const pill = res.passed
+    ? '<span class="status-pill pill-ok">PASS</span>'
+    : '<span class="status-pill pill-error">FAIL</span>';
+  const mismatches = (res.mismatches || []).map(m => `<li>${escapeHtml(m)}</li>`).join('');
+  el.style.color = 'var(--text)';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <strong>Replay Verification:</strong> ${escapeHtml(res.tapeName || res.path)} ${pill}
+    </div>
+    <div style="color:var(--muted);font-size:12px;margin-top:6px;">
+      Path: ${escapeHtml(res.path)} | Frames: ${res.framesExecuted} | Checkpoints: ${res.checkpointCount} | Final Hash: <code>${res.finalSceneHash}</code>
+    </div>
+    ${mismatches ? `<ul style="color:#ff7b72;font-size:12px;margin-top:8px;">${mismatches}</ul>` : ''}
+  `;
+}
+
 function renderInspectReport(report) {
   const el = document.getElementById('inspectorResult');
   if (!report) return;
+  if (report.kind === 'tape') {
+    const keys = (report.distinctKeysUsed || []).join(', ') || '(none)';
+    el.style.color = 'var(--text)';
+    el.innerHTML = `
+      <div><strong>InputTape:</strong> ${escapeHtml(report.tapeName)} (schema v${report.schemaVersion})</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px;">
+        Path: ${escapeHtml(report.path)} | Size: ${report.fileSizeBytes} B | Frames: ${report.frameCount} | Duration: ${Number(report.totalDurationSeconds || 0).toFixed(3)}s | Checkpoints: ${report.checkpointCount} | Initial Scene: ${report.hasInitialScene ? 'yes' : 'no'}
+      </div>
+      <div style="font-size:12px;margin-top:8px;"><strong>Distinct Keys:</strong> <code>${escapeHtml(keys)}</code></div>
+    `;
+    return;
+  }
   if (report.kind === 'pak') {
     const ratio = report.totalRawBytes > 0
       ? ((report.totalStoredBytes / report.totalRawBytes) * 100).toFixed(1) + '%'

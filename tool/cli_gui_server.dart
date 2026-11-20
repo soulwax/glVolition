@@ -248,6 +248,18 @@ class VolitionGuiServer {
             'type': 'inspector.inspect.result',
             'report': report,
           });
+        case 'tape.verify':
+          final path = (params['path'] as String? ?? '').trim();
+          if (path.isEmpty) {
+            _send(ws, {
+              'id': id,
+              'type': 'error',
+              'message': 'Tape path is required.',
+            });
+            return;
+          }
+          final result = service.verifyInputTapeFile(path);
+          _send(ws, {'id': id, 'type': 'tape.verify.result', 'result': result});
         case 'task.cancel':
           final taskId = params['taskId'] as String? ?? '';
           service.cancelTask(taskId);

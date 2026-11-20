@@ -223,4 +223,169 @@ void main() {
       },
     );
   });
+
+  group(
+    'P10-W18-A — Local/World Gizmos, Planar Handles & Multi-Selection Pivot Drag',
+    () {
+      test(
+        'local space rotates axis hit-testing and dragging by target orientation',
+        () {
+          final engine = Engine(HeadlessHost());
+          final gizmos = engine.scene.viewportGizmos;
+          gizmos.mode = ViewportGizmoMode.translate;
+          gizmos.space = ViewportGizmoSpace.local;
+          gizmos.gizmoSize = 2.0;
+          gizmos.hitThreshold = 0.25;
+          gizmos.snapEnabled = false;
+
+          // Rotate 90 degrees around Y so local +X points along world -Z.
+          final rot90Y = Quat.axisAngle(const Vec3(0, 1, 0), 1.57079632679);
+          final go = engine.scene.createGameObject(
+            'RotatedBox',
+            position: Vec3.zero,
+            rotation: rot90Y,
+          );
+
+          final localX = gizmos.axisDirection(
+            ViewportGizmoAxis.x,
+            rotation: rot90Y,
+          );
+          expect(localX.z, closeTo(-1.0, 1e-4));
+
+          final rayLocalX = Ray(
+            origin: const Vec3(-5.0, 0.0, -1.0),
+            direction: const Vec3(1.0, 0.0, 0.0),
+          );
+          final hit = gizmos.hitTest(rayLocalX, Vec3.zero, rotation: rot90Y);
+          expect(hit, isNotNull);
+          expect(hit!.axis, equals(ViewportGizmoAxis.x));
+
+          final startRay = Ray(
+            origin: const Vec3(-5.0, 0.0, 0.0),
+            direction: const Vec3(1.0, 0.0, 0.0),
+          );
+          gizmos.beginDrag(ViewportGizmoAxis.x, startRay, go);
+          final dragRay = Ray(
+            origin: const Vec3(-5.0, 0.0, -3.0),
+            direction: const Vec3(1.0, 0.0, 0.0),
+          );
+          gizmos.updateDrag(dragRay, go);
+          expect(go.transform.position.z, closeTo(-3.0, 1e-3));
+          expect(go.transform.position.x, closeTo(0.0, 1e-3));
+          expect(gizmos.endDrag(go), isNotNull);
+        },
+      );
+
+      test(
+        'planar XY and XZ handles hit-test and translate along two axes simultaneously',
+        () {
+          final engine = Engine(HeadlessHost());
+          final gizmos = engine.scene.viewportGizmos;
+          gizmos.mode = ViewportGizmoMode.translate;
+          gizmos.space = ViewportGizmoSpace.world;
+          gizmos.gizmoSize = 2.0;
+          gizmos.snapEnabled = false;
+
+          // Planar quad bounds for gizmoSize=2.0 are [0.3, 0.9] x [0.3, 0.9].
+          final rayXY = Ray(
+            origin: const Vec3(0.6, 0.6, -5.0),
+            direction: const Vec3(0.0, 0.0, 1.0),
+          );
+          final hitXY = gizmos.hitTest(rayXY, Vec3.zero);
+          expect(hitXY, isNotNull);
+          expect(hitXY!.axis, equals(ViewportGizmoAxis.xy));
+
+          final rayXZ = Ray(
+            origin: const Vec3(0.6, 5.0, 0.6),
+            direction: const Vec3(0.0, -1.0, 0.0),
+          );
+          final hitXZ = gizmos.hitTest(rayXZ, Vec3.zero);
+          expect(hitXZ, isNotNull);
+          expect(hitXZ!.axis, equals(ViewportGizmoAxis.xz));
+
+          final go = engine.scene.createGameObject(
+            'PlanarCrate',
+            position: Vec3.zero,
+          );
+          gizmos.beginDrag(
+            ViewportGizmoAxis.xy,
+            Ray(
+              origin: const Vec3(0.0, 0.0, -5.0),
+              direction: const Vec3(0.0, 0.0, 1.0),
+            ),
+            go,
+          );
+          gizmos.updateDrag(
+            Ray(
+              origin: const Vec3(2.5, -1.5, -5.0),
+              direction: const Vec3(0.0, 0.0, 1.0),
+            ),
+            go,
+          );
+          expect(go.transform.position.x, closeTo(2.5, 1e-4));
+          expect(go.transform.position.y, closeTo(-1.5, 1e-4));
+          expect(go.transform.position.z, closeTo(0.0, 1e-4));
+          expect(gizmos.endDrag(go), isNotNull);
+        },
+      );
+
+      test(
+        'multi-selection pivot drag translates all selected objects and supports undo/redo',
+        () {
+          final engine = Engine(HeadlessHost());
+          final gizmos = engine.scene.viewportGizmos;
+          final editor = engine.editor;
+          gizmos.mode = ViewportGizmoMode.translate;
+          gizmos.space = ViewportGizmoSpace.world;
+          gizmos.snapEnabled = false;
+
+          final a = engine.scene.createGameObject(
+            'SelA',
+            position: const Vec3(-2.0, 0.0, 0.0),
+          );
+          final b = engine.scene.createGameObject(
+            'SelB',
+            position: const Vec3(2.0, 0.0, 0.0),
+          );
+          editor.selectAll([a, b]);
+
+          final started = gizmos.beginSelectionDrag(
+            ViewportGizmoAxis.xy,
+            Ray(
+              origin: const Vec3(0.0, 0.0, -10.0),
+              direction: const Vec3(0.0, 0.0, 1.0),
+            ),
+            editor,
+          );
+          expect(started, isTrue);
+
+          gizmos.updateSelectionDrag(
+            Ray(
+              origin: const Vec3(3.0, 4.0, -10.0),
+              direction: const Vec3(0.0, 0.0, 1.0),
+            ),
+            editor,
+          );
+          expect(a.transform.position.x, closeTo(1.0, 1e-4));
+          expect(a.transform.position.y, closeTo(4.0, 1e-4));
+          expect(b.transform.position.x, closeTo(5.0, 1e-4));
+          expect(b.transform.position.y, closeTo(4.0, 1e-4));
+
+          final cmd = gizmos.endSelectionDrag(editor);
+          expect(cmd, isNotNull);
+          editor.executeCommand(cmd!);
+
+          expect(editor.undo(), isTrue);
+          expect(a.transform.position.x, closeTo(-2.0, 1e-4));
+          expect(a.transform.position.y, closeTo(0.0, 1e-4));
+          expect(b.transform.position.x, closeTo(2.0, 1e-4));
+          expect(b.transform.position.y, closeTo(0.0, 1e-4));
+
+          expect(editor.redo(), isTrue);
+          expect(a.transform.position.x, closeTo(1.0, 1e-4));
+          expect(b.transform.position.x, closeTo(5.0, 1e-4));
+        },
+      );
+    },
+  );
 }

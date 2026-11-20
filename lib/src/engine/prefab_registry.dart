@@ -238,7 +238,7 @@ final class PrefabRegistry {
   }) {
     final direct = _prefabs[id];
     if (direct != null) {
-      return direct.instantiate(
+      final root = direct.instantiate(
         scene,
         parent: parent,
         position: position,
@@ -247,6 +247,8 @@ final class PrefabRegistry {
         name: name,
         active: active,
       );
+      _ensureInstanceComponent(root, id);
+      return root;
     }
 
     final chain = <PrefabVariant>[];
@@ -299,9 +301,319 @@ final class PrefabRegistry {
     if (rotation != null) root.transform.localRotation = rotation;
     if (scale != null) root.transform.localScale = scale;
 
+    _ensureInstanceComponent(root, id);
     final finalActive = active && (rootActiveOverride ?? true);
     if (finalActive) root.setActive(true);
     return root;
+  }
+
+  static void _ensureInstanceComponent(GameObject root, String prefabId) {
+    final existing = root.getComponent<PrefabInstanceComponent>();
+    if (existing != null) {
+      existing.prefabName = prefabId;
+    } else {
+      root.addComponent(PrefabInstanceComponent(prefabName: prefabId));
+    }
+  }
+
+  /// Diffs [instance] against its registered baseline prefab/variant hierarchy
+  /// and extracts per-node transform, activation, and component field overrides
+  /// (P10-W18-C).
+  List<PrefabNodeOverride> computeInstanceOverrides(
+    GameObject instance, {
+    String? basePrefabId,
+    ComponentRegistry? registry,
+  }) {
+    final prefabId =
+        basePrefabId ??
+        instance.getComponent<PrefabInstanceComponent>()?.prefabName;
+    if (prefabId == null || prefabId.isEmpty || !contains(prefabId)) {
+      throw StateError(
+        'Cannot compute overrides for "${instance.name}": unknown prefab id "$prefabId"',
+      );
+    }
+
+    final reg =
+        registry ??
+        (instance.scene._engine?.registry ?? ComponentRegistry.defaults());
+    final scratch = Scene('_prefab_diff_scratch');
+    final baselineRoot = instantiate(scratch, prefabId, registry: reg);
+
+    final overrides = <PrefabNodeOverride>[];
+    const eps = 1e-5;
+
+    bool vec3Differs(Vec3 a, Vec3 b) =>
+        (a.x - b.x).abs() > eps ||
+        (a.y - b.y).abs() > eps ||
+        (a.z - b.z).abs() > eps;
+
+    bool quatDiffers(Quat a, Quat b) {
+      final dot = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+      return (1.0 - dot.abs()) > eps;
+    }
+
+    Map<String, Map<String, Object?>> diffComponents(
+      GameObject actual,
+      GameObject base,
+    ) {
+      final baseByType = <String, Map<String, Object?>>{};
+      for (final c in base._components) {
+        if (c is TransformComponent ||
+            c is PrefabInstanceComponent ||
+            c._destroyRequested) {
+          continue;
+        }
+        final spec = reg.specFor(c);
+        if (spec == null) continue;
+        final data = spec.toJson(c);
+        if (c is Behaviour) data['enabled'] = c.enabled;
+        baseByType[spec.typeName] = data;
+      }
+
+      final result = <String, Map<String, Object?>>{};
+      for (final c in actual._components) {
+        if (c is TransformComponent ||
+            c is PrefabInstanceComponent ||
+            c._destroyRequested) {
+          continue;
+        }
+        final spec = reg.specFor(c);
+        if (spec == null) continue;
+        final actualData = spec.toJson(c);
+        if (c is Behaviour) actualData['enabled'] = c.enabled;
+        final baseData = baseByType[spec.typeName];
+
+        final changed = <String, Object?>{};
+        for (final entry in actualData.entries) {
+          if (entry.key == 'type') continue;
+          final baseVal = baseData?[entry.key];
+          if (baseData == null || !_jsonValuesEqual(entry.value, baseVal)) {
+            changed[entry.key] = entry.value;
+          }
+        }
+        if (changed.isNotEmpty) {
+          result[spec.typeName] = changed;
+        }
+      }
+      return result;
+    }
+
+    void walk(GameObject actual, GameObject base, String nodePath) {
+      final posDiff = vec3Differs(
+        actual.transform.localPosition,
+        base.transform.localPosition,
+      );
+      final rotDiff = quatDiffers(
+        actual.transform.localRotation,
+        base.transform.localRotation,
+      );
+      final scaleDiff =
+          (actual.transform.localScale - base.transform.localScale).abs() > eps;
+      final activeDiff = actual.activeSelf != base.activeSelf;
+      final compDiffs = diffComponents(actual, base);
+
+      if (posDiff ||
+          rotDiff ||
+          scaleDiff ||
+          activeDiff ||
+          compDiffs.isNotEmpty) {
+        overrides.add(
+          PrefabNodeOverride(
+            nodePath: nodePath,
+            localPosition: posDiff ? actual.transform.localPosition : null,
+            localRotation: rotDiff ? actual.transform.localRotation : null,
+            localScale: scaleDiff ? actual.transform.localScale : null,
+            active: activeDiff ? actual.activeSelf : null,
+            componentFieldOverrides: compDiffs,
+          ),
+        );
+      }
+
+      for (final child in actual._children) {
+        if (child._destroyRequested || child._destroyed) continue;
+        GameObject? baseChild;
+        for (final bc in base._children) {
+          if (!bc._destroyRequested && bc.name == child.name) {
+            baseChild = bc;
+            break;
+          }
+        }
+        if (baseChild != null) {
+          final childPath = nodePath.isEmpty
+              ? child.name
+              : '$nodePath/${child.name}';
+          walk(child, baseChild, childPath);
+        }
+      }
+    }
+
+    walk(instance, baselineRoot, '');
+    return List.unmodifiable(overrides);
+  }
+
+  static bool _jsonValuesEqual(Object? a, Object? b) {
+    if (identical(a, b)) return true;
+    if (a is num && b is num) {
+      return (a.toDouble() - b.toDouble()).abs() <= 1e-5;
+    }
+    if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (!_jsonValuesEqual(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    if (a is Map && b is Map) {
+      if (a.length != b.length) return false;
+      for (final key in a.keys) {
+        if (!b.containsKey(key) || !_jsonValuesEqual(a[key], b[key])) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return a == b;
+  }
+
+  /// Extracts a reusable [PrefabVariant] from an edited in-scene [instance]
+  /// by diffing it against its base prefab definition (P10-W18-C).
+  PrefabVariant extractVariantFromInstance(
+    String variantName,
+    GameObject instance, {
+    String? basePrefabId,
+    ComponentRegistry? registry,
+  }) {
+    final resolvedBase =
+        basePrefabId ??
+        instance.getComponent<PrefabInstanceComponent>()?.prefabName;
+    if (resolvedBase == null || resolvedBase.isEmpty) {
+      throw StateError(
+        'Cannot extract variant from "${instance.name}": no base prefab id',
+      );
+    }
+    final overrides = computeInstanceOverrides(
+      instance,
+      basePrefabId: resolvedBase,
+      registry: registry,
+    );
+    return PrefabVariant(
+      name: variantName,
+      basePrefabId: resolvedBase,
+      overrides: overrides,
+    );
+  }
+
+  /// Hot-propagates updated prefab/variant definitions for [id] to all live
+  /// instances in [scene], preserving each instance's placement and overrides
+  /// (P10-W18-C).
+  int propagatePrefabChanges(
+    Scene scene,
+    String id, {
+    ComponentRegistry? registry,
+    Map<String, List<PrefabNodeOverride>>? preservedOverridesByObjectName,
+  }) {
+    if (!contains(id)) {
+      throw ArgumentError('Unknown prefab or variant id "$id"');
+    }
+
+    final targets = <GameObject>[];
+    void collect(GameObject go) {
+      if (go._destroyRequested || go._destroyed) return;
+      final inst = go.getComponent<PrefabInstanceComponent>();
+      if (inst != null && inst.prefabName == id) {
+        targets.add(go);
+        return;
+      }
+      for (final child in go._children) {
+        collect(child);
+      }
+    }
+
+    for (final root in List.of(scene._roots)) {
+      collect(root);
+    }
+
+    for (final instance in targets) {
+      final savedName = instance.name;
+      final savedTag = instance.tag;
+      final savedLayer = instance.layer;
+      final savedParent = instance.parent;
+      final savedPos = instance.transform.localPosition;
+      final savedRot = instance.transform.localRotation;
+      final savedScale = instance.transform.localScale;
+      final savedActive = instance.activeSelf;
+      final instComp = instance.getComponent<PrefabInstanceComponent>();
+      final savedPropOverrides = instComp == null
+          ? const <PrefabOverride>[]
+          : [
+              for (final o in instComp.overrides)
+                PrefabOverride(
+                  propertyName: o.propertyName,
+                  originalValue: o.originalValue,
+                  overrideValue: o.overrideValue,
+                ),
+            ];
+      final nodeOverrides = preservedOverridesByObjectName?[savedName];
+
+      final fresh = instantiate(
+        scene,
+        id,
+        parent: savedParent,
+        position: savedPos,
+        rotation: savedRot,
+        scale: savedScale,
+        name: savedName,
+        active: savedActive,
+        registry: registry,
+      );
+      fresh.tag = savedTag;
+      fresh.layer = savedLayer;
+
+      if (nodeOverrides != null && nodeOverrides.isNotEmpty) {
+        PrefabVariant(
+          name: '_propagated_overrides',
+          basePrefabId: id,
+          overrides: nodeOverrides,
+        ).applyToInstance(fresh, registry: registry);
+        final hasRootTransformOverride = nodeOverrides.any(
+          (ov) =>
+              (ov.nodePath.isEmpty || ov.nodePath == '.') &&
+              (ov.localPosition != null ||
+                  ov.localRotation != null ||
+                  ov.localScale != null),
+        );
+        if (!hasRootTransformOverride) {
+          fresh.transform
+            ..localPosition = savedPos
+            ..localRotation = savedRot
+            ..localScale = savedScale;
+        }
+      }
+
+      if (savedPropOverrides.isNotEmpty) {
+        final freshInst = fresh.getComponent<PrefabInstanceComponent>();
+        if (freshInst != null) {
+          freshInst.overrides
+            ..clear()
+            ..addAll(savedPropOverrides);
+          for (final o in savedPropOverrides) {
+            if (o.propertyName == 'position' && o.overrideValue is Vec3) {
+              fresh.transform.position = o.overrideValue as Vec3;
+            } else if (o.propertyName == 'rotation' &&
+                o.overrideValue is Quat) {
+              fresh.transform.rotation = o.overrideValue as Quat;
+            } else if (o.propertyName == 'scale' && o.overrideValue is double) {
+              fresh.transform.localScale = o.overrideValue as double;
+            }
+          }
+        }
+      }
+
+      instance.destroy();
+    }
+
+    scene._flushDestroyed();
+    return targets.length;
   }
 
   /// Exports registered prefab metadata, variant definitions, and IDs as JSON.

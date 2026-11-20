@@ -518,6 +518,50 @@
 
 ---
 
+## Wave 18 (Phase 10) — Advanced Gizmos, Additive Scenes, Integrity Save Bundles, Live Prefab Propagation & Replay CLI
+
+**Wave Exit Gate:** Local/world planar 3D gizmos & multi-selection pivot drag pass `gizmos_workbench_test.dart`, additive scene loading & CRC32/bundle save system pass `scene_save_subsystems_test.dart`, prefab diffing/extraction/hot-propagation pass `prefab_live_propagation_test.dart`, and `volition replay` + Studio `tape.verify` RPC pass `cli_gui_test.dart` with `verify_all.dart` 10/10 green.
+
+- [x] **[P10-W18-A] Advanced 3D Viewport Gizmos (Local/World Space, Planar Dual-Axis Handles & Multi-Selection Pivot Drag)**
+  - **Priority:** P1
+  - **DependsOn:** `[P9-W17-D]`
+  - **Owns:** `lib/src/engine/gizmos/viewport_gizmos.dart`, `test/engine/gizmos_workbench_test.dart`
+  - **Reads:** `lib/src/engine/editor_session.dart`, `lib/src/engine/editor_commands.dart`
+  - **Scope:** Add `ViewportGizmoSpace.world`/`local`, planar `xy`/`xz`/`yz` handles with `intersectRayPlane` hit-testing & dragging, and `beginSelectionDrag`/`updateSelectionDrag`/`endSelectionDrag` returning reversible `CompoundCommand`.
+  - **DoneWhen:** `dart test test/engine/gizmos_workbench_test.dart` and `dart analyze` pass cleanly.
+
+- [x] **[P10-W18-B] Additive Multi-Scene Composition (`SceneManager`) & Integrity/Bundle Save System (`SaveSystem`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P9-W17-D]`
+  - **Owns:** `lib/src/engine/scene_manager.dart`, `lib/src/engine/save_system.dart`, `test/engine/scene_save_subsystems_test.dart`
+  - **Reads:** `lib/src/engine/scene.dart`, `lib/src/engine/serialization/scene_serializer.dart`, `vendor/voxpack/lib/voxpack.dart`
+  - **Scope:** Add `loadAdditive`, `unloadAdditive`, `isAdditiveLoaded`, `loadedAdditiveScenes` to `SceneManager`, and CRC32 `verifySlotIntegrity`, `loadDataMigrated`, `exportSlotBundle`, `importSlotBundle` to `SaveSystem`.
+  - **DoneWhen:** `dart test test/engine/scene_save_subsystems_test.dart` and `dart analyze` pass cleanly.
+
+- [x] **[P10-W18-C] Live Prefab Instance Diffing, Variant Extraction & Hot-Propagation (`PrefabRegistry`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P9-W17-D]`
+  - **Owns:** `lib/src/engine/prefab_registry.dart`, `test/engine/prefab_live_propagation_test.dart`
+  - **Reads:** `lib/src/engine/prefab.dart`, `lib/src/engine/serialization/scene_serializer.dart`, `lib/src/engine/gizmos/viewport_gizmos.dart`
+  - **Scope:** Ensure `PrefabRegistry.instantiate` attaches `PrefabInstanceComponent`, add `computeInstanceOverrides` and `extractVariantFromInstance`, and add live `propagatePrefabChanges` preserving transforms and overrides.
+  - **DoneWhen:** `dart test test/engine/prefab_live_propagation_test.dart` and `dart analyze` pass cleanly.
+
+- [x] **[P10-W18-D] Headless Replay CLI (`volition replay`) & Volition Studio Replay Verification Integration**
+  - **Priority:** P1
+  - **DependsOn:** `[P9-W17-D]`
+  - **Owns:** `tool/cli_service.dart`, `tool/cli_gui_server.dart`, `tool/cli_gui_assets.dart`, `bin/volition.dart`, `test/engine/cli_gui_test.dart`
+  - **Reads:** `lib/src/engine/replay/input_tape.dart`
+  - **Scope:** Add `*tape*.json` discovery/inspection and `verifyInputTapeFile` to `VolitionCliService`, `tape.verify` RPC in `VolitionGuiServer`, "Verify Replay Tape" UI controls in `cli_gui_assets.dart`, and `volition replay <tape.json> [--json]` in `bin/volition.dart`.
+  - **DoneWhen:** `dart test test/engine/cli_gui_test.dart` and `dart analyze` pass cleanly.
+
+- [x] **[P10-W18-M] Coordinator Merge, Full Verification & Wave 18 Commit**
+  - **Priority:** P0
+  - **DependsOn:** `[P10-W18-A]`, `[P10-W18-B]`, `[P10-W18-C]`, `[P10-W18-D]`
+  - **Owns:** `PLAN.md`, `TODO.md`, root formatting, full 10-gate verification, and git commit
+  - **Scope:** Verify zero boundary violations, run `dart format`, `dart analyze`, full `verify_all.dart --check-format --skip-wasm`, mark Wave 18 complete, and commit.
+
+---
+
 ## Carry-Over Index: Legacy `pixeldart` `PLAN.md` & `TODO.md` Traceability
 
 Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is tracked explicitly here so zero renderer debt is dropped:
