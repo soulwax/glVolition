@@ -4,6 +4,9 @@ import 'dart:io';
 ///
 /// - Core engine (`lib/gl_volition.dart`, `lib/src/engine.dart`, `lib/src/engine/**`):
 ///   must NOT import or export `dart:io`, `dart:ffi`, `dart:isolate`,
+///   `package:web`, `dart:js_interop`, `dart:html`, or `lib/src/studio/**`.
+/// - Pure-Dart Studio core (`lib/src/studio/**`):
+///   must NOT import or export `dart:io`, `dart:ffi`, `dart:isolate`,
 ///   `package:web`, `dart:js_interop`, or `dart:html`.
 /// - Web host (`lib/gl_volition_web.dart`, `lib/src/web/**`):
 ///   must NOT import or export `dart:io` or `dart:ffi`.
@@ -48,6 +51,21 @@ void main(List<String> args) {
         'package:web',
         'dart:js_interop',
         'dart:html',
+        'package:gl_volition/src/studio',
+      ],
+      forbiddenSubstrings: ['/studio/', 'studio/studio.dart'],
+    ),
+    const _BoundaryRule(
+      name: 'pure-dart-studio',
+      files: ['lib/src/studio/studio.dart'],
+      directories: ['lib/src/studio'],
+      forbiddenTargets: [
+        'dart:io',
+        'dart:ffi',
+        'dart:isolate',
+        'package:web',
+        'dart:js_interop',
+        'dart:html',
       ],
     ),
     const _BoundaryRule(
@@ -80,6 +98,7 @@ void main(List<String> args) {
         final forbidden = _matchForbiddenTarget(
           directive.uri,
           rule.forbiddenTargets,
+          rule.forbiddenSubstrings,
         );
         if (forbidden != null) {
           violations.add(
@@ -115,12 +134,14 @@ final class _BoundaryRule {
   final List<String> files;
   final List<String> directories;
   final List<String> forbiddenTargets;
+  final List<String> forbiddenSubstrings;
 
   const _BoundaryRule({
     required this.name,
     required this.files,
     required this.directories,
     required this.forbiddenTargets,
+    this.forbiddenSubstrings = const [],
   });
 }
 
@@ -219,13 +240,22 @@ String _relativeSlashPath(String rootPath, String fullPath) {
   return normFull;
 }
 
-String? _matchForbiddenTarget(String uri, List<String> forbiddenTargets) {
+String? _matchForbiddenTarget(
+  String uri,
+  List<String> forbiddenTargets, [
+  List<String> forbiddenSubstrings = const [],
+]) {
   for (final forbidden in forbiddenTargets) {
     if (uri == forbidden || uri.startsWith('$forbidden/')) {
       return forbidden;
     }
     if (forbidden == 'dart:js_interop' && uri == 'dart:js_interop_unsafe') {
       return forbidden;
+    }
+  }
+  for (final sub in forbiddenSubstrings) {
+    if (uri.contains(sub)) {
+      return sub;
     }
   }
   return null;

@@ -696,7 +696,7 @@
 
 **Exit Gate:** No fixed `uniform mat4 …[N]` arrays in world/shadow/depth shaders; device API v2 is implemented on WebGL2, `Gles3FfiDevice` and `RecordingGlesDevice`; GUID references survive rename/move; the module registry inventories 74/74 packages; the boundary checker covers `lib/src/studio/**`.
 
-- [ ] **[S1-0] Coordinator Freeze: GPU Device API v2, Studio Protocol v2, Project FS & Editor Boundaries**
+- [x] **[S1-0] Coordinator Freeze: GPU Device API v2, Studio Protocol v2, Project FS & Editor Boundaries**
   - **Priority:** P0
   - **DependsOn:** none (current `main`)
   - **Owns:** `vendor/pixeldart/lib/rendering/webgl/device_api.dart`, `vendor/pixeldart/lib/rendering/api/capabilities.dart`, `lib/src/studio/protocol/**`, `lib/src/studio/project/project_fs.dart`, `lib/src/studio/studio.dart`, `tool/check_boundaries.dart`
@@ -724,7 +724,7 @@
     - Replace `uJointMatrices[64]` (`:25`) with a 256-joint std140 UBO palette, falling back to an RGBA32F joint texture when `MAX_UNIFORM_BLOCK_SIZE` is too small. Skin shadow-caster and depth-prepass vertices too. Raise `SkinnedMeshRenderer` capacity constants to match.
   - **DoneWhen:** `test_no_fixed_uniform_caps.dart` scans `shaders/rendering/{world,shadow,depth}/**` and fails on any `uniform mat4 \w+\[\d+\]`. `test_instancing_uncapped.dart` proves 4,096 instances go out in exactly one recorded `drawElementsInstanced`. `test/engine/skinning_256_test.dart` matches a 200-joint CPU reference within 1e-4. Browser Lab goldens of the instanced forest and skinned character are unchanged (SSIM ≥ 0.99).
 
-- [ ] **[S1-C] Project Format, `.vmeta` GUID Sidecars & `AssetDatabase` with Incremental Import Cache**
+- [x] **[S1-C] Project Format, `.vmeta` GUID Sidecars & `AssetDatabase` with Incremental Import Cache**
   - **Priority:** P0
   - **DependsOn:** `[S1-0]`
   - **Owns:** `lib/src/studio/project/**` (except `project_fs.dart`), `lib/src/studio/assets/**`, `tool/studio/io_project_fs.dart`, `test/studio/asset_database_test.dart`, `test/studio/project_format_test.dart`
@@ -735,7 +735,7 @@
     - `AssetDatabase`: initial scan, GUID allocation, move/rename/delete keeping GUIDs, orphan-meta detection, dependency graph, importer registry (texture, glb/obj/qmesh model, audio, LUT, scene, prefab, material, data asset), and an incremental import cache under `.volition/library/` keyed by `(contentHash, importerVersion, settingsHash)`. Reimports are change-driven from `ProjectFileSystem.watch`. Add a `dart:io` adapter (`io_project_fs.dart`).
   - **DoneWhen:** Tests prove: renaming or moving keeps GUID resolution; unchanged assets are not reimported (counter assertion); changed settings invalidate dependents transitively; an in-memory FS and the IO FS behave identically on a fixture project; GUIDs are deterministic with a seeded RNG.
 
-- [ ] **[S1-D] Studio Module Registry, Maturity Levels & Coverage Gate (74 `vendor/*` Packages)**
+- [x] **[S1-D] Studio Module Registry, Maturity Levels & Coverage Gate (74 `vendor/*` Packages)**
   - **Priority:** P0
   - **DependsOn:** `[S1-0]`
   - **Owns:** `lib/src/studio/modules/module_descriptor.dart`, `lib/src/studio/modules/module_registry.dart`, `lib/src/studio/modules/module_inventory.g.dart`, `tool/check_module_coverage.dart`, `test/studio/module_registry_test.dart`
