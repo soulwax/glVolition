@@ -851,62 +851,65 @@ void main() {
         },
       );
 
-      test('clamping enforces RenderingShaderContracts.maxSkinJoints (64)', () {
-        final host = HeadlessHost();
-        const excessJoints = 70; // > 64
+      test(
+        'clamping enforces RenderingShaderContracts.maxSkinJoints (256)',
+        () {
+          final host = HeadlessHost();
+          const excessJoints = RenderingShaderContracts.maxSkinJoints + 6;
 
-        final joints = List.generate(
-          excessJoints,
-          (i) => SkinJointNode(
-            nodeIndex: i,
-            name: 'Joint_$i',
-            parentJointIndex: i == 0 ? -1 : 0,
-            restTranslation: Vec3(i.toDouble(), 0, 0),
-          ),
-        );
+          final joints = List.generate(
+            excessJoints,
+            (i) => SkinJointNode(
+              nodeIndex: i,
+              name: 'Joint_$i',
+              parentJointIndex: i == 0 ? -1 : 0,
+              restTranslation: Vec3(i.toDouble(), 0, 0),
+            ),
+          );
 
-        final ibm = Float32List(excessJoints * 16);
-        for (var i = 0; i < excessJoints; i++) {
-          for (var k = 0; k < 16; k++) {
-            ibm[i * 16 + k] = Mat4.identity().m[k];
+          final ibm = Float32List(excessJoints * 16);
+          for (var i = 0; i < excessJoints; i++) {
+            for (var k = 0; k < 16; k++) {
+              ibm[i * 16 + k] = Mat4.identity().m[k];
+            }
           }
-        }
 
-        // SkinData clamps to maxJoints (64)
-        final skin = SkinData(
-          name: 'ExcessSkin',
-          joints: joints,
-          inverseBindMatrices: ibm,
-          clampToMaxJoints: true,
-        );
-        expect(skin.jointCount, RenderingShaderContracts.maxSkinJoints);
-        expect(
-          skin.inverseBindMatrices.length,
-          RenderingShaderContracts.maxSkinJoints * 16,
-        );
+          // SkinData clamps to maxJoints (64)
+          final skin = SkinData(
+            name: 'ExcessSkin',
+            joints: joints,
+            inverseBindMatrices: ibm,
+            clampToMaxJoints: true,
+          );
+          expect(skin.jointCount, RenderingShaderContracts.maxSkinJoints);
+          expect(
+            skin.inverseBindMatrices.length,
+            RenderingShaderContracts.maxSkinJoints * 16,
+          );
 
-        final dummyMesh = host.graphics.createMesh(
-          MeshData(
-            layout: VertexLayoutDescriptor.surfaceV2,
-            vertices: Float32List(18),
-            indices: Uint16List(3),
-            localBounds: Aabb(Vec3.zero, const Vec3(1, 1, 1)),
-          ),
-        );
+          final dummyMesh = host.graphics.createMesh(
+            MeshData(
+              layout: VertexLayoutDescriptor.surfaceV2,
+              vertices: Float32List(18),
+              indices: Uint16List(3),
+              localBounds: Aabb(Vec3.zero, const Vec3(1, 1, 1)),
+            ),
+          );
 
-        final smr = SkinnedMeshRenderer(mesh: dummyMesh, skin: skin);
-        smr.applySkinPalette(host.graphics);
+          final smr = SkinnedMeshRenderer(mesh: dummyMesh, skin: skin);
+          smr.applySkinPalette(host.graphics);
 
-        final hGfx = host.graphics;
-        expect(
-          hGfx.skinningJointCounts[dummyMesh],
-          RenderingShaderContracts.maxSkinJoints,
-        );
-        expect(
-          hGfx.skinningPalettes[dummyMesh]!.length,
-          RenderingShaderContracts.maxSkinJoints * 16,
-        );
-      });
+          final hGfx = host.graphics;
+          expect(
+            hGfx.skinningJointCounts[dummyMesh],
+            RenderingShaderContracts.maxSkinJoints,
+          );
+          expect(
+            hGfx.skinningPalettes[dummyMesh]!.length,
+            RenderingShaderContracts.maxSkinJoints * 16,
+          );
+        },
+      );
 
       test(
         'SkinnedMeshRenderer cleanly manages child SceneNode lifecycle and dispose',

@@ -264,6 +264,101 @@ final class SceneV1ToV2MigrationStep implements SceneMigrationStep {
   }
 }
 
+/// Injectable path/key-to-GUID resolver used by [SceneV2ToV3GuidMigrationStep]
+/// so `lib/src/engine` stays decoupled from `lib/src/studio` (`[S1-M]`).
+typedef AssetGuidResolver = String? Function(String pathOrKey);
+
+/// Built-in v2 -> v3 migration step converting legacy string asset path/key
+/// fields in component payloads into [AssetRef] (`{"$assetGuid": "..."}`)
+/// objects when [guidResolver] resolves a GUID.
+final class SceneV2ToV3GuidMigrationStep implements SceneMigrationStep {
+  static const Set<String> defaultAssetFieldKeys = {
+    'mesh',
+    'material',
+    'texture',
+    'albedo',
+    'audio',
+    'clip',
+    'lut',
+    'assetPath',
+    'meshPath',
+    'materialPath',
+    'texturePath',
+  };
+
+  final AssetGuidResolver? guidResolver;
+  final Set<String> assetFieldKeys;
+
+  const SceneV2ToV3GuidMigrationStep({
+    this.guidResolver,
+    this.assetFieldKeys = defaultAssetFieldKeys,
+  });
+
+  @override
+  int get fromVersion => 2;
+
+  @override
+  int get toVersion => 3;
+
+  @override
+  Map<String, Object?> migrate(Map<String, Object?> data) {
+    final resolver = guidResolver;
+    if (resolver != null) {
+      if (data['objects'] is List) {
+        for (final node in data['objects']! as List) {
+          if (node is Map<String, Object?>) {
+            _rewriteNodeAssets(node, resolver);
+          }
+        }
+      } else if (data.containsKey('components') ||
+          data.containsKey('children')) {
+        _rewriteNodeAssets(data, resolver);
+      }
+    }
+    data['schemaVersion'] = toVersion;
+    return data;
+  }
+
+  void _rewriteNodeAssets(
+    Map<String, Object?> node,
+    AssetGuidResolver resolver,
+  ) {
+    final comps = node['components'];
+    if (comps is List) {
+      for (final comp in comps) {
+        if (comp is Map<String, Object?>) {
+          _rewriteMapFields(comp, resolver);
+          final dataMap = comp['data'];
+          if (dataMap is Map<String, Object?>) {
+            _rewriteMapFields(dataMap, resolver);
+          }
+        }
+      }
+    }
+    final children = node['children'];
+    if (children is List) {
+      for (final child in children) {
+        if (child is Map<String, Object?>) {
+          _rewriteNodeAssets(child, resolver);
+        }
+      }
+    }
+  }
+
+  void _rewriteMapFields(Map<String, Object?> map, AssetGuidResolver resolver) {
+    for (final key in map.keys.toList()) {
+      if (!assetFieldKeys.contains(key)) continue;
+      final val = map[key];
+      if (val is String && val.isNotEmpty) {
+        final guid = resolver(val);
+        if (guid != null && guid.isNotEmpty) {
+          map[key] = AssetRef(guid).toJson();
+        }
+      }
+    }
+  }
+}
+
 /// Validates and executes chained [SceneMigrationStep] upgrades from legacy
 /// schema versions up to [currentVersion] without mutating input payloads.
 final class SceneMigrator {
@@ -271,7 +366,20 @@ final class SceneMigrator {
   /// [SceneSerializer.schemaVersion].
   static const List<SceneMigrationStep> defaultSteps = [
     SceneV1ToV2MigrationStep(),
+    SceneV2ToV3GuidMigrationStep(),
   ];
+
+  /// Creates a [SceneMigrator] wired with [guidResolver] for v2->v3 GUID
+  /// asset reference conversion.
+  factory SceneMigrator.withGuidResolver(AssetGuidResolver guidResolver) =>
+      SceneMigrator(
+        currentVersion: SceneSerializer.schemaVersion,
+        steps: [
+          const SceneV1ToV2MigrationStep(),
+          SceneV2ToV3GuidMigrationStep(guidResolver: guidResolver),
+        ],
+        validateStructure: true,
+      );
 
   final int currentVersion;
   final List<SceneMigrationStep> _steps;

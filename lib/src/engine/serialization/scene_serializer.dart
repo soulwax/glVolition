@@ -1,10 +1,58 @@
 part of '../../engine.dart';
 
+/// Pure-Dart rename-safe asset reference serialized in v3+ scenes & prefabs
+/// (`[S1-M]`), keeping `lib/src/engine/**` decoupled from `lib/src/studio/**`.
+final class AssetRef {
+  static const String guidJsonKey = r'$assetGuid';
+  static const String subAssetJsonKey = 'subAssetId';
+
+  final String guid;
+  final String? subAssetId;
+
+  const AssetRef(this.guid, {this.subAssetId});
+
+  bool get isValid => guid.isNotEmpty;
+
+  Map<String, Object?> toJson() => {
+    guidJsonKey: guid,
+    if (subAssetId != null && subAssetId!.isNotEmpty)
+      subAssetJsonKey: subAssetId,
+  };
+
+  static AssetRef? tryFromJson(Object? raw) {
+    if (raw is Map && raw[guidJsonKey] is String) {
+      final guid = (raw[guidJsonKey] as String).trim();
+      if (guid.isEmpty) return null;
+      return AssetRef(guid, subAssetId: raw[subAssetJsonKey] as String?);
+    }
+    return null;
+  }
+
+  factory AssetRef.fromJson(Map<String, Object?> json) {
+    final parsed = tryFromJson(json);
+    if (parsed == null) {
+      throw FormatException('Invalid AssetRef payload: $json');
+    }
+    return parsed;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AssetRef && other.guid == guid && other.subAssetId == subAssetId;
+
+  @override
+  int get hashCode => Object.hash(guid, subAssetId);
+
+  @override
+  String toString() =>
+      subAssetId == null ? 'AssetRef($guid)' : 'AssetRef($guid#$subAssetId)';
+}
+
 /// Round-trips a [Scene] (hierarchy, transforms, tags, layers,
 /// [RenderSettings], registered components, and prefab instances with field
-/// overrides) to and from JSON maps (E3-3).
+/// overrides) to and from JSON maps (E3-3 / S1-M).
 abstract final class SceneSerializer {
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   static String toJsonString(Scene scene, {ComponentRegistry? registry}) =>
       jsonEncode(toJson(scene, registry: registry));

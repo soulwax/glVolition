@@ -44,6 +44,17 @@ Future<void> main(List<String> args) async {
       workingDirectory: root.path,
     ),
     _VerifyStep(
+      name: 'Studio module coverage gate (tool/check_module_coverage.dart)',
+      executable: dartExe,
+      arguments: const [
+        'run',
+        'tool/check_module_coverage.dart',
+        '--min-maturity',
+        'runtime-only',
+      ],
+      workingDirectory: root.path,
+    ),
+    _VerifyStep(
       name: 'Static analysis (dart analyze)',
       executable: dartExe,
       arguments: const ['analyze'],
@@ -66,6 +77,15 @@ Future<void> main(List<String> args) async {
       name: 'vendor/pixeldart generated shader check',
       executable: dartExe,
       arguments: const ['run', 'tools/renderer/shaders.dart', '--check'],
+      workingDirectory: pixeldartDir.path,
+    ),
+    _VerifyStep(
+      name: 'vendor/pixeldart anti-cap shader check',
+      executable: dartExe,
+      arguments: const [
+        'run',
+        'tools/renderer/test_no_fixed_uniform_caps.dart',
+      ],
       workingDirectory: pixeldartDir.path,
     ),
     _VerifyStep(

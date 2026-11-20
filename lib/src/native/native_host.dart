@@ -32,17 +32,24 @@ final class _NativeTimerQuery implements GpuObject {
   _NativeTimerQuery(this.id);
 }
 
+final class _NativeOcclusionQuery implements GpuObject {
+  final int id;
+  bool ended = false;
+  bool anySamplesPassed = true;
+  _NativeOcclusionQuery(this.id);
+}
+
 /// Preserved backward-compatible alias for [RecordingGlesDevice].
 typedef GlesDevice = RecordingGlesDevice;
 
-/// Recording / software-validated native [GpuDevice] implementation for
-/// `glVolition` (E6-3).
+/// Recording / software-validated native [GpuDeviceV2] implementation for
+/// `glVolition` (E6-3 / S1-A).
 ///
-/// Implements the full `pixeldart` [GpuDevice] and [GpuContextGeneration]
+/// Implements the full `pixeldart` [GpuDeviceV2] and [GpuContextGeneration]
 /// contracts without `package:web`, validating shaders, render target
 /// attachments, vertex/index bindings, and resource lifetimes while optionally
 /// dispatching commands to a native GLES3 / FFI [onCommand] hook.
-final class RecordingGlesDevice implements GpuDevice, GpuContextGeneration {
+final class RecordingGlesDevice implements GpuDeviceV2, GpuContextGeneration {
   final bool timerQueries;
   final bool disjointTimer;
   int maxSamples;
@@ -722,6 +729,314 @@ final class RecordingGlesDevice implements GpuDevice, GpuContextGeneration {
       throw StateError('GlesDevice: unknown timer query');
     }
     return query;
+  }
+
+  // --- GpuDeviceV2 (S1-A) ---
+
+  final Set<int> _occlusionIds = {};
+  int _nextOcclusionId = 1;
+  final Map<int, GpuObject> _boundUbos = {};
+
+  @override
+  GpuObject createUniformBuffer(GpuUniformBufferDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    bufferCreateCalls += 1;
+    final obj = _create('ubo');
+    drawLog.add('createUniformBuffer(${descriptor.byteLength})');
+    onCommand?.call('createUniformBuffer', [
+      (obj as _NativeGpuObject).id,
+      descriptor.byteLength,
+      descriptor.usage.name,
+    ]);
+    return obj;
+  }
+
+  @override
+  void updateUniformBuffer(
+    GpuObject buffer,
+    ByteData data, {
+    int dstByteOffset = 0,
+  }) {
+    _requireReady();
+    _requireLive(buffer);
+    bufferUploadCalls += 1;
+    final id = (buffer as _NativeGpuObject).id;
+    drawLog.add(
+      'updateUniformBuffer($id, ${data.lengthInBytes}, $dstByteOffset)',
+    );
+    onCommand?.call('updateUniformBuffer', [
+      id,
+      data.lengthInBytes,
+      dstByteOffset,
+    ]);
+  }
+
+  @override
+  void bindUniformBufferBase(int bindingPoint, GpuObject buffer) {
+    _requireReady();
+    _requireLive(buffer);
+    _boundUbos[bindingPoint] = buffer;
+    final id = (buffer as _NativeGpuObject).id;
+    drawLog.add('bindUniformBufferBase($bindingPoint, $id)');
+    onCommand?.call('bindUniformBufferBase', [bindingPoint, id]);
+  }
+
+  @override
+  void uniformBlockBinding(
+    GpuObject program,
+    String blockName,
+    int bindingPoint,
+  ) {
+    _requireReady();
+    _requireLive(program);
+    final id = (program as _NativeGpuObject).id;
+    drawLog.add('uniformBlockBinding($id, $blockName, $bindingPoint)');
+    onCommand?.call('uniformBlockBinding', [id, blockName, bindingPoint]);
+  }
+
+  @override
+  GpuObject createCubeTexture(GpuCubeTextureDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    textureCreateCalls += 1;
+    final obj = _create('cubeTexture');
+    if (descriptor.hasMips) {
+      _texturesMissingFinalizedMips.add((obj as _NativeGpuObject).id);
+    }
+    drawLog.add(
+      'createCubeTexture(${descriptor.size}, ${descriptor.format.name})',
+    );
+    onCommand?.call('createCubeTexture', [
+      (obj as _NativeGpuObject).id,
+      descriptor.size,
+      descriptor.format.name,
+    ]);
+    return obj;
+  }
+
+  @override
+  void uploadCubeFace(
+    GpuObject texture,
+    GpuCubeFace face,
+    Uint8List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    _requireLive(texture);
+    final id = (texture as _NativeGpuObject).id;
+    drawLog.add('uploadCubeFace($id, ${face.name}, mip=$mipLevel)');
+    onCommand?.call('uploadCubeFace', [id, face.name, pixels.length, mipLevel]);
+  }
+
+  @override
+  void uploadCubeFaceFloat(
+    GpuObject texture,
+    GpuCubeFace face,
+    Float32List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    _requireLive(texture);
+    final id = (texture as _NativeGpuObject).id;
+    drawLog.add('uploadCubeFaceFloat($id, ${face.name}, mip=$mipLevel)');
+    onCommand?.call('uploadCubeFaceFloat', [
+      id,
+      face.name,
+      pixels.length,
+      mipLevel,
+    ]);
+  }
+
+  @override
+  void bindCubeTexture(int unit, GpuObject texture) {
+    _requireReady();
+    _requireLive(texture);
+    _sampledSinceUseProgram[unit] = texture;
+    final id = (texture as _NativeGpuObject).id;
+    drawLog.add('bindCubeTexture($unit, $id)');
+    onCommand?.call('bindCubeTexture', [unit, id]);
+  }
+
+  @override
+  GpuObject createTextureArray(GpuTextureArrayDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    textureCreateCalls += 1;
+    final obj = _create('textureArray');
+    if (descriptor.hasMips) {
+      _texturesMissingFinalizedMips.add((obj as _NativeGpuObject).id);
+    }
+    drawLog.add(
+      'createTextureArray(${descriptor.width}x${descriptor.height}x${descriptor.layers})',
+    );
+    onCommand?.call('createTextureArray', [
+      (obj as _NativeGpuObject).id,
+      descriptor.width,
+      descriptor.height,
+      descriptor.layers,
+      descriptor.format.name,
+    ]);
+    return obj;
+  }
+
+  @override
+  void uploadTextureArrayLayer(
+    GpuObject texture,
+    int layer,
+    Uint8List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    _requireLive(texture);
+    final id = (texture as _NativeGpuObject).id;
+    drawLog.add('uploadTextureArrayLayer($id, layer=$layer, mip=$mipLevel)');
+    onCommand?.call('uploadTextureArrayLayer', [
+      id,
+      layer,
+      pixels.length,
+      mipLevel,
+    ]);
+  }
+
+  @override
+  void uploadTextureArrayLayerFloat(
+    GpuObject texture,
+    int layer,
+    Float32List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    _requireLive(texture);
+    final id = (texture as _NativeGpuObject).id;
+    drawLog.add(
+      'uploadTextureArrayLayerFloat($id, layer=$layer, mip=$mipLevel)',
+    );
+    onCommand?.call('uploadTextureArrayLayerFloat', [
+      id,
+      layer,
+      pixels.length,
+      mipLevel,
+    ]);
+  }
+
+  @override
+  void bindTextureArray(int unit, GpuObject texture) {
+    _requireReady();
+    _requireLive(texture);
+    _sampledSinceUseProgram[unit] = texture;
+    final id = (texture as _NativeGpuObject).id;
+    drawLog.add('bindTextureArray($unit, $id)');
+    onCommand?.call('bindTextureArray', [unit, id]);
+  }
+
+  @override
+  GpuObject createMrtTarget(GpuMrtTargetDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    targetCreateCalls += 1;
+    final target = _create('mrtTarget');
+    _targetDescriptors[(target as _NativeGpuObject).id] = GpuTargetDescriptor(
+      width: descriptor.width,
+      height: descriptor.height,
+      samples: descriptor.samples,
+      hasDepth: descriptor.hasDepth,
+      hasStencil: descriptor.hasStencil,
+    );
+    drawLog.add(
+      'createMrtTarget(${descriptor.width}x${descriptor.height}, '
+      'attachments=${descriptor.colorFormats.length})',
+    );
+    onCommand?.call('createMrtTarget', [
+      target.id,
+      descriptor.width,
+      descriptor.height,
+      descriptor.colorFormats.map((f) => f.name).toList(),
+    ]);
+    return target;
+  }
+
+  @override
+  void drawBuffers(List<int> colorAttachmentIndices) {
+    _requireReady();
+    drawLog.add('drawBuffers(${colorAttachmentIndices.join(',')})');
+    onCommand?.call('drawBuffers', [colorAttachmentIndices]);
+  }
+
+  @override
+  void bindTargetColorAttachment(
+    int unit,
+    GpuObject target,
+    int attachmentIndex,
+  ) {
+    _requireReady();
+    _requireLive(target);
+    _sampledSinceUseProgram[unit] = target;
+    final id = (target as _NativeGpuObject).id;
+    drawLog.add('bindTargetColorAttachment($unit, $id, $attachmentIndex)');
+    onCommand?.call('bindTargetColorAttachment', [unit, id, attachmentIndex]);
+  }
+
+  @override
+  GpuObject? beginOcclusionQuery() {
+    _requireReady();
+    final q = _NativeOcclusionQuery(_nextOcclusionId++);
+    _occlusionIds.add(q.id);
+    drawLog.add('beginOcclusionQuery(${q.id})');
+    onCommand?.call('beginOcclusionQuery', [q.id]);
+    return q;
+  }
+
+  @override
+  void endOcclusionQuery(GpuObject query) {
+    if (query is! _NativeOcclusionQuery || !_occlusionIds.contains(query.id)) {
+      throw StateError('GlesDevice: unknown occlusion query');
+    }
+    if (query.ended) {
+      throw StateError('GlesDevice: occlusion query already ended');
+    }
+    query.ended = true;
+    drawLog.add('endOcclusionQuery(${query.id})');
+    onCommand?.call('endOcclusionQuery', [query.id]);
+  }
+
+  @override
+  GpuOcclusionQueryPoll pollOcclusionQuery(GpuObject query) {
+    if (query is! _NativeOcclusionQuery || !_occlusionIds.contains(query.id)) {
+      throw StateError('GlesDevice: unknown occlusion query');
+    }
+    if (!query.ended) {
+      return const GpuOcclusionQueryPoll(GpuOcclusionQueryStatus.pending);
+    }
+    return GpuOcclusionQueryPoll(
+      GpuOcclusionQueryStatus.ready,
+      query.anySamplesPassed,
+    );
+  }
+
+  @override
+  void deleteOcclusionQuery(GpuObject query) {
+    if (query is! _NativeOcclusionQuery || !_occlusionIds.remove(query.id)) {
+      throw StateError('GlesDevice: unknown occlusion query');
+    }
+    drawLog.add('deleteOcclusionQuery(${query.id})');
+    onCommand?.call('deleteOcclusionQuery', [query.id]);
+  }
+
+  @override
+  GpuPassTimerScope? beginPassTimer(String passName) {
+    final q = beginGpuTimer();
+    if (q == null) return null;
+    drawLog.add('beginPassTimer($passName)');
+    onCommand?.call('beginPassTimer', [passName]);
+    return GpuPassTimerScope(passName: passName, query: q);
+  }
+
+  @override
+  void endPassTimer(GpuPassTimerScope scope) {
+    endGpuTimer(scope.query);
+    drawLog.add('endPassTimer(${scope.passName})');
+    onCommand?.call('endPassTimer', [scope.passName]);
   }
 }
 

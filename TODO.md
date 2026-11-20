@@ -707,14 +707,14 @@
     - Extend `tool/check_boundaries.dart` so `lib/src/studio/**` gets the same import bans as `lib/src/engine/**`, and so `lib/src/engine/**` may not import `lib/src/studio/**`.
   - **DoneWhen:** Root and `vendor/pixeldart` `dart analyze` pass; `dart run tool/check_boundaries.dart` passes and has a test fixture proving a `dart:io` import under `lib/src/studio/` is rejected.
 
-- [ ] **[S1-A] Device API v2 Implementations (WebGL2, `Gles3FfiDevice`, `RecordingGlesDevice`)**
+- [x] **[S1-A] Device API v2 Implementations (WebGL2, `Gles3FfiDevice`, `RecordingGlesDevice`)**
   - **Priority:** P0
   - **DependsOn:** `[S1-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/webgl/webgl2_device.dart`, `vendor/pixeldart/lib/rendering/webgl/webgl2_device_*.dart`, `vendor/pixeldart/lib/rendering/webgl/state_cache.dart`, `vendor/pixeldart/tools/renderer/test_device_v2.dart`, `lib/src/native/gles3_bindings.dart`, `lib/src/native/gles3_ffi_device.dart`, `lib/src/native/native_host.dart` (`RecordingGlesDevice` only), `test/native/gles3_device_v2_test.dart`
   - **Scope:** Implement every `[S1-0]` op on all three devices, with state-cache awareness (UBO binding points, texture-array/cube units). Resolve the new GLES3 entry points via FFI with actionable missing-symbol diagnostics, and record commands deterministically for CI.
   - **DoneWhen:** `test_device_v2.dart` and `test/native/gles3_device_v2_test.dart` assert recorded command streams for each new op and an FFI symbol table containing `glBindBufferBase`, `glUniformBlockBinding`, `glTexImage3D`, `glDrawBuffers`, `glVertexAttribDivisor` and `glBeginQuery`. When hardware is present, a native readback renders a cubemap face and an RGBA16F target.
 
-- [ ] **[S1-B] Uncapped Instancing, UBO Frame Data & 256-Joint Skinning (reopens `[P4-W12-B2]` / `[P4-W12-C]`)**
+- [x] **[S1-B] Uncapped Instancing, UBO Frame Data & 256-Joint Skinning (reopens `[P4-W12-B2]` / `[P4-W12-C]`)**
   - **Priority:** P0
   - **DependsOn:** `[S1-0]`
   - **Owns:** `vendor/pixeldart/shaders/rendering/world/**`, `vendor/pixeldart/shaders/rendering/shadow/**`, `vendor/pixeldart/shaders/rendering/depth/**`, `vendor/pixeldart/lib/rendering/passes/{world,textured_world,shadowed_world,shadow,depth_prepass}.dart`, `vendor/pixeldart/lib/rendering/webgl/instanced_stream.dart`, `vendor/pixeldart/lib/rendering/webgl/generated_shaders.dart`, `vendor/pixeldart/tools/renderer/test_no_fixed_uniform_caps.dart`, `vendor/pixeldart/tools/renderer/test_instancing_uncapped.dart`, `lib/src/engine/components/skinned_mesh.dart`, `test/engine/skinning_256_test.dart`
@@ -746,7 +746,7 @@
     - `check_module_coverage.dart` takes `--report` (table + JSON), `--min-maturity <level>` and `--owners <family>`.
   - **DoneWhen:** `dart run tool/check_module_coverage.dart --report` lists 74/74 packages with family and current maturity; `--min-maturity runtime-only` exits 0; the test fails when a fixture vendor package has no descriptor.
 
-- [ ] **[S1-M] Coordinator Merge: GUID Scene References, Gates in `verify_all`, Barrels & `pixeldart` Commit**
+- [x] **[S1-M] Coordinator Merge: GUID Scene References, Gates in `verify_all`, Barrels & `pixeldart` Commit**
   - **Priority:** P0
   - **DependsOn:** `[S1-A]`, `[S1-B]`, `[S1-C]`, `[S1-D]`
   - **Owns:** `lib/src/engine/serialization/scene_serializer.dart`, `lib/src/engine/serialization/scene_migration.dart`, `lib/gl_volition.dart`, `lib/src/studio/studio.dart`, `tool/verify_all.dart`, `.gitignore` (`.volition/library/`), `vendor/pixeldart` gitlink

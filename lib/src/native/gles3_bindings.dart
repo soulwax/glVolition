@@ -25,19 +25,44 @@ const int GL_FLOAT = 0x1406;
 
 const int GL_ARRAY_BUFFER = 0x8892;
 const int GL_ELEMENT_ARRAY_BUFFER = 0x8893;
+const int GL_UNIFORM_BUFFER = 0x8A11;
 const int GL_STREAM_DRAW = 0x88E0;
 const int GL_STATIC_DRAW = 0x88E4;
 const int GL_DYNAMIC_DRAW = 0x88E8;
 
 const int GL_TEXTURE_2D = 0x0DE1;
 const int GL_TEXTURE_2D_ARRAY = 0x8C1A;
+const int GL_TEXTURE_CUBE_MAP = 0x8513;
+const int GL_TEXTURE_CUBE_MAP_POSITIVE_X = 0x8515;
+const int GL_TEXTURE_CUBE_MAP_NEGATIVE_X = 0x8516;
+const int GL_TEXTURE_CUBE_MAP_POSITIVE_Y = 0x8517;
+const int GL_TEXTURE_CUBE_MAP_NEGATIVE_Y = 0x8518;
+const int GL_TEXTURE_CUBE_MAP_POSITIVE_Z = 0x8519;
+const int GL_TEXTURE_CUBE_MAP_NEGATIVE_Z = 0x851A;
+const int GL_TEXTURE_WRAP_R = 0x8072;
 const int GL_TEXTURE0 = 0x84C0;
 
 const int GL_COLOR = 0x1800;
 const int GL_DEPTH_COMPONENT = 0x1902;
+const int GL_RED = 0x1903;
+const int GL_RG = 0x8227;
 const int GL_RGBA = 0x1908;
 const int GL_RGBA8 = 0x8058;
+const int GL_SRGB8_ALPHA8 = 0x8C43;
+const int GL_RGBA16F = 0x881A;
+const int GL_RGBA32F = 0x8814;
+const int GL_R16F = 0x822D;
+const int GL_R32F = 0x822E;
+const int GL_RG16F = 0x822F;
 const int GL_DEPTH_COMPONENT24 = 0x81A6;
+const int GL_DEPTH_COMPONENT32F = 0x8CAC;
+
+const int GL_ANY_SAMPLES_PASSED_CONSERVATIVE = 0x8D6A;
+const int GL_INVALID_INDEX = 0xFFFFFFFF;
+const int GL_MAX_UNIFORM_BLOCK_SIZE = 0x8A30;
+const int GL_MAX_UNIFORM_BUFFER_BINDINGS = 0x8A2F;
+const int GL_MAX_DRAW_BUFFERS = 0x8824;
+const int GL_MAX_CUBE_MAP_TEXTURE_SIZE = 0x851C;
 
 const int GL_FRAMEBUFFER = 0x8D40;
 const int GL_READ_FRAMEBUFFER = 0x8CA8;
@@ -323,6 +348,17 @@ abstract interface class Gles3ExtensionsApi {
   int glGetAttribLocation(int program, String name);
   void glReadBuffer(int mode);
   String? glGetStringi(int name, int index);
+}
+
+/// Device API v2 GLES 3.0 UBO entrypoints implemented by [FfiGles3Api] (S1-A).
+abstract interface class Gles3V2Api {
+  void glBindBufferBase(int target, int index, int buffer);
+  int glGetUniformBlockIndex(int program, String uniformBlockName);
+  void glUniformBlockBinding(
+    int program,
+    int uniformBlockIndex,
+    int uniformBlockBinding,
+  );
 }
 
 // --- Native FFI function typedefs ---
@@ -743,11 +779,27 @@ const List<String> requiredGles3Symbols = <String>[
   'glBeginQuery',
   'glEndQuery',
   'glGetQueryObjectuiv',
+  'glBindBufferBase',
+  'glGetUniformBlockIndex',
+  'glUniformBlockBinding',
 ];
 
-/// `dart:ffi` implementation of [Gles3Api] and [Gles3ExtensionsApi] resolving
-/// OpenGL ES 3.0 / ANGLE entrypoints dynamically via [GlProcBindings].
-final class FfiGles3Api implements Gles3Api, Gles3ExtensionsApi {
+typedef _GlBindBufferBaseNative =
+    ffi.Void Function(ffi.Uint32, ffi.Uint32, ffi.Uint32);
+typedef _GlBindBufferBaseDart = void Function(int, int, int);
+
+typedef _GlGetUniformBlockIndexNative =
+    ffi.Uint32 Function(ffi.Uint32, ffi.Pointer<ffi.Uint8>);
+typedef _GlGetUniformBlockIndexDart = int Function(int, ffi.Pointer<ffi.Uint8>);
+
+typedef _GlUniformBlockBindingNative =
+    ffi.Void Function(ffi.Uint32, ffi.Uint32, ffi.Uint32);
+typedef _GlUniformBlockBindingDart = void Function(int, int, int);
+
+/// `dart:ffi` implementation of [Gles3Api], [Gles3ExtensionsApi], and
+/// [Gles3V2Api] resolving OpenGL ES 3.0 / ANGLE entrypoints dynamically via
+/// [GlProcBindings].
+final class FfiGles3Api implements Gles3Api, Gles3ExtensionsApi, Gles3V2Api {
   final GlProcBindings bindings;
   final NativeCAllocator _allocator;
 
@@ -1979,4 +2031,41 @@ final class FfiGles3Api implements Gles3Api, Gles3ExtensionsApi {
       _allocator.free(buf);
     }
   }
+
+  // --- Gles3V2Api (S1-A) ---
+
+  late final _GlBindBufferBaseDart _fnGlBindBufferBase =
+      ffi.Pointer<ffi.NativeFunction<_GlBindBufferBaseNative>>.fromAddress(
+        resolveAddress('glBindBufferBase'),
+      ).asFunction<_GlBindBufferBaseDart>();
+
+  late final _GlGetUniformBlockIndexDart _fnGlGetUniformBlockIndex =
+      ffi.Pointer<
+            ffi.NativeFunction<_GlGetUniformBlockIndexNative>
+          >.fromAddress(resolveAddress('glGetUniformBlockIndex'))
+          .asFunction<_GlGetUniformBlockIndexDart>();
+
+  late final _GlUniformBlockBindingDart _fnGlUniformBlockBinding =
+      ffi.Pointer<ffi.NativeFunction<_GlUniformBlockBindingNative>>.fromAddress(
+        resolveAddress('glUniformBlockBinding'),
+      ).asFunction<_GlUniformBlockBindingDart>();
+
+  @override
+  void glBindBufferBase(int target, int index, int buffer) =>
+      _fnGlBindBufferBase(target, index, buffer);
+
+  @override
+  int glGetUniformBlockIndex(int program, String uniformBlockName) =>
+      _allocator.withUtf8(
+        uniformBlockName,
+        (ptr) => _fnGlGetUniformBlockIndex(program, ptr),
+      );
+
+  @override
+  void glUniformBlockBinding(
+    int program,
+    int uniformBlockIndex,
+    int uniformBlockBinding,
+  ) =>
+      _fnGlUniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding);
 }

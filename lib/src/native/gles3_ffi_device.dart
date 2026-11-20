@@ -7,7 +7,15 @@ import 'package:pixeldart/rendering/webgl/state_cache.dart';
 import 'gles3_bindings.dart';
 import 'native_ffi_transport.dart';
 
-enum _GlesObjectKind { buffer, texture, target, vao, program, timer }
+enum _GlesObjectKind {
+  buffer,
+  texture,
+  target,
+  vao,
+  program,
+  timer,
+  occlusionQuery,
+}
 
 final class _GlesGpuObject implements GpuObject {
   final int id;
@@ -24,6 +32,8 @@ final class _GlTexture {
   final int layers;
   final bool hasMips;
   final AnisotropyDecision anisotropy;
+  final GpuTextureTarget target;
+  final GpuTextureFormat format;
 
   const _GlTexture({
     required this.id,
@@ -32,6 +42,8 @@ final class _GlTexture {
     required this.layers,
     required this.hasMips,
     required this.anisotropy,
+    this.target = GpuTextureTarget.tex2d,
+    this.format = GpuTextureFormat.rgba8,
   });
 }
 
@@ -43,6 +55,7 @@ final class _GlFramebuffer {
   final int? depthTex;
   final int? glowTex;
   final int? glowRb;
+  final List<int> colorAttachments;
   final int width;
   final int height;
   final int samples;
@@ -55,6 +68,7 @@ final class _GlFramebuffer {
     this.depthTex,
     this.glowTex,
     this.glowRb,
+    this.colorAttachments = const [],
     required this.width,
     required this.height,
     required this.samples,
@@ -68,15 +82,22 @@ final class _GlTimerQuery {
   _GlTimerQuery(this.id);
 }
 
+final class _GlOcclusionQuery {
+  final int id;
+  bool ended = false;
+
+  _GlOcclusionQuery(this.id);
+}
+
 final class _UniformLocations {
   final Map<String, int> found = <String, int>{};
   final Set<String> missing = <String>{};
 }
 
-/// Hardware-backed OpenGL ES 3.0 / ANGLE [GpuDevice] implementation driven
+/// Hardware-backed OpenGL ES 3.0 / ANGLE [GpuDeviceV2] implementation driven
 /// through [Gles3Api] (defaulting to [FfiGles3Api] over
 /// [DynamicLibraryGlLoader]).
-final class Gles3FfiDevice implements GpuDevice, GpuContextGeneration {
+final class Gles3FfiDevice implements GpuDeviceV2, GpuContextGeneration {
   final Gles3Api _gl;
   final WebGlStateCache _stateCache = WebGlStateCache();
   final Float32List _clearColorScratch = Float32List(4);
@@ -97,6 +118,8 @@ final class Gles3FfiDevice implements GpuDevice, GpuContextGeneration {
   final Set<int> _vaos = <int>{};
   final Set<int> _programs = <int>{};
   final Map<int, _GlTimerQuery> _timers = <int, _GlTimerQuery>{};
+  final Map<int, _GlOcclusionQuery> _occlusionQueries =
+      <int, _GlOcclusionQuery>{};
   final Map<int, _UniformLocations> _uniformLocations =
       <int, _UniformLocations>{};
 
@@ -1593,5 +1616,575 @@ final class Gles3FfiDevice implements GpuDevice, GpuContextGeneration {
       offsetBytes,
       instanceCount,
     );
+  }
+
+  // --- GpuDeviceV2 (S1-A) ---
+
+  Gles3V2Api _requireV2Api(String op) {
+    final gl = _gl;
+    if (gl is Gles3V2Api) return gl as Gles3V2Api;
+    throw UnsupportedError(
+      'Gles3FfiDevice.$op requires a Gles3Api implementing Gles3V2Api',
+    );
+  }
+
+  int _glInternalFormat(GpuTextureFormat fmt) => switch (fmt) {
+    GpuTextureFormat.rgba8 => GL_RGBA8,
+    GpuTextureFormat.srgb8Alpha8 => GL_SRGB8_ALPHA8,
+    GpuTextureFormat.rgba16f => GL_RGBA16F,
+    GpuTextureFormat.rgba32f => GL_RGBA32F,
+    GpuTextureFormat.r16f => GL_R16F,
+    GpuTextureFormat.r32f => GL_R32F,
+    GpuTextureFormat.rg16f => GL_RG16F,
+    GpuTextureFormat.depth24 => GL_DEPTH_COMPONENT24,
+    GpuTextureFormat.depth32f => GL_DEPTH_COMPONENT32F,
+  };
+
+  int _glBaseFormat(GpuTextureFormat fmt) => switch (fmt) {
+    GpuTextureFormat.r16f || GpuTextureFormat.r32f => GL_RED,
+    GpuTextureFormat.rg16f => GL_RG,
+    GpuTextureFormat.depth24 || GpuTextureFormat.depth32f => GL_DEPTH_COMPONENT,
+    _ => GL_RGBA,
+  };
+
+  int _glColorTargetFormat(GpuColorTargetFormat fmt) => switch (fmt) {
+    GpuColorTargetFormat.rgba8 => GL_RGBA8,
+    GpuColorTargetFormat.rgba16f => GL_RGBA16F,
+    GpuColorTargetFormat.rgba32f => GL_RGBA32F,
+  };
+
+  int _glCubeFaceTarget(GpuCubeFace face) => switch (face) {
+    GpuCubeFace.positiveX => GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+    GpuCubeFace.negativeX => GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+    GpuCubeFace.positiveY => GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+    GpuCubeFace.negativeY => GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+    GpuCubeFace.positiveZ => GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+    GpuCubeFace.negativeZ => GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+  };
+
+  int _glUsageV2(GpuBufferUsage usage) => switch (usage) {
+    GpuBufferUsage.staticDraw => GL_STATIC_DRAW,
+    GpuBufferUsage.dynamicDraw => GL_DYNAMIC_DRAW,
+    GpuBufferUsage.streamDraw => GL_STREAM_DRAW,
+  };
+
+  int _glFilterV2(GpuTextureFilter filter) => switch (filter) {
+    GpuTextureFilter.nearest => GL_NEAREST,
+    GpuTextureFilter.linear => GL_LINEAR,
+    GpuTextureFilter.linearMipmapLinear => GL_LINEAR_MIPMAP_LINEAR,
+  };
+
+  int _glWrapV2(GpuTextureWrap wrap) => switch (wrap) {
+    GpuTextureWrap.clampToEdge => GL_CLAMP_TO_EDGE,
+    GpuTextureWrap.repeat => GL_REPEAT,
+  };
+
+  @override
+  GpuObject createUniformBuffer(GpuUniformBufferDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    final id = _gl.glGenBuffers(1).single;
+    _buffers.add(id);
+    _gl.glBindBuffer(GL_UNIFORM_BUFFER, id);
+    _gl.glBufferData(
+      GL_UNIFORM_BUFFER,
+      descriptor.byteLength,
+      null,
+      _glUsageV2(descriptor.usage),
+    );
+    return _GlesGpuObject(id, _contextGeneration, _GlesObjectKind.buffer);
+  }
+
+  @override
+  void updateUniformBuffer(
+    GpuObject buffer,
+    ByteData data, {
+    int dstByteOffset = 0,
+  }) {
+    _requireReady();
+    final id = _requireBuffer(buffer);
+    _gl.glBindBuffer(GL_UNIFORM_BUFFER, id);
+    _gl.glBufferSubData(
+      GL_UNIFORM_BUFFER,
+      dstByteOffset,
+      data.lengthInBytes,
+      data,
+    );
+  }
+
+  @override
+  void bindUniformBufferBase(int bindingPoint, GpuObject buffer) {
+    _requireReady();
+    final id = _requireBuffer(buffer);
+    if (_stateCache.shouldBindUbo(bindingPoint, id)) {
+      _requireV2Api(
+        'bindUniformBufferBase',
+      ).glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, id);
+      _stateCache.markUboBound(bindingPoint, id);
+    }
+  }
+
+  @override
+  void uniformBlockBinding(
+    GpuObject program,
+    String blockName,
+    int bindingPoint,
+  ) {
+    _requireReady();
+    final progId = _requireProgram(program);
+    final v2 = _requireV2Api('uniformBlockBinding');
+    final idx = v2.glGetUniformBlockIndex(progId, blockName);
+    if (idx != GL_INVALID_INDEX) {
+      v2.glUniformBlockBinding(progId, idx, bindingPoint);
+    }
+  }
+
+  @override
+  GpuObject createCubeTexture(GpuCubeTextureDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    final id = _gl.glGenTextures(1).single;
+    _gl.glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+    final internal = _glInternalFormat(descriptor.format);
+    final base = _glBaseFormat(descriptor.format);
+    final type =
+        (descriptor.format == GpuTextureFormat.rgba8 ||
+            descriptor.format == GpuTextureFormat.srgb8Alpha8)
+        ? GL_UNSIGNED_BYTE
+        : GL_FLOAT;
+    for (final face in GpuCubeFace.values) {
+      _gl.glTexImage2D(
+        _glCubeFaceTarget(face),
+        0,
+        internal,
+        descriptor.size,
+        descriptor.size,
+        0,
+        base,
+        type,
+        null,
+      );
+    }
+    _gl.glTexParameteri(
+      GL_TEXTURE_CUBE_MAP,
+      GL_TEXTURE_MIN_FILTER,
+      _glFilterV2(descriptor.minFilter),
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_CUBE_MAP,
+      GL_TEXTURE_MAG_FILTER,
+      _glFilterV2(descriptor.magFilter),
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_CUBE_MAP,
+      GL_TEXTURE_WRAP_S,
+      GL_CLAMP_TO_EDGE,
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_CUBE_MAP,
+      GL_TEXTURE_WRAP_T,
+      GL_CLAMP_TO_EDGE,
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_CUBE_MAP,
+      GL_TEXTURE_WRAP_R,
+      GL_CLAMP_TO_EDGE,
+    );
+    _textures[id] = _GlTexture(
+      id: id,
+      width: descriptor.size,
+      height: descriptor.size,
+      layers: 6,
+      hasMips: descriptor.hasMips,
+      anisotropy: const AnisotropyDecision(
+        requested: 1,
+        effective: 1,
+        maxSupported: 1,
+        extensionAvailable: false,
+      ),
+      target: GpuTextureTarget.cubeMap,
+      format: descriptor.format,
+    );
+    return _GlesGpuObject(id, _contextGeneration, _GlesObjectKind.texture);
+  }
+
+  @override
+  void uploadCubeFace(
+    GpuObject texture,
+    GpuCubeFace face,
+    Uint8List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    final tex = _requireTexture(texture);
+    final dim = (tex.width >> mipLevel).clamp(1, tex.width);
+    _gl.glBindTexture(GL_TEXTURE_CUBE_MAP, tex.id);
+    _gl.glTexSubImage2D(
+      _glCubeFaceTarget(face),
+      mipLevel,
+      0,
+      0,
+      dim,
+      dim,
+      _glBaseFormat(tex.format),
+      GL_UNSIGNED_BYTE,
+      pixels,
+    );
+  }
+
+  @override
+  void uploadCubeFaceFloat(
+    GpuObject texture,
+    GpuCubeFace face,
+    Float32List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    final tex = _requireTexture(texture);
+    final dim = (tex.width >> mipLevel).clamp(1, tex.width);
+    _gl.glBindTexture(GL_TEXTURE_CUBE_MAP, tex.id);
+    _gl.glTexSubImage2D(
+      _glCubeFaceTarget(face),
+      mipLevel,
+      0,
+      0,
+      dim,
+      dim,
+      _glBaseFormat(tex.format),
+      GL_FLOAT,
+      pixels,
+    );
+  }
+
+  @override
+  void bindCubeTexture(int unit, GpuObject texture) {
+    _requireReady();
+    final tex = _requireTexture(texture);
+    if (_stateCache.shouldBindTexture(unit, GL_TEXTURE_CUBE_MAP, tex.id)) {
+      _gl.glActiveTexture(GL_TEXTURE0 + unit);
+      _gl.glBindTexture(GL_TEXTURE_CUBE_MAP, tex.id);
+      _stateCache.markTextureBound(unit, GL_TEXTURE_CUBE_MAP, tex.id);
+    }
+  }
+
+  @override
+  GpuObject createTextureArray(GpuTextureArrayDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    final id = _gl.glGenTextures(1).single;
+    _gl.glBindTexture(GL_TEXTURE_2D_ARRAY, id);
+    final type =
+        (descriptor.format == GpuTextureFormat.rgba8 ||
+            descriptor.format == GpuTextureFormat.srgb8Alpha8)
+        ? GL_UNSIGNED_BYTE
+        : GL_FLOAT;
+    _gl.glTexImage3D(
+      GL_TEXTURE_2D_ARRAY,
+      0,
+      _glInternalFormat(descriptor.format),
+      descriptor.width,
+      descriptor.height,
+      descriptor.layers,
+      0,
+      _glBaseFormat(descriptor.format),
+      type,
+      null,
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_2D_ARRAY,
+      GL_TEXTURE_MIN_FILTER,
+      _glFilterV2(descriptor.minFilter),
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_2D_ARRAY,
+      GL_TEXTURE_MAG_FILTER,
+      _glFilterV2(descriptor.magFilter),
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_2D_ARRAY,
+      GL_TEXTURE_WRAP_S,
+      _glWrapV2(descriptor.wrap),
+    );
+    _gl.glTexParameteri(
+      GL_TEXTURE_2D_ARRAY,
+      GL_TEXTURE_WRAP_T,
+      _glWrapV2(descriptor.wrap),
+    );
+    _textures[id] = _GlTexture(
+      id: id,
+      width: descriptor.width,
+      height: descriptor.height,
+      layers: descriptor.layers,
+      hasMips: descriptor.hasMips,
+      anisotropy: const AnisotropyDecision(
+        requested: 1,
+        effective: 1,
+        maxSupported: 1,
+        extensionAvailable: false,
+      ),
+      target: GpuTextureTarget.tex2dArray,
+      format: descriptor.format,
+    );
+    return _GlesGpuObject(id, _contextGeneration, _GlesObjectKind.texture);
+  }
+
+  @override
+  void uploadTextureArrayLayer(
+    GpuObject texture,
+    int layer,
+    Uint8List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    final tex = _requireTexture(texture);
+    final w = (tex.width >> mipLevel).clamp(1, tex.width);
+    final h = (tex.height >> mipLevel).clamp(1, tex.height);
+    _gl.glBindTexture(GL_TEXTURE_2D_ARRAY, tex.id);
+    _gl.glTexSubImage3D(
+      GL_TEXTURE_2D_ARRAY,
+      mipLevel,
+      0,
+      0,
+      layer,
+      w,
+      h,
+      1,
+      _glBaseFormat(tex.format),
+      GL_UNSIGNED_BYTE,
+      pixels,
+    );
+  }
+
+  @override
+  void uploadTextureArrayLayerFloat(
+    GpuObject texture,
+    int layer,
+    Float32List pixels, {
+    int mipLevel = 0,
+  }) {
+    _requireReady();
+    final tex = _requireTexture(texture);
+    final w = (tex.width >> mipLevel).clamp(1, tex.width);
+    final h = (tex.height >> mipLevel).clamp(1, tex.height);
+    _gl.glBindTexture(GL_TEXTURE_2D_ARRAY, tex.id);
+    _gl.glTexSubImage3D(
+      GL_TEXTURE_2D_ARRAY,
+      mipLevel,
+      0,
+      0,
+      layer,
+      w,
+      h,
+      1,
+      _glBaseFormat(tex.format),
+      GL_FLOAT,
+      pixels,
+    );
+  }
+
+  @override
+  void bindTextureArray(int unit, GpuObject texture) {
+    _requireReady();
+    final tex = _requireTexture(texture);
+    if (_stateCache.shouldBindTexture(unit, GL_TEXTURE_2D_ARRAY, tex.id)) {
+      _gl.glActiveTexture(GL_TEXTURE0 + unit);
+      _gl.glBindTexture(GL_TEXTURE_2D_ARRAY, tex.id);
+      _stateCache.markTextureBound(unit, GL_TEXTURE_2D_ARRAY, tex.id);
+    }
+  }
+
+  @override
+  GpuObject createMrtTarget(GpuMrtTargetDescriptor descriptor) {
+    _requireReady();
+    descriptor.validate();
+    final fbo = _gl.glGenFramebuffers(1).single;
+    _gl.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    final colorAttachments = <int>[];
+    final drawBufs = <int>[];
+    for (var i = 0; i < descriptor.colorFormats.length; i++) {
+      final fmt = descriptor.colorFormats[i];
+      final tex = _gl.glGenTextures(1).single;
+      _gl.glBindTexture(GL_TEXTURE_2D, tex);
+      _gl.glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        _glColorTargetFormat(fmt),
+        descriptor.width,
+        descriptor.height,
+        0,
+        GL_RGBA,
+        fmt == GpuColorTargetFormat.rgba8 ? GL_UNSIGNED_BYTE : GL_FLOAT,
+        null,
+      );
+      _gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      _gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      _gl.glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_COLOR_ATTACHMENT0 + i,
+        GL_TEXTURE_2D,
+        tex,
+        0,
+      );
+      colorAttachments.add(tex);
+      drawBufs.add(GL_COLOR_ATTACHMENT0 + i);
+    }
+
+    _gl.glDrawBuffers(drawBufs.isEmpty ? const [GL_NONE] : drawBufs);
+
+    int? depthTex;
+    if (descriptor.hasDepth) {
+      depthTex = _gl.glGenTextures(1).single;
+      _gl.glBindTexture(GL_TEXTURE_2D, depthTex);
+      _gl.glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_DEPTH_COMPONENT24,
+        descriptor.width,
+        descriptor.height,
+        0,
+        GL_DEPTH_COMPONENT,
+        GL_UNSIGNED_INT,
+        null,
+      );
+      _gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      _gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      _gl.glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_DEPTH_ATTACHMENT,
+        GL_TEXTURE_2D,
+        depthTex,
+        0,
+      );
+    }
+
+    final status = _gl.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    _gl.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+      _gl.glDeleteFramebuffers([fbo]);
+      if (colorAttachments.isNotEmpty) _gl.glDeleteTextures(colorAttachments);
+      if (depthTex != null) _gl.glDeleteTextures([depthTex]);
+      throw StateError(
+        'Gles3FfiDevice.createMrtTarget: framebuffer incomplete (0x${status.toRadixString(16)})',
+      );
+    }
+
+    _targets[fbo] = _GlFramebuffer(
+      fbo: fbo,
+      colorTex: colorAttachments.isNotEmpty ? colorAttachments.first : null,
+      glowTex: colorAttachments.length > 1 ? colorAttachments[1] : null,
+      colorAttachments: colorAttachments,
+      depthTex: depthTex,
+      width: descriptor.width,
+      height: descriptor.height,
+      samples: descriptor.samples,
+    );
+    return _GlesGpuObject(fbo, _contextGeneration, _GlesObjectKind.target);
+  }
+
+  @override
+  void drawBuffers(List<int> colorAttachmentIndices) {
+    _requireReady();
+    if (colorAttachmentIndices.isEmpty) {
+      _gl.glDrawBuffers(const [GL_NONE]);
+      return;
+    }
+    _gl.glDrawBuffers([
+      for (final i in colorAttachmentIndices)
+        i < 0 ? GL_NONE : GL_COLOR_ATTACHMENT0 + i,
+    ]);
+  }
+
+  @override
+  void bindTargetColorAttachment(
+    int unit,
+    GpuObject target,
+    int attachmentIndex,
+  ) {
+    _requireReady();
+    final fb = _requireTarget(target);
+    final int? tex = attachmentIndex < fb.colorAttachments.length
+        ? fb.colorAttachments[attachmentIndex]
+        : (attachmentIndex == 0
+              ? fb.colorTex
+              : attachmentIndex == 1
+              ? fb.glowTex
+              : null);
+    if (tex == null) {
+      throw RangeError.index(
+        attachmentIndex,
+        fb.colorAttachments,
+        'attachmentIndex',
+        'No color attachment at index $attachmentIndex',
+      );
+    }
+    if (_stateCache.shouldBindTexture(unit, GL_TEXTURE_2D, tex)) {
+      _gl.glActiveTexture(GL_TEXTURE0 + unit);
+      _gl.glBindTexture(GL_TEXTURE_2D, tex);
+      _stateCache.markTextureBound(unit, GL_TEXTURE_2D, tex);
+    }
+  }
+
+  @override
+  GpuObject? beginOcclusionQuery() {
+    _requireReady();
+    final id = _gl.glGenQueries(1).single;
+    _occlusionQueries[id] = _GlOcclusionQuery(id);
+    _gl.glBeginQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE, id);
+    return _GlesGpuObject(
+      id,
+      _contextGeneration,
+      _GlesObjectKind.occlusionQuery,
+    );
+  }
+
+  @override
+  void endOcclusionQuery(GpuObject query) {
+    _requireReady();
+    final obj = query as _GlesGpuObject;
+    final q = _occlusionQueries[obj.id];
+    if (q == null) {
+      throw StateError('Gles3FfiDevice: unknown occlusion query ${obj.id}');
+    }
+    if (q.ended) {
+      throw StateError('Gles3FfiDevice: occlusion query already ended');
+    }
+    _gl.glEndQuery(GL_ANY_SAMPLES_PASSED_CONSERVATIVE);
+    q.ended = true;
+  }
+
+  @override
+  GpuOcclusionQueryPoll pollOcclusionQuery(GpuObject query) {
+    final obj = query as _GlesGpuObject;
+    final q = _occlusionQueries[obj.id];
+    if (q == null || !q.ended) {
+      return const GpuOcclusionQueryPoll(GpuOcclusionQueryStatus.pending);
+    }
+    final available = _gl.glGetQueryObjectuiv(q.id, GL_QUERY_RESULT_AVAILABLE);
+    if (available == 0) {
+      return const GpuOcclusionQueryPoll(GpuOcclusionQueryStatus.pending);
+    }
+    final passed = _gl.glGetQueryObjectuiv(q.id, GL_QUERY_RESULT);
+    return GpuOcclusionQueryPoll(GpuOcclusionQueryStatus.ready, passed != 0);
+  }
+
+  @override
+  void deleteOcclusionQuery(GpuObject query) {
+    final obj = query as _GlesGpuObject;
+    if (obj.generation != _contextGeneration) return;
+    _occlusionQueries.remove(obj.id);
+    _gl.glDeleteQueries([obj.id]);
+  }
+
+  @override
+  GpuPassTimerScope? beginPassTimer(String passName) {
+    final q = beginGpuTimer();
+    if (q == null) return null;
+    return GpuPassTimerScope(passName: passName, query: q);
+  }
+
+  @override
+  void endPassTimer(GpuPassTimerScope scope) {
+    endGpuTimer(scope.query);
   }
 }

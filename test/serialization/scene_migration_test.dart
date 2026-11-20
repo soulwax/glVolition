@@ -167,7 +167,7 @@ void main() {
         expect(migrationResult.fromVersion, 1);
         expect(migrationResult.toVersion, SceneSerializer.schemaVersion);
         expect(migrationResult.didMigrate, isTrue);
-        expect(migrationResult.appliedSteps, ['v1->v2']);
+        expect(migrationResult.appliedSteps, ['v1->v2', 'v2->v3']);
         expect(
           migrationResult.data['schemaVersion'],
           SceneSerializer.schemaVersion,
