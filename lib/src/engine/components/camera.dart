@@ -250,6 +250,42 @@ final class Camera extends Component {
         FrustumIntersection.outside;
   }
 
+  /// Tests whether [worldPoint] lies inside this camera's viewing frustum (P13-W21-C).
+  bool isPointVisible(Vec3 worldPoint, [double? aspect]) {
+    final frustum = calculateFrustum(aspect);
+    final tiny = Aabb3.fromCenterExtents(
+      GeomVec3(worldPoint.x, worldPoint.y, worldPoint.z),
+      const GeomVec3(1e-4, 1e-4, 1e-4),
+    );
+    return frustum.intersectsAabb(tiny) != FrustumIntersection.outside;
+  }
+
+  /// Tests whether world-space [bounds] intersect this camera's viewing frustum (P13-W21-C).
+  bool isAabbVisible(Aabb bounds, [double? aspect]) {
+    final frustum = calculateFrustum(aspect);
+    final box = Aabb3(
+      GeomVec3(bounds.min.x, bounds.min.y, bounds.min.z),
+      GeomVec3(bounds.max.x, bounds.max.y, bounds.max.z),
+    );
+    return frustum.intersectsAabb(box) != FrustumIntersection.outside;
+  }
+
+  /// Single-pass batch frustum cull returning all active [MeshRenderer]s in the
+  /// scene matching [cullingMask] and intersecting this camera's frustum (P13-W21-C).
+  List<MeshRenderer> collectVisibleMeshes([double? aspect]) {
+    final frustum = calculateFrustum(aspect);
+    final visible = <MeshRenderer>[];
+    for (final (_, renderer) in scene.query<MeshRenderer>(
+      layerMask: cullingMask,
+    )) {
+      if (frustum.intersectsAabb(renderer.worldAabb) !=
+          FrustumIntersection.outside) {
+        visible.add(renderer);
+      }
+    }
+    return visible;
+  }
+
   CameraView toCameraView([double? aspect]) {
     _sync();
     final base = controller.toCameraView(aspect ?? engine.graphics.aspect);

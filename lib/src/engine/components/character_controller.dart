@@ -9,8 +9,8 @@ abstract final class CollisionFlags {
 }
 
 /// Kinematic 3D character controller with capsule/sphere depenetration,
-/// wall sliding, slope clamping, and automatic [TerrainComponent] grounding
-/// (E10-2).
+/// wall sliding, slope clamping, coyote time, jump buffering, moving platform
+/// carry, and automatic [TerrainComponent] grounding (E10-2, P13-W21-A).
 final class CharacterController extends Component {
   double radius;
   double height;
@@ -20,11 +20,18 @@ final class CharacterController extends Component {
   double skinWidth;
   bool useGravity;
   Vec3 gravity;
+  double coyoteTime;
+  double jumpBufferTime;
 
   bool _isGrounded = false;
   Vec3 _velocity = Vec3.zero;
   double _verticalSpeed = 0.0;
   int _collisionFlags = CollisionFlags.none;
+  Vec3 _groundNormal = Vec3.unitY;
+  GameObject? _groundObject;
+  Vec3? _lastGroundPos;
+  double _coyoteTimer = 0.0;
+  double _jumpBufferTimer = 0.0;
 
   CharacterController({
     this.radius = 0.4,
@@ -35,20 +42,63 @@ final class CharacterController extends Component {
     this.skinWidth = 0.02,
     this.useGravity = true,
     this.gravity = const Vec3(0, -9.81, 0),
+    this.coyoteTime = 0.12,
+    this.jumpBufferTime = 0.12,
   });
 
   bool get isGrounded => _isGrounded;
   Vec3 get velocity => _velocity;
+  double get verticalSpeed => _verticalSpeed;
   int get collisionFlags => _collisionFlags;
+  Vec3 get groundNormal => _groundNormal;
+  GameObject? get groundObject =>
+      (_groundObject != null && !_groundObject!.isDestroyed)
+      ? _groundObject
+      : null;
+  bool get canCoyoteJump => _isGrounded || _coyoteTimer > 0.0;
+  bool get hasBufferedJump => _jumpBufferTimer > 0.0;
+
+  /// Buffers a jump request for [jumpBufferTime] seconds so slightly-early jump
+  /// presses execute automatically on landing (P13-W21-A).
+  void queueJump() {
+    _jumpBufferTimer = math.max(0.0, jumpBufferTime);
+  }
+
+  /// Executes a buffered (or immediate when [requireBuffer] is `false`) jump
+  /// with upward [jumpSpeed] if grounded or within [coyoteTime].
+  bool consumeBufferedJump(double jumpSpeed, {bool requireBuffer = true}) {
+    if (requireBuffer && _jumpBufferTimer <= 0.0) return false;
+    if (!canCoyoteJump) return false;
+    _verticalSpeed = jumpSpeed;
+    _isGrounded = false;
+    _coyoteTimer = 0.0;
+    _jumpBufferTimer = 0.0;
+    _groundObject = null;
+    _lastGroundPos = null;
+    return true;
+  }
 
   /// Moves the character by [motion] in world space, sliding along static solid
   /// colliders in [PhysicsWorld] and clamping against any active
   /// [TerrainComponent] in the scene. Returns a [CollisionFlags] bitmask.
   int move(Vec3 motion) {
     final dt = scene.isLoaded ? engine.time.deltaTime : 0.0;
+
+    // Carry character along with moving ground platform if still standing on it.
+    var effectiveMotion = motion;
+    if (_isGrounded &&
+        _groundObject != null &&
+        !_groundObject!.isDestroyed &&
+        _lastGroundPos != null) {
+      final platformDelta = _groundObject!.transform.position - _lastGroundPos!;
+      effectiveMotion = effectiveMotion + platformDelta;
+    }
+
     final startPos = transform.position;
     var flags = CollisionFlags.none;
     var grounded = false;
+    var bestGroundNormal = Vec3.unitY;
+    GameObject? hitGroundObject;
     final minSlopeY = math.cos(slopeLimitDegrees * math.pi / 180.0);
     final r = math.max(0.05, radius) + skinWidth;
     final halfSeg = math.max(0.0, height * 0.5 - radius);
@@ -57,8 +107,8 @@ final class CharacterController extends Component {
         : const <Vec3>[Vec3.zero];
 
     final maxStep = math.max(0.05, radius * 0.5);
-    final subSteps = math.max(1, (motion.length / maxStep).ceil());
-    final stepDelta = motion * (1.0 / subSteps);
+    final subSteps = math.max(1, (effectiveMotion.length / maxStep).ceil());
+    final stepDelta = effectiveMotion * (1.0 / subSteps);
     var pos = startPos;
 
     for (var s = 0; s < subSteps; s++) {
@@ -80,6 +130,8 @@ final class CharacterController extends Component {
             pos = pos + normal * depth;
             if (normal.y >= minSlopeY) {
               grounded = true;
+              bestGroundNormal = normal;
+              hitGroundObject = other.gameObject;
               flags |= CollisionFlags.below;
             } else if (normal.y < -0.5) {
               flags |= CollisionFlags.above;
@@ -101,6 +153,8 @@ final class CharacterController extends Component {
         if (lift >= -skinWidth) {
           pos = Vec3(pos.x, pos.y + lift, pos.z);
           grounded = true;
+          bestGroundNormal = Vec3.unitY;
+          hitGroundObject = terrain.gameObject;
           flags |= CollisionFlags.below;
         }
       }
@@ -108,7 +162,20 @@ final class CharacterController extends Component {
 
     transform.position = pos;
     _isGrounded = grounded;
+    _groundNormal = bestGroundNormal;
+    _groundObject = hitGroundObject;
+    _lastGroundPos = hitGroundObject?.transform.position;
     _collisionFlags = flags;
+
+    if (grounded) {
+      _coyoteTimer = coyoteTime;
+    } else if (dt > 0) {
+      _coyoteTimer = math.max(0.0, _coyoteTimer - dt);
+    }
+    if (_jumpBufferTimer > 0 && dt > 0) {
+      _jumpBufferTimer = math.max(0.0, _jumpBufferTimer - dt);
+    }
+
     if (dt > 1e-6) {
       _velocity = (pos - startPos) * (1.0 / dt);
     } else {

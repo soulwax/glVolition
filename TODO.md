@@ -630,6 +630,33 @@
 
 ---
 
+## Wave 21 (Phase 13) — Platformer CharacterController, Exact SpatialGrid2D & Camera Frustum Batching
+
+**Wave Exit Gate:** Coyote-time/jump-buffer/moving-platform `CharacterController`, exact circle/nearest/DDA-ray `SpatialGrid2D`, and single-pass `Camera.collectVisibleMeshes` pass `wave21_gameplay_spatial_test.dart` and full 10-gate `verify_all.dart`.
+
+- [x] **[P13-W21-A] Platformer-Grade `CharacterController` (Coyote Time, Jump Buffering & Moving Platform Carry)**
+  - **Priority:** P1
+  - **DependsOn:** `[P12-W20-D]`
+  - **Owns:** `lib/src/engine/components/character_controller.dart`, `test/engine/wave21_gameplay_spatial_test.dart`
+  - **Scope:** Add `coyoteTime`, `jumpBufferTime`, `queueJump`, `consumeBufferedJump`, `groundNormal`, `groundObject`, and moving platform carry tracking.
+  - **DoneWhen:** `dart test test/engine/wave21_gameplay_spatial_test.dart` passes.
+
+- [x] **[P13-W21-B] Exact `SpatialGrid2D` Circle Queries, Nearest-Neighbor & DDA Ray Traversal**
+  - **Priority:** P1
+  - **DependsOn:** `[P12-W20-D]`
+  - **Owns:** `lib/src/engine/spatial_grid_2d.dart`, `test/engine/wave21_gameplay_spatial_test.dart`
+  - **Scope:** Add cell-coherent `update`, `queryCircleExact`, `findNearest`, and `queryRay`.
+  - **DoneWhen:** `dart test test/engine/wave21_gameplay_spatial_test.dart` passes.
+
+- [x] **[P13-W21-C] Camera Batch Frustum Culling (`collectVisibleMeshes`, `isPointVisible`, `isAabbVisible`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P12-W20-D]`
+  - **Owns:** `lib/src/engine/components/camera.dart`, `test/engine/wave21_gameplay_spatial_test.dart`
+  - **Scope:** Add single-pass frustum culling batching and point/AABB visibility helpers respecting `cullingMask`.
+  - **DoneWhen:** `dart test test/engine/wave21_gameplay_spatial_test.dart` and `dart run tool/verify_all.dart --check-format --skip-wasm` pass.
+
+---
+
 ## Carry-Over Index: Legacy `pixeldart` `PLAN.md` & `TODO.md` Traceability
 
 Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is tracked explicitly here so zero renderer debt is dropped:
