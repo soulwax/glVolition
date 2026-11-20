@@ -36,7 +36,142 @@ final class DebugMetrics {
       'Col $colliderCount | Scale ${timeScale}x${paused ? " [PAUSED]" : ""}';
 }
 
-/// In-game diagnostics and time-control behaviour (E2-4).
+/// Command descriptor registered in [DebugConsole] (P11-W19-C).
+final class DebugConsoleCommand {
+  final String name;
+  final String description;
+  final String usage;
+  final String Function(List<String> args) handler;
+
+  const DebugConsoleCommand({
+    required this.name,
+    required this.handler,
+    this.description = '',
+    this.usage = '',
+  });
+}
+
+/// Extensible runtime developer command console attached to [DebugController]
+/// (P11-W19-C). Supports quoted argument tokenization, command history, prefix
+/// autocompletion, and built-in scene/entity/time commands.
+final class DebugConsole {
+  final Map<String, DebugConsoleCommand> _commands = {};
+  final List<String> _history = [];
+  final List<String> _outputLog = [];
+  final int maxLogEntries;
+
+  DebugConsole({this.maxLogEntries = 200});
+
+  List<String> get commandHistory => List.unmodifiable(_history);
+  List<String> get outputLog => List.unmodifiable(_outputLog);
+  Iterable<String> get registeredCommands => _commands.keys;
+
+  void register(
+    String name,
+    String Function(List<String> args) handler, {
+    String description = '',
+    String usage = '',
+  }) {
+    final key = name.trim().toLowerCase();
+    if (key.isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Command name must not be empty');
+    }
+    _commands[key] = DebugConsoleCommand(
+      name: key,
+      handler: handler,
+      description: description,
+      usage: usage.isEmpty ? key : usage,
+    );
+  }
+
+  bool unregister(String name) =>
+      _commands.remove(name.trim().toLowerCase()) != null;
+
+  void clearLog() => _outputLog.clear();
+
+  /// Returns sorted registered command names starting with [prefix].
+  List<String> autocomplete(String prefix) {
+    final p = prefix.trim().toLowerCase();
+    final matches = [
+      for (final name in _commands.keys)
+        if (name.startsWith(p)) name,
+    ]..sort();
+    return matches;
+  }
+
+  /// Tokenizes [commandLine] (preserving quoted strings) and dispatches the
+  /// matching registered command.
+  String execute(String commandLine) {
+    final trimmed = commandLine.trim();
+    if (trimmed.isEmpty) return '';
+    _history.add(trimmed);
+    _appendLog('> $trimmed');
+
+    final tokens = tokenize(trimmed);
+    if (tokens.isEmpty) return '';
+    final cmdName = tokens.first.toLowerCase();
+    final args = tokens.sublist(1);
+    final cmd = _commands[cmdName];
+    if (cmd == null) {
+      final msg =
+          'Unknown command "$cmdName". Type "help" for available commands.';
+      _appendLog(msg);
+      return msg;
+    }
+
+    try {
+      final result = cmd.handler(args);
+      if (result.isNotEmpty) {
+        _appendLog(result);
+      }
+      return result;
+    } catch (e) {
+      final err = 'Error executing "$cmdName": $e';
+      _appendLog(err);
+      return err;
+    }
+  }
+
+  void _appendLog(String line) {
+    _outputLog.add(line);
+    if (_outputLog.length > maxLogEntries) {
+      _outputLog.removeAt(0);
+    }
+  }
+
+  /// Splits [input] into whitespace-separated tokens while preserving
+  /// single- or double-quoted arguments.
+  static List<String> tokenize(String input) {
+    final tokens = <String>[];
+    final buf = StringBuffer();
+    String? quoteChar;
+    for (var i = 0; i < input.length; i++) {
+      final ch = input[i];
+      if (quoteChar != null) {
+        if (ch == quoteChar) {
+          quoteChar = null;
+        } else {
+          buf.write(ch);
+        }
+      } else if (ch == '"' || ch == "'") {
+        quoteChar = ch;
+      } else if (ch.trim().isEmpty) {
+        if (buf.isNotEmpty) {
+          tokens.add(buf.toString());
+          buf.clear();
+        }
+      } else {
+        buf.write(ch);
+      }
+    }
+    if (buf.isNotEmpty) {
+      tokens.add(buf.toString());
+    }
+    return tokens;
+  }
+}
+
+/// In-game diagnostics and time-control behaviour (E2-4, P11-W19-C).
 ///
 /// Toggle overlay with `Backquote` (`` ` ``). While open:
 /// - `Space`: pause / resume (`time.timeScale = 0` / restore prior scale)
@@ -52,6 +187,7 @@ final class DebugController extends Behaviour {
   final String stepKey;
   final String slowDownKey;
   final String speedUpKey;
+  final DebugConsole console = DebugConsole();
 
   final List<double> _frameSamplesMs = [];
   static const int _maxSamples = 60;
@@ -66,7 +202,93 @@ final class DebugController extends Behaviour {
     this.stepKey = 'Period',
     this.slowDownKey = 'BracketLeft',
     this.speedUpKey = 'BracketRight',
-  });
+  }) {
+    _registerBuiltInCommands();
+  }
+
+  void _registerBuiltInCommands() {
+    console.register('help', (_) {
+      final names = console.registeredCommands.toList()..sort();
+      return names.join(', ');
+    }, description: 'List all registered console commands');
+    console.register('clear', (_) {
+      console.clearLog();
+      return '';
+    }, description: 'Clear console output log');
+    console.register(
+      'stats',
+      (_) => isAttached ? metrics().toString() : 'Not attached to a scene',
+      description: 'Print current frame and scene metrics',
+    );
+    console.register('pause', (_) {
+      pause();
+      return 'Simulation paused.';
+    }, description: 'Pause simulation timeScale');
+    console.register('resume', (_) {
+      resume();
+      return 'Simulation resumed (timeScale=${time.timeScale}).';
+    }, description: 'Resume simulation timeScale');
+    console.register(
+      'timescale',
+      (args) {
+        if (args.isEmpty) return 'timeScale=${time.timeScale}';
+        final val = double.tryParse(args.first);
+        if (val == null) return 'Invalid number: ${args.first}';
+        setTimeScale(val);
+        return 'timeScale set to ${_savedTimeScale.toStringAsFixed(3)}';
+      },
+      description: 'Get or set simulation timeScale (0.125..4.0)',
+      usage: 'timescale [scale]',
+    );
+    console.register(
+      'entities',
+      (args) {
+        if (!isAttached) return 'Not attached to a scene';
+        final filter = args.isEmpty ? null : args.first.toLowerCase();
+        final names = <String>[
+          for (final go in scene._allObjects(includeInactive: true))
+            if (filter == null || go.name.toLowerCase().contains(filter))
+              '${go.name}${go.activeSelf ? '' : ' [inactive]'}',
+        ];
+        return names.isEmpty ? '(none)' : names.join(', ');
+      },
+      description: 'List entities in the active scene',
+      usage: 'entities [filter]',
+    );
+    console.register(
+      'tp',
+      (args) {
+        if (!isAttached) return 'Not attached to a scene';
+        if (args.length < 4) return 'Usage: tp <name> <x> <y> <z>';
+        final go = scene.find(args[0]);
+        if (go == null) return 'Entity "${args[0]}" not found.';
+        final x = double.tryParse(args[1]);
+        final y = double.tryParse(args[2]);
+        final z = double.tryParse(args[3]);
+        if (x == null || y == null || z == null) {
+          return 'Invalid coordinates.';
+        }
+        go.transform.position = Vec3(x, y, z);
+        return 'Teleported ${go.name} to ($x, $y, $z)';
+      },
+      description: 'Teleport a named entity to world coordinates',
+      usage: 'tp <name> <x> <y> <z>',
+    );
+    console.register(
+      'active',
+      (args) {
+        if (!isAttached) return 'Not attached to a scene';
+        if (args.length < 2) return 'Usage: active <name> <true|false>';
+        final go = scene.find(args[0]);
+        if (go == null) return 'Entity "${args[0]}" not found.';
+        final val = args[1].toLowerCase() == 'true' || args[1] == '1';
+        go.setActive(val);
+        return '${go.name}.activeSelf = $val';
+      },
+      description: 'Activate or deactivate a named entity',
+      usage: 'active <name> <true|false>',
+    );
+  }
 
   static final spec = ComponentSpec<DebugController>(
     'DebugController',

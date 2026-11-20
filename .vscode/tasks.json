@@ -1,0 +1,78 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Release: Compile Native CLI (volition.exe)",
+      "type": "shell",
+      "command": "dart compile exe bin/volition.dart -o volition.exe",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$dart-compile"
+      ]
+    },
+    {
+      "label": "Release: Build Web JS (Prism Pulse)",
+      "type": "shell",
+      "command": "dart run bin/volition.dart build example/prism_pulse/main.dart --target js",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Release: Build Web Wasm (Prism Pulse)",
+      "type": "shell",
+      "command": "dart run bin/volition.dart build example/prism_pulse/main.dart --target wasm",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Release: Build Dedicated Server (Native)",
+      "type": "shell",
+      "command": "dart run bin/volition.dart build example/pixel_rocket/main.dart --target native",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Release: Package Distribution Bundle (Pixel Rocket)",
+      "type": "shell",
+      "command": "dart run bin/volition.dart dist example/pixel_rocket/main.dart",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Debug: Static Analysis",
+      "type": "shell",
+      "command": "dart analyze",
+      "group": "build",
+      "problemMatcher": [
+        "$dart-analyze"
+      ]
+    },
+    {
+      "label": "Check: Architecture Boundaries",
+      "type": "shell",
+      "command": "dart run tool/check_boundaries.dart",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Run Root Tests",
+      "type": "shell",
+      "command": "dart test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check: Verify All (CI Suite)",
+      "type": "shell",
+      "command": "dart run tool/verify_all.dart --check-format",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "glVolition CLI (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "glVolition CLI (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "noDebug": true
+    },
+    {
+      "name": "glVolition CLI: Doctor (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "doctor"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "glVolition CLI: Doctor (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "doctor"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "noDebug": true
+    },
+    {
+      "name": "Serve Prism Pulse (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "serve",
+        "example/prism_pulse/main.dart",
+        "--port",
+        "8080"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Serve Prism Pulse (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "serve",
+        "example/prism_pulse/main.dart",
+        "--port",
+        "8080"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "noDebug": true
+    },
+    {
+      "name": "Serve Pixel Rocket (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "serve",
+        "example/pixel_rocket/main.dart",
+        "--port",
+        "8080"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Serve Pixel Rocket (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "serve",
+        "example/pixel_rocket/main.dart",
+        "--port",
+        "8080"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "noDebug": true
+    },
+    {
+      "name": "Native Smoke: Headless (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "example/native_smoke/main.dart",
+      "args": [
+        "--headless"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Native Smoke: Headless (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "example/native_smoke/main.dart",
+      "args": [
+        "--headless"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "noDebug": true
+    },
+    {
+      "name": "Native Smoke: Hardware (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "example/native_smoke/main.dart",
+      "args": [
+        "--hardware"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Native Smoke: Hardware (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "example/native_smoke/main.dart",
+      "args": [
+        "--hardware"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "noDebug": true
+    },
+    {
+      "name": "Run Current Dart File (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Run Current Dart File (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "console": "terminal",
+      "noDebug": true
+    },
+    {
+      "name": "Run All Tests (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "test/",
+      "cwd": "${workspaceFolder}",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    }
+  ]
+}

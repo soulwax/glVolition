@@ -230,3 +230,14 @@ Verified clean on Dart 3.14.0 across unified test suites (382 root tests, 140 pi
   - **Additive Sub-Scenes & Integrity Save Bundles (`[P10-W18-B]`)**: Extend `SceneManager` with `loadAdditive`/`unloadAdditive`/`isAdditiveLoaded` and `SaveSystem` with CRC32 integrity verification (`verifySlotIntegrity`), `loadDataMigrated`, and signed `exportSlotBundle`/`importSlotBundle`.
   - **Live Prefab Diffing & Hot-Propagation (`[P10-W18-C]`)**: Auto-attach `PrefabInstanceComponent` in `PrefabRegistry.instantiate`, implement `computeInstanceOverrides`/`extractVariantFromInstance`, and add live `propagatePrefabChanges` preserving per-instance transforms and field overrides.
   - **Headless Replay CLI & Studio Verification (`[P10-W18-D]`)**: Support `InputTape` inspection (`discoverInspectableFiles()['tapes']`), `verifyInputTapeFile`, WebSocket RPC `tape.verify`, Studio UI tape verification button, and `volition replay <tape.json> [--json]`.
+
+---
+
+## 10. Phase 11 (Wave 19) — Rebindable Input Profiles, Prioritized Events & Composable Coroutines, Runtime Dev Console & Scoped Frame Profiler
+
+- **Objective**: Round out core gameplay-scripting and live-debugging ergonomics with customizable keyboard+gamepad input profiles, priority/deferred scene events, composable coroutines, an extensible developer command console, and real `Stopwatch`-measured sub-frame profiler spans.
+- **Key Deliverables**:
+  - **Input Rebinding & Gamepad Profiles (`[P11-W19-A]`)**: Extend `InputActions` (`lib/src/engine/input_actions.dart`) with gamepad button/axis bindings, configurable deadzones, runtime `rebindButton`/`rebindAxis`, and JSON / `KeyValueStore` profile persistence.
+  - **Prioritized Events & Composable Coroutines (`[P11-W19-B]`)**: Extend `SceneEvents` with priority ordering, `once<E>`, `emitDeferred<E>`/`flushDeferred()`, and `listenerCount<E>()`; add `WaitWhile`, `WaitForFrames`, and `WaitForCoroutine` yield instructions (`lib/src/engine/events_coroutines.dart`).
+  - **Runtime Developer Console (`[P11-W19-C]`)**: Add `DebugConsole` and built-in engine commands (`help`, `stats`, `pause`, `resume`, `timescale`, `entities`, `tp`, `active`, `clear`) with quoted-arg parsing, history, and prefix autocompletion on `DebugController` (`lib/src/engine/debug_controller.dart`).
+  - **Scoped Sub-Frame Profiler Spans (`[P11-W19-D]`)**: Add real `Stopwatch`-backed `beginSpan`/`endSpan`/`measureSpan` and `exportTelemetryJson()` to `FrameProfilerComponent` (`lib/src/engine/components/frame_profiler.dart`).

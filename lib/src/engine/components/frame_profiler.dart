@@ -13,6 +13,10 @@ final class FrameProfilerComponent extends Behaviour {
   late alloc.FixedSlabPool<String> slabPool;
   late alloc.FrameTelemetryRecorder telemetry;
 
+  final List<(String name, int depth, Stopwatch watch)> _openSpans = [];
+  final List<alloc.TelemetrySpan> _pendingSpans = [];
+  List<alloc.TelemetrySpan> _lastRecordedSpans = const [];
+
   FrameProfilerComponent({
     this.arenaCapacityBytes = 65536,
     this.slabCapacity = 256,
@@ -78,25 +82,87 @@ final class FrameProfilerComponent extends Behaviour {
 
   alloc.FrameTelemetryStats computeStats() => telemetry.computeStats();
 
+  /// Last frame's flushed telemetry spans (either measured via [beginSpan] /
+  /// [measureSpan] or default engine spans).
+  List<alloc.TelemetrySpan> get lastRecordedSpans => _lastRecordedSpans;
+
+  /// Starts a nested sub-frame profiler span backed by a live [Stopwatch]
+  /// (P11-W19-D). Pair with [endSpan].
+  void beginSpan(String name) {
+    final depth = _openSpans.length;
+    final sw = Stopwatch()..start();
+    _openSpans.add((name, depth, sw));
+  }
+
+  /// Ends the most recently opened profiler span and records its elapsed
+  /// milliseconds into the current frame's span buffer.
+  alloc.TelemetrySpan? endSpan() {
+    if (_openSpans.isEmpty) return null;
+    final (name, depth, sw) = _openSpans.removeLast();
+    sw.stop();
+    final span = alloc.TelemetrySpan(
+      name: name,
+      durationMs: sw.elapsedMicroseconds / 1000.0,
+      depth: depth,
+    );
+    _pendingSpans.add(span);
+    return span;
+  }
+
+  /// Measures [body] inside a scoped profiler span named [name] and returns
+  /// its result.
+  T measureSpan<T>(String name, T Function() body) {
+    beginSpan(name);
+    try {
+      return body();
+    } finally {
+      endSpan();
+    }
+  }
+
+  /// Exports rolling frame timing, arena/slab usage, and recent spans as JSON.
+  Map<String, Object?> exportTelemetryJson() {
+    final stats = computeStats();
+    return {
+      'meanMs': stats.meanMs,
+      'p95Ms': stats.p95Ms,
+      'p99Ms': stats.p99Ms,
+      'budgetMs': targetFrameBudgetMs,
+      'budgetHitRate': stats.budgetHitRate,
+      'totalFramesRecorded': telemetry.totalFramesRecorded,
+      'arenaUsedBytes': frameArena.usedBytes,
+      'arenaPeakBytes': frameArena.peakBytes,
+      'arenaCapacityBytes': frameArena.capacityBytes,
+      'slabActiveCount': slabPool.activeCount,
+      'slabCapacity': slabPool.capacity,
+      'lastSpans': [
+        for (final s in _lastRecordedSpans)
+          {'name': s.name, 'durationMs': s.durationMs, 'depth': s.depth},
+      ],
+    };
+  }
+
   @override
   void update() {
     if (paused) return;
     final dtMs = math.max(0.0, time.unscaledDeltaTime * 1000.0);
-    telemetry.recordFrame(
-      totalFrameMs: dtMs,
-      spans: [
-        alloc.TelemetrySpan(
-          name: 'EngineUpdate',
-          durationMs: dtMs * 0.65,
-          depth: 0,
-        ),
-        alloc.TelemetrySpan(
-          name: 'SceneRender',
-          durationMs: dtMs * 0.35,
-          depth: 0,
-        ),
-      ],
-    );
+    final spans = _pendingSpans.isNotEmpty
+        ? List<alloc.TelemetrySpan>.unmodifiable(_pendingSpans)
+        : List<alloc.TelemetrySpan>.unmodifiable([
+            alloc.TelemetrySpan(
+              name: 'EngineUpdate',
+              durationMs: dtMs * 0.65,
+              depth: 0,
+            ),
+            alloc.TelemetrySpan(
+              name: 'SceneRender',
+              durationMs: dtMs * 0.35,
+              depth: 0,
+            ),
+          ]);
+    _pendingSpans.clear();
+    _lastRecordedSpans = spans;
+    telemetry.recordFrame(totalFrameMs: dtMs, spans: spans);
     if (autoResetArenaOnUpdate) {
       frameArena.resetFrame();
     }

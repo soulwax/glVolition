@@ -562,6 +562,40 @@
 
 ---
 
+## Wave 19 (Phase 11) — Input Rebinding Profiles, Prioritized Events & Coroutines, Runtime Dev Console & Scoped Profiler
+
+**Wave Exit Gate:** Rebindable keyboard+gamepad `InputActions` profiles, prioritized/deferred `SceneEvents` & composable `Coroutine` instructions, `DebugConsole` commands/autocomplete, and `Stopwatch`-measured `FrameProfilerComponent` spans pass targeted tests and full 10-gate `verify_all.dart`.
+
+- [x] **[P11-W19-A] Runtime Input Rebinding, Gamepad Button/Axis Integration & JSON Profile Persistence**
+  - **Priority:** P1
+  - **DependsOn:** `[P10-W18-M]`
+  - **Owns:** `lib/src/engine/input_actions.dart`, `test/engine/wave19_runtime_ux_test.dart`
+  - **Scope:** Add gamepad button/axis bindings, deadzone handling, `rebindButton`/`rebindAxis`, `exportBindingsJson`/`importBindingsJson`, and `saveToStore`/`loadFromStore` to `InputActions`.
+  - **DoneWhen:** `dart test test/engine/wave19_runtime_ux_test.dart` passes cleanly.
+
+- [x] **[P11-W19-B] Prioritized & Deferred `SceneEvents` + Composable `Coroutine` Instructions**
+  - **Priority:** P1
+  - **DependsOn:** `[P10-W18-M]`
+  - **Owns:** `lib/src/engine/events_coroutines.dart`, `test/engine/wave19_runtime_ux_test.dart`
+  - **Scope:** Add priority ordering, `once<E>`, `emitDeferred<E>`/`flushDeferred()`, and `listenerCount<E>()` to `SceneEvents`; add `WaitWhile`, `WaitForFrames`, and `WaitForCoroutine` yield instructions to `Coroutine`.
+  - **DoneWhen:** `dart test test/engine/wave19_runtime_ux_test.dart` passes cleanly.
+
+- [x] **[P11-W19-C] Runtime Developer Console & Built-In Command Registry (`DebugController`)**
+  - **Priority:** P1
+  - **DependsOn:** `[P10-W18-M]`
+  - **Owns:** `lib/src/engine/debug_controller.dart`, `test/engine/wave19_runtime_ux_test.dart`
+  - **Scope:** Add `DebugConsole` with quoted-argument parsing, history, prefix autocompletion, custom command registration, and built-in scene/time/entity commands on `DebugController`.
+  - **DoneWhen:** `dart test test/engine/wave19_runtime_ux_test.dart` passes cleanly.
+
+- [x] **[P11-W19-D] Scoped Sub-Frame `Stopwatch` Profiler Spans & JSON Telemetry Export**
+  - **Priority:** P1
+  - **DependsOn:** `[P10-W18-M]`
+  - **Owns:** `lib/src/engine/components/frame_profiler.dart`, `test/engine/wave19_runtime_ux_test.dart`
+  - **Scope:** Add `beginSpan`, `endSpan`, `measureSpan`, and `exportTelemetryJson()` to `FrameProfilerComponent`.
+  - **DoneWhen:** `dart test test/engine/wave19_runtime_ux_test.dart` and `dart run tool/verify_all.dart --check-format --skip-wasm` pass.
+
+---
+
 ## Carry-Over Index: Legacy `pixeldart` `PLAN.md` & `TODO.md` Traceability
 
 Every open item from the prior `pixeldart`-only `PLAN.md` and `TODO.md` is tracked explicitly here so zero renderer debt is dropped:
