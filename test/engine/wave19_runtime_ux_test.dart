@@ -110,12 +110,12 @@ void main() {
             trace.add('main:start');
             yield WaitWhile(() => !gateOpen);
             trace.add('main:after_gate');
-            final child = runner.startCoroutine(subRoutine());
+            final child = runner.startCoroutine(subRoutine);
             yield WaitForCoroutine(child);
             trace.add('main:done');
           }
 
-          final mainCo = runner.startCoroutine(mainRoutine());
+          final mainCo = runner.startCoroutine(mainRoutine);
           engine.step(0.016);
           expect(trace, equals(['main:start']));
 

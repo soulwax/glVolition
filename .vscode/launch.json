@@ -2,27 +2,38 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "glVolition CLI (Debug)",
+      "name": "glVolition CLI (Interactive - Debug)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "vmAdditionalArgs": [
         "--enable-asserts"
       ]
     },
     {
-      "name": "glVolition CLI (Release)",
+      "name": "glVolition CLI (Interactive - Release)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "noDebug": true
     },
     {
-      "name": "glVolition CLI: Doctor (Debug)",
+      "name": "glVolition Studio GUI",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "gui"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal"
+    },
+    {
+      "name": "glVolition Doctor (Debug)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
@@ -30,13 +41,13 @@
         "doctor"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "vmAdditionalArgs": [
         "--enable-asserts"
       ]
     },
     {
-      "name": "glVolition CLI: Doctor (Release)",
+      "name": "glVolition Doctor (Release)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
@@ -44,11 +55,11 @@
         "doctor"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "noDebug": true
     },
     {
-      "name": "Serve Prism Pulse (Debug)",
+      "name": "Serve: Prism Pulse (Debug)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
@@ -59,13 +70,13 @@
         "8080"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "vmAdditionalArgs": [
         "--enable-asserts"
       ]
     },
     {
-      "name": "Serve Prism Pulse (Release)",
+      "name": "Serve: Prism Pulse (Release)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
@@ -76,11 +87,11 @@
         "8080"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "noDebug": true
     },
     {
-      "name": "Serve Pixel Rocket (Debug)",
+      "name": "Serve: Pixel Rocket (Debug)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
@@ -91,13 +102,13 @@
         "8080"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "vmAdditionalArgs": [
         "--enable-asserts"
       ]
     },
     {
-      "name": "Serve Pixel Rocket (Release)",
+      "name": "Serve: Pixel Rocket (Release)",
       "type": "dart",
       "request": "launch",
       "program": "bin/volition.dart",
@@ -108,8 +119,202 @@
         "8080"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "noDebug": true
+    },
+    {
+      "name": "Serve: Dungeon 2D (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "serve",
+        "example/dungeon_2d/main.dart",
+        "--port",
+        "8080"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Serve: Island 3D (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "serve",
+        "example/island_3d/main.dart",
+        "--port",
+        "8080"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Serve: Procession (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "serve",
+        "example/procession/main.dart",
+        "--port",
+        "8080"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Build: Prism Pulse -> Web JS (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "build",
+        "example/prism_pulse/main.dart",
+        "--target",
+        "js"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "noDebug": true
+    },
+    {
+      "name": "Build: Prism Pulse -> Web Wasm (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "build",
+        "example/prism_pulse/main.dart",
+        "--target",
+        "wasm"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "noDebug": true
+    },
+    {
+      "name": "Build: Pixel Rocket -> Windows Native AOT (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "build",
+        "example/pixel_rocket/main.dart",
+        "--target",
+        "windows"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "noDebug": true
+    },
+    {
+      "name": "Build: Dedicated Headless Server (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "build",
+        "example/pixel_rocket/main.dart",
+        "--target",
+        "server"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "noDebug": true
+    },
+    {
+      "name": "Build: Dry-Run Plan (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "build",
+        "example/pixel_rocket/main.dart",
+        "--target",
+        "windows",
+        "--dry-run"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Dist: Package All Targets - Pixel Rocket (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "dist",
+        "example/pixel_rocket/main.dart",
+        "--target",
+        "all"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "noDebug": true
+    },
+    {
+      "name": "Dist: Package Windows Target - Pixel Rocket (Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "dist",
+        "example/pixel_rocket/main.dart",
+        "--target",
+        "windows"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "noDebug": true
+    },
+    {
+      "name": "Dist: Dry-Run Plan (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "dist",
+        "example/pixel_rocket/main.dart",
+        "--target",
+        "all",
+        "--dry-run"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Pack: Validate Assets (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "bin/volition.dart",
+      "args": [
+        "pack",
+        "validate",
+        "--in",
+        "assets"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
     },
     {
       "name": "Native Smoke: Headless (Debug)",
@@ -120,7 +325,7 @@
         "--headless"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "vmAdditionalArgs": [
         "--enable-asserts"
       ]
@@ -134,7 +339,7 @@
         "--headless"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "noDebug": true
     },
     {
@@ -146,7 +351,7 @@
         "--hardware"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "vmAdditionalArgs": [
         "--enable-asserts"
       ]
@@ -160,8 +365,36 @@
         "--hardware"
       ],
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "noDebug": true
+    },
+    {
+      "name": "Benchmark: Headless Renderer",
+      "type": "dart",
+      "request": "launch",
+      "program": "tool/renderer_bench.dart",
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal",
+      "noDebug": true
+    },
+    {
+      "name": "Tool: Check Boundaries",
+      "type": "dart",
+      "request": "launch",
+      "program": "tool/check_boundaries.dart",
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal"
+    },
+    {
+      "name": "Tool: Verify All (CI Suite)",
+      "type": "dart",
+      "request": "launch",
+      "program": "tool/verify_all.dart",
+      "args": [
+        "--check-format"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "externalTerminal"
     },
     {
       "name": "Run Current Dart File (Debug)",
@@ -169,7 +402,7 @@
       "request": "launch",
       "program": "${file}",
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "vmAdditionalArgs": [
         "--enable-asserts"
       ]
@@ -180,14 +413,74 @@
       "request": "launch",
       "program": "${file}",
       "cwd": "${workspaceFolder}",
-      "console": "terminal",
+      "console": "externalTerminal",
       "noDebug": true
     },
     {
-      "name": "Run All Tests (Debug)",
+      "name": "Test: All Tests (Debug)",
       "type": "dart",
       "request": "launch",
       "program": "test/",
+      "cwd": "${workspaceFolder}",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Test: Current Test File",
+      "type": "dart",
+      "request": "launch",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Test: Engine Subsystem",
+      "type": "dart",
+      "request": "launch",
+      "program": "test/engine/",
+      "cwd": "${workspaceFolder}",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Test: Physics Subsystem",
+      "type": "dart",
+      "request": "launch",
+      "program": "test/physics/",
+      "cwd": "${workspaceFolder}",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Test: Assets Subsystem",
+      "type": "dart",
+      "request": "launch",
+      "program": "test/assets/",
+      "cwd": "${workspaceFolder}",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Test: Native Subsystem",
+      "type": "dart",
+      "request": "launch",
+      "program": "test/native/",
+      "cwd": "${workspaceFolder}",
+      "vmAdditionalArgs": [
+        "--enable-asserts"
+      ]
+    },
+    {
+      "name": "Test: Network Subsystem",
+      "type": "dart",
+      "request": "launch",
+      "program": "test/network/",
       "cwd": "${workspaceFolder}",
       "vmAdditionalArgs": [
         "--enable-asserts"

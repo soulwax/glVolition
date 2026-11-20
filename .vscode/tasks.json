@@ -14,38 +14,118 @@
       ]
     },
     {
-      "label": "Release: Build Web JS (Prism Pulse)",
+      "label": "Build: Web JS (Prism Pulse)",
       "type": "shell",
       "command": "dart run bin/volition.dart build example/prism_pulse/main.dart --target js",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Release: Build Web Wasm (Prism Pulse)",
+      "label": "Build: Web Wasm (Prism Pulse)",
       "type": "shell",
       "command": "dart run bin/volition.dart build example/prism_pulse/main.dart --target wasm",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Release: Build Dedicated Server (Native)",
+      "label": "Build: Windows Native AOT (Pixel Rocket)",
       "type": "shell",
-      "command": "dart run bin/volition.dart build example/pixel_rocket/main.dart --target native",
+      "command": "dart run bin/volition.dart build example/pixel_rocket/main.dart --target windows",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Release: Package Distribution Bundle (Pixel Rocket)",
+      "label": "Build: Dedicated Server (Pixel Rocket)",
       "type": "shell",
-      "command": "dart run bin/volition.dart dist example/pixel_rocket/main.dart",
+      "command": "dart run bin/volition.dart build example/pixel_rocket/main.dart --target server",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Debug: Static Analysis",
+      "label": "Build: Dry-Run Plan (Pixel Rocket)",
+      "type": "shell",
+      "command": "dart run bin/volition.dart build example/pixel_rocket/main.dart --target windows --dry-run",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Dist: Package All Targets (Pixel Rocket)",
+      "type": "shell",
+      "command": "dart run bin/volition.dart dist example/pixel_rocket/main.dart --target all",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Dist: Package Windows Target (Pixel Rocket)",
+      "type": "shell",
+      "command": "dart run bin/volition.dart dist example/pixel_rocket/main.dart --target windows",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Dist: Dry-Run Packaging Plan",
+      "type": "shell",
+      "command": "dart run bin/volition.dart dist example/pixel_rocket/main.dart --target all --dry-run",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Pack: Validate Assets Pak",
+      "type": "shell",
+      "command": "dart run bin/volition.dart pack validate --in assets",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: All Tests",
+      "type": "shell",
+      "command": "dart test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Engine Subsystem",
+      "type": "shell",
+      "command": "dart test test/engine/",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Physics Subsystem",
+      "type": "shell",
+      "command": "dart test test/physics/",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Native Subsystem",
+      "type": "shell",
+      "command": "dart test test/native/",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Assets Subsystem",
+      "type": "shell",
+      "command": "dart test test/assets/",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Network Subsystem",
+      "type": "shell",
+      "command": "dart test test/network/",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Check: Static Analysis",
       "type": "shell",
       "command": "dart analyze",
-      "group": "build",
+      "group": "test",
       "problemMatcher": [
         "$dart-analyze"
       ]
@@ -55,16 +135,6 @@
       "type": "shell",
       "command": "dart run tool/check_boundaries.dart",
       "group": "test",
-      "problemMatcher": []
-    },
-    {
-      "label": "Test: Run Root Tests",
-      "type": "shell",
-      "command": "dart test",
-      "group": {
-        "kind": "test",
-        "isDefault": true
-      },
       "problemMatcher": []
     },
     {
