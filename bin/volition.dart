@@ -2,15 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:voxlog/voxlog.dart';
-
 import '../tool/asset_packer.dart';
 import '../tool/cli_gui_server.dart';
 import '../tool/cli_service.dart';
 import '../tool/package_native.dart';
 import '../tool/codegen/spec_codegen.dart';
 import '../tool/studio/studio_daemon.dart';
-import 'package:gl_volition/src/studio/protocol/studio_protocol.dart';
+import 'package:gl_volition/gl_volition_native.dart';
+import 'package:gl_volition/src/studio/studio.dart';
 
 final log = voxlog.stdoutColor('volition', level: LogLevel.info);
 
@@ -972,6 +971,24 @@ Future<void> _runGui(List<String> args) async {
   if (nativeMode) {
     log.info(
       'Starting glVolition Studio in native AOT mode (checking SDL3/ANGLE capabilities)...',
+    );
+    final engine = Engine(HeadlessHost());
+    final scene = Scene('VolitionStudio');
+    scene.createGameObject('MainCamera').addComponent(Camera());
+    scene.createGameObject('Sun').addComponent(Light.directional());
+    engine.loadScene(scene);
+    final bridge = SessionEditorHostBridge(EditorSession(engine));
+    final shell = StudioWorkspaceShell(bridge: bridge);
+    final res = await Sdl3StudioRunner.tryLaunchHardware(shell: shell);
+    if (res.launched) {
+      log.info(
+        'Native AOT Studio closed after ${res.framesRendered} frame(s).',
+      );
+      return;
+    }
+    log.warn(
+      res.diagnostic ??
+          'Native SDL3 Studio unavailable; falling back to local browser Studio.',
     );
   }
 

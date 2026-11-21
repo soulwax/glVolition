@@ -630,13 +630,35 @@ final class StudioWorkspaceShell {
           y += 22;
           for (final f in comp.fields.take(6)) {
             if (y > r.bottom) break;
+            final fr = VoxRect(r.x + 12, y, r.width - 20, 18);
+            final hov = fr.contains(input.mouseX, input.mouseY);
+            if (hov) {
+              dl.addRectFilled(
+                fr.x,
+                fr.y,
+                fr.width,
+                fr.height,
+                UnityDarkTheme.bgTabHover,
+                cornerRadius: 2,
+              );
+            }
             dl.addText(
               '${f.field.name}: ${f.isMixed ? '—' : f.jsonValue}',
-              r.x + 16,
-              y + 2,
-              color: UnityDarkTheme.textMuted,
+              fr.x + 4,
+              fr.y + 2,
+              color: hov
+                  ? UnityDarkTheme.textPrimary
+                  : UnityDarkTheme.textMuted,
               size: 11,
             );
+            // Interactive bool toggle via undoable SetComponentFieldCommand
+            if (hov && input.wasMouseClicked && f.jsonValue is bool) {
+              inspector.setFieldValue(
+                comp.typeName,
+                f.field.name,
+                !(f.jsonValue as bool),
+              );
+            }
             y += 18;
           }
         }
