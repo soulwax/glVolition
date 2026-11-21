@@ -28,6 +28,7 @@ import '../project_window/project_window_model.dart';
 import '../timeline/timeline_model.dart';
 import '../viewport/scene_gizmo_interactor.dart';
 import '../viewport/scene_viewport_model.dart';
+import '../windows/animation/animator_controller_model.dart';
 import '../windows/lighting_window.dart';
 import '../windows/modules_window.dart';
 import '../windows/profiler/profiler_window_model.dart';
@@ -35,6 +36,7 @@ import '../windows/quality_window.dart';
 import 'app_launcher_model.dart';
 import 'dock_layout.dart';
 import 'dock_layout_solver.dart';
+import 'studio_animator_panel_ui.dart';
 import 'studio_cli_bridge.dart';
 import 'studio_command_palette_ui.dart';
 import 'studio_graph_canvas_ui.dart';
@@ -99,6 +101,7 @@ final class StudioWorkspaceShell {
   final StudioGraphModel graphModel;
   final StudioTimelineModel timelineModel;
   final StudioSettingsModel settings;
+  final AnimatorControllerModel animatorController;
   late final MaterialInspectorModel materialInspector;
   late final StudioCliController cli;
   final StudioGraphCanvasController graphCanvas = StudioGraphCanvasController();
@@ -108,6 +111,8 @@ final class StudioWorkspaceShell {
       StudioSettingsPanelRenderer();
   final StudioMaterialPanelRenderer materialPanel =
       StudioMaterialPanelRenderer();
+  final StudioAnimatorPanelRenderer animatorPanel =
+      StudioAnimatorPanelRenderer();
   final StudioProjectWizardController projectWizard =
       StudioProjectWizardController();
   final StudioCommandPaletteController commandPalette =
@@ -177,6 +182,7 @@ final class StudioWorkspaceShell {
     StudioGraphModel? graphModel,
     StudioTimelineModel? timelineModel,
     StudioSettingsModel? settings,
+    AnimatorControllerModel? animatorController,
     MaterialInspectorModel? materialInspector,
     StudioCliBridge? cliBridge,
     bool openWizardOnStart = false,
@@ -200,6 +206,27 @@ final class StudioWorkspaceShell {
        graphModel = graphModel ?? StudioGraphModel(schemaId: 'shader_graph'),
        timelineModel = timelineModel ?? StudioTimelineModel(),
        settings = settings ?? StudioSettingsModel(),
+       animatorController =
+           animatorController ??
+           AnimatorControllerModel(
+             name: 'DefaultAnimator',
+             states: const ['Idle', 'Run', 'Jump'],
+             transitions: const [
+               AnimatorTransitionDef(
+                 fromState: 'Idle',
+                 toState: 'Run',
+                 parameter: 'speed',
+                 greaterThan: 0.5,
+               ),
+               AnimatorTransitionDef(
+                 fromState: 'Run',
+                 toState: 'Jump',
+                 parameter: 'jump',
+                 greaterThan: 0.5,
+               ),
+             ],
+             parameters: const {'speed': 0.0, 'jump': 0.0},
+           ),
        layout = layout ?? StudioDockLayout.defaultLayout() {
     this.materialInspector =
         materialInspector ??
@@ -275,6 +302,7 @@ final class StudioWorkspaceShell {
       ('graph', 'Node Graph'),
       ('timeline', 'Timeline'),
       ('material', 'Material Editor'),
+      ('animator', 'Animator'),
       ('history', 'Undo History'),
       ('settings', 'Settings'),
     ];
@@ -1024,6 +1052,56 @@ final class StudioWorkspaceShell {
             active: sceneGizmosVisible,
             onClick: () => sceneGizmosVisible = !sceneGizmosVisible,
           );
+          // Top-right Unity Orientation Compass & Camera View Presets
+          if (r.width > 420) {
+            final cam = sceneViewport.editorCamera;
+            var cx = r.right - 8;
+            cx -= 46;
+            _toolbarButton(
+              overlayDl,
+              input,
+              VoxRect(cx, r.y + 8, 46, 22),
+              'Right',
+              onClick: () {
+                cam.isOrthographic2D = false;
+                cam.yawRadians = 1.5707963;
+                cam.pitchRadians = 0.0;
+              },
+            );
+            cx -= 50;
+            _toolbarButton(
+              overlayDl,
+              input,
+              VoxRect(cx, r.y + 8, 46, 22),
+              'Front',
+              onClick: () {
+                cam.isOrthographic2D = false;
+                cam.yawRadians = 0.0;
+                cam.pitchRadians = 0.0;
+              },
+            );
+            cx -= 42;
+            _toolbarButton(
+              overlayDl,
+              input,
+              VoxRect(cx, r.y + 8, 38, 22),
+              'Top',
+              onClick: () {
+                cam.isOrthographic2D = false;
+                cam.yawRadians = 0.0;
+                cam.pitchRadians = 1.50;
+              },
+            );
+            cx -= 52;
+            _toolbarButton(
+              overlayDl,
+              input,
+              VoxRect(cx, r.y + 8, 48, 22),
+              cam.isOrthographic2D ? '2D' : 'Persp',
+              active: cam.isOrthographic2D,
+              onClick: () => cam.isOrthographic2D = !cam.isOrthographic2D,
+            );
+          }
         } else {
           final aspectRect = VoxRect(r.x + 8, r.y + 8, 124, 22);
           _toolbarButton(
@@ -1039,7 +1117,16 @@ final class StudioWorkspaceShell {
               gameViewport.aspectPreset = next;
             },
           );
-          final modeRect = VoxRect(r.x + 136, r.y + 8, 72, 22);
+          final statsRect = VoxRect(r.x + 136, r.y + 8, 56, 22);
+          _toolbarButton(
+            overlayDl,
+            input,
+            statsRect,
+            'Stats',
+            active: gameViewport.showStats,
+            onClick: () => gameViewport.showStats = !gameViewport.showStats,
+          );
+          final modeRect = VoxRect(r.x + 196, r.y + 8, 72, 22);
           overlayDl.addRectFilled(
             modeRect.x,
             modeRect.y,
@@ -1055,6 +1142,52 @@ final class StudioWorkspaceShell {
             color: UnityDarkTheme.textPrimary,
             size: 11,
           );
+          if (gameViewport.showStats) {
+            final scene = bridge.session.engine.scene;
+            final objCount = scene.rootGameObjects.length;
+            final camCount = scene.sortedActiveCameras.length;
+            final hudW = 196.0;
+            final hudH = 86.0;
+            final hx = (r.right - hudW - 10).clamp(r.x + 8, r.right);
+            final hy = r.y + 36;
+            overlayDl.addRectFilled(
+              hx,
+              hy,
+              hudW,
+              hudH,
+              UnityDarkTheme.bgOverlay,
+              cornerRadius: 4,
+            );
+            overlayDl.addRectOutline(hx, hy, hudW, hudH, UnityDarkTheme.border);
+            overlayDl.addText(
+              'Game Stats',
+              hx + 8,
+              hy + 6,
+              color: UnityDarkTheme.textPrimary,
+              size: 11,
+            );
+            overlayDl.addText(
+              'FPS: ${lastFps.toStringAsFixed(0)} (${lastFrameMs.toStringAsFixed(1)} ms)',
+              hx + 8,
+              hy + 24,
+              color: UnityDarkTheme.textMuted,
+              size: 10,
+            );
+            overlayDl.addText(
+              'Roots: $objCount  |  Cameras: $camCount',
+              hx + 8,
+              hy + 42,
+              color: UnityDarkTheme.textMuted,
+              size: 10,
+            );
+            overlayDl.addText(
+              'VRP: ${quality.activeTier.name.toUpperCase()}  |  ${isPlaying ? 'PLAY' : 'EDIT'}',
+              hx + 8,
+              hy + 60,
+              color: UnityDarkTheme.textMuted,
+              size: 10,
+            );
+          }
         }
         overlayDl.popClip();
       case 'hierarchy':
@@ -1812,6 +1945,13 @@ final class StudioWorkspaceShell {
           bounds: r,
           onSaved: (path) => showToast('Saved $path'),
         );
+      case 'animator':
+        animatorPanel.render(
+          model: animatorController,
+          dl: dl,
+          input: input,
+          bounds: r,
+        );
       case 'history':
         final snap = bridge.snapshot();
         dl.addText(
@@ -2239,6 +2379,7 @@ final class StudioWorkspaceShell {
     'graph' => 'Graph',
     'timeline' => 'Timeline',
     'material' => 'Material',
+    'animator' => 'Animator',
     'history' => 'History',
     'settings' => 'Settings',
     _ => id,

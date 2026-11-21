@@ -40,6 +40,7 @@ export 'reload/reload_state_snapshot.dart';
 export 'shell/app_launcher_model.dart';
 export 'shell/dock_layout.dart';
 export 'shell/dock_layout_solver.dart';
+export 'shell/studio_animator_panel_ui.dart';
 export 'shell/studio_cli_bridge.dart';
 export 'shell/studio_command_palette_ui.dart';
 export 'shell/studio_graph_canvas_ui.dart';
