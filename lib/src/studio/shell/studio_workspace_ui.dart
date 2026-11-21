@@ -14,12 +14,14 @@ import '../bridge/editor_host_bridge.dart';
 import '../build/build_profiles.dart';
 import '../commands/menu_registry.dart';
 import '../console/console_model.dart';
+import '../graph/graph_model.dart';
 import '../hierarchy/hierarchy_model.dart';
 import '../inspector/inspector_model.dart';
 import '../modules/module_inventory.g.dart';
 import '../modules/module_registry.dart';
 import '../project/project_fs.dart';
 import '../project_window/project_window_model.dart';
+import '../timeline/timeline_model.dart';
 import '../viewport/scene_gizmo_interactor.dart';
 import '../viewport/scene_viewport_model.dart';
 import '../windows/lighting_window.dart';
@@ -29,7 +31,9 @@ import '../windows/quality_window.dart';
 import 'app_launcher_model.dart';
 import 'dock_layout.dart';
 import 'dock_layout_solver.dart';
+import 'studio_graph_canvas_ui.dart';
 import 'studio_shortcuts.dart';
+import 'studio_timeline_canvas_ui.dart';
 
 /// Unity dark-theme color palette for Volition Studio (`[Wave G2]`).
 abstract final class UnityDarkTheme {
@@ -83,6 +87,11 @@ final class StudioWorkspaceShell {
   final ModulesWindowModel modules;
   final ProfilerWindowModel profiler;
   final StudioAppLauncherModel launcher;
+  final StudioGraphModel graphModel;
+  final StudioTimelineModel timelineModel;
+  final StudioGraphCanvasController graphCanvas = StudioGraphCanvasController();
+  final StudioTimelineCanvasController timelineCanvas =
+      StudioTimelineCanvasController();
   final SceneGizmoInteractor gizmoInteractor = SceneGizmoInteractor();
 
   StudioDockLayout layout;
@@ -132,6 +141,8 @@ final class StudioWorkspaceShell {
     ModulesWindowModel? modules,
     ProfilerWindowModel? profiler,
     StudioAppLauncherModel? launcher,
+    StudioGraphModel? graphModel,
+    StudioTimelineModel? timelineModel,
     StudioDockLayout? layout,
   }) : menus = menus ?? StudioMenuRegistry(registerDefaults: true),
        hierarchy = hierarchy ?? HierarchyPanelModel(bridge),
@@ -149,6 +160,8 @@ final class StudioWorkspaceShell {
            ModulesWindowModel(StudioModuleRegistry(kStudioModuleInventory)),
        profiler = profiler ?? ProfilerWindowModel(),
        launcher = launcher ?? StudioAppLauncherModel(),
+       graphModel = graphModel ?? StudioGraphModel(schemaId: 'shader_graph'),
+       timelineModel = timelineModel ?? StudioTimelineModel(),
        layout = layout ?? StudioDockLayout.defaultLayout();
 
   bool get isPlaying => bridge.playState == StudioPlayState.playing;
@@ -1340,6 +1353,15 @@ final class StudioWorkspaceShell {
             size: 11,
           );
         }
+      case 'graph':
+        graphCanvas.render(graph: graphModel, dl: dl, input: input, bounds: r);
+      case 'timeline':
+        timelineCanvas.render(
+          timeline: timelineModel,
+          dl: dl,
+          input: input,
+          bounds: r,
+        );
       default:
         dl.addText(
           _panelTitle(panelId),
@@ -1815,6 +1837,8 @@ final class StudioWorkspaceShell {
     'profiler' => 'Profiler',
     'modules' => 'Modules',
     'build' => 'Build',
+    'graph' => 'Graph',
+    'timeline' => 'Timeline',
     _ => id,
   };
 }
