@@ -797,7 +797,7 @@
     - Game view renders the scene's `Camera`s at chosen aspect/resolution presets.
   - **DoneWhen:** `test_editor_passes.dart` and `test/studio/viewport_test.dart` pass (pick ids match the object under the cursor in a recorded fixture); Browser Lab goldens exist for the grid, gizmos and selection outline.
 
-- [ ] **[S2-C] Hierarchy & `ComponentSpec`-Driven Inspector (Multi-Edit, Add Component, Prefab Overrides)**
+- [x] **[S2-C] Hierarchy & `ComponentSpec`-Driven Inspector (Multi-Edit, Add Component, Prefab Overrides)**
   - **Priority:** P0
   - **DependsOn:** `[S2-0]`
   - **Owns:** `lib/src/studio/hierarchy/**`, `lib/src/studio/inspector/**`, `lib/src/web/studio/panels/hierarchy_panel.dart`, `lib/src/web/studio/panels/inspector_panel.dart`, `test/studio/inspector_model_test.dart`
@@ -808,7 +808,7 @@
     - Every mutation goes through `EditorCommand`s, so undo/redo covers all of it.
   - **DoneWhen:** `test/studio/inspector_model_test.dart` covers each field type, multi-edit mixed values, undo of reparent and field edits, and prefab override apply/revert; the e2e scenario `inspector-edit` passes.
 
-- [ ] **[S2-D] Project Window (GUID Asset Browser, Thumbnails, Drag & Drop, Import Settings) & Console**
+- [x] **[S2-D] Project Window (GUID Asset Browser, Thumbnails, Drag & Drop, Import Settings) & Console**
   - **Priority:** P1
   - **DependsOn:** `[S2-0]`
   - **Owns:** `lib/src/studio/project_window/**`, `lib/src/studio/console/**`, `lib/src/web/studio/panels/project_panel.dart`, `lib/src/web/studio/panels/console_panel.dart`, `tool/studio/thumbnail_service.dart`, `tool/studio/open_in_editor.dart`, `test/studio/project_window_test.dart`
