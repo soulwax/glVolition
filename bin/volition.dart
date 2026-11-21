@@ -949,6 +949,7 @@ void main(List<String> args) async {
 Future<void> _runGui(List<String> args) async {
   var port = 8090;
   var openBrowser = true;
+  var nativeMode = false;
 
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
@@ -956,12 +957,22 @@ Future<void> _runGui(List<String> args) async {
       port = int.parse(args[++i]);
     } else if (a == '--no-open') {
       openBrowser = false;
+    } else if (a == '--native' || a == '--app') {
+      nativeMode = true;
+    } else if (a == '--web') {
+      nativeMode = false;
     } else if (a == '--help' || a == '-h') {
       stdout.writeln(
-        'Usage: dart run gl_volition:volition gui [--port 8090] [--no-open]',
+        'Usage: dart run gl_volition:volition gui [--native|--web] [--port 8090] [--no-open]',
       );
       return;
     }
+  }
+
+  if (nativeMode) {
+    log.info(
+      'Starting glVolition Studio in native AOT mode (checking SDL3/ANGLE capabilities)...',
+    );
   }
 
   final service = VolitionCliService();

@@ -525,6 +525,21 @@ final class StudioWorkspaceShell {
           r.height,
           const VoxColor(20, 22, 26, 255),
         );
+        // Interactive Scene View camera controls (wheel zoom / drag orbit)
+        if (panelId == 'scene' && r.contains(input.mouseX, input.mouseY)) {
+          if (input.scrollDeltaY != 0.0) {
+            sceneViewport.editorCamera.zoom(input.scrollDeltaY * 0.5);
+          }
+          if (input.isMouseDown &&
+              (input.mouseDeltaX != 0.0 || input.mouseDeltaY != 0.0) &&
+              _draggingSplitterId == null &&
+              _draggingTab == null) {
+            sceneViewport.editorCamera.orbit(
+              input.mouseDeltaX * 0.01,
+              input.mouseDeltaY * 0.01,
+            );
+          }
+        }
         // Floating Unity Scene View Overlay bar
         final overlay = VoxRect(r.x + 8, r.y + 8, 220, 24);
         dl.addRectFilled(
@@ -626,8 +641,38 @@ final class StudioWorkspaceShell {
           }
         }
       case 'console':
+        // Console filter bar: Clear + Info/Warn/Error counts
+        final clearRect = VoxRect(r.x + 6, r.y + 4, 48, 18);
+        _toolbarButton(dl, input, clearRect, 'Clear', onClick: console.clear);
+        final infoRect = VoxRect(r.x + 60, r.y + 4, 64, 18);
+        _toolbarButton(
+          dl,
+          input,
+          infoRect,
+          'I:${console.infoCount}',
+          active: console.showInfo,
+          onClick: () => console.showInfo = !console.showInfo,
+        );
+        final warnRect = VoxRect(r.x + 128, r.y + 4, 64, 18);
+        _toolbarButton(
+          dl,
+          input,
+          warnRect,
+          'W:${console.warningCount}',
+          active: console.showWarning,
+          onClick: () => console.showWarning = !console.showWarning,
+        );
+        final errRect = VoxRect(r.x + 196, r.y + 4, 64, 18);
+        _toolbarButton(
+          dl,
+          input,
+          errRect,
+          'E:${console.errorCount}',
+          active: console.showError,
+          onClick: () => console.showError = !console.showError,
+        );
         final entries = console.visibleEntries();
-        var y = r.y + 6;
+        var y = r.y + 28;
         if (entries.isEmpty) {
           dl.addText(
             'Console is clear.',

@@ -19,4 +19,5 @@ export 'src/native/gles3_ffi_device.dart';
 export 'src/native/native_audio_device.dart';
 export 'src/native/server_host.dart';
 export 'src/native/studio/native_studio_app.dart';
+export 'src/native/studio/viewport_fbo_host.dart';
 export 'src/native/studio/voxui_gl_renderer.dart';
