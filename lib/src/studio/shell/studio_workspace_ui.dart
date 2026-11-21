@@ -84,6 +84,8 @@ final class StudioWorkspaceShell {
   String? maximizedAreaId;
   String activeGizmoTool = 'move'; // hand | move | rotate | scale | rect
   String sceneShadingMode = 'Lit'; // Lit | Wire | Albedo | Normals | Heatmap
+  bool sceneGridVisible = true;
+  bool sceneGizmosVisible = true;
   String? openTopMenu;
 
   // Interactive drag state
@@ -540,26 +542,70 @@ final class StudioWorkspaceShell {
             );
           }
         }
-        // Floating Unity Scene View Overlay bar
-        final overlay = VoxRect(r.x + 8, r.y + 8, 220, 24);
-        dl.addRectFilled(
-          overlay.x,
-          overlay.y,
-          overlay.width,
-          overlay.height,
-          UnityDarkTheme.bgOverlay,
-          cornerRadius: 4,
-        );
-        final overlayLabel = panelId == 'scene'
-            ? 'Scene  |  $sceneShadingMode  |  Grid: On'
-            : 'Game  |  ${gameViewport.aspectPreset.name}  |  ${isPlaying ? 'PLAYING' : 'Edit'}';
-        dl.addText(
-          overlayLabel,
-          overlay.x + 8,
-          overlay.y + 6,
-          color: UnityDarkTheme.textPrimary,
-          size: 11,
-        );
+        // Floating Unity Scene/Game View Overlay bar with interactive pills
+        if (panelId == 'scene') {
+          const shadingModes = ['Lit', 'Wire', 'Albedo', 'Normals', 'Heatmap'];
+          final shadeRect = VoxRect(r.x + 8, r.y + 8, 76, 22);
+          _toolbarButton(
+            dl,
+            input,
+            shadeRect,
+            sceneShadingMode,
+            onClick: () {
+              final idx = shadingModes.indexOf(sceneShadingMode);
+              sceneShadingMode = shadingModes[(idx + 1) % shadingModes.length];
+            },
+          );
+          final gridRect = VoxRect(r.x + 88, r.y + 8, 68, 22);
+          _toolbarButton(
+            dl,
+            input,
+            gridRect,
+            sceneGridVisible ? 'Grid:On' : 'Grid:Off',
+            active: sceneGridVisible,
+            onClick: () => sceneGridVisible = !sceneGridVisible,
+          );
+          final gizmoRect = VoxRect(r.x + 160, r.y + 8, 76, 22);
+          _toolbarButton(
+            dl,
+            input,
+            gizmoRect,
+            sceneGizmosVisible ? 'Gizmo:On' : 'Gizmo:Off',
+            active: sceneGizmosVisible,
+            onClick: () => sceneGizmosVisible = !sceneGizmosVisible,
+          );
+        } else {
+          final aspectRect = VoxRect(r.x + 8, r.y + 8, 124, 22);
+          _toolbarButton(
+            dl,
+            input,
+            aspectRect,
+            'Aspect: ${gameViewport.aspectPreset.name}',
+            onClick: () {
+              const presets = GameViewAspectPreset.values;
+              final next =
+                  presets[(gameViewport.aspectPreset.index + 1) %
+                      presets.length];
+              gameViewport.aspectPreset = next;
+            },
+          );
+          final modeRect = VoxRect(r.x + 136, r.y + 8, 72, 22);
+          dl.addRectFilled(
+            modeRect.x,
+            modeRect.y,
+            modeRect.width,
+            modeRect.height,
+            isPlaying ? UnityDarkTheme.accentBlue : UnityDarkTheme.bgOverlay,
+            cornerRadius: 3,
+          );
+          dl.addText(
+            isPlaying ? 'PLAYING' : 'Edit',
+            modeRect.x + 8,
+            modeRect.y + 5,
+            color: UnityDarkTheme.textPrimary,
+            size: 11,
+          );
+        }
       case 'hierarchy':
         final rows = hierarchy.visibleRows();
         var y = r.y + 4;
@@ -651,13 +697,27 @@ final class StudioWorkspaceShell {
                   : UnityDarkTheme.textMuted,
               size: 11,
             );
-            // Interactive bool toggle via undoable SetComponentFieldCommand
+            // Interactive bool toggle or Unity-style numeric drag-scrubbing
             if (hov && input.wasMouseClicked && f.jsonValue is bool) {
               inspector.setFieldValue(
                 comp.typeName,
                 f.field.name,
                 !(f.jsonValue as bool),
               );
+            } else if (hov &&
+                input.isMouseDown &&
+                input.mouseDeltaX != 0.0 &&
+                f.jsonValue is num) {
+              final cur = f.jsonValue as num;
+              final nextVal = cur is int
+                  ? (cur + input.mouseDeltaX.round())
+                  : double.parse(
+                      (cur.toDouble() + input.mouseDeltaX * 0.05)
+                          .toStringAsFixed(3),
+                    );
+              if (nextVal != cur) {
+                inspector.setFieldValue(comp.typeName, f.field.name, nextVal);
+              }
             }
             y += 18;
           }
@@ -722,13 +782,26 @@ final class StudioWorkspaceShell {
           }
         }
       case 'project':
+        final assets = project.visibleAssets();
         dl.addText(
-          'Assets / ${project.currentFolder} (${project.visibleAssets().length} items)',
+          'Assets / ${project.currentFolder} (${assets.length} items)',
           r.x + 10,
           r.y + 8,
           color: UnityDarkTheme.textPrimary,
           size: 11,
         );
+        var py = r.y + 28;
+        for (final asset in assets.take(20)) {
+          if (py > r.bottom) break;
+          dl.addText(
+            '[${asset.importerId}] ${asset.path}',
+            r.x + 12,
+            py,
+            color: UnityDarkTheme.textMuted,
+            size: 11,
+          );
+          py += 18;
+        }
       case 'lighting':
         dl.addText(
           'EV100: ${lighting.exposureSettings.manualEv100.toStringAsFixed(2)} | '
@@ -741,20 +814,78 @@ final class StudioWorkspaceShell {
       case 'profiler':
         dl.addText(
           'Avg Frame: ${profiler.averageFrameTimeMs.toStringAsFixed(2)}ms | '
-          'GPU: ${profiler.averageGpuTimeMs.toStringAsFixed(2)}ms',
+          'GPU: ${profiler.averageGpuTimeMs.toStringAsFixed(2)}ms | '
+          'Samples: ${profiler.frames.length}',
           r.x + 10,
-          r.y + 10,
+          r.y + 8,
           color: UnityDarkTheme.textPrimary,
           size: 11,
         );
+        // Rolling frame-time bar chart (0..50ms scale with 16.6ms 60fps line)
+        final chartX = r.x + 10;
+        final chartY = r.y + 28;
+        final chartW = (r.width - 20).clamp(40.0, double.infinity);
+        final chartH = (r.height - 38).clamp(24.0, 140.0);
+        dl.addRectFilled(
+          chartX,
+          chartY,
+          chartW,
+          chartH,
+          const VoxColor(26, 28, 32, 255),
+          cornerRadius: 3,
+        );
+        final line60Y = chartY + chartH * (1.0 - (16.6 / 50.0));
+        dl.addLine(
+          chartX,
+          line60Y,
+          chartX + chartW,
+          line60Y,
+          UnityDarkTheme.accentBlue,
+        );
+        final recent = profiler.frames.length > 60
+            ? profiler.frames.sublist(profiler.frames.length - 60)
+            : profiler.frames;
+        if (recent.isNotEmpty) {
+          final barW = (chartW / recent.length).clamp(2.0, 14.0);
+          for (var i = 0; i < recent.length; i++) {
+            final ms = recent[i].frameTimeMs;
+            final frac = (ms / 50.0).clamp(0.02, 1.0);
+            final bh = chartH * frac;
+            final col = ms < 16.6
+                ? const VoxColor(76, 185, 110, 255)
+                : (ms < 33.3
+                      ? UnityDarkTheme.statusWarn
+                      : UnityDarkTheme.statusError);
+            dl.addRectFilled(
+              chartX + i * barW,
+              chartY + chartH - bh,
+              (barW - 1.0).clamp(1.0, barW),
+              bh,
+              col,
+            );
+          }
+        }
       case 'modules':
+        final list = modules.filteredModules;
         dl.addText(
-          'Volition Modules: ${modules.filteredModules.length}/74 registered',
+          'Volition Modules: ${list.length}/74 registered',
           r.x + 10,
-          r.y + 10,
+          r.y + 8,
           color: UnityDarkTheme.textPrimary,
           size: 11,
         );
+        var my = r.y + 28;
+        for (final m in list.take(24)) {
+          if (my > r.bottom) break;
+          dl.addText(
+            '${m.package}  [${m.maturity.cliName}]',
+            r.x + 12,
+            my,
+            color: UnityDarkTheme.textMuted,
+            size: 11,
+          );
+          my += 18;
+        }
       default:
         dl.addText(
           _panelTitle(panelId),

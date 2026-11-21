@@ -114,5 +114,101 @@ void main() {
         bridge.exitPlayMode();
       },
     );
+
+    test(
+      'Wave G5 — Scene View interactive overlays and Profiler bar chart render cleanly',
+      () {
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        final scene = Scene('OverlayTest');
+        scene.createGameObject('Sun');
+        engine.loadScene(scene);
+
+        final session = EditorSession(engine);
+        final bridge = SessionEditorHostBridge(session);
+        final shell = StudioWorkspaceShell(bridge: bridge);
+        final dl = DrawList();
+
+        // First frame to discover Scene View content rect
+        shell.buildFrame(dl: dl, input: VoxInput(), width: 1280, height: 720);
+        final sceneSlot = shell.activeViewportSlots.firstWhere(
+          (s) => s.panelId == 'scene',
+        );
+        expect(shell.sceneShadingMode, equals('Lit'));
+        expect(shell.sceneGridVisible, isTrue);
+
+        // Click Shading pill -> cycles Lit -> Wire
+        dl.clear();
+        shell.buildFrame(
+          dl: dl,
+          input: VoxInput(
+            mouseX: sceneSlot.rect.x + 24,
+            mouseY: sceneSlot.rect.y + 16,
+            isMouseDown: true,
+            wasMouseClicked: true,
+          ),
+          width: 1280,
+          height: 720,
+        );
+        expect(shell.sceneShadingMode, equals('Wire'));
+
+        // Click Grid pill -> toggles Grid:On -> Grid:Off
+        dl.clear();
+        shell.buildFrame(
+          dl: dl,
+          input: VoxInput(
+            mouseX: sceneSlot.rect.x + 110,
+            mouseY: sceneSlot.rect.y + 16,
+            isMouseDown: true,
+            wasMouseClicked: true,
+          ),
+          width: 1280,
+          height: 720,
+        );
+        expect(shell.sceneGridVisible, isFalse);
+
+        // Push telemetry samples into Profiler and verify chart renders
+        shell.profiler.pushFrame(
+          const PlayerTelemetryFrame(
+            frameIndex: 1,
+            frameTimeMs: 11.5,
+            gpuPasses: [
+              GpuPassTimingSample(passName: 'Forward', durationMs: 5.2),
+            ],
+          ),
+        );
+        shell.profiler.pushFrame(
+          const PlayerTelemetryFrame(
+            frameIndex: 2,
+            frameTimeMs: 22.0,
+            gpuPasses: [
+              GpuPassTimingSample(passName: 'Forward', durationMs: 12.1),
+            ],
+          ),
+        );
+        shell.layout = const StudioDockLayout(
+          root: DockTabsNode(
+            id: 'prof_only',
+            panelIds: ['profiler'],
+            activeIndex: 0,
+          ),
+        );
+        dl.clear();
+        shell.buildFrame(dl: dl, input: VoxInput(), width: 800, height: 400);
+        expect(
+          dl.commands.any((c) => (c.text ?? '').contains('Samples: 2')),
+          isTrue,
+        );
+        // Chart emits green (<16.6ms) and warn (<33.3ms) bars
+        expect(
+          dl.commands.any((c) => c.color == const VoxColor(76, 185, 110, 255)),
+          isTrue,
+        );
+        expect(
+          dl.commands.any((c) => c.color == UnityDarkTheme.statusWarn),
+          isTrue,
+        );
+      },
+    );
   });
 }
