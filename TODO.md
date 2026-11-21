@@ -1130,38 +1130,38 @@
 
 **Exit Gate:** `volition build --profile web-release|windows-release` reproduces the Studio build byte-for-byte; the profiler shows live GPU pass timings from a native player; the showcase uses at least one module from every family; the release gate re-runs the PLAN §13.1 audit queries with zero reopened items.
 
-- [ ] **[S8-0] Coordinator Freeze: Player Link Protocol**
+- [x] **[S8-0] Coordinator Freeze: Player Link Protocol**
   - **Priority:** P0
   - **DependsOn:** `[S7-M]`
   - **Owns:** `lib/src/studio/protocol/player_link.dart`, `lib/src/engine/diagnostics/player_link_client.dart`
   - **Scope:** Handshake (player id, target, build profile), telemetry frames (CPU spans from `FrameProfilerComponent`, GPU pass timings, memory and asset counts, draw/triangle/state-change stats), log stream, remote `DebugConsole` commands, and frame-capture requests and responses. The transport is a pluggable WebSocket via host adapters, so the engine core stays pure.
   - **DoneWhen:** `dart analyze` and the boundary check pass.
 
-- [ ] **[S8-A] Profiler Window, GPU Per-Pass Timers & Frame Debugger**
+- [x] **[S8-A] Profiler Window, GPU Per-Pass Timers & Frame Debugger**
   - **Priority:** P0 · **DependsOn:** `[S8-0]`
   - **Owns:** `lib/src/studio/windows/profiler/**`, `lib/src/web/studio/panels/profiler_*.dart`, `vendor/pixeldart/lib/rendering/core/frame_telemetry.dart`, `vendor/pixeldart/lib/rendering/core/scene_renderer_timing.dart`, `lib/src/web/player_link_web.dart`, `lib/src/native/player_link_native.dart`, `test/studio/profiler_test.dart`
   - **Scope:** Attach to the in-Studio player, an external browser tab, a native exe or a dedicated server. CPU timeline/hierarchy view, GPU timer-query scopes per declared render-graph pass (with the `RecordingGlesDevice` path marked as synthetic), memory/asset charts, and a draw-stats graph. Frame debugger: pass list → draw list → state → intermediate target readback thumbnails. Captures can be saved and loaded.
   - **DoneWhen:** `test/studio/profiler_test.dart` passes (protocol round-trip, capture save/load); a native player with a GPU shows non-synthetic GPU timings (otherwise reported as skipped); e2e `profiler-attach`.
 
-- [ ] **[S8-B] Build Profiles, Reachability Stripping, Module Tree-Shaking & Build Report**
+- [x] **[S8-B] Build Profiles, Reachability Stripping, Module Tree-Shaking & Build Report**
   - **Priority:** P0 · **DependsOn:** `[S8-0]`
   - **Owns:** `lib/src/studio/build/**`, `tool/studio/build_pipeline.dart`, `tool/package_native.dart`, `tool/asset_packer.dart`, `test/studio/build_profiles_test.dart`
   - **Scope:** Build profiles in `volition.project.json` (target `web|wasm|windows|linux|macos|server`, scenes in build, defines, quality tier, compression, dev/release). Build a GUID dependency closure from scenes in build into a per-profile `.pak` with unreferenced assets stripped. Generate a player entrypoint that imports only enabled modules. Emit a build report (size by asset, module and code) as JSON and in the Studio Build window. Builds are deterministic.
   - **DoneWhen:** `test/studio/build_profiles_test.dart` passes (stripping closure, deterministic `.pak` hash across two builds); `volition build --profile web-release` output hash matches the Studio-triggered build.
 
-- [ ] **[S8-C] Standalone Studio App & Single Distributable**
+- [x] **[S8-C] Standalone Studio App & Single Distributable**
   - **Priority:** P1 · **DependsOn:** `[S8-0]`
   - **Owns:** `bin/volition.dart` (`gui --app` only), `dist.ps1`, `tool/studio/app_window.dart`, `test/studio/app_mode_test.dart`
   - **Scope:** `volition gui --app` opens Studio in a native window, either through the existing `--target webview` wrapper or a browser in app mode, chosen by `volition doctor` capability. Add a first-run project picker, recent projects and new-from-template. `dist.ps1` emits one bundle: `volition.exe` + embedded Studio + SDL3/ANGLE runtimes.
   - **DoneWhen:** `test/studio/app_mode_test.dart` passes; `dist.ps1` output launches Studio offline on a clean machine (manual check recorded with screenshot).
 
-- [ ] **[S8-D] Templates, Flagship Showcase & Generated Documentation**
+- [x] **[S8-D] Templates, Flagship Showcase & Generated Documentation**
   - **Priority:** P1 · **DependsOn:** `[S8-0]`
   - **Owns:** `tool/templates/**`, `example/showcase/**`, `doc/studio/**`, `tool/generate_module_catalog.dart`
   - **Scope:** Rebuild `volition create --template empty|2d|3d|multiplayer` on the project format with GUID assets. "Volition Showcase" uses VRP (CSM, clustered lights, IBL, TAA) and at least one module from each of the six families, and is built for web and windows. Docs: Studio manual, scripting guide (annotations, codegen, hot reload), VRP guide, and a module catalog generated from the registry.
   - **DoneWhen:** `volition create` → open in Studio → play → `volition build --profile web-release` passes in e2e `template-roundtrip` for each template; the showcase builds for both targets.
 
-- [ ] **[S8-M] Coordinator Release Gate & Re-Audit**
+- [x] **[S8-M] Coordinator Release Gate & Re-Audit**
   - **Priority:** P0
   - **DependsOn:** `[S8-A]`, `[S8-B]`, `[S8-C]`, `[S8-D]`
   - **Owns:** `PLAN.md`, `TODO.md`, `ENGINE.md`, `README.md`, root + submodule gitlinks
