@@ -89,5 +89,48 @@ void main() {
         expect(device.programDeleteCalls, equals(device.programCompileCalls));
       },
     );
+
+    test(
+      'Wave G10 — renders all 5 Scene View shading modes and Camera/Light/Selection 3D gizmos with zero leaks',
+      () {
+        final device = RecordingGlesDevice();
+        final host = HeadlessHost();
+        final engine = Engine(host);
+        final scene = Scene('ShadingAndGizmosTest');
+        final sun = scene.createGameObject('Sun')
+          ..addComponent(Light.directional());
+        scene.createGameObject('MainCamera').addComponent(Camera());
+        final prop = scene.createGameObject('Crate');
+        engine.loadScene(scene);
+
+        final session = EditorSession(engine);
+        final bridge = SessionEditorHostBridge(session);
+        bridge.selectObjects([prop]);
+        final shell = StudioWorkspaceShell(bridge: bridge);
+        final app = NativeStudioApp(shell: shell, device: device);
+
+        const modes = ['Lit', 'Wire', 'Albedo', 'Normals', 'Heatmap'];
+        for (var i = 0; i < modes.length; i++) {
+          shell.sceneShadingMode = modes[i];
+          app.stepFrame(input: VoxInput(), pixelWidth: 1280, pixelHeight: 720);
+          expect(app.viewport3dRenderer.lastShadingModeIndex, equals(i));
+          expect(app.viewport3dRenderer.lastSceneDrawCalls, equals(1));
+          expect(app.viewport3dRenderer.lastGizmoVertexCount, greaterThan(100));
+        }
+
+        // Turning gizmos off drops gizmo vertex count to zero
+        shell.sceneGizmosVisible = false;
+        app.stepFrame(input: VoxInput(), pixelWidth: 1280, pixelHeight: 720);
+        expect(app.viewport3dRenderer.lastGizmoVertexCount, equals(0));
+        expect(sun.activeInHierarchy, isTrue);
+
+        app.dispose();
+        expect(device.bufferDeleteCalls, equals(device.bufferCreateCalls));
+        expect(device.textureDeleteCalls, equals(device.textureCreateCalls));
+        expect(device.targetDeleteCalls, equals(device.targetCreateCalls));
+        expect(device.vaoDeleteCalls, equals(device.vaoCreateCalls));
+        expect(device.programDeleteCalls, equals(device.programCompileCalls));
+      },
+    );
   });
 }

@@ -35,14 +35,41 @@ void main() {
 precision highp float;
 in vec3 vNormal;
 in vec4 vColor;
+uniform float uShadingMode;
+uniform vec3 uSunDir;
+uniform vec3 uSunColor;
 layout(location=0) out vec4 oColor;
 void main() {
   vec3 n = normalize(vNormal);
-  vec3 keyDir = normalize(vec3(0.45, 0.85, 0.35));
+  if (uShadingMode > 2.5 && uShadingMode < 3.5) {
+    // Normals mode
+    oColor = vec4(n * 0.5 + 0.5, vColor.a);
+    return;
+  }
+  if (uShadingMode > 1.5 && uShadingMode < 2.5) {
+    // Albedo mode
+    oColor = vColor;
+    return;
+  }
+  if (uShadingMode > 3.5) {
+    // Heatmap mode (blue -> green -> yellow -> red by elevation/density)
+    float h = clamp(abs(n.y) * 0.4 + 0.45, 0.0, 1.0);
+    vec3 heat = mix(vec3(0.15, 0.45, 0.95), vec3(0.95, 0.32, 0.14), h);
+    oColor = vec4(heat, vColor.a);
+    return;
+  }
+  if (uShadingMode > 0.5 && uShadingMode < 1.5) {
+    // Wireframe mode (unlit bright edges)
+    oColor = vec4(vColor.rgb * 1.15, vColor.a);
+    return;
+  }
+  // Lit mode (directional scene sun + hemisphere ambient)
+  vec3 keyDir = normalize(uSunDir);
   vec3 fillDir = normalize(vec3(-0.6, 0.3, -0.5));
-  float ndl = max(dot(n, keyDir), 0.0) * 0.72 + max(dot(n, fillDir), 0.0) * 0.22 + 0.22;
-  vec3 lit = vColor.rgb * min(ndl, 1.15);
-  oColor = vec4(lit, vColor.a);
+  float ndl = max(dot(n, keyDir), 0.0) * 0.78 + max(dot(n, fillDir), 0.0) * 0.18;
+  float hemi = n.y * 0.12 + 0.24;
+  vec3 lit = vColor.rgb * (uSunColor * ndl + vec3(hemi));
+  oColor = vec4(min(lit, vec3(1.2)), vColor.a);
 }
 ''';
 
@@ -66,6 +93,8 @@ void main() {
   int lastSceneDrawCalls = 0;
   int lastGameVertices = 0;
   int lastGameDrawCalls = 0;
+  int lastShadingModeIndex = 0;
+  int lastGizmoVertexCount = 0;
 
   StudioViewport3DRenderer(this._device);
 
@@ -77,7 +106,12 @@ void main() {
       vertexSource: _vertSrc,
       fragmentSource: _fragSrc,
       requiredAttributes: const ['aPos', 'aNormal', 'aColor'],
-      requiredUniforms: const ['uViewProj'],
+      requiredUniforms: const [
+        'uViewProj',
+        'uShadingMode',
+        'uSunDir',
+        'uSunColor',
+      ],
     );
     _vao ??= _device.createVertexArray();
     _vbo ??= _device.createBuffer(
@@ -161,10 +195,42 @@ void main() {
 
     collect(scene.rootGameObjects);
 
+    final shadingModeIndex = isScene
+        ? switch (shell.sceneShadingMode) {
+            'Wire' => 1,
+            'Albedo' => 2,
+            'Normals' => 3,
+            'Heatmap' => 4,
+            _ => 0,
+          }
+        : 0;
+    lastShadingModeIndex = shadingModeIndex;
+
+    // Extract primary directional light from the active scene for Lit shading
+    var sunDir = const Vec3(0.45, 0.85, 0.35).normalized;
+    var sunColor = const Vec3(1.0, 0.98, 0.94);
+    for (final go in allObjects) {
+      final light = go.getComponent<Light>();
+      if (light != null && light.type == LightType.directional) {
+        final fwd = go.transform.forward;
+        sunDir = Vec3(-fwd.x, -fwd.y, -fwd.z).normalized;
+        final intensity = light.intensity.clamp(0.2, 2.5);
+        sunColor = Vec3(
+          light.color.r * intensity,
+          light.color.g * intensity,
+          light.color.b * intensity,
+        );
+        break;
+      }
+    }
+
+    var gizmoVertStart = 0;
     for (final go in allObjects) {
       final isSelected = isScene && selectedSet.contains(go);
-      final isLight = go.getComponent<Light>() != null;
-      final isCam = go.getComponent<Camera>() != null;
+      final light = go.getComponent<Light>();
+      final camComp = go.getComponent<Camera>();
+      final isLight = light != null;
+      final isCam = camComp != null;
       final (r, g, b) = isSelected
           ? (0.95, 0.58, 0.18)
           : isLight
@@ -187,18 +253,51 @@ void main() {
         sy: w.scale * st.y,
         sz: w.scale * st.z,
       );
-      _emitShadedBox(
-        verts,
-        worldMatrix: worldMatrix,
-        halfExtent: halfExt,
-        r: r,
-        g: g,
-        b: b,
-        a: 1.0,
-      );
+      if (shadingModeIndex == 1) {
+        _emitWireBox(
+          verts,
+          worldMatrix: worldMatrix,
+          halfExtent: halfExt,
+          r: r,
+          g: g,
+          b: b,
+        );
+      } else {
+        _emitShadedBox(
+          verts,
+          worldMatrix: worldMatrix,
+          halfExtent: halfExt,
+          r: r,
+          g: g,
+          b: b,
+          a: 1.0,
+        );
+      }
+
+      if (isScene && shell.sceneGizmosVisible) {
+        final beforeGizmos = verts.length;
+        if (isSelected) {
+          _emitWireBox(
+            verts,
+            worldMatrix: worldMatrix,
+            halfExtent: halfExt + 0.04,
+            r: 1.0,
+            g: 0.68,
+            b: 0.16,
+          );
+        }
+        if (isCam) {
+          _emitCameraFrustumGizmo(verts, go.transform, camComp);
+        }
+        if (isLight) {
+          _emitLightGizmo(verts, go.transform, light);
+        }
+        gizmoVertStart += (verts.length - beforeGizmos) ~/ 10;
+      }
     }
 
     if (isScene && shell.sceneGizmosVisible && selectedSet.isNotEmpty) {
+      final beforeAxis = verts.length;
       final anchor = selectedSet.first.transform.position;
       final highlightAxis = shell.gizmoInteractor.activeAxis != GizmoAxis.none
           ? shell.gizmoInteractor.activeAxis
@@ -209,6 +308,10 @@ void main() {
         length: 1.35,
         highlightAxis: highlightAxis,
       );
+      gizmoVertStart += (verts.length - beforeAxis) ~/ 10;
+    }
+    if (isScene) {
+      lastGizmoVertexCount = gizmoVertStart;
     }
 
     final vertexCount = verts.length ~/ 10;
@@ -228,6 +331,20 @@ void main() {
     _device.uploadBuffer(_vbo!, Float32List.fromList(verts));
     _device.useProgram(_program!);
     _device.setUniform('uViewProj', UniformValue.mat4(viewProj.m));
+    _device.setUniform(
+      'uShadingMode',
+      UniformValue.float1(shadingModeIndex.toDouble()),
+    );
+    _device.setUniform(
+      'uSunDir',
+      UniformValue.float3(Float32List.fromList([sunDir.x, sunDir.y, sunDir.z])),
+    );
+    _device.setUniform(
+      'uSunColor',
+      UniformValue.float3(
+        Float32List.fromList([sunColor.x, sunColor.y, sunColor.z]),
+      ),
+    );
     _device.drawArrays(first: 0, count: vertexCount);
 
     if (isScene) {
@@ -532,6 +649,167 @@ void main() {
       bl,
       al,
     ]);
+  }
+
+  void _emitSegmentBeam(
+    List<double> out,
+    Vec3 a,
+    Vec3 b, {
+    double thickness = 0.025,
+    required double r,
+    required double g,
+    required double bl,
+  }) {
+    final diff = b - a;
+    final len = diff.length;
+    if (len < 1e-5) return;
+    final dir = diff * (1.0 / len);
+    final upRef = dir.y.abs() > 0.9 ? const Vec3(1, 0, 0) : const Vec3(0, 1, 0);
+    final side = dir.cross(upRef).normalized * thickness;
+    final ortho = side.cross(dir).normalized * thickness;
+    _pushTri(
+      out,
+      a - side,
+      b - side,
+      b + side,
+      ortho.normalized,
+      r,
+      g,
+      bl,
+      1.0,
+    );
+    _pushTri(
+      out,
+      a - side,
+      b + side,
+      a + side,
+      ortho.normalized,
+      r,
+      g,
+      bl,
+      1.0,
+    );
+    _pushTri(
+      out,
+      a - ortho,
+      b - ortho,
+      b + ortho,
+      side.normalized,
+      r,
+      g,
+      bl,
+      1.0,
+    );
+    _pushTri(
+      out,
+      a - ortho,
+      b + ortho,
+      a + ortho,
+      side.normalized,
+      r,
+      g,
+      bl,
+      1.0,
+    );
+  }
+
+  void _emitWireBox(
+    List<double> out, {
+    required Mat4 worldMatrix,
+    required double halfExtent,
+    required double r,
+    required double g,
+    required double b,
+  }) {
+    final s = halfExtent;
+    final corners = [
+      worldMatrix.transformPoint(Vec3(-s, -s, -s)),
+      worldMatrix.transformPoint(Vec3(s, -s, -s)),
+      worldMatrix.transformPoint(Vec3(s, s, -s)),
+      worldMatrix.transformPoint(Vec3(-s, s, -s)),
+      worldMatrix.transformPoint(Vec3(-s, -s, s)),
+      worldMatrix.transformPoint(Vec3(s, -s, s)),
+      worldMatrix.transformPoint(Vec3(s, s, s)),
+      worldMatrix.transformPoint(Vec3(-s, s, s)),
+    ];
+    const edges = [
+      (0, 1),
+      (1, 2),
+      (2, 3),
+      (3, 0),
+      (4, 5),
+      (5, 6),
+      (6, 7),
+      (7, 4),
+      (0, 4),
+      (1, 5),
+      (2, 6),
+      (3, 7),
+    ];
+    for (final (i0, i1) in edges) {
+      _emitSegmentBeam(out, corners[i0], corners[i1], r: r, g: g, bl: b);
+    }
+  }
+
+  void _emitCameraFrustumGizmo(
+    List<double> out,
+    TransformComponent tr,
+    Camera cam,
+  ) {
+    final eye = tr.position;
+    final fwd = tr.forward;
+    final right = tr.right;
+    final up = tr.up;
+    final dist = 2.4;
+    final halfH = math.tan(cam.fovYRadians * 0.5) * dist;
+    final halfW = halfH * 1.6;
+    final center = eye + fwd * dist;
+    final tl = center - right * halfW + up * halfH;
+    final trPt = center + right * halfW + up * halfH;
+    final br = center + right * halfW - up * halfH;
+    final bl = center - right * halfW - up * halfH;
+    for (final corner in [tl, trPt, br, bl]) {
+      _emitSegmentBeam(out, eye, corner, r: 0.45, g: 0.82, bl: 0.98);
+    }
+    _emitSegmentBeam(out, tl, trPt, r: 0.45, g: 0.82, bl: 0.98);
+    _emitSegmentBeam(out, trPt, br, r: 0.45, g: 0.82, bl: 0.98);
+    _emitSegmentBeam(out, br, bl, r: 0.45, g: 0.82, bl: 0.98);
+    _emitSegmentBeam(out, bl, tl, r: 0.45, g: 0.82, bl: 0.98);
+  }
+
+  void _emitLightGizmo(List<double> out, TransformComponent tr, Light light) {
+    final origin = tr.position;
+    if (light.type == LightType.directional) {
+      final fwd = tr.forward;
+      final right = tr.right;
+      final up = tr.up;
+      for (final offset in [
+        Vec3.zero,
+        right * 0.28,
+        right * -0.28,
+        up * 0.28,
+        up * -0.28,
+      ]) {
+        _emitSegmentBeam(
+          out,
+          origin + offset,
+          origin + offset + fwd * 1.6,
+          r: 1.0,
+          g: 0.92,
+          bl: 0.35,
+        );
+      }
+    } else {
+      final rad = light.range.clamp(0.8, 3.0);
+      const segs = 12;
+      for (var i = 0; i < segs; i++) {
+        final a0 = (i / segs) * math.pi * 2.0;
+        final a1 = ((i + 1) / segs) * math.pi * 2.0;
+        final p0 = origin + Vec3(math.cos(a0) * rad, 0, math.sin(a0) * rad);
+        final p1 = origin + Vec3(math.cos(a1) * rad, 0, math.sin(a1) * rad);
+        _emitSegmentBeam(out, p0, p1, r: 1.0, g: 0.92, bl: 0.35);
+      }
+    }
   }
 
   void dispose() {
