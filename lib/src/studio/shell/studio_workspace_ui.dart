@@ -33,7 +33,10 @@ import '../windows/quality_window.dart';
 import 'app_launcher_model.dart';
 import 'dock_layout.dart';
 import 'dock_layout_solver.dart';
+import 'studio_cli_bridge.dart';
 import 'studio_graph_canvas_ui.dart';
+import 'studio_project_wizard_ui.dart';
+import 'studio_settings_panel_ui.dart';
 import 'studio_shortcuts.dart';
 import 'studio_timeline_canvas_ui.dart';
 
@@ -91,9 +94,15 @@ final class StudioWorkspaceShell {
   final StudioAppLauncherModel launcher;
   final StudioGraphModel graphModel;
   final StudioTimelineModel timelineModel;
+  final StudioSettingsModel settings;
+  late final StudioCliController cli;
   final StudioGraphCanvasController graphCanvas = StudioGraphCanvasController();
   final StudioTimelineCanvasController timelineCanvas =
       StudioTimelineCanvasController();
+  final StudioSettingsPanelRenderer settingsPanel =
+      StudioSettingsPanelRenderer();
+  final StudioProjectWizardController projectWizard =
+      StudioProjectWizardController();
   final SceneGizmoInteractor gizmoInteractor = SceneGizmoInteractor();
 
   StudioDockLayout layout;
@@ -145,6 +154,9 @@ final class StudioWorkspaceShell {
     StudioAppLauncherModel? launcher,
     StudioGraphModel? graphModel,
     StudioTimelineModel? timelineModel,
+    StudioSettingsModel? settings,
+    StudioCliBridge? cliBridge,
+    bool openWizardOnStart = false,
     StudioDockLayout? layout,
   }) : menus = menus ?? StudioMenuRegistry(registerDefaults: true),
        hierarchy = hierarchy ?? HierarchyPanelModel(bridge),
@@ -164,8 +176,46 @@ final class StudioWorkspaceShell {
        launcher = launcher ?? StudioAppLauncherModel(),
        graphModel = graphModel ?? StudioGraphModel(schemaId: 'shader_graph'),
        timelineModel = timelineModel ?? StudioTimelineModel(),
+       settings = settings ?? StudioSettingsModel(),
        layout = layout ?? StudioDockLayout.defaultLayout() {
+    cli = StudioCliController(
+      bridge: cliBridge ?? SimulatedStudioCliBridge(),
+      console: this.console,
+    );
+    projectHubOpen = openWizardOnStart;
     _registerWindowMenuActions();
+  }
+
+  /// Completes the 3-step New Project Wizard: scaffolds the starter template
+  /// into [fs] (defaulting to the active Project Window filesystem), loads the
+  /// generated scene into the running [Engine], applies chosen quality &
+  /// layout presets, records the project in [launcher], and transitions into
+  /// the live Editor (`[Wave G14]`).
+  Future<CreatedStudioProject> completeWizardAndOpenEditor({
+    ProjectFileSystem? fs,
+  }) async {
+    final targetFs = fs ?? project.database.fs;
+    final created = await projectWizard.createProject(
+      fs: targetFs,
+      registry: bridge.session.engine.registry,
+    );
+    bridge.session.engine.loadScene(created.initialScene);
+    bridge.selectObjects(const []);
+    quality.selectTier(created.qualityTier);
+    applyLayoutPreset(created.layoutPreset);
+    launcher.recordOpened(
+      created.name,
+      created.location,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    lastOpenedProjectPath = created.location;
+    lastRequestedTemplate = projectWizard.cliTemplateFlag;
+    projectHubOpen = false;
+    console.log(
+      ConsoleLogLevel.info,
+      'Created & opened "${created.name}" (${projectWizard.cliTemplateFlag}).',
+    );
+    return created;
   }
 
   void _registerWindowMenuActions() {
@@ -182,6 +232,7 @@ final class StudioWorkspaceShell {
       ('build', 'Build Profiles'),
       ('graph', 'Node Graph'),
       ('timeline', 'Timeline'),
+      ('settings', 'Settings'),
     ];
     for (final (id, title) in windowPanels) {
       menus.register(
@@ -195,8 +246,18 @@ final class StudioWorkspaceShell {
     menus.register(
       StudioMenuItem(
         id: 'file.project_hub',
-        menuPath: 'File/Project Hub',
-        action: () => projectHubOpen = true,
+        menuPath: 'File/New Project Wizard',
+        action: () {
+          projectWizard.reset();
+          projectHubOpen = true;
+        },
+      ),
+    );
+    menus.register(
+      StudioMenuItem(
+        id: 'edit.preferences',
+        menuPath: 'Edit/Preferences',
+        action: () => openOrFocusPanel('settings'),
       ),
     );
   }
@@ -341,7 +402,23 @@ final class StudioWorkspaceShell {
       _renderAddComponentPopup(topDl, input);
     }
     if (projectHubOpen) {
-      _renderProjectHubModal(topDl, input, width, height);
+      projectWizard.render(
+        dl: topDl,
+        input: input,
+        keyboard: keyboard,
+        launcher: launcher,
+        width: width,
+        height: height,
+        onFinishCreate: () {
+          completeWizardAndOpenEditor();
+        },
+        onOpenRecent: (entry) {
+          lastOpenedProjectPath = entry.path;
+          projectHubOpen = false;
+          console.log(ConsoleLogLevel.info, 'Opened project: ${entry.name}');
+        },
+        onClose: () => projectHubOpen = false,
+      );
     }
 
     _lastSolved = solved;
@@ -506,6 +583,26 @@ final class StudioWorkspaceShell {
       tx += 30;
     }
 
+    // Left-Mid: Unity Gizmo Space (Local/Global) & Grid Snap toggles
+    tx += 8;
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(tx, y + 5, 58, 24),
+      settings.gizmoLocalSpace ? 'Local' : 'Global',
+      active: settings.gizmoLocalSpace,
+      onClick: () => settings.gizmoLocalSpace = !settings.gizmoLocalSpace,
+    );
+    tx += 62;
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(tx, y + 5, 52, 24),
+      'Snap',
+      active: gizmoInteractor.snapEnabled,
+      onClick: () => gizmoInteractor.snapEnabled = !gizmoInteractor.snapEnabled,
+    );
+
     // Center: Unity Play / Pause / Step transport controls
     final centerX = (width * 0.5) - 54;
     final playRect = VoxRect(centerX, y + 5, 36, 24);
@@ -527,15 +624,36 @@ final class StudioWorkspaceShell {
       },
     );
     _toolbarButton(dl, input, pauseRect, '❚❚', active: false, onClick: () {});
-    _toolbarButton(dl, input, stepRect, '▶|', active: false, onClick: () {});
-
-    // Right: Quality Tier & Layout preset buttons
-    final tierLabel = 'VRP: ${quality.activeTier.name.toUpperCase()}';
-    final tierRect = VoxRect(width - 210, y + 5, 102, 24);
     _toolbarButton(
       dl,
       input,
-      tierRect,
+      stepRect,
+      '▶|',
+      active: false,
+      onClick: () => bridge.session.engine.step(1.0 / 60.0),
+    );
+
+    // Right: New/Wizard, CLI Doctor, Settings, Quality Tier & Layout presets
+    var rx = width - 10.0;
+    rx -= 82;
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(rx, y + 5, 82, 24),
+      activeLayoutPreset,
+      onClick: () {
+        const presets = ['Default', 'Wide', '2 by 3'];
+        final idx = presets.indexOf(activeLayoutPreset);
+        applyLayoutPreset(presets[(idx + 1) % presets.length]);
+      },
+    );
+
+    rx -= 96;
+    final tierLabel = 'VRP:${quality.activeTier.name.toUpperCase()}';
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(rx, y + 5, 92, 24),
       tierLabel,
       onClick: () {
         const tiers = VrpQualityTier.values;
@@ -544,16 +662,34 @@ final class StudioWorkspaceShell {
       },
     );
 
-    final layoutRect = VoxRect(width - 100, y + 5, 90, 24);
+    rx -= 74;
     _toolbarButton(
       dl,
       input,
-      layoutRect,
-      activeLayoutPreset,
+      VoxRect(rx, y + 5, 70, 24),
+      'Settings',
+      onClick: () => openOrFocusPanel('settings'),
+    );
+
+    rx -= 66;
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(rx, y + 5, 62, 24),
+      'Doctor',
+      onClick: () => cli.execute(const ['doctor']),
+    );
+
+    rx -= 62;
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(rx, y + 5, 58, 24),
+      'Wizard',
+      active: projectHubOpen,
       onClick: () {
-        const presets = ['Default', 'Wide', '2 by 3'];
-        final idx = presets.indexOf(activeLayoutPreset);
-        applyLayoutPreset(presets[(idx + 1) % presets.length]);
+        projectWizard.reset();
+        projectHubOpen = true;
       },
     );
   }
@@ -1433,6 +1569,18 @@ final class StudioWorkspaceShell {
           input: input,
           bounds: r,
         );
+      case 'settings':
+        settingsPanel.render(
+          settings: settings,
+          gizmoInteractor: gizmoInteractor,
+          sceneViewport: sceneViewport,
+          lighting: lighting,
+          quality: quality,
+          cli: cli,
+          dl: dl,
+          input: input,
+          bounds: r,
+        );
       default:
         dl.addText(
           _panelTitle(panelId),
@@ -1731,112 +1879,6 @@ final class StudioWorkspaceShell {
     );
   }
 
-  void _renderProjectHubModal(
-    DrawList dl,
-    VoxInput input,
-    double width,
-    double height,
-  ) {
-    // Dimmed full-window backdrop
-    dl.addRectFilled(0, 0, width, height, const VoxColor(10, 12, 16, 190));
-    final mw = (width * 0.62).clamp(440.0, 760.0);
-    final mh = (height * 0.62).clamp(300.0, 480.0);
-    final mx = (width - mw) * 0.5;
-    final my = (height - mh) * 0.5;
-    dl.addRectFilled(mx, my, mw, mh, UnityDarkTheme.bgPanel, cornerRadius: 6);
-    dl.addRectOutline(mx, my, mw, mh, UnityDarkTheme.accentBlue, thickness: 2);
-
-    dl.addText(
-      'Volition Studio — Project Hub',
-      mx + 16,
-      my + 14,
-      color: UnityDarkTheme.textPrimary,
-      size: 14,
-    );
-    final closeRect = VoxRect(mx + mw - 72, my + 10, 60, 22);
-    _toolbarButton(
-      dl,
-      input,
-      closeRect,
-      'Close',
-      onClick: () => projectHubOpen = false,
-    );
-
-    // Recent Projects section
-    dl.addText(
-      'Recent Projects (${launcher.recentProjects.length})',
-      mx + 16,
-      my + 46,
-      color: UnityDarkTheme.textMuted,
-      size: 11,
-    );
-    var ry = my + 66;
-    for (final recent in launcher.recentProjects.take(5)) {
-      final rr = VoxRect(mx + 16, ry, mw - 32, 24);
-      final hov = rr.contains(input.mouseX, input.mouseY);
-      dl.addRectFilled(
-        rr.x,
-        rr.y,
-        rr.width,
-        rr.height,
-        hov ? UnityDarkTheme.accentBlue : UnityDarkTheme.bgRowAlt,
-        cornerRadius: 3,
-      );
-      dl.addText(
-        '${recent.name}   (${recent.path})',
-        rr.x + 8,
-        rr.y + 5,
-        color: UnityDarkTheme.textPrimary,
-        size: 11,
-      );
-      if (hov && input.wasMouseClicked) {
-        lastOpenedProjectPath = recent.path;
-        projectHubOpen = false;
-        return;
-      }
-      ry += 28;
-    }
-
-    // New Project Template cards
-    final ty = (ry + 16).clamp(my + 140, my + mh - 84);
-    dl.addText(
-      'New Project Templates',
-      mx + 16,
-      ty,
-      color: UnityDarkTheme.textMuted,
-      size: 11,
-    );
-    const templates = ['Empty', '2D', '3D', 'Multiplayer', 'Showcase'];
-    final cardW = ((mw - 32 - (templates.length - 1) * 8) / templates.length)
-        .clamp(68.0, 140.0);
-    for (var i = 0; i < templates.length; i++) {
-      final tmpl = templates[i];
-      final cr = VoxRect(mx + 16 + i * (cardW + 8), ty + 20, cardW, 44);
-      final hov = cr.contains(input.mouseX, input.mouseY);
-      dl.addRectFilled(
-        cr.x,
-        cr.y,
-        cr.width,
-        cr.height,
-        hov ? UnityDarkTheme.accentBlue : UnityDarkTheme.bgTabBar,
-        cornerRadius: 4,
-      );
-      dl.addRectOutline(cr.x, cr.y, cr.width, cr.height, UnityDarkTheme.border);
-      dl.addText(
-        tmpl,
-        cr.x + 10,
-        cr.y + 15,
-        color: UnityDarkTheme.textPrimary,
-        size: 11,
-      );
-      if (hov && input.wasMouseClicked) {
-        lastRequestedTemplate = tmpl.toLowerCase();
-        projectHubOpen = false;
-        return;
-      }
-    }
-  }
-
   double _updatePanelScroll(
     String panelId,
     VoxRect viewport,
@@ -1910,6 +1952,7 @@ final class StudioWorkspaceShell {
     'build' => 'Build',
     'graph' => 'Graph',
     'timeline' => 'Timeline',
+    'settings' => 'Settings',
     _ => id,
   };
 }

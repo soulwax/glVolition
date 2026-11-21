@@ -32,7 +32,9 @@ void main() {
       );
 
       expect(
-        overlayDl.commands.any((c) => (c.text ?? '').contains('Project Hub')),
+        overlayDl.commands.any(
+          (c) => (c.text ?? '').contains('New Project Wizard'),
+        ),
         isTrue,
       );
       expect(

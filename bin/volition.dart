@@ -973,6 +973,8 @@ Future<void> _runGui(List<String> args) async {
   var port = 8090;
   var openBrowser = true;
   var nativeMode = false;
+  var openWizard = false;
+  String? projectDir;
 
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
@@ -984,9 +986,13 @@ Future<void> _runGui(List<String> args) async {
       nativeMode = true;
     } else if (a == '--web') {
       nativeMode = false;
+    } else if (a == '--wizard') {
+      openWizard = true;
+    } else if (a == '--project' && i + 1 < args.length) {
+      projectDir = args[++i];
     } else if (a == '--help' || a == '-h') {
       stdout.writeln(
-        'Usage: dart run gl_volition:volition gui [--native|--web] [--port 8090] [--no-open]',
+        'Usage: dart run gl_volition:volition gui [--native|--web] [--wizard] [--project <dir>] [--port 8090] [--no-open]',
       );
       return;
     }
@@ -997,13 +1003,24 @@ Future<void> _runGui(List<String> args) async {
       'Starting glVolition Studio in native AOT mode (checking SDL3/ANGLE capabilities)...',
     );
     final engine = Engine(HeadlessHost());
-    final scene = Scene('VolitionStudio');
+    final scene = Scene(
+      projectDir == null
+          ? 'VolitionStudio'
+          : projectDir.split(RegExp(r'[/\\]')).last,
+    );
     scene.createGameObject('MainCamera').addComponent(Camera());
     scene.createGameObject('Sun').addComponent(Light.directional());
     engine.loadScene(scene);
     final bridge = SessionEditorHostBridge(EditorSession(engine));
-    final shell = StudioWorkspaceShell(bridge: bridge);
-    final res = await Sdl3StudioRunner.tryLaunchHardware(shell: shell);
+    final shell = StudioWorkspaceShell(
+      bridge: bridge,
+      cliBridge: _NativeProcessCliBridge(dartExecutable: _dartExecutable),
+      openWizardOnStart: openWizard || projectDir == null,
+    );
+    final res = await Sdl3StudioRunner.tryLaunchHardware(
+      shell: shell,
+      title: shell.windowTitle,
+    );
     if (res.launched) {
       log.info(
         'Native AOT Studio closed after ${res.framesRendered} frame(s).',
@@ -1303,6 +1320,46 @@ Future<void> _runDistStudioBundle({
     log.warn(
       'Optional native runtime libraries not found in search dirs: '
       '${missingLibs.join(', ')}. Place them beside $exeName or pass --lib-dir <path>.',
+    );
+  }
+}
+
+/// Real OS process-backed [StudioCliBridge] connecting the native AOT Studio
+/// GUI directly to the `volition` CLI (`[Wave G14]`).
+final class _NativeProcessCliBridge implements StudioCliBridge {
+  final String dartExecutable;
+
+  const _NativeProcessCliBridge({required this.dartExecutable});
+
+  @override
+  Future<StudioCliResult> runCommand(
+    List<String> args, {
+    String? workingDirectory,
+  }) async {
+    final sw = Stopwatch()..start();
+    final isCompiledExe =
+        Platform.resolvedExecutable.toLowerCase().endsWith('volition.exe') ||
+        Platform.resolvedExecutable.toLowerCase().endsWith(
+          'volition_studio.exe',
+        );
+    final executable = isCompiledExe
+        ? Platform.resolvedExecutable
+        : dartExecutable;
+    final fullArgs = isCompiledExe
+        ? args
+        : ['run', 'bin/volition.dart', ...args];
+    final res = await Process.run(
+      executable,
+      fullArgs,
+      workingDirectory: workingDirectory,
+    );
+    sw.stop();
+    return StudioCliResult(
+      args: List<String>.unmodifiable(args),
+      exitCode: res.exitCode,
+      stdoutText: '${res.stdout}',
+      stderrText: '${res.stderr}',
+      durationMs: sw.elapsedMilliseconds,
     );
   }
 }
