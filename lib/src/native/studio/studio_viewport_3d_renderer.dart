@@ -200,7 +200,15 @@ void main() {
 
     if (isScene && shell.sceneGizmosVisible && selectedSet.isNotEmpty) {
       final anchor = selectedSet.first.transform.position;
-      _emitTransformGizmo(verts, anchor, length: 1.35);
+      final highlightAxis = shell.gizmoInteractor.activeAxis != GizmoAxis.none
+          ? shell.gizmoInteractor.activeAxis
+          : shell.gizmoInteractor.hoveredAxis;
+      _emitTransformGizmo(
+        verts,
+        anchor,
+        length: 1.35,
+        highlightAxis: highlightAxis,
+      );
     }
 
     final vertexCount = verts.length ~/ 10;
@@ -347,34 +355,38 @@ void main() {
     List<double> out,
     Vec3 origin, {
     double length = 1.35,
+    GizmoAxis highlightAxis = GizmoAxis.none,
   }) {
     const t = 0.045;
-    // X axis (Red)
+    final xHi = highlightAxis == GizmoAxis.x;
+    final yHi = highlightAxis == GizmoAxis.y;
+    final zHi = highlightAxis == GizmoAxis.z;
+    // X axis (Red -> Yellow on hover/drag)
     _emitWorldAxisBox(
       out,
       origin + Vec3(length * 0.5, 0, 0),
       Vec3(length * 0.5, t, t),
-      0.95,
-      0.24,
-      0.22,
+      xHi ? 1.0 : 0.95,
+      xHi ? 0.92 : 0.24,
+      xHi ? 0.18 : 0.22,
     );
-    // Y axis (Green)
+    // Y axis (Green -> Yellow on hover/drag)
     _emitWorldAxisBox(
       out,
       origin + Vec3(0, length * 0.5, 0),
       Vec3(t, length * 0.5, t),
-      0.26,
-      0.88,
-      0.32,
+      yHi ? 1.0 : 0.26,
+      yHi ? 0.92 : 0.88,
+      yHi ? 0.18 : 0.32,
     );
-    // Z axis (Blue)
+    // Z axis (Blue -> Yellow on hover/drag)
     _emitWorldAxisBox(
       out,
       origin + Vec3(0, 0, length * 0.5),
       Vec3(t, t, length * 0.5),
-      0.24,
-      0.52,
-      0.96,
+      zHi ? 1.0 : 0.24,
+      zHi ? 0.92 : 0.52,
+      zHi ? 0.18 : 0.96,
     );
   }
 

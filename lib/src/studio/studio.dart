@@ -42,6 +42,7 @@ export 'shell/dock_layout.dart';
 export 'shell/dock_layout_solver.dart';
 export 'shell/studio_workspace_ui.dart';
 export 'timeline/timeline_model.dart';
+export 'viewport/scene_gizmo_interactor.dart';
 export 'viewport/scene_viewport_model.dart';
 export 'windows/animation/animator_controller_model.dart';
 export 'windows/graphs/graph_schemas.dart';

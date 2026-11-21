@@ -19,6 +19,7 @@ import '../modules/module_inventory.g.dart';
 import '../modules/module_registry.dart';
 import '../project/project_fs.dart';
 import '../project_window/project_window_model.dart';
+import '../viewport/scene_gizmo_interactor.dart';
 import '../viewport/scene_viewport_model.dart';
 import '../windows/lighting_window.dart';
 import '../windows/modules_window.dart';
@@ -78,6 +79,7 @@ final class StudioWorkspaceShell {
   final QualityWindowModel quality;
   final ModulesWindowModel modules;
   final ProfilerWindowModel profiler;
+  final SceneGizmoInteractor gizmoInteractor = SceneGizmoInteractor();
 
   StudioDockLayout layout;
   String activeLayoutPreset = 'Default';
@@ -538,19 +540,38 @@ final class StudioWorkspaceShell {
           r.height,
           const VoxColor(20, 22, 26, 255),
         );
-        // Interactive Scene View camera controls (wheel zoom / drag orbit)
-        if (panelId == 'scene' && r.contains(input.mouseX, input.mouseY)) {
-          if (input.scrollDeltaY != 0.0) {
-            sceneViewport.editorCamera.zoom(input.scrollDeltaY * 0.5);
-          }
-          if (input.isMouseDown &&
-              (input.mouseDeltaX != 0.0 || input.mouseDeltaY != 0.0) &&
+        // Interactive Scene View ray-pick, 3D gizmo drag, and camera orbit/zoom
+        if (panelId == 'scene') {
+          final overlayBarRect = VoxRect(r.x + 8, r.y + 8, 232, 24);
+          final overOverlayPill = overlayBarRect.contains(
+            input.mouseX,
+            input.mouseY,
+          );
+          final gizmoConsumed =
+              !overOverlayPill &&
               _draggingSplitterId == null &&
-              _draggingTab == null) {
-            sceneViewport.editorCamera.orbit(
-              input.mouseDeltaX * 0.01,
-              input.mouseDeltaY * 0.01,
-            );
+              _draggingTab == null &&
+              gizmoInteractor.handlePointer(
+                bridge: bridge,
+                camera: sceneViewport.editorCamera,
+                viewportRect: r,
+                input: input,
+                activeTool: activeGizmoTool,
+                gizmosVisible: sceneGizmosVisible,
+              );
+          if (!gizmoConsumed && r.contains(input.mouseX, input.mouseY)) {
+            if (input.scrollDeltaY != 0.0) {
+              sceneViewport.editorCamera.zoom(input.scrollDeltaY * 0.5);
+            }
+            if (input.isMouseDown &&
+                (input.mouseDeltaX != 0.0 || input.mouseDeltaY != 0.0) &&
+                _draggingSplitterId == null &&
+                _draggingTab == null) {
+              sceneViewport.editorCamera.orbit(
+                input.mouseDeltaX * 0.01,
+                input.mouseDeltaY * 0.01,
+              );
+            }
           }
         }
         // Floating Unity Scene/Game View Overlay bar emitted to overlayDl
