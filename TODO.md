@@ -783,7 +783,7 @@
     - The e2e runner (pattern of `run_shader_lab.mjs`) drives headless Chromium through scripted scenarios.
   - **DoneWhen:** `test/studio/studio_server_test.dart` passes; `node tool/studio/e2e/run_studio_e2e.mjs --scenario shell-smoke` passes; `dart compile exe bin/volition.dart` serves the embedded bundle with no network access.
 
-- [ ] **[S2-B] Scene View & Game View: Editor Camera, Grid, Gizmo Overlay, ID-Buffer Picking, Selection Outline & Shading Modes**
+- [x] **[S2-B] Scene View & Game View: Editor Camera, Grid, Gizmo Overlay, ID-Buffer Picking, Selection Outline & Shading Modes**
   - **Priority:** P0
   - **DependsOn:** `[S2-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/passes/editor_*.dart`, `vendor/pixeldart/shaders/rendering/editor/**`, `vendor/pixeldart/tools/renderer/test_editor_passes.dart`, `lib/src/studio/viewport/**`, `lib/src/web/studio/viewport/**`, `test/studio/viewport_test.dart`

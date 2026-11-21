@@ -19,3 +19,4 @@ export 'project/project_fs.dart';
 export 'project_window/project_window_model.dart';
 export 'protocol/studio_protocol.dart';
 export 'shell/dock_layout.dart';
+export 'viewport/scene_viewport_model.dart';
