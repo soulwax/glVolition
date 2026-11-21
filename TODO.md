@@ -771,7 +771,7 @@
     - Add a renderer `EditorOverlay` contract for grid, gizmo lines/icons, ID-pick target and selection set.
   - **DoneWhen:** `dart analyze` passes on root and `vendor/pixeldart`; existing `ComponentSpec` round-trip tests are unchanged.
 
-- [ ] **[S2-A] Dart-Compiled Studio Shell, Bundle Embedding, Legacy Panels Migration & e2e Harness**
+- [x] **[S2-A] Dart-Compiled Studio Shell, Bundle Embedding, Legacy Panels Migration & e2e Harness**
   - **Priority:** P0
   - **DependsOn:** `[S2-0]`
   - **Owns:** `lib/src/web/studio/shell/**`, `tool/studio/web/studio_main.dart`, `tool/studio/studio_bundle.dart`, `tool/studio/studio_bundle.g.dart`, `tool/cli_gui_server.dart`, `tool/cli_gui_assets.dart`, `tool/studio/e2e/run_studio_e2e.mjs`, `test/studio/studio_server_test.dart`
@@ -819,7 +819,7 @@
     - Console: capture `voxlog` + `EngineHost.reportError` from the in-page player, with collapse, level filters and search. Clicking a stack frame opens `file:line` through a daemon call (`code -g`, or the configured editor).
   - **DoneWhen:** `test/studio/project_window_test.dart` passes (create/rename/move through the UI model keeps GUIDs, and the thumbnail cache is reused); the e2e scenario `drag-material` passes.
 
-- [ ] **[S2-M] Coordinator Merge: Play Mode, Scene Save/Load via Daemon, Autosave & Studio ⇄ CLI Parity Gate**
+- [x] **[S2-M] Coordinator Merge: Play Mode, Scene Save/Load via Daemon, Autosave & Studio ⇄ CLI Parity Gate**
   - **Priority:** P0
   - **DependsOn:** `[S2-A]`, `[S2-B]`, `[S2-C]`, `[S2-D]`
   - **Owns:** `lib/src/engine/editor_session.dart`, `tool/cli_service.dart`, `bin/volition.dart`, `tool/studio/studio_daemon.dart`, `test/studio/cli_parity_test.dart`, `test/studio/play_mode_test.dart`

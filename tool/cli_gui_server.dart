@@ -2,15 +2,23 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:gl_volition/src/studio/protocol/studio_protocol.dart';
+
 import 'cli_gui_assets.dart';
 import 'cli_service.dart';
+import 'studio/studio_daemon.dart';
 
-/// Local HTTP + WebSocket RPC server powering `volition gui`.
+/// Local HTTP + WebSocket RPC server powering `volition gui` & Volition Studio
+/// (supports Protocol v2 typed envelopes while keeping legacy v1 aliases).
 class VolitionGuiServer {
-  VolitionGuiServer({VolitionCliService? service})
-    : service = service ?? VolitionCliService();
+  VolitionGuiServer({VolitionCliService? service, StudioDaemon? daemon})
+    : service = service ?? VolitionCliService() {
+    this.daemon = daemon ?? StudioDaemon(cliService: this.service);
+  }
 
   final VolitionCliService service;
+  late final StudioDaemon daemon;
+  static const StudioProtocolCodec _v2Codec = StudioProtocolCodec();
 
   HttpServer? _server;
   final Set<WebSocket> _clients = {};
@@ -107,6 +115,27 @@ class VolitionGuiServer {
       msg = decoded.cast<String, Object?>();
     } catch (_) {
       _send(ws, {'type': 'error', 'message': 'Invalid JSON payload.'});
+      return;
+    }
+
+    // Studio Protocol v2 typed envelope path (S2-A)
+    if (msg['version'] == studioProtocolVersion && msg['kind'] == 'request') {
+      try {
+        final req = StudioRequest.fromJson(msg);
+        final res = await daemon.dispatch(req);
+        if (ws.readyState == WebSocket.open) {
+          ws.add(_v2Codec.encode(res));
+        }
+      } catch (e) {
+        final fallbackId = msg['id']?.toString() ?? 'invalid';
+        final err = StudioResponse.err(
+          fallbackId,
+          StudioError(code: StudioErrorCode.invalidRequest, message: '$e'),
+        );
+        if (ws.readyState == WebSocket.open) {
+          ws.add(_v2Codec.encode(err));
+        }
+      }
       return;
     }
 

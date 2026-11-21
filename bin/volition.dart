@@ -8,6 +8,8 @@ import '../tool/asset_packer.dart';
 import '../tool/cli_gui_server.dart';
 import '../tool/cli_service.dart';
 import '../tool/package_native.dart';
+import '../tool/studio/studio_daemon.dart';
+import 'package:gl_volition/src/studio/protocol/studio_protocol.dart';
 
 final log = voxlog.stdoutColor('volition', level: LogLevel.info);
 
@@ -97,6 +99,8 @@ Future<void> main(List<String> args) async {
       await _runDoctor(rest);
     case 'create':
       await _runCreate(rest);
+    case 'rpc':
+      await _runRpc(rest);
     case 'gui':
       await _runGui(rest);
     case 'replay':
@@ -1035,5 +1039,81 @@ Future<void> _runReplay(List<String> args) async {
     }
   } finally {
     await service.dispose();
+  }
+}
+
+Future<void> _runRpc(List<String> args) async {
+  var asJson = false;
+  var listMethods = false;
+  String? method;
+  var params = <String, Object?>{};
+
+  for (var i = 0; i < args.length; i++) {
+    final a = args[i];
+    if (a == '--help' || a == '-h') {
+      stdout.writeln(
+        'Usage: dart run gl_volition:volition rpc <method> [--params <json>] [--json]\n'
+        '       dart run gl_volition:volition rpc --list [--json]',
+      );
+      return;
+    } else if (a == '--json') {
+      asJson = true;
+    } else if (a == '--list') {
+      listMethods = true;
+    } else if (a == '--params' && i + 1 < args.length) {
+      final raw = jsonDecode(args[++i]);
+      if (raw is Map<String, Object?>) {
+        params = raw;
+      } else if (raw is Map) {
+        params = raw.map((k, v) => MapEntry('$k', v));
+      } else {
+        stderr.writeln('--params must be a JSON object.');
+        exit(64);
+      }
+    } else if (!a.startsWith('-')) {
+      method ??= a;
+    }
+  }
+
+  if (listMethods) {
+    final registry = StudioMethodRegistry();
+    final rows = [
+      for (final m in registry.all)
+        {'method': m.method, 'cliCommand': m.cliCommand, 'summary': m.summary},
+    ];
+    if (asJson) {
+      stdout.writeln(jsonEncode({'methods': rows}));
+    } else {
+      for (final r in rows) {
+        stdout.writeln('${r['method']} -> ${r['cliCommand']}');
+      }
+    }
+    return;
+  }
+
+  if (method == null || method.isEmpty) {
+    stderr.writeln('Usage: volition rpc <method> [--params <json>] [--json]');
+    exit(64);
+  }
+
+  final daemon = StudioDaemon();
+  try {
+    final res = await daemon.dispatch(
+      StudioRequest(id: 'cli', method: method, params: params),
+    );
+    if (asJson) {
+      stdout.writeln(jsonEncode(res.toJson()));
+    } else if (res.ok) {
+      stdout.writeln(const JsonEncoder.withIndent('  ').convert(res.result));
+    } else {
+      stderr.writeln(
+        'RPC error (${res.error?.code.name}): ${res.error?.message}',
+      );
+    }
+    if (!res.ok) {
+      exit(1);
+    }
+  } finally {
+    await daemon.cliService.dispose();
   }
 }
