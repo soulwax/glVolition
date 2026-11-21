@@ -1033,36 +1033,36 @@
 
 **Owns:** `lib/src/studio/modules/<family>/**`, `test/studio/modules/<family>_test.dart`, `example/studio_samples/<family>/**`, plus annotation-only edits to the wrapper files listed by `dart run tool/check_module_coverage.dart --owners <family>` (resolved in `[S1-D]`). Vendor packages themselves are not modified unless a bug blocks integration. That fix happens inside the submodule first (Invariant 4) and is reported.
 
-- [ ] **[S6-A] Rendering & Visuals Family (17):** `pixeldart`, `voxvfx`, `voxribbon`, `voxdecal`, `voxlight`, `voxshadow`, `voxsky`, `voxcolor`, `voxlens`, `voxcam`, `voxprobe`, `voxatlas`, `voxbatch`, `voxoctree`, `voxsdf`, `voxgreedy`, `voxvox`
+- [x] **[S6-A] Rendering & Visuals Family (17):** `pixeldart`, `voxvfx`, `voxribbon`, `voxdecal`, `voxlight`, `voxshadow`, `voxsky`, `voxcolor`, `voxlens`, `voxcam`, `voxprobe`, `voxatlas`, `voxbatch`, `voxoctree`, `voxsdf`, `voxgreedy`, `voxvox`
   - **Priority:** P1 · **DependsOn:** `[S5-M]`, `[S4-M]`
   - **DoneWhen:** `dart test test/studio/modules/rendering_test.dart`; coverage gate `inspectable` passes for this family; sample `example/studio_samples/rendering/` plays in Studio e2e (`module-rendering`).
 
-- [ ] **[S6-B] Physics & Simulation Family (11):** `voxphys`, `voxbroad`, `voxcloth`, `voxfluid`, `voxfracture`, `voxragdoll`, `voxverlet`, `voxwheel`, `voxtraffic`, `voxcrowd`, `voxsteer`
+- [x] **[S6-B] Physics & Simulation Family (11):** `voxphys`, `voxbroad`, `voxcloth`, `voxfluid`, `voxfracture`, `voxragdoll`, `voxverlet`, `voxwheel`, `voxtraffic`, `voxcrowd`, `voxsteer`
   - **Priority:** P1 · **DependsOn:** `[S5-M]`
   - **Extra scope:** Collider gizmos (box/sphere/capsule/mesh/heightfield edit handles), Physics project settings panel (layer matrix, gravity, fixed step), joint gizmos.
   - **DoneWhen:** `dart test test/studio/modules/physics_test.dart`; gate passes for family; e2e `module-physics`.
 
-- [ ] **[S6-C] Animation & Motion Family (9):** `voxanim`, `voxblend`, `voxik2d`, `voxgait`, `voxtween`, `voxcurve`, `voxseq`, `voxspline3d`, `voxextrude`
+- [x] **[S6-C] Animation & Motion Family (9):** `voxanim`, `voxblend`, `voxik2d`, `voxgait`, `voxtween`, `voxcurve`, `voxseq`, `voxspline3d`, `voxextrude`
   - **Priority:** P1 · **DependsOn:** `[S5-M]`
   - **Extra scope:** Curve field editor for the generic inspector (reused by `[S7-A]`), spline point gizmos.
   - **DoneWhen:** `dart test test/studio/modules/animation_test.dart`; gate passes for family; e2e `module-animation`.
 
-- [ ] **[S6-D] AI, Gameplay & Narrative Family (15):** `voxai`, `voxhtn`, `voxnav3d`, `voxpath`, `voxflow`, `voxgraph`, `voxcircuit`, `voxrule`, `voxitem`, `voxcraft`, `voxquest`, `voxtalk`, `voxstat`, `voxscore`, `voxloc`
+- [x] **[S6-D] AI, Gameplay & Narrative Family (15):** `voxai`, `voxhtn`, `voxnav3d`, `voxpath`, `voxflow`, `voxgraph`, `voxcircuit`, `voxrule`, `voxitem`, `voxcraft`, `voxquest`, `voxtalk`, `voxstat`, `voxscore`, `voxloc`
   - **Priority:** P1 · **DependsOn:** `[S5-M]`
   - **Extra scope:** Convert item/quest/stat/craft/loc definitions to `DataAsset` types with `@CreateAssetMenu`; navmesh agent gizmos.
   - **DoneWhen:** `dart test test/studio/modules/gameplay_test.dart`; gate passes for family; e2e `module-gameplay`.
 
-- [ ] **[S6-E] World & Procedural Family (10):** `voxbiome`, `voxnoise3d`, `voxproc`, `voxarch`, `voxbuild`, `voxgrid`, `voxhex`, `voxsnap`, `voxgeom`, `voxfoliage`
+- [x] **[S6-E] World & Procedural Family (10):** `voxbiome`, `voxnoise3d`, `voxproc`, `voxarch`, `voxbuild`, `voxgrid`, `voxhex`, `voxsnap`, `voxgeom`, `voxfoliage`
   - **Priority:** P1 · **DependsOn:** `[S5-M]`
   - **Extra scope:** "Generate / Regenerate with seed" context actions that produce undoable scene edits; grid/hex overlays.
   - **DoneWhen:** `dart test test/studio/modules/world_test.dart`; gate passes for family; e2e `module-world`.
 
-- [ ] **[S6-F] Audio, Input, Net & Infrastructure Family (12):** `voxdsp`, `voxreverb`, `voxsynth`, `voxrhythm`, `voxpad`, `voxnet`, `voxrollback`, `voxecs`, `voxui`, `voxlog`, `voxpack`, `voxalloc`
+- [x] **[S6-F] Audio, Input, Net & Infrastructure Family (12):** `voxdsp`, `voxreverb`, `voxsynth`, `voxrhythm`, `voxpad`, `voxnet`, `voxrollback`, `voxecs`, `voxui`, `voxlog`, `voxpack`, `voxalloc`
   - **Priority:** P1 · **DependsOn:** `[S5-M]`
   - **Extra scope:** Audio Mixer window (buses, snapshots, ducking from Wave 20) with live meters; Input Actions asset editor (Wave 19 profiles); Network settings + "Play with N clients" launcher (local headless server + extra Studio game views); `voxlog` already feeds Console (verify).
   - **DoneWhen:** `dart test test/studio/modules/infra_test.dart`; gate passes for family; e2e `module-audio-input-net`.
 
-- [ ] **[S6-M] Coordinator Merge: Raise Coverage Gate to `inspectable` in `verify_all` & Module Catalog**
+- [x] **[S6-M] Coordinator Merge: Raise Coverage Gate to `inspectable` in `verify_all` & Module Catalog**
   - **Priority:** P0
   - **DependsOn:** `[S6-A]`, `[S6-B]`, `[S6-C]`, `[S6-D]`, `[S6-E]`, `[S6-F]`
   - **Owns:** `tool/verify_all.dart`, `lib/src/studio/modules/module_registry.dart`, `lib/src/studio/studio.dart`

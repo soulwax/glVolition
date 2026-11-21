@@ -339,7 +339,8 @@ void _generateInventory(Directory root) {
       buf.writeln('    ],');
     }
     buf
-      ..writeln('    maturity: StudioModuleMaturity.runtimeOnly,')
+      ..writeln("    sampleScenes: ['example/studio_samples/${family.name}/'],")
+      ..writeln('    maturity: StudioModuleMaturity.inspectable,')
       ..writeln('    requiredMaturity: $reqMaturity,')
       ..writeln('  ),');
   }

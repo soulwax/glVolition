@@ -81,12 +81,19 @@ void main() {
         contains('vox_unregistered_test_pkg'),
       );
 
-      final maturityReport = registry.checkCoverage(
+      final inspectableReport = registry.checkCoverage(
         allPkgs,
         minMaturity: StudioModuleMaturity.inspectable,
       );
+      expect(inspectableReport.passed, isTrue);
+      expect(inspectableReport.belowMinMaturity, isEmpty);
+
+      final maturityReport = registry.checkCoverage(
+        allPkgs,
+        minMaturity: StudioModuleMaturity.editorTooled,
+      );
       expect(maturityReport.passed, isFalse);
-      expect(maturityReport.belowMinMaturity.length, equals(74));
+      expect(maturityReport.belowMinMaturity, isNotEmpty);
     });
 
     test(

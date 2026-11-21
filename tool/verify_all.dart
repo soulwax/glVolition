@@ -50,7 +50,7 @@ Future<void> main(List<String> args) async {
         'run',
         'tool/check_module_coverage.dart',
         '--min-maturity',
-        'runtime-only',
+        'inspectable',
       ],
       workingDirectory: root.path,
     ),
