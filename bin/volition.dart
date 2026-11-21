@@ -389,6 +389,7 @@ Future<void> _runBuild(List<String> args) async {
   String? explicitName;
   var distRoot = 'dist';
   var dryRun = false;
+  var studioBundle = false;
   final libSearchDirs = <String>[];
 
   for (var i = 0; i < args.length; i++) {
@@ -396,6 +397,8 @@ Future<void> _runBuild(List<String> args) async {
     if (a == '-h' || a == '--help') {
       _printUsage();
       return;
+    } else if (a == '--studio') {
+      studioBundle = true;
     } else if (a == '--target') {
       target = _requireOptionValue(args, i, a);
       i++;
@@ -422,6 +425,15 @@ Future<void> _runBuild(List<String> args) async {
     } else {
       entryPath ??= a;
     }
+  }
+
+  if (studioBundle) {
+    await _runDistStudioBundle(
+      distRoot: distRoot,
+      libSearchDirs: libSearchDirs,
+      dryRun: dryRun,
+    );
+    return;
   }
 
   entryPath ??= 'example/pixel_rocket/main.dart';
@@ -624,6 +636,7 @@ Future<void> _runDist(List<String> args) async {
   String? explicitName;
   var distRoot = 'dist';
   var dryRun = false;
+  var studioBundle = false;
   final libSearchDirs = <String>[];
 
   for (var i = 0; i < args.length; i++) {
@@ -631,6 +644,8 @@ Future<void> _runDist(List<String> args) async {
     if (a == '-h' || a == '--help') {
       _printUsage();
       return;
+    } else if (a == '--studio') {
+      studioBundle = true;
     } else if (a == '--target') {
       target = _requireOptionValue(args, i, a);
       i++;
@@ -654,6 +669,15 @@ Future<void> _runDist(List<String> args) async {
     } else {
       entryPath ??= a;
     }
+  }
+
+  if (studioBundle) {
+    await _runDistStudioBundle(
+      distRoot: distRoot,
+      libSearchDirs: libSearchDirs,
+      dryRun: dryRun,
+    );
+    return;
   }
 
   entryPath ??= 'example/pixel_rocket/main.dart';
@@ -1199,4 +1223,86 @@ Future<void> _runCodegen(List<String> args) async {
     'volition codegen: processed $generatedFiles spec file(s), $totalErrors diagnostic(s).',
   );
   if (totalErrors > 0) exit(1);
+}
+
+Future<void> _runDistStudioBundle({
+  required String distRoot,
+  required List<String> libSearchDirs,
+  required bool dryRun,
+}) async {
+  final outDir = Directory('$distRoot/studio');
+  final exeName = Platform.isWindows
+      ? 'volition_studio.exe'
+      : 'volition_studio';
+  final exePath = '${outDir.path}/$exeName';
+  final runtimeLibs = Platform.isWindows
+      ? const ['SDL3.dll', 'libEGL.dll', 'libGLESv2.dll']
+      : Platform.isMacOS
+      ? const ['libSDL3.dylib', 'libEGL.dylib', 'libGLESv2.dylib']
+      : const ['libSDL3.so.0', 'libEGL.so.1', 'libGLESv2.so.2'];
+
+  final searchDirs = <String>[
+    ...libSearchDirs,
+    Directory.current.path,
+    '${Directory.current.path}/native_libs',
+  ];
+  final foundLibs = <String, String>{};
+  final missingLibs = <String>[];
+
+  for (final lib in runtimeLibs) {
+    String? matched;
+    for (final dir in searchDirs) {
+      final candidate = File('$dir/$lib');
+      if (candidate.existsSync()) {
+        matched = candidate.path;
+        break;
+      }
+    }
+    if (matched != null) {
+      foundLibs[lib] = matched;
+    } else {
+      missingLibs.add(lib);
+    }
+  }
+
+  final manifest = <String, Object?>{
+    'bundle': 'volition_studio_aot',
+    'platform': Platform.operatingSystem,
+    'executable': exePath,
+    'dryRun': dryRun,
+    'foundRuntimeLibraries': foundLibs,
+    'missingRuntimeLibraries': missingLibs,
+  };
+
+  if (dryRun) {
+    stdout.writeln(const JsonEncoder.withIndent('  ').convert(manifest));
+    return;
+  }
+
+  outDir.createSync(recursive: true);
+  log.info('Compiling portable AOT Volition Studio -> $exePath ...');
+  final res = await Process.run(_dartExecutable, [
+    'compile',
+    'exe',
+    'bin/volition.dart',
+    '-o',
+    exePath,
+  ]);
+  if (res.exitCode != 0) {
+    stderr.write(res.stderr);
+    exit(res.exitCode);
+  }
+  for (final entry in foundLibs.entries) {
+    File(entry.value).copySync('${outDir.path}/${entry.key}');
+  }
+  File(
+    '${outDir.path}/studio_bundle_manifest.json',
+  ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(manifest));
+  log.info('Portable AOT Studio bundle written to ${outDir.path}');
+  if (missingLibs.isNotEmpty) {
+    log.warn(
+      'Optional native runtime libraries not found in search dirs: '
+      '${missingLibs.join(', ')}. Place them beside $exeName or pass --lib-dir <path>.',
+    );
+  }
 }

@@ -9,6 +9,7 @@ library;
 import '../../../gl_volition.dart';
 import '../assets/asset_database.dart';
 import '../bridge/editor_host_bridge.dart';
+import '../build/build_profiles.dart';
 import '../commands/menu_registry.dart';
 import '../console/console_model.dart';
 import '../hierarchy/hierarchy_model.dart';
@@ -23,6 +24,7 @@ import '../windows/lighting_window.dart';
 import '../windows/modules_window.dart';
 import '../windows/profiler/profiler_window_model.dart';
 import '../windows/quality_window.dart';
+import 'app_launcher_model.dart';
 import 'dock_layout.dart';
 import 'dock_layout_solver.dart';
 import 'studio_shortcuts.dart';
@@ -78,6 +80,7 @@ final class StudioWorkspaceShell {
   final QualityWindowModel quality;
   final ModulesWindowModel modules;
   final ProfilerWindowModel profiler;
+  final StudioAppLauncherModel launcher;
   final SceneGizmoInteractor gizmoInteractor = SceneGizmoInteractor();
 
   StudioDockLayout layout;
@@ -91,6 +94,11 @@ final class StudioWorkspaceShell {
   bool hierarchyCreateMenuOpen = false;
   bool hierarchySearchFocused = false;
   bool addComponentPopupOpen = false;
+  bool projectHubOpen = false;
+  String? lastOpenedProjectPath;
+  String? lastRequestedTemplate;
+  StudioBuildTarget activeBuildTarget = StudioBuildTarget.windows;
+  StudioBuildReport? lastBuildReport;
   VoxRect _hierarchyCreateAnchor = const VoxRect(8, 84, 150, 22);
   VoxRect _addComponentAnchor = const VoxRect(980, 320, 160, 22);
   SolvedDockWorkspace? _lastSolved;
@@ -119,6 +127,7 @@ final class StudioWorkspaceShell {
     QualityWindowModel? quality,
     ModulesWindowModel? modules,
     ProfilerWindowModel? profiler,
+    StudioAppLauncherModel? launcher,
     StudioDockLayout? layout,
   }) : menus = menus ?? StudioMenuRegistry(registerDefaults: true),
        hierarchy = hierarchy ?? HierarchyPanelModel(bridge),
@@ -135,6 +144,7 @@ final class StudioWorkspaceShell {
            modules ??
            ModulesWindowModel(StudioModuleRegistry(kStudioModuleInventory)),
        profiler = profiler ?? ProfilerWindowModel(),
+       launcher = launcher ?? StudioAppLauncherModel(),
        layout = layout ?? StudioDockLayout.defaultLayout();
 
   bool get isPlaying => bridge.playState == StudioPlayState.playing;
@@ -241,6 +251,9 @@ final class StudioWorkspaceShell {
     }
     if (addComponentPopupOpen) {
       _renderAddComponentPopup(topDl, input);
+    }
+    if (projectHubOpen) {
+      _renderProjectHubModal(topDl, input, width, height);
     }
 
     _lastSolved = solved;
@@ -1080,6 +1093,62 @@ final class StudioWorkspaceShell {
           );
           my += 18;
         }
+      case 'build':
+        dl.addText(
+          'Build Profiles (AOT / Web)',
+          r.x + 10,
+          r.y + 8,
+          color: UnityDarkTheme.textPrimary,
+          size: 12,
+        );
+        final targetBtn = VoxRect(r.x + 10, r.y + 30, 148, 22);
+        _toolbarButton(
+          dl,
+          input,
+          targetBtn,
+          'Target: ${activeBuildTarget.name}',
+          onClick: () {
+            const targets = StudioBuildTarget.values;
+            activeBuildTarget =
+                targets[(activeBuildTarget.index + 1) % targets.length];
+          },
+        );
+        final planBtn = VoxRect(r.x + 166, r.y + 30, 110, 22);
+        _toolbarButton(
+          dl,
+          input,
+          planBtn,
+          'Plan Build',
+          active: true,
+          onClick: _runBuildPlan,
+        );
+        final rep = lastBuildReport;
+        if (rep != null) {
+          dl.addText(
+            'Included: ${rep.includedAssetGuids.length} | '
+            'Stripped: ${rep.strippedAssetGuids.length} | '
+            'Bytes: ${rep.totalAssetBytes}',
+            r.x + 10,
+            r.y + 62,
+            color: UnityDarkTheme.textPrimary,
+            size: 11,
+          );
+          dl.addText(
+            'Deterministic Hash: ${rep.deterministicPakHash}',
+            r.x + 10,
+            r.y + 82,
+            color: UnityDarkTheme.textMuted,
+            size: 11,
+          );
+        } else {
+          dl.addText(
+            'Click "Plan Build" to compute GUID reachability & deterministic hash.',
+            r.x + 10,
+            r.y + 62,
+            color: UnityDarkTheme.textMuted,
+            size: 11,
+          );
+        }
       default:
         dl.addText(
           _panelTitle(panelId),
@@ -1352,6 +1421,136 @@ final class StudioWorkspaceShell {
       return {'x': values[0], 'y': values[1], 'z': values[2]};
     }
     return values;
+  }
+
+  void _runBuildPlan() {
+    final assets = project.visibleAssets();
+    final catalog = <String, BuildAssetRecord>{
+      for (final a in assets)
+        a.guid: BuildAssetRecord(
+          guid: a.guid,
+          path: a.path,
+          sizeBytes: a.path.length * 64,
+        ),
+    };
+    final rootGuids = catalog.isEmpty ? const <String>[] : [catalog.keys.first];
+    final profile = StudioBuildProfile(
+      name: '${activeBuildTarget.name}-release',
+      target: activeBuildTarget,
+      scenesInBuild: rootGuids,
+      qualityTier: quality.activeTier.name,
+    );
+    lastBuildReport = StudioBuildPlanner.planBuild(
+      profile: profile,
+      catalog: catalog,
+      rootSceneGuids: rootGuids,
+    );
+  }
+
+  void _renderProjectHubModal(
+    DrawList dl,
+    VoxInput input,
+    double width,
+    double height,
+  ) {
+    // Dimmed full-window backdrop
+    dl.addRectFilled(0, 0, width, height, const VoxColor(10, 12, 16, 190));
+    final mw = (width * 0.62).clamp(440.0, 760.0);
+    final mh = (height * 0.62).clamp(300.0, 480.0);
+    final mx = (width - mw) * 0.5;
+    final my = (height - mh) * 0.5;
+    dl.addRectFilled(mx, my, mw, mh, UnityDarkTheme.bgPanel, cornerRadius: 6);
+    dl.addRectOutline(mx, my, mw, mh, UnityDarkTheme.accentBlue, thickness: 2);
+
+    dl.addText(
+      'Volition Studio — Project Hub',
+      mx + 16,
+      my + 14,
+      color: UnityDarkTheme.textPrimary,
+      size: 14,
+    );
+    final closeRect = VoxRect(mx + mw - 72, my + 10, 60, 22);
+    _toolbarButton(
+      dl,
+      input,
+      closeRect,
+      'Close',
+      onClick: () => projectHubOpen = false,
+    );
+
+    // Recent Projects section
+    dl.addText(
+      'Recent Projects (${launcher.recentProjects.length})',
+      mx + 16,
+      my + 46,
+      color: UnityDarkTheme.textMuted,
+      size: 11,
+    );
+    var ry = my + 66;
+    for (final recent in launcher.recentProjects.take(5)) {
+      final rr = VoxRect(mx + 16, ry, mw - 32, 24);
+      final hov = rr.contains(input.mouseX, input.mouseY);
+      dl.addRectFilled(
+        rr.x,
+        rr.y,
+        rr.width,
+        rr.height,
+        hov ? UnityDarkTheme.accentBlue : UnityDarkTheme.bgRowAlt,
+        cornerRadius: 3,
+      );
+      dl.addText(
+        '${recent.name}   (${recent.path})',
+        rr.x + 8,
+        rr.y + 5,
+        color: UnityDarkTheme.textPrimary,
+        size: 11,
+      );
+      if (hov && input.wasMouseClicked) {
+        lastOpenedProjectPath = recent.path;
+        projectHubOpen = false;
+        return;
+      }
+      ry += 28;
+    }
+
+    // New Project Template cards
+    final ty = (ry + 16).clamp(my + 140, my + mh - 84);
+    dl.addText(
+      'New Project Templates',
+      mx + 16,
+      ty,
+      color: UnityDarkTheme.textMuted,
+      size: 11,
+    );
+    const templates = ['Empty', '2D', '3D', 'Multiplayer', 'Showcase'];
+    final cardW = ((mw - 32 - (templates.length - 1) * 8) / templates.length)
+        .clamp(68.0, 140.0);
+    for (var i = 0; i < templates.length; i++) {
+      final tmpl = templates[i];
+      final cr = VoxRect(mx + 16 + i * (cardW + 8), ty + 20, cardW, 44);
+      final hov = cr.contains(input.mouseX, input.mouseY);
+      dl.addRectFilled(
+        cr.x,
+        cr.y,
+        cr.width,
+        cr.height,
+        hov ? UnityDarkTheme.accentBlue : UnityDarkTheme.bgTabBar,
+        cornerRadius: 4,
+      );
+      dl.addRectOutline(cr.x, cr.y, cr.width, cr.height, UnityDarkTheme.border);
+      dl.addText(
+        tmpl,
+        cr.x + 10,
+        cr.y + 15,
+        color: UnityDarkTheme.textPrimary,
+        size: 11,
+      );
+      if (hov && input.wasMouseClicked) {
+        lastRequestedTemplate = tmpl.toLowerCase();
+        projectHubOpen = false;
+        return;
+      }
+    }
   }
 
   static String _panelTitle(String id) => switch (id) {
