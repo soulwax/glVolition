@@ -6,6 +6,8 @@
 /// [DrawList] — 100% platform-agnostic and unit-testable headlessly.
 library;
 
+import 'dart:convert';
+
 import 'package:pixeldart/rendering/passes/exposure.dart';
 
 import '../../../gl_volition.dart';
@@ -162,7 +164,76 @@ final class StudioWorkspaceShell {
        launcher = launcher ?? StudioAppLauncherModel(),
        graphModel = graphModel ?? StudioGraphModel(schemaId: 'shader_graph'),
        timelineModel = timelineModel ?? StudioTimelineModel(),
-       layout = layout ?? StudioDockLayout.defaultLayout();
+       layout = layout ?? StudioDockLayout.defaultLayout() {
+    _registerWindowMenuActions();
+  }
+
+  void _registerWindowMenuActions() {
+    const windowPanels = [
+      ('scene', 'Scene'),
+      ('game', 'Game'),
+      ('hierarchy', 'Hierarchy'),
+      ('inspector', 'Inspector'),
+      ('project', 'Project'),
+      ('console', 'Console'),
+      ('lighting', 'Lighting'),
+      ('profiler', 'Profiler'),
+      ('modules', 'Modules'),
+      ('build', 'Build Profiles'),
+      ('graph', 'Node Graph'),
+      ('timeline', 'Timeline'),
+    ];
+    for (final (id, title) in windowPanels) {
+      menus.register(
+        StudioMenuItem(
+          id: 'window.open.$id',
+          menuPath: 'Window/$title',
+          action: () => openOrFocusPanel(id),
+        ),
+      );
+    }
+    menus.register(
+      StudioMenuItem(
+        id: 'file.project_hub',
+        menuPath: 'File/Project Hub',
+        action: () => projectHubOpen = true,
+      ),
+    );
+  }
+
+  /// Dynamic native window title reflecting the active scene and dirty `*` flag.
+  String get windowTitle {
+    final name = bridge.session.engine.scene.name;
+    final dirtyMark = bridge.snapshot().isDirty ? '*' : '';
+    return 'Volition Studio — $name$dirtyMark';
+  }
+
+  /// Focuses [panelId] if already docked, or spawns a new tab for it (`[Wave G13]`).
+  void openOrFocusPanel(String panelId) {
+    maximizedAreaId = null;
+    layout = DockLayoutSolver.focusOrAddPanel(layout, panelId);
+  }
+
+  /// Serializes the active scene as indented JSON into [fs] (`[Wave G13]`).
+  Future<String> saveActiveScene(ProjectFileSystem fs, {String? path}) async {
+    final scene = bridge.session.engine.scene;
+    final targetPath = path ?? 'Assets/Scenes/${scene.name}.scene.json';
+    final jsonMap = SceneSerializer.toJson(
+      scene,
+      registry: bridge.session.engine.registry,
+    );
+    final text = const JsonEncoder.withIndent('  ').convert(jsonMap);
+    await fs.writeString(targetPath, text);
+    console.log(ConsoleLogLevel.info, 'Saved scene -> $targetPath');
+    return targetPath;
+  }
+
+  /// Creates and loads a fresh empty [Scene] in the editor (`[Wave G13]`).
+  void newScene({String name = 'Untitled'}) {
+    bridge.session.engine.loadScene(Scene(name));
+    bridge.selectObjects(const []);
+    console.log(ConsoleLogLevel.info, 'Created new scene "$name"');
+  }
 
   bool get isPlaying => bridge.playState == StudioPlayState.playing;
 

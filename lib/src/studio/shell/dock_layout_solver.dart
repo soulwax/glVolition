@@ -532,4 +532,64 @@ abstract final class DockLayoutSolver {
       ),
     ),
   );
+
+  /// Focuses [panelId] if it is already docked anywhere in [layout]; otherwise
+  /// appends [panelId] to the first `DockTabsNode` and activates it (`[Wave G13]`).
+  static StudioDockLayout focusOrAddPanel(
+    StudioDockLayout layout,
+    String panelId,
+  ) {
+    var found = false;
+    DockNode tryFocus(DockNode node) {
+      switch (node) {
+        case DockTabsNode():
+          final idx = node.panelIds.indexOf(panelId);
+          if (idx >= 0) {
+            found = true;
+            return DockTabsNode(
+              id: node.id,
+              panelIds: node.panelIds,
+              activeIndex: idx,
+            );
+          }
+          return node;
+        case DockSplitNode():
+          return DockSplitNode(
+            id: node.id,
+            axis: node.axis,
+            ratio: node.ratio,
+            first: tryFocus(node.first),
+            second: tryFocus(node.second),
+          );
+      }
+    }
+
+    final focusedRoot = tryFocus(layout.root);
+    if (found) return StudioDockLayout(root: focusedRoot);
+
+    var added = false;
+    DockNode appendToFirst(DockNode node) {
+      if (added) return node;
+      switch (node) {
+        case DockTabsNode():
+          added = true;
+          final next = [...node.panelIds, panelId];
+          return DockTabsNode(
+            id: node.id,
+            panelIds: next,
+            activeIndex: next.length - 1,
+          );
+        case DockSplitNode():
+          return DockSplitNode(
+            id: node.id,
+            axis: node.axis,
+            ratio: node.ratio,
+            first: appendToFirst(node.first),
+            second: appendToFirst(node.second),
+          );
+      }
+    }
+
+    return StudioDockLayout(root: appendToFirst(layout.root));
+  }
 }
