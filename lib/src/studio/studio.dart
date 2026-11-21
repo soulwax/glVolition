@@ -6,12 +6,16 @@ library;
 
 export 'assets/asset_database.dart';
 export 'assets/asset_meta.dart';
+export 'assets/importers/material_importer.dart';
+export 'baking/lightmapper.dart';
 export 'bridge/editor_host_bridge.dart';
 export 'commands/menu_registry.dart';
 export 'console/console_model.dart';
 export 'gizmos/light_gizmos.dart';
+export 'gizmos/probe_gizmos.dart';
 export 'hierarchy/hierarchy_model.dart';
 export 'inspector/inspector_model.dart';
+export 'inspector/material_inspector.dart';
 export 'modules/module_descriptor.dart';
 export 'modules/module_inventory.g.dart';
 export 'modules/module_registry.dart';

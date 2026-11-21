@@ -214,6 +214,7 @@ part 'engine/components/engine_workbench.dart';
 part 'engine/components/shader_override.dart';
 part 'engine/components/scene_stream_zone.dart';
 part 'engine/components/shadow_caster_lod.dart';
+part 'engine/components/reflection_probe.dart';
 part 'engine/serialization/component_spec_extra.dart';
 part 'engine/editor_commands.dart';
 part 'engine/gizmos/viewport_gizmos.dart';

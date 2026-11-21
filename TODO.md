@@ -911,28 +911,28 @@
 
 **Exit Gate:** Metallic sphere reflects its probe; the baked-lightmap scene golden matches; TAA golden is stable over 600 frames; editing a `.vmat` updates every user live in the Scene view.
 
-- [ ] **[S4-0] Coordinator Freeze: `.vmat` Material Asset, `MaterialPropertyBlock`, Render Queues & Environment/Probe Blocks**
+- [x] **[S4-0] Coordinator Freeze: `.vmat` Material Asset, `MaterialPropertyBlock`, Render Queues & Environment/Probe Blocks**
   - **Priority:** P0
   - **DependsOn:** `[S3-M]`
   - **Owns:** `vendor/pixeldart/lib/rendering/api/materials.dart`, `vendor/pixeldart/lib/rendering/api/effects.dart`, `vendor/pixeldart/lib/rendering/api/environment.dart`, `lib/src/engine/assets/asset_types.dart`
   - **Scope:** `.vmat` schema (shader id, keyword set, typed property values, GUID texture refs, render queue, sorting layer and order); `MaterialPropertyBlock` per renderer; queue ranges matching Unity (Background 1000, Geometry 2000, AlphaTest 2450, Transparent 3000, Overlay 4000); std140 environment block (SH9, exposure, sky) and probe binding contract; Volume profile schema.
   - **DoneWhen:** `dart analyze` passes on root and `vendor/pixeldart`.
 
-- [ ] **[S4-A] Skybox & Image-Based Lighting (HDR Cubemaps, GGX Prefilter, BRDF LUT, SH9 Ambient)**
+- [x] **[S4-A] Skybox & Image-Based Lighting (HDR Cubemaps, GGX Prefilter, BRDF LUT, SH9 Ambient)**
   - **Priority:** P0
   - **DependsOn:** `[S4-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/passes/{skybox,ibl_prefilter}*.dart`, `vendor/pixeldart/shaders/rendering/sky/**`, `vendor/pixeldart/shaders/rendering/include/ibl.glsl`, `vendor/pixeldart/lib/rendering/atmosphere/sky_atmosphere.dart`, `vendor/pixeldart/tools/renderer/test_ibl.dart`, `lib/src/studio/assets/importers/hdri_importer.dart`
   - **Scope:** Import equirect `.hdr` into a cubemap with mips. Bake the procedural sky (`sky_atmosphere`/`voxsky`) to a cubemap at runtime when the sun moves past a threshold. Add a GGX-prefiltered specular mip chain, a 2D split-sum BRDF LUT and SH9 projection for ambient, plus a skybox pass. Remove the `uReflectionColor` uniform.
   - **DoneWhen:** `test_ibl.dart` checks SH9 projection against an analytic reference and that the prefilter mip count matches cube size; Browser Lab roughness/metallic sphere-grid golden passes.
 
-- [ ] **[S4-B] Reflection Probes & Per-Object Light-Probe SH**
+- [x] **[S4-B] Reflection Probes & Per-Object Light-Probe SH**
   - **Priority:** P1
   - **DependsOn:** `[S4-0]`
   - **Owns:** `lib/src/engine/components/reflection_probe.dart`, `lib/src/engine/components/light_probe_gi.dart`, `vendor/pixeldart/lib/rendering/passes/reflection_probe*.dart`, `vendor/pixeldart/shaders/rendering/include/probes.glsl`, `lib/src/studio/gizmos/probe_gizmos.dart`, `test/engine/reflection_probe_test.dart`
   - **Scope:** `ReflectionProbe` component (baked / on-demand realtime, box projection, blend distance, importance), blending between the two nearest probes, and baked cubemaps stored as GUID assets. `LightProbeVolume` SH3/SH9 is interpolated per renderer and uploaded per object (no longer one global uniform). Studio probe gizmos and a "Bake Probes" command.
   - **DoneWhen:** `test/engine/reflection_probe_test.dart` covers probe selection, blend weights and box-projection math; the Browser Lab interior/exterior blend golden passes.
 
-- [ ] **[S4-C] Progressive Lightmapper (UV2 Packing, Isolate Path Tracer, Denoise, Bake UI)**
+- [x] **[S4-C] Progressive Lightmapper (UV2 Packing, Isolate Path Tracer, Denoise, Bake UI)**
   - **Priority:** P2
   - **DependsOn:** `[S4-0]`, `[S2-M]`
   - **Owns:** `lib/src/studio/baking/**`, `tool/studio/lightmap_baker_io.dart`, `test/studio/lightmapper_test.dart`
@@ -940,21 +940,21 @@
   - **Scope:** Generate UV2 charts and pack them (pure Dart), then path-trace direct and one-bounce indirect light over a BVH on isolates (daemon-side) with progressive passes. Denoise with an edge-aware À-trous filter and dilate charts. Write lightmap textures and per-renderer scale/offset that feed the existing `lightmapTexture` material slot. Lighting window gets "Bake / Cancel / Clear" with progress events over Protocol v2, plus CLI `volition bake`.
   - **DoneWhen:** `test/studio/lightmapper_test.dart` checks chart packing has no overlaps and that the Cornell-box bake matches its reference image within tolerance with deterministic seeds; the measured bake time is recorded.
 
-- [ ] **[S4-D] Post-Processing v2: Motion Vectors, TAA, SSR, GTAO, Motion Blur & Volume Framework**
+- [x] **[S4-D] Post-Processing v2: Motion Vectors, TAA, SSR, GTAO, Motion Blur & Volume Framework**
   - **Priority:** P1
   - **DependsOn:** `[S4-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/passes/{motion_vectors,taa,ssr,gtao,motion_blur}*.dart`, `vendor/pixeldart/lib/rendering/passes/ssao*.dart`, `vendor/pixeldart/shaders/rendering/{taa,ssr,gtao,motion}/**`, `lib/src/engine/components/post_process_volume.dart`, `vendor/pixeldart/tools/renderer/test_post_v2.dart`
   - **Scope:** Per-object motion-vector pass (MRT or separate pass, skinned + instanced aware). TAA uses Halton jitter, history reprojection, YCoCg neighborhood clamp and sharpening. SSR uses a Hi-Z trace and falls back to probes. GTAO replaces SSAO behind a setting. Camera and per-object motion blur. A Volume framework (global/local volumes, priority, blend distance, per-effect override flags) drives the whole post stack.
   - **DoneWhen:** `test_post_v2.dart` covers volume blending math and jitter-sequence determinism; Browser Lab TAA golden is stable across 600 frames (SSIM ≥ 0.99 between frames 300 and 600 on a static camera); SSR and GTAO goldens pass.
 
-- [ ] **[S4-E] Material Assets, Material Inspector with Live Preview, Render Queues & Sorting Layers**
+- [x] **[S4-E] Material Assets, Material Inspector with Live Preview, Render Queues & Sorting Layers**
   - **Priority:** P0
   - **DependsOn:** `[S4-0]`, `[S2-M]`
   - **Owns:** `lib/src/studio/assets/importers/material_importer.dart`, `lib/src/studio/inspector/material_inspector.dart`, `lib/src/web/studio/panels/material_preview.dart`, `vendor/pixeldart/lib/rendering/core/material_table.dart`, `vendor/pixeldart/lib/rendering/core/sort_key.dart`, `lib/src/engine/components/renderers.dart`, `test/studio/material_asset_test.dart`
   - **Scope:** Import `.vmat` into `MaterialDefinition` and hot-update every user on change. The material inspector shows keyword toggles, typed properties and texture GUID pickers, with a live preview sphere/cube/plane rendered offscreen. `MaterialPropertyBlock` on `MeshRenderer`/`SkinnedMeshRenderer`. Render queues and sorting layers feed `sort_key.dart`; transparent objects sort back to front. Material UBOs are cached SRP-batcher style.
   - **DoneWhen:** `test/studio/material_asset_test.dart` covers hot-update fan-out, property-block override precedence and queue sort order; the e2e scenario `material-edit-live` passes.
 
-- [ ] **[S4-M] Coordinator Merge: Environment/GI/Post Integration & `pixeldart` Commit**
+- [x] **[S4-M] Coordinator Merge: Environment/GI/Post Integration & `pixeldart` Commit**
   - **Priority:** P0
   - **DependsOn:** `[S4-A]`, `[S4-B]`, `[S4-C]`, `[S4-D]`, `[S4-E]`
   - **Owns:** `lib/src/engine/scene.dart`, `lib/src/engine/serialization/component_spec_extra.dart`, `lib/gl_volition.dart`, `vendor/pixeldart` gitlink

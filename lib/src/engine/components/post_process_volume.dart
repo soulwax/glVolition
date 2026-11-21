@@ -188,3 +188,73 @@ final class PostProcessVolume extends Behaviour {
     }
   }
 }
+
+/// Global or localized VRP v2 post-processing volume component (`[S4-D]`).
+final class PostProcessVolumeComponent extends Component {
+  bool isGlobal;
+  double priority;
+  double weight;
+  double blendDistance;
+  Vec3 size;
+  PostProcessVolumeProfile profile;
+
+  PostProcessVolumeComponent({
+    this.isGlobal = true,
+    this.priority = 0.0,
+    this.weight = 1.0,
+    this.blendDistance = 2.0,
+    this.size = const Vec3(10, 10, 10),
+    this.profile = const PostProcessVolumeProfile(),
+  });
+
+  /// Effective blend factor `[0, 1]` at [cameraPos].
+  double effectiveWeightAt(Vec3 cameraPos) {
+    if (!isActiveAndEnabled || weight <= 0.0) return 0.0;
+    if (isGlobal) return weight.clamp(0.0, 1.0);
+    final center = isAttached ? transform.position : Vec3.zero;
+    final half = size * 0.5;
+    final rel = cameraPos - center;
+    final dx = rel.x.abs() - half.x;
+    final dy = rel.y.abs() - half.y;
+    final dz = rel.z.abs() - half.z;
+    final outside = math.max(dx, math.max(dy, dz));
+    if (outside <= 0.0) return weight.clamp(0.0, 1.0);
+    if (blendDistance <= 1e-5 || outside >= blendDistance) return 0.0;
+    return ((1.0 - outside / blendDistance) * weight).clamp(0.0, 1.0);
+  }
+
+  /// Evaluates the blended [PostProcessVolumeProfile] across all active volumes
+  /// sorted by ascending [priority].
+  static PostProcessVolumeProfile evaluateStack(
+    Vec3 cameraPos,
+    Iterable<PostProcessVolumeComponent> volumes, {
+    PostProcessVolumeProfile base = PostProcessVolumeProfile.defaults,
+  }) {
+    final sorted = volumes.where((v) => v.isActiveAndEnabled).toList()
+      ..sort((a, b) => a.priority.compareTo(b.priority));
+    var current = base;
+    for (final v in sorted) {
+      final w = v.effectiveWeightAt(cameraPos);
+      if (w > 0.0) {
+        current = current.blendWith(v.profile, w);
+      }
+    }
+    return current;
+  }
+
+  static final spec = ComponentSpec<PostProcessVolumeComponent>(
+    'PostProcessVolumeComponent',
+    PostProcessVolumeComponent.new,
+    [
+      Field.boolean('isGlobal', (c) => c.isGlobal, (c, v) => c.isGlobal = v),
+      Field.number('priority', (c) => c.priority, (c, v) => c.priority = v),
+      Field.number('weight', (c) => c.weight, (c, v) => c.weight = v),
+      Field.number(
+        'blendDistance',
+        (c) => c.blendDistance,
+        (c, v) => c.blendDistance = v,
+      ),
+      Field.vec3('size', (c) => c.size, (c, v) => c.size = v),
+    ],
+  );
+}

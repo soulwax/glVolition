@@ -1152,4 +1152,8 @@ void registerExtendedDefaultSpecs(ComponentRegistry registry) {
     ]),
   );
   registry.register<PrefabInstanceComponent>(PrefabInstanceComponent.spec);
+  registry.register<ReflectionProbeComponent>(ReflectionProbeComponent.spec);
+  registry.register<PostProcessVolumeComponent>(
+    PostProcessVolumeComponent.spec,
+  );
 }
