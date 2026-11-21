@@ -967,7 +967,7 @@
 
 **Exit Gate:** `@Serialized @Range(0, 10) double speed` shows a slider with no hand-written spec; edit-to-visible reload time is measured and reported (target 3 s); scene, selection and camera survive reload; a nested-prefab edit propagates through two levels.
 
-- [ ] **[S5-0] Coordinator Freeze: Serialization Annotations, `DataAsset` & EditorExtension API**
+- [x] **[S5-0] Coordinator Freeze: Serialization Annotations, `DataAsset` & EditorExtension API**
   - **Priority:** P0
   - **DependsOn:** `[S2-M]`
   - **Owns:** `lib/src/engine/serialization/annotations.dart`, `lib/src/engine/data_asset.dart`, `lib/src/studio/extensions/**`, `lib/gl_volition.dart`
@@ -977,14 +977,14 @@
     - Extension points: `CustomInspector<T>`, `GizmoDrawer<T>`, `MenuItem`, `EditorWindow`, `AssetImporter`, `ContextAction`, `ToolbarTool`.
   - **DoneWhen:** `dart analyze` passes; the boundary check keeps annotations and `DataAsset` free of platform imports.
 
-- [ ] **[S5-A] `volition codegen`: Analyzer-Based `ComponentSpec` / `DataAsset` Spec Generation**
+- [x] **[S5-A] `volition codegen`: Analyzer-Based `ComponentSpec` / `DataAsset` Spec Generation**
   - **Priority:** P0
   - **DependsOn:** `[S5-0]`
   - **Owns:** `tool/codegen/**`, `test/studio/codegen_test.dart`
   - **Scope:** Use `package:analyzer` to scan the project's `lib/` plus module wrappers and emit `*.spec.g.dart` (`ComponentSpec` with field metadata, `@RequireComponent` graph, menu paths). Watch mode with incremental regeneration. Diagnostics report `file:line` for unsupported field types. Generated files are deterministic, so they diff cleanly.
   - **DoneWhen:** `test/studio/codegen_test.dart` passes on golden source → spec fixtures (all annotation types, generics rejected with a clear diagnostic); regenerating unchanged input produces byte-identical output.
 
-- [ ] **[S5-B] Hot-Reload Loop: In-Studio Player Recompile with State-Preserving Reload + Native VM-Service Reload**
+- [x] **[S5-B] Hot-Reload Loop: In-Studio Player Recompile with State-Preserving Reload + Native VM-Service Reload**
   - **Priority:** P0
   - **DependsOn:** `[S5-0]`
   - **Owns:** `tool/studio/hot_reload/**`, `lib/src/studio/reload/**`, `test/studio/hot_reload_test.dart`
@@ -995,21 +995,21 @@
     - Native: `volition run --native --hot` uses the VM service `reloadSources` while keeping engine state.
   - **DoneWhen:** `test/studio/hot_reload_test.dart` passes (the state snapshot round-trips byte-equal); the benchmark table of the strategies is recorded in the merge report with the chosen default.
 
-- [ ] **[S5-C] Edit-Mode Execution & Extension Host (Discovery, Custom Inspectors, Gizmo Drawers, Menu Items)**
+- [x] **[S5-C] Edit-Mode Execution & Extension Host (Discovery, Custom Inspectors, Gizmo Drawers, Menu Items)**
   - **Priority:** P1
   - **DependsOn:** `[S5-0]`
   - **Owns:** `lib/src/studio/extension_host/**`, `lib/src/engine/scene.dart` (edit-mode tick gate only), `example/studio_samples/extension_demo/**`, `test/studio/extension_host_test.dart`
   - **Scope:** `@ExecuteInEditMode` behaviours tick in edit mode with an `isPlaying` guard. Discover extensions from modules (descriptors) and from the project `editor/` folder. Custom inspectors replace or augment the generic one, gizmo drawers render through `EditorOverlay`, and menu items register in the menu registry. Add a sample extension.
   - **DoneWhen:** `test/studio/extension_host_test.dart` passes (custom inspector precedence, edit-mode tick, menu registration); the e2e scenario `extension-demo` passes.
 
-- [ ] **[S5-D] Nested Prefabs, Prefab Mode (Isolation Stage) & Variant Chains**
+- [x] **[S5-D] Nested Prefabs, Prefab Mode (Isolation Stage) & Variant Chains**
   - **Priority:** P1
   - **DependsOn:** `[S5-0]`
   - **Owns:** `lib/src/engine/prefab.dart`, `lib/src/engine/prefab_registry.dart`, `lib/src/studio/prefab_mode/**`, `test/engine/nested_prefab_test.dart`
   - **Scope:** Nested prefab instances with layered overrides (outermost wins), variant chains, apply-to-specific-level, and Prefab Mode (open a prefab in an isolated stage with breadcrumbs, then save and propagate). Detect broken references and offer a repair UI model.
   - **DoneWhen:** `test/engine/nested_prefab_test.dart` covers 2-level propagation, override precedence, variant-of-variant and broken-reference repair.
 
-- [ ] **[S5-M] Coordinator Merge: `volition codegen` / `run --hot` CLI Wiring, Studio "Recompile" & Parity**
+- [x] **[S5-M] Coordinator Merge: `volition codegen` / `run --hot` CLI Wiring, Studio "Recompile" & Parity**
   - **Priority:** P0
   - **DependsOn:** `[S5-A]`, `[S5-B]`, `[S5-C]`, `[S5-D]`
   - **Owns:** `bin/volition.dart`, `tool/cli_service.dart`, `lib/src/engine/serialization/component_spec_extra.dart`

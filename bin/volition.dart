@@ -8,6 +8,7 @@ import '../tool/asset_packer.dart';
 import '../tool/cli_gui_server.dart';
 import '../tool/cli_service.dart';
 import '../tool/package_native.dart';
+import '../tool/codegen/spec_codegen.dart';
 import '../tool/studio/studio_daemon.dart';
 import 'package:gl_volition/src/studio/protocol/studio_protocol.dart';
 
@@ -101,6 +102,8 @@ Future<void> main(List<String> args) async {
       await _runCreate(rest);
     case 'rpc':
       await _runRpc(rest);
+    case 'codegen':
+      await _runCodegen(rest);
     case 'gui':
       await _runGui(rest);
     case 'replay':
@@ -1116,4 +1119,56 @@ Future<void> _runRpc(List<String> args) async {
   } finally {
     await daemon.cliService.dispose();
   }
+}
+
+Future<void> _runCodegen(List<String> args) async {
+  var targetDir = 'lib';
+  var checkOnly = false;
+  for (final a in args) {
+    if (a == '--help' || a == '-h') {
+      stdout.writeln(
+        'Usage: dart run gl_volition:volition codegen [dir] [--check]',
+      );
+      return;
+    } else if (a == '--check') {
+      checkOnly = true;
+    } else if (!a.startsWith('-')) {
+      targetDir = a;
+    }
+  }
+  final dir = Directory(targetDir);
+  if (!dir.existsSync()) {
+    stderr.writeln('Directory not found: $targetDir');
+    exit(64);
+  }
+  var generatedFiles = 0;
+  var totalErrors = 0;
+  for (final entity in dir.listSync(recursive: true)) {
+    if (entity is! File ||
+        !entity.path.endsWith('.dart') ||
+        entity.path.endsWith('.spec.g.dart')) {
+      continue;
+    }
+    final src = entity.readAsStringSync();
+    if (!src.contains('@Serialized') && !src.contains('@serialized')) {
+      continue;
+    }
+    final res = SpecCodeGenerator.generateForSource(src, filePath: entity.path);
+    for (final d in res.diagnostics) {
+      stderr.writeln(d);
+      totalErrors++;
+    }
+    if (res.classCount > 0 && !res.hasErrors) {
+      final outPath =
+          '${entity.path.substring(0, entity.path.length - 5)}.spec.g.dart';
+      if (!checkOnly) {
+        File(outPath).writeAsStringSync(res.generatedCode);
+      }
+      generatedFiles++;
+    }
+  }
+  stdout.writeln(
+    'volition codegen: processed $generatedFiles spec file(s), $totalErrors diagnostic(s).',
+  );
+  if (totalErrors > 0) exit(1);
 }

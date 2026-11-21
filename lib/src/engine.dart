@@ -108,6 +108,8 @@ part 'engine/scene_manager.dart';
 part 'engine/save_system.dart';
 part 'engine/prefab.dart';
 part 'engine/prefab_registry.dart';
+part 'engine/data_asset.dart';
+part 'engine/serialization/annotations.dart';
 part 'engine/serialization/component_spec.dart';
 part 'engine/serialization/scene_migration.dart';
 part 'engine/serialization/scene_serializer.dart';
