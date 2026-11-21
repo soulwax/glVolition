@@ -179,8 +179,47 @@ final class CascadedShadowRigComponent extends Behaviour {
       scene.renderSettings
         ..shadowFilterRadius = lightWorldRadius.clamp(0.0, 3.0)
         ..shadowBias = (baseTexel * 0.008).clamp(0.0005, 0.01);
+      uploadCascadeUniforms(engine.graphics);
     }
     return cascades;
+  }
+
+  /// Uploads fitted cascade splits and shadow filter parameters to the active
+  /// GPU shader uniforms (`[S3-C]`).
+  void uploadCascadeUniforms(Graphics graphics) {
+    final count = cascades.length.clamp(0, 4);
+    graphics.setShaderUniform(
+      ShaderSlot.shadowedWorld,
+      'uShadowCascadeCount',
+      ShaderUniform.float(count.toDouble()),
+    );
+    final s0 = splits.isNotEmpty ? splits[0].farPlane : maxShadowDistance;
+    final s1 = splits.length > 1 ? splits[1].farPlane : maxShadowDistance;
+    final s2 = splits.length > 2 ? splits[2].farPlane : maxShadowDistance;
+    final s3 = splits.length > 3 ? splits[3].farPlane : maxShadowDistance;
+    graphics.setShaderUniform(
+      ShaderSlot.shadowedWorld,
+      'uCascadeSplits',
+      ShaderUniform.vec4(s0, s1, s2, s3),
+    );
+    graphics.setShaderUniform(
+      ShaderSlot.shadowedWorld,
+      'uShadowPcssLightRadius',
+      ShaderUniform.float(lightWorldRadius),
+    );
+    final baseTexel = cascades.isNotEmpty
+        ? cascades.first.texelWorldSize
+        : 0.05;
+    graphics.setShaderUniform(
+      ShaderSlot.shadowedWorld,
+      'uShadowDepthBias',
+      ShaderUniform.float((baseTexel * 0.008).clamp(0.0005, 0.01)),
+    );
+    graphics.setShaderUniform(
+      ShaderSlot.shadowedWorld,
+      'uShadowNormalBias',
+      ShaderUniform.float((baseTexel * 0.04).clamp(0.005, 0.08)),
+    );
   }
 
   double estimatePenumbra({

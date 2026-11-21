@@ -848,7 +848,7 @@
     - `Light` component fields: range, inner/outer cone, shadows (none/hard/soft), shadow strength, bias, normal bias, culling layers, and intensity in lux/lumen units.
   - **DoneWhen:** `dart analyze` passes on root and `vendor/pixeldart`; `shaders.dart --check` passes with an include fixture.
 
-- [ ] **[S3-A] Unified Lit Uber-Shader, PBR BRDF & Variant Cache/Warmup**
+- [x] **[S3-A] Unified Lit Uber-Shader, PBR BRDF & Variant Cache/Warmup**
   - **Priority:** P0
   - **DependsOn:** `[S3-0]`
   - **Owns:** `vendor/pixeldart/shaders/rendering/world/**`, `vendor/pixeldart/shaders/rendering/include/{brdf,surface,lit_common}.glsl`, `vendor/pixeldart/lib/rendering/core/program_library.dart`, `vendor/pixeldart/lib/rendering/core/program_set_planner.dart`, `vendor/pixeldart/lib/rendering/core/program_source.dart`, `vendor/pixeldart/lib/rendering/passes/{world,textured_world,shadowed_world}.dart`, `vendor/pixeldart/tools/renderer/test_lit_variants.dart`
@@ -858,7 +858,7 @@
     - Program variant cache keyed by keyword bitset, with per-scene warmup lists; the legacy PS1/safe looks stay as keyword combinations.
   - **DoneWhen:** `test_lit_variants.dart` compiles every allowed variant on the recording device and asserts no keyword combination is missing; Browser Lab goldens of the legacy looks stay SSIM ≥ 0.98; furnace test (white env, roughness sweep) energy stays within ±3 %.
 
-- [ ] **[S3-B] Clustered Forward+ Lighting (Froxel Grid, ≥256 Visible Lights, Heatmap)**
+- [x] **[S3-B] Clustered Forward+ Lighting (Froxel Grid, ≥256 Visible Lights, Heatmap)**
   - **Priority:** P0
   - **DependsOn:** `[S3-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/core/light_clusters.dart`, `vendor/pixeldart/lib/rendering/passes/light_cluster_upload.dart`, `vendor/pixeldart/shaders/rendering/include/clustered_lights.glsl`, `vendor/pixeldart/tools/renderer/test_light_clusters.dart`
@@ -868,7 +868,7 @@
     - Light-count heatmap debug view; zero per-frame allocations (frame arena).
   - **DoneWhen:** `test_light_clusters.dart` proves cluster assignment matches brute force on randomized scenes and that 256 lights stay allocation-free; the Browser Lab 256-light golden passes; the measured CPU cluster build time is recorded.
 
-- [ ] **[S3-C] Shadows: Directional CSM, Spot/Point Shadow Atlas, PCF/PCSS & Priority Resolution**
+- [x] **[S3-C] Shadows: Directional CSM, Spot/Point Shadow Atlas, PCF/PCSS & Priority Resolution**
   - **Priority:** P0
   - **DependsOn:** `[S3-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/passes/shadow*.dart`, `vendor/pixeldart/lib/rendering/core/shadow_atlas.dart`, `vendor/pixeldart/shaders/rendering/shadow/**`, `vendor/pixeldart/shaders/rendering/include/shadows.glsl`, `vendor/pixeldart/tools/renderer/test_shadow_atlas.dart`, `vendor/pixeldart/tools/renderer/test_directional_shadow.dart`, `lib/src/engine/components/cascaded_shadow_rig.dart`, `test/engine/cascaded_shadow_gpu_test.dart`
@@ -879,7 +879,7 @@
     - `CascadedShadowRig` drives the GPU path.
   - **DoneWhen:** `test_shadow_atlas.dart` (packing, no overlap, stable reassignments) and `test/engine/cascaded_shadow_gpu_test.dart` (recorded passes per cascade) pass; Browser Lab goldens exist for the CSM sun, 8 shadowed spots and 2 shadowed points; `RuntimeLightBudget.shadowMaps = 1` has no remaining callers.
 
-- [ ] **[S3-D] HDR Scene Color, Physical Exposure/Auto-Exposure, Tonemappers & HDR Bloom**
+- [x] **[S3-D] HDR Scene Color, Physical Exposure/Auto-Exposure, Tonemappers & HDR Bloom**
   - **Priority:** P0
   - **DependsOn:** `[S3-0]`
   - **Owns:** `vendor/pixeldart/lib/rendering/passes/{present,post_chain,bloom,bloom_resources,grade,grade_resources}.dart`, `vendor/pixeldart/lib/rendering/passes/exposure*.dart`, `vendor/pixeldart/shaders/rendering/post/**`, `vendor/pixeldart/shaders/rendering/bloom/**`, `vendor/pixeldart/shaders/rendering/grade/**`, `vendor/pixeldart/shaders/rendering/exposure/**`, `vendor/pixeldart/tools/renderer/test_hdr_pipeline.dart`
@@ -891,14 +891,14 @@
     - End-to-end linear audit: known emissive patches read back at expected values.
   - **DoneWhen:** `test_hdr_pipeline.dart` passes on both tiers; Browser Lab linear-audit readback is within ±1/255 of expected; goldens exist for each tonemapper.
 
-- [ ] **[S3-E] Studio Lighting & Quality Windows, Light Inspectors & Gizmos**
+- [x] **[S3-E] Studio Lighting & Quality Windows, Light Inspectors & Gizmos**
   - **Priority:** P1
   - **DependsOn:** `[S3-0]`, `[S2-M]`
   - **Owns:** `lib/src/studio/windows/lighting_window.dart`, `lib/src/studio/windows/quality_window.dart`, `lib/src/studio/gizmos/light_gizmos.dart`, `lib/src/web/studio/panels/lighting_panel.dart`, `test/studio/lighting_window_test.dart`
   - **Scope:** The Lighting window edits the `RenderPipelineSettings` asset and the environment (ambient, sky, exposure). The Quality window switches tiers live in the Scene and Game views. Light gizmos draw range spheres, spot cones, directional arrows and a cascade-split overlay toggle. The light inspector adds a unit helper (lux/lumen).
   - **DoneWhen:** `test/studio/lighting_window_test.dart` passes; the e2e scenario `lighting-tier-switch` passes with golden captures of both tiers.
 
-- [ ] **[S3-M] Coordinator Merge: VRP Lighting Integration, `Scene._syncToRenderer` Light Upload & Bench Ratification**
+- [x] **[S3-M] Coordinator Merge: VRP Lighting Integration, `Scene._syncToRenderer` Light Upload & Bench Ratification**
   - **Priority:** P0
   - **DependsOn:** `[S3-A]`, `[S3-B]`, `[S3-C]`, `[S3-D]`, `[S3-E]`
   - **Owns:** `lib/src/engine/scene.dart`, `tool/renderer_bench.dart`, `vendor/pixeldart` gitlink
