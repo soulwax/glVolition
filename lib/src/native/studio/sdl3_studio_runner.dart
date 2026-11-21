@@ -69,6 +69,40 @@ final class NativeStudioInputMapper {
         isLeftDown: input.pointerDown,
         scrollDeltaY: scrollDeltaY,
       );
+
+  /// Samples Unity-standard keyboard shortcuts & modifiers from [ScriptedInput].
+  StudioKeyboardState sampleKeyboard(ScriptedInput input) {
+    const codeMap = <(String, String)>[
+      ('KeyW', 'w'),
+      ('KeyA', 'a'),
+      ('KeyS', 's'),
+      ('KeyD', 'd'),
+      ('KeyQ', 'q'),
+      ('KeyE', 'e'),
+      ('KeyR', 'r'),
+      ('KeyT', 't'),
+      ('KeyF', 'f'),
+      ('KeyZ', 'z'),
+      ('KeyY', 'y'),
+      ('Space', 'space'),
+      ('Delete', 'delete'),
+      ('Escape', 'escape'),
+    ];
+    final held = <String>{};
+    final pressed = <String>{};
+    for (final (code, key) in codeMap) {
+      if (input.isDown(code)) held.add(key);
+      if (input.wasPressed(code)) pressed.add(key);
+    }
+    return StudioKeyboardState(
+      heldKeys: held,
+      pressedKeys: pressed,
+      ctrl: input.isDown('ControlLeft') || input.isDown('ControlRight'),
+      shift: input.isDown('ShiftLeft') || input.isDown('ShiftRight'),
+      alt: input.isDown('AltLeft') || input.isDown('AltRight'),
+      backspace: input.wasPressed('Backspace'),
+    );
+  }
 }
 
 /// Native AOT SDL3 + GLES3 Studio desktop runner (`[Wave G5]`).
@@ -170,9 +204,11 @@ final class Sdl3StudioRunner {
             ? (windowBackend as Sdl3WindowBackend).wheelDeltaY
             : 0.0;
         final voxInput = mapper.sample(input, scrollDeltaY: scrollY);
+        final keyboard = mapper.sampleKeyboard(input);
 
         app.stepFrame(
           input: voxInput,
+          keyboard: keyboard,
           pixelWidth: w,
           pixelHeight: h,
           dtSeconds: dt,

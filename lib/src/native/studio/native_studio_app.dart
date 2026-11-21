@@ -43,6 +43,7 @@ final class NativeStudioApp {
   ///    get covered by the 3D FBOs.
   SolvedDockWorkspace stepFrame({
     required VoxInput input,
+    StudioKeyboardState? keyboard,
     required int pixelWidth,
     required int pixelHeight,
     double dtSeconds = 1.0 / 60.0,
@@ -64,6 +65,8 @@ final class NativeStudioApp {
       dl: _baseDrawList,
       overlayDl: _overlayDrawList,
       input: input,
+      keyboard: keyboard,
+      dtSeconds: dtSeconds,
       width: pixelWidth.toDouble(),
       height: pixelHeight.toDouble(),
     );

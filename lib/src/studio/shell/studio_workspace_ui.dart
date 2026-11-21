@@ -6,9 +6,7 @@
 /// [DrawList] — 100% platform-agnostic and unit-testable headlessly.
 library;
 
-import 'package:pixeldart/rendering/api/settings.dart';
-import 'package:voxui/voxui.dart';
-
+import '../../../gl_volition.dart';
 import '../assets/asset_database.dart';
 import '../bridge/editor_host_bridge.dart';
 import '../commands/menu_registry.dart';
@@ -27,6 +25,7 @@ import '../windows/profiler/profiler_window_model.dart';
 import '../windows/quality_window.dart';
 import 'dock_layout.dart';
 import 'dock_layout_solver.dart';
+import 'studio_shortcuts.dart';
 
 /// Unity dark-theme color palette for Volition Studio (`[Wave G2]`).
 abstract final class UnityDarkTheme {
@@ -89,6 +88,12 @@ final class StudioWorkspaceShell {
   bool sceneGridVisible = true;
   bool sceneGizmosVisible = true;
   String? openTopMenu;
+  bool hierarchyCreateMenuOpen = false;
+  bool hierarchySearchFocused = false;
+  bool addComponentPopupOpen = false;
+  VoxRect _hierarchyCreateAnchor = const VoxRect(8, 84, 150, 22);
+  VoxRect _addComponentAnchor = const VoxRect(980, 320, 160, 22);
+  SolvedDockWorkspace? _lastSolved;
 
   // Interactive drag state
   String? _draggingSplitterId;
@@ -158,11 +163,24 @@ final class StudioWorkspaceShell {
     required DrawList dl,
     DrawList? overlayDl,
     required VoxInput input,
+    StudioKeyboardState? keyboard,
+    double dtSeconds = 1.0 / 60.0,
     required double width,
     required double height,
   }) {
     final topDl = overlayDl ?? dl;
     activeViewportSlots.clear();
+
+    if (keyboard != null) {
+      StudioShortcutDispatcher.dispatch(
+        shell: this,
+        keyboard: keyboard,
+        previousSolved: _lastSolved,
+        mouseX: input.mouseX,
+        mouseY: input.mouseY,
+        dtSeconds: dtSeconds,
+      );
+    }
 
     // 1. Background
     dl.addRectFilled(0, 0, width, height, UnityDarkTheme.bgRoot);
@@ -214,11 +232,18 @@ final class StudioWorkspaceShell {
     // 5. Bottom Status Bar
     _renderStatusBar(dl, input, width, height);
 
-    // 6. Active top-level menu dropdown overlay (always on top of FBOs)
+    // 6. Active top-level menu dropdown & authoring popups (always on top of FBOs)
     if (openTopMenu != null) {
       _renderMenuDropdown(topDl, input);
     }
+    if (hierarchyCreateMenuOpen) {
+      _renderHierarchyCreatePopup(topDl, input);
+    }
+    if (addComponentPopupOpen) {
+      _renderAddComponentPopup(topDl, input);
+    }
 
+    _lastSolved = solved;
     return solved;
   }
 
@@ -642,8 +667,59 @@ final class StudioWorkspaceShell {
         }
         overlayDl.popClip();
       case 'hierarchy':
+        // Top authoring bar: [+ Create] + [Search]
+        final createBtn = VoxRect(r.x + 4, r.y + 4, 68, 20);
+        _hierarchyCreateAnchor = createBtn;
+        _toolbarButton(
+          dl,
+          input,
+          createBtn,
+          '+ Create',
+          active: hierarchyCreateMenuOpen,
+          onClick: () => hierarchyCreateMenuOpen = !hierarchyCreateMenuOpen,
+        );
+        final searchRect = VoxRect(
+          r.x + 76,
+          r.y + 4,
+          (r.width - 80).clamp(40.0, double.infinity),
+          20,
+        );
+        final searchHov = searchRect.contains(input.mouseX, input.mouseY);
+        dl.addRectFilled(
+          searchRect.x,
+          searchRect.y,
+          searchRect.width,
+          searchRect.height,
+          const VoxColor(34, 34, 34, 255),
+          cornerRadius: 3,
+        );
+        dl.addRectOutline(
+          searchRect.x,
+          searchRect.y,
+          searchRect.width,
+          searchRect.height,
+          hierarchySearchFocused
+              ? UnityDarkTheme.accentBlue
+              : UnityDarkTheme.border,
+        );
+        dl.addText(
+          hierarchy.searchQuery.isEmpty ? 'Search...' : hierarchy.searchQuery,
+          searchRect.x + 6,
+          searchRect.y + 4,
+          color: hierarchy.searchQuery.isEmpty
+              ? UnityDarkTheme.textMuted
+              : UnityDarkTheme.textPrimary,
+          size: 11,
+        );
+        if (input.wasMouseClicked) {
+          if (searchHov) {
+            hierarchySearchFocused = true;
+          } else if (r.contains(input.mouseX, input.mouseY)) {
+            hierarchySearchFocused = false;
+          }
+        }
         final rows = hierarchy.visibleRows();
-        var y = r.y + 4;
+        var y = r.y + 28;
         for (var i = 0; i < rows.length && y < r.bottom; i++) {
           final row = rows[i];
           final rr = VoxRect(r.x + 2, y, r.width - 4, 20);
@@ -692,7 +768,7 @@ final class StudioWorkspaceShell {
         );
         y += 22;
         for (final comp in sections) {
-          if (y > r.bottom) break;
+          if (y > r.bottom - 28) break;
           dl.addRectFilled(
             r.x + 4,
             y,
@@ -710,8 +786,75 @@ final class StudioWorkspaceShell {
           );
           y += 22;
           for (final f in comp.fields.take(6)) {
-            if (y > r.bottom) break;
+            if (y > r.bottom - 28) break;
             final fr = VoxRect(r.x + 12, y, r.width - 20, 18);
+            final vec3 = _tryParseVec3(f.jsonValue);
+            if (vec3 != null && !f.isMixed) {
+              // Unity-style color-coded [X] [Y] [Z] mini-scrub row
+              dl.addText(
+                f.field.name,
+                fr.x + 2,
+                fr.y + 2,
+                color: UnityDarkTheme.textMuted,
+                size: 11,
+              );
+              const labels = ['X', 'Y', 'Z'];
+              const accentColors = [
+                VoxColor(210, 70, 70, 255),
+                VoxColor(76, 185, 100, 255),
+                VoxColor(70, 130, 225, 255),
+              ];
+              final startX = fr.x + (fr.width * 0.40).clamp(64.0, 120.0);
+              final slotW = ((fr.right - startX - 8) / 3.0).clamp(32.0, 90.0);
+              for (var axisIdx = 0; axisIdx < 3; axisIdx++) {
+                final sr = VoxRect(
+                  startX + axisIdx * (slotW + 3),
+                  fr.y + 1,
+                  slotW,
+                  16,
+                );
+                final sHov = sr.contains(input.mouseX, input.mouseY);
+                dl.addRectFilled(
+                  sr.x,
+                  sr.y,
+                  sr.width,
+                  sr.height,
+                  sHov
+                      ? UnityDarkTheme.bgTabHover
+                      : const VoxColor(38, 38, 38, 255),
+                  cornerRadius: 2,
+                );
+                dl.addRectFilled(
+                  sr.x,
+                  sr.y,
+                  3,
+                  sr.height,
+                  accentColors[axisIdx],
+                );
+                dl.addText(
+                  '${labels[axisIdx]}:${vec3[axisIdx].toStringAsFixed(1)}',
+                  sr.x + 5,
+                  sr.y + 2,
+                  color: UnityDarkTheme.textPrimary,
+                  size: 10,
+                );
+                if (sHov && input.isMouseDown && input.mouseDeltaX != 0.0) {
+                  final next = List<double>.from(vec3);
+                  next[axisIdx] = double.parse(
+                    (next[axisIdx] + input.mouseDeltaX * 0.05).toStringAsFixed(
+                      3,
+                    ),
+                  );
+                  inspector.setFieldValue(
+                    comp.typeName,
+                    f.field.name,
+                    _encodeVec3Like(f.jsonValue, next),
+                  );
+                }
+              }
+              y += 19;
+              continue;
+            }
             final hov = fr.contains(input.mouseX, input.mouseY);
             if (hov) {
               dl.addRectFilled(
@@ -757,6 +900,22 @@ final class StudioWorkspaceShell {
             y += 18;
           }
         }
+        // Bottom [+ Add Component] button
+        final addRect = VoxRect(
+          r.x + 14,
+          (y + 6).clamp(r.y + 30, r.bottom - 26),
+          (r.width - 28).clamp(80.0, 220.0),
+          22,
+        );
+        _addComponentAnchor = addRect;
+        _toolbarButton(
+          dl,
+          input,
+          addRect,
+          '+ Add Component',
+          active: addComponentPopupOpen,
+          onClick: () => addComponentPopupOpen = !addComponentPopupOpen,
+        );
       case 'console':
         // Console filter bar: Clear + Info/Warn/Error counts
         final clearRect = VoxRect(r.x + 6, r.y + 4, 48, 18);
@@ -1032,6 +1191,167 @@ final class StudioWorkspaceShell {
       color: UnityDarkTheme.textMuted,
       size: 11,
     );
+  }
+
+  void _renderHierarchyCreatePopup(DrawList dl, VoxInput input) {
+    final actions = <(String, void Function())>[
+      (
+        'Create Empty',
+        () => bridge.session.executeCommand(
+          CreateGameObjectStudioCommand(objectName: 'GameObject'),
+        ),
+      ),
+      (
+        'Create Cube',
+        () => bridge.session.executeCommand(
+          CreateGameObjectStudioCommand(objectName: 'Cube'),
+        ),
+      ),
+      (
+        'Create Directional Light',
+        () => bridge.session.executeCommand(
+          CreateGameObjectStudioCommand(
+            objectName: 'Directional Light',
+            configure: (go) => go.addComponent(Light.directional()),
+          ),
+        ),
+      ),
+      (
+        'Create Camera',
+        () => bridge.session.executeCommand(
+          CreateGameObjectStudioCommand(
+            objectName: 'Camera',
+            position: const Vec3(0, 2, 6),
+            configure: (go) => go.addComponent(Camera()),
+          ),
+        ),
+      ),
+      (
+        'Duplicate Selected',
+        () => StudioShortcutDispatcher.duplicateSelected(this),
+      ),
+      ('Delete Selected', () => StudioShortcutDispatcher.deleteSelected(this)),
+    ];
+    final px = _hierarchyCreateAnchor.x;
+    final py = _hierarchyCreateAnchor.bottom + 2;
+    const pw = 176.0;
+    const rowH = 22.0;
+    final ph = actions.length * rowH + 8.0;
+    final popupRect = VoxRect(px, py, pw, ph);
+    dl.addRectFilled(px, py, pw, ph, UnityDarkTheme.bgOverlay, cornerRadius: 4);
+    dl.addRectOutline(px, py, pw, ph, UnityDarkTheme.border);
+    for (var i = 0; i < actions.length; i++) {
+      final (label, fn) = actions[i];
+      final rr = VoxRect(px + 4, py + 4 + i * rowH, pw - 8, rowH);
+      final hov = rr.contains(input.mouseX, input.mouseY);
+      if (hov) {
+        dl.addRectFilled(
+          rr.x,
+          rr.y,
+          rr.width,
+          rr.height,
+          UnityDarkTheme.accentBlue,
+          cornerRadius: 2,
+        );
+      }
+      dl.addText(
+        label,
+        rr.x + 8,
+        rr.y + 4,
+        color: UnityDarkTheme.textPrimary,
+        size: 11,
+      );
+      if (hov && input.wasMouseClicked) {
+        fn();
+        hierarchyCreateMenuOpen = false;
+        return;
+      }
+    }
+    if (input.wasMouseClicked &&
+        !popupRect.contains(input.mouseX, input.mouseY) &&
+        !_hierarchyCreateAnchor.contains(input.mouseX, input.mouseY)) {
+      hierarchyCreateMenuOpen = false;
+    }
+  }
+
+  void _renderAddComponentPopup(DrawList dl, VoxInput input) {
+    final selected = bridge.session.selectedObjects;
+    if (selected.isEmpty) {
+      addComponentPopupOpen = false;
+      return;
+    }
+    final target = selected.first;
+    final choices = <(String, Component Function())>[
+      ('Light', () => Light.directional()),
+      ('Camera', () => Camera()),
+      ('RigidBody', () => RigidBody()),
+      ('BoxCollider', () => BoxCollider()),
+    ];
+    final px = _addComponentAnchor.x;
+    final py = _addComponentAnchor.bottom + 2;
+    const pw = 168.0;
+    const rowH = 22.0;
+    final ph = choices.length * rowH + 8.0;
+    final popupRect = VoxRect(px, py, pw, ph);
+    dl.addRectFilled(px, py, pw, ph, UnityDarkTheme.bgOverlay, cornerRadius: 4);
+    dl.addRectOutline(px, py, pw, ph, UnityDarkTheme.border);
+    for (var i = 0; i < choices.length; i++) {
+      final (label, factory) = choices[i];
+      final rr = VoxRect(px + 4, py + 4 + i * rowH, pw - 8, rowH);
+      final hov = rr.contains(input.mouseX, input.mouseY);
+      if (hov) {
+        dl.addRectFilled(
+          rr.x,
+          rr.y,
+          rr.width,
+          rr.height,
+          UnityDarkTheme.accentBlue,
+          cornerRadius: 2,
+        );
+      }
+      dl.addText(
+        label,
+        rr.x + 8,
+        rr.y + 4,
+        color: UnityDarkTheme.textPrimary,
+        size: 11,
+      );
+      if (hov && input.wasMouseClicked) {
+        target.addComponent(factory());
+        addComponentPopupOpen = false;
+        return;
+      }
+    }
+    if (input.wasMouseClicked &&
+        !popupRect.contains(input.mouseX, input.mouseY) &&
+        !_addComponentAnchor.contains(input.mouseX, input.mouseY)) {
+      addComponentPopupOpen = false;
+    }
+  }
+
+  static List<double>? _tryParseVec3(Object? raw) {
+    if (raw is List && raw.length == 3 && raw.every((e) => e is num)) {
+      return [
+        (raw[0] as num).toDouble(),
+        (raw[1] as num).toDouble(),
+        (raw[2] as num).toDouble(),
+      ];
+    }
+    if (raw is Map && raw['x'] is num && raw['y'] is num && raw['z'] is num) {
+      return [
+        (raw['x'] as num).toDouble(),
+        (raw['y'] as num).toDouble(),
+        (raw['z'] as num).toDouble(),
+      ];
+    }
+    return null;
+  }
+
+  static Object _encodeVec3Like(Object? original, List<double> values) {
+    if (original is Map) {
+      return {'x': values[0], 'y': values[1], 'z': values[2]};
+    }
+    return values;
   }
 
   static String _panelTitle(String id) => switch (id) {
