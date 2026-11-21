@@ -1075,49 +1075,49 @@
 
 **Exit Gate:** Each window has an e2e scenario that authors content, saves it as GUID assets, and plays it back in the Game view; the 22 `editor-tooled` modules (PLAN §13.7) pass `--min-maturity editor-tooled`.
 
-- [ ] **[S7-0] Coordinator Freeze: Shared Node-Graph View Model & Timeline/Curve View Model**
+- [x] **[S7-0] Coordinator Freeze: Shared Node-Graph View Model & Timeline/Curve View Model**
   - **Priority:** P0
   - **DependsOn:** `[S6-M]`
   - **Owns:** `lib/src/studio/graph/**`, `lib/src/studio/timeline/**`, `lib/src/web/studio/widgets/{graph_canvas,timeline_canvas,curve_canvas}.dart`
   - **Scope:** Graph model (nodes, typed ports, edges, groups, comments, minimap, auto-layout, copy/paste, undo through `EditorCommand`s) and timeline model (tracks, clips, keys, tangents, snapping, scrubbing).
   - **DoneWhen:** `dart analyze` passes; model unit tests in `test/studio/graph_model_test.dart` and `test/studio/timeline_model_test.dart` pass.
 
-- [ ] **[S7-A] Animation Window, Animator Controller Graph & Timeline**
+- [x] **[S7-A] Animation Window, Animator Controller Graph & Timeline**
   - **Priority:** P1 · **DependsOn:** `[S7-0]`
   - **Owns:** `lib/src/studio/windows/animation/**`, `lib/src/web/studio/panels/animation_*.dart`, `test/studio/animation_windows_test.dart`
   - **Modules:** `voxanim`, `voxblend`, `voxseq`, `voxcurve`, `voxtween`
   - **Scope:** Dopesheet and curve editor with record mode (inspector edits become keys). Animator Controller asset: states, transitions with conditions, parameters, layers with masks, and 1D/2D blend trees, compiled to `StateMachine`/`BlendTreeController`. Live state highlighting in play mode. Timeline over `CutsceneSequencer` tracks: animation, audio, activation, signal, camera.
   - **DoneWhen:** `test/studio/animation_windows_test.dart` passes; e2e `animator-author-play`.
 
-- [ ] **[S7-B] Graph Editors: Flow Graph (Visual Scripting), Dialogue, HTN, Logic Circuits & Rules**
+- [x] **[S7-B] Graph Editors: Flow Graph (Visual Scripting), Dialogue, HTN, Logic Circuits & Rules**
   - **Priority:** P1 · **DependsOn:** `[S7-0]`
   - **Owns:** `lib/src/studio/windows/graphs/**`, `lib/src/web/studio/panels/graph_*.dart`, `test/studio/graph_editors_test.dart`
   - **Modules:** `voxgraph`, `voxflow`, `voxtalk`, `voxhtn`, `voxcircuit`, `voxrule`
   - **Scope:** One graph canvas, many schemas. Each editor serializes to its module's runtime format as a GUID asset and supports live play-mode debugging (active node highlight, port values, breakpoints for the flow graph).
   - **DoneWhen:** `test/studio/graph_editors_test.dart` round-trips every schema; e2e `flowgraph-author-play`, `dialogue-author-play`.
 
-- [ ] **[S7-C] World Tools: Terrain Sculpt/Paint, Foliage Brush, NavMesh Bake, Splines & Modular Building**
+- [x] **[S7-C] World Tools: Terrain Sculpt/Paint, Foliage Brush, NavMesh Bake, Splines & Modular Building**
   - **Priority:** P1 · **DependsOn:** `[S7-0]`
   - **Owns:** `lib/src/studio/windows/world_tools/**`, `lib/src/studio/tools/{terrain,foliage,navmesh,spline,snap}_tool.dart`, `test/studio/world_tools_test.dart`
   - **Modules:** `voxbiome`, `voxfoliage`, `voxnav3d`, `voxspline3d`, `voxsnap`, `voxbuild`
   - **Scope:** Terrain brushes (raise/lower/smooth/flatten/holes) with splat-layer painting (heightfield and physics collider stay in sync). Foliage paint/erase with density. NavMesh bake settings, visualization and agent types (+ CLI `volition bake --navmesh`). Spline point/tangent editing. Snap/socket placement for modular building. All brush strokes are undoable as compact deltas.
   - **DoneWhen:** `test/studio/world_tools_test.dart` passes (stroke delta undo, navmesh bake determinism); e2e `terrain-paint-bake`.
 
-- [ ] **[S7-D] 2D Tools: Sprite Editor, Tile Palette & Rule Tiles, 2D Lights/Colliders & Sorting Layers**
+- [x] **[S7-D] 2D Tools: Sprite Editor, Tile Palette & Rule Tiles, 2D Lights/Colliders & Sorting Layers**
   - **Priority:** P1 · **DependsOn:** `[S7-0]`
   - **Owns:** `lib/src/studio/windows/tools_2d/**`, `lib/src/web/studio/panels/sprite_editor.dart`, `test/studio/tools_2d_test.dart`
   - **Modules:** `voxatlas` (+ engine `sprites_2d`, `tilemap`, `lighting_2d`, `physics_2d`)
   - **Scope:** Sprite slicing (grid/auto), pivots and 9-slice borders, with atlas packing at import. Tile palette with brush/fill/rect/picker and rule tiles. 2D light and shadow-caster shape editing. Physics 2D collider shape editing. Sorting layers UI.
   - **DoneWhen:** `test/studio/tools_2d_test.dart` passes; e2e `tilemap-author-play`.
 
-- [ ] **[S7-E] UI Builder, Localization Tables & Data Tables (Items, Quests, Stats)**
+- [x] **[S7-E] UI Builder, Localization Tables & Data Tables (Items, Quests, Stats)**
   - **Priority:** P1 · **DependsOn:** `[S7-0]`
   - **Owns:** `lib/src/studio/windows/ui_builder/**`, `lib/src/studio/windows/data_tables/**`, `lib/src/web/studio/panels/{ui_builder,table_editor}.dart`, `test/studio/ui_data_tools_test.dart`
   - **Modules:** `voxui`, `voxloc`, `voxitem`, `voxquest`, `voxstat`
   - **Scope:** UI builder over `canvas_ui`/`voxui`: RectTransform anchors, pivots and offsets, layout groups, resolution preview, and event wiring to methods. Localization table editor with CSV import/export and a missing-key report. Spreadsheet-style editors for `DataAsset` collections with validation.
   - **DoneWhen:** `test/studio/ui_data_tools_test.dart` passes (anchor math across resolutions, CSV round-trip); e2e `ui-builder-play`.
 
-- [ ] **[S7-M] Coordinator Merge: Window Registration, `editor-tooled` Gate & Docs Stubs**
+- [x] **[S7-M] Coordinator Merge: Window Registration, `editor-tooled` Gate & Docs Stubs**
   - **Priority:** P0
   - **DependsOn:** `[S7-A]`, `[S7-B]`, `[S7-C]`, `[S7-D]`, `[S7-E]`
   - **Owns:** `lib/src/studio/studio.dart`, `lib/src/studio/modules/module_registry.dart`, `tool/verify_all.dart`

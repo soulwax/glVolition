@@ -35,7 +35,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.animationMotion,
     sampleScenes: ['example/studio_samples/animationMotion/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -51,7 +51,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.renderingVisuals,
     sampleScenes: ['example/studio_samples/renderingVisuals/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -67,7 +67,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.worldProcedural,
     sampleScenes: ['example/studio_samples/worldProcedural/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -75,7 +75,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.animationMotion,
     sampleScenes: ['example/studio_samples/animationMotion/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -91,7 +91,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.worldProcedural,
     sampleScenes: ['example/studio_samples/worldProcedural/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -107,7 +107,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -147,7 +147,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.animationMotion,
     sampleScenes: ['example/studio_samples/animationMotion/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -187,7 +187,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -203,7 +203,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.worldProcedural,
     sampleScenes: ['example/studio_samples/worldProcedural/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -235,7 +235,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -267,7 +267,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -283,7 +283,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -307,7 +307,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -323,7 +323,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -403,7 +403,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -451,7 +451,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -475,7 +475,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.animationMotion,
     sampleScenes: ['example/studio_samples/animationMotion/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -499,7 +499,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.worldProcedural,
     sampleScenes: ['example/studio_samples/worldProcedural/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -507,7 +507,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.animationMotion,
     sampleScenes: ['example/studio_samples/animationMotion/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -515,7 +515,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -539,7 +539,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.aiGameplayNarrative,
     sampleScenes: ['example/studio_samples/aiGameplayNarrative/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
@@ -563,7 +563,7 @@ const List<StudioModuleDescriptor> kStudioModuleInventory = [
     version: '0.1.0',
     family: StudioModuleFamily.audioInputNetInfra,
     sampleScenes: ['example/studio_samples/audioInputNetInfra/'],
-    maturity: StudioModuleMaturity.inspectable,
+    maturity: StudioModuleMaturity.editorTooled,
     requiredMaturity: StudioModuleMaturity.editorTooled,
   ),
   StudioModuleDescriptor(
