@@ -2,11 +2,17 @@ part of '../../engine.dart';
 
 enum LightType { directional, point, spot }
 
+/// Shadow filtering mode for a [Light] component (`[S3-0]`).
+enum LightShadowMode { none, hard, soft }
+
+/// Photometric unit for [Light.intensity] (`[S3-0]`).
+enum LightIntensityUnit { unitless, lux, lumens }
+
 /// A scene light. Its position and direction come from its [GameObject]'s
 /// transform (`transform.position`, `transform.forward`).
 ///
 /// The active lights are gathered each frame into [FrameEnvironment] up to
-/// [RuntimeLightBudget].
+/// the active [RenderPipelineSettings] / [RuntimeLightBudget] limit.
 final class Light extends Component {
   LightType type;
   LinearColor color;
@@ -18,6 +24,12 @@ final class Light extends Component {
   double innerSpotAngle;
   double spotAngle;
   bool castsShadow;
+  LightShadowMode shadowMode;
+  double shadowStrength;
+  double shadowBias;
+  double shadowNormalBias;
+  int cullingMask;
+  LightIntensityUnit intensityUnit;
 
   Light({
     this.type = LightType.point,
@@ -27,7 +39,15 @@ final class Light extends Component {
     this.innerSpotAngle = 0.3,
     this.spotAngle = 0.5,
     this.castsShadow = false,
-  });
+    LightShadowMode? shadowMode,
+    this.shadowStrength = 1.0,
+    this.shadowBias = 0.0005,
+    this.shadowNormalBias = 0.02,
+    this.cullingMask = 0xFFFFFFFF,
+    this.intensityUnit = LightIntensityUnit.unitless,
+  }) : shadowMode =
+           shadowMode ??
+           (castsShadow ? LightShadowMode.soft : LightShadowMode.none);
 
   factory Light.directional({
     LinearColor color = LinearColor.white,

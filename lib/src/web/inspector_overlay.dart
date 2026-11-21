@@ -632,6 +632,8 @@ final class InspectorOverlay {
         row.append(span);
         row.append(input);
         parent.append(row);
+      case FieldKind.vec2:
+      case FieldKind.assetRef:
       case FieldKind.vec3:
       case FieldKind.color:
         _appendVec3Editor(parent, field.name, () {

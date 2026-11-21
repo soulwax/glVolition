@@ -545,6 +545,23 @@ final class EngineWorkbenchComponent extends Behaviour {
                 read: () => dField.getter(c).toString(),
               ),
             );
+          case FieldKind.vec2:
+            rows.add(
+              _InspectorRow.text(
+                label: field.name,
+                read: () {
+                  final v = dField.getter(c) as Vec2;
+                  return '(${v.x.toStringAsFixed(1)}, ${v.y.toStringAsFixed(1)})';
+                },
+              ),
+            );
+          case FieldKind.assetRef:
+            rows.add(
+              _InspectorRow.text(
+                label: field.name,
+                read: () => dField.getter(c)?.toString() ?? '(none)',
+              ),
+            );
           case FieldKind.vec3:
             rows.add(
               _InspectorRow.text(

@@ -759,7 +759,7 @@
 
 **Exit Gate:** The Studio e2e script passes in headless Chromium: open project → click-select → gizmo move → add component → drag material onto mesh → play/stop restores state → save → reload is byte-equal. A 1,000-object scene is interactive within 2 s and an inspector edit round-trips in under 16 ms (measured). Every RPC has a CLI path.
 
-- [ ] **[S2-0] Coordinator Freeze: Panel/Docking Model, `EditorHostBridge`, Command & Menu Registry, `ComponentSpec` Field Metadata**
+- [x] **[S2-0] Coordinator Freeze: Panel/Docking Model, `EditorHostBridge`, Command & Menu Registry, `ComponentSpec` Field Metadata**
   - **Priority:** P0
   - **DependsOn:** `[S1-M]`
   - **Owns:** `lib/src/studio/shell/**`, `lib/src/studio/bridge/**`, `lib/src/studio/commands/menu_registry.dart`, `lib/src/engine/serialization/component_spec.dart`, `vendor/pixeldart/lib/rendering/api/editor_overlay.dart`
@@ -836,7 +836,7 @@
 
 **Exit Gate:** The Browser Lab "VRP lights" scene (256 point lights, 4-cascade sun, 8 shadowed spots) matches its goldens; measured 1080p frame time on the `tool/renderer_bench.dart` reference machine is ≤ 16.6 ms on web and native; linear-audit readbacks are within tolerance on both quality tiers.
 
-- [ ] **[S3-0] Coordinator Freeze: Render Pipeline Settings Asset, Light GPU Layout, Shader Keywords & `#include` Support**
+- [x] **[S3-0] Coordinator Freeze: Render Pipeline Settings Asset, Light GPU Layout, Shader Keywords & `#include` Support**
   - **Priority:** P0
   - **DependsOn:** `[S1-M]`
   - **Owns:** `vendor/pixeldart/lib/rendering/api/settings.dart`, `vendor/pixeldart/lib/rendering/api/lights.dart`, `vendor/pixeldart/lib/rendering/api/shaders.dart`, `vendor/pixeldart/tools/renderer/shaders.dart`, `vendor/pixeldart/shaders/rendering/include/README.md`, `lib/src/engine/components/light.dart` (fields only)

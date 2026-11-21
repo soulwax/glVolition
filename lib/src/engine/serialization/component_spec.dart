@@ -5,10 +5,51 @@ enum FieldKind {
   integer,
   boolean,
   text,
+  vec2,
   vec3,
   quat,
   color,
   enumeration,
+  assetRef,
+}
+
+/// Optional inspector & editor metadata attached to a [Field] (`[S2-0]`).
+final class FieldMetadata {
+  final double? min;
+  final double? max;
+  final double? step;
+  final List<String> enumValues;
+  final String? tooltip;
+  final String? header;
+  final String? assetTypeFilter;
+  final bool hidden;
+  final bool readOnly;
+
+  const FieldMetadata({
+    this.min,
+    this.max,
+    this.step,
+    this.enumValues = const [],
+    this.tooltip,
+    this.header,
+    this.assetTypeFilter,
+    this.hidden = false,
+    this.readOnly = false,
+  });
+
+  bool get hasRange => min != null && max != null;
+
+  Map<String, Object?> toJson() => {
+    if (min != null) 'min': min,
+    if (max != null) 'max': max,
+    if (step != null) 'step': step,
+    if (enumValues.isNotEmpty) 'enumValues': enumValues,
+    if (tooltip != null) 'tooltip': tooltip,
+    if (header != null) 'header': header,
+    if (assetTypeFilter != null) 'assetTypeFilter': assetTypeFilter,
+    if (hidden) 'hidden': hidden,
+    if (readOnly) 'readOnly': readOnly,
+  };
 }
 
 /// Strongly typed, zero-codegen field descriptor for a [Component] subclass [T].
@@ -19,6 +60,7 @@ final class Field<T extends Component, V> {
   final void Function(T component, V value) setter;
   final Object? Function(V value) toJson;
   final V Function(Object? raw) fromJson;
+  final FieldMetadata metadata;
 
   const Field._({
     required this.name,
@@ -27,6 +69,7 @@ final class Field<T extends Component, V> {
     required this.setter,
     required this.toJson,
     required this.fromJson,
+    this.metadata = const FieldMetadata(),
   });
 
   Object? readJson(T component) => toJson(getter(component));
@@ -36,107 +79,254 @@ final class Field<T extends Component, V> {
   static Field<T, double> number<T extends Component>(
     String name,
     double Function(T) get,
-    void Function(T, double) set,
-  ) => Field._(
+    void Function(T, double) set, {
+    double? min,
+    double? max,
+    double? step,
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.number,
     getter: get,
     setter: set,
     toJson: (v) => v,
     fromJson: (raw) => (raw as num).toDouble(),
+    metadata: FieldMetadata(
+      min: min,
+      max: max,
+      step: step,
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
 
   static Field<T, int> integer<T extends Component>(
     String name,
     int Function(T) get,
-    void Function(T, int) set,
-  ) => Field._(
+    void Function(T, int) set, {
+    double? min,
+    double? max,
+    double? step,
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.integer,
     getter: get,
     setter: set,
     toJson: (v) => v,
     fromJson: (raw) => (raw as num).toInt(),
+    metadata: FieldMetadata(
+      min: min,
+      max: max,
+      step: step,
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
 
   static Field<T, bool> boolean<T extends Component>(
     String name,
     bool Function(T) get,
-    void Function(T, bool) set,
-  ) => Field._(
+    void Function(T, bool) set, {
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.boolean,
     getter: get,
     setter: set,
     toJson: (v) => v,
     fromJson: (raw) => raw as bool,
+    metadata: FieldMetadata(
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
 
   static Field<T, String> text<T extends Component>(
     String name,
     String Function(T) get,
-    void Function(T, String) set,
-  ) => Field._(
+    void Function(T, String) set, {
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.text,
     getter: get,
     setter: set,
     toJson: (v) => v,
     fromJson: (raw) => raw as String,
+    metadata: FieldMetadata(
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
+  );
+
+  static Field<T, Vec2> vec2<T extends Component>(
+    String name,
+    Vec2 Function(T) get,
+    void Function(T, Vec2) set, {
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
+    name: name,
+    kind: FieldKind.vec2,
+    getter: get,
+    setter: set,
+    toJson: _vec2ToJson,
+    fromJson: _vec2FromJson,
+    metadata: FieldMetadata(
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
 
   static Field<T, Vec3> vec3<T extends Component>(
     String name,
     Vec3 Function(T) get,
-    void Function(T, Vec3) set,
-  ) => Field._(
+    void Function(T, Vec3) set, {
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.vec3,
     getter: get,
     setter: set,
     toJson: _vec3ToJson,
     fromJson: _vec3FromJson,
+    metadata: FieldMetadata(
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
 
   static Field<T, Quat> quat<T extends Component>(
     String name,
     Quat Function(T) get,
-    void Function(T, Quat) set,
-  ) => Field._(
+    void Function(T, Quat) set, {
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.quat,
     getter: get,
     setter: set,
     toJson: _quatToJson,
     fromJson: _quatFromJson,
+    metadata: FieldMetadata(
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
 
   static Field<T, LinearColor> color<T extends Component>(
     String name,
     LinearColor Function(T) get,
-    void Function(T, LinearColor) set,
-  ) => Field._(
+    void Function(T, LinearColor) set, {
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.color,
     getter: get,
     setter: set,
     toJson: _colorToJson,
     fromJson: _colorFromJson,
+    metadata: FieldMetadata(
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
 
   static Field<T, E> enumValue<T extends Component, E extends Enum>(
     String name,
     List<E> values,
     E Function(T) get,
-    void Function(T, E) set,
-  ) => Field._(
+    void Function(T, E) set, {
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
     name: name,
     kind: FieldKind.enumeration,
     getter: get,
     setter: set,
     toJson: (v) => v.name,
     fromJson: (raw) => values.firstWhere((e) => e.name == raw),
+    metadata: FieldMetadata(
+      enumValues: [for (final v in values) v.name],
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
   );
+
+  static Field<T, AssetRef?> assetRef<T extends Component>(
+    String name,
+    AssetRef? Function(T) get,
+    void Function(T, AssetRef?) set, {
+    String? assetTypeFilter,
+    String? tooltip,
+    String? header,
+    bool hidden = false,
+    bool readOnly = false,
+  }) => Field._(
+    name: name,
+    kind: FieldKind.assetRef,
+    getter: get,
+    setter: set,
+    toJson: (v) => v?.toJson(),
+    fromJson: (raw) => raw == null ? null : AssetRef.tryFromJson(raw),
+    metadata: FieldMetadata(
+      assetTypeFilter: assetTypeFilter,
+      tooltip: tooltip,
+      header: header,
+      hidden: hidden,
+      readOnly: readOnly,
+    ),
+  );
+}
+
+List<double> _vec2ToJson(Vec2 v) => [v.x, v.y];
+Vec2 _vec2FromJson(Object? raw) {
+  final list = raw as List<Object?>;
+  return Vec2((list[0] as num).toDouble(), (list[1] as num).toDouble());
 }
 
 List<double> _vec3ToJson(Vec3 v) => [v.x, v.y, v.z];
