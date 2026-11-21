@@ -146,6 +146,12 @@ abstract final class StudioShortcutDispatcher {
       return;
     }
 
+    // Save workspace (Ctrl+S): active scene + settings + docking layout
+    if (keyboard.ctrl && keyboard.wasPressed('s')) {
+      shell.saveWorkspace();
+      return;
+    }
+
     // Undo / Redo
     if (keyboard.ctrl && keyboard.wasPressed('z')) {
       if (keyboard.shift) {

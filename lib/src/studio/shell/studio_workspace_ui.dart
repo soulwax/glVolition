@@ -296,6 +296,59 @@ final class StudioWorkspaceShell {
     console.log(ConsoleLogLevel.info, 'Created new scene "$name"');
   }
 
+  /// Saves active scene, `.volition/studio_settings.json`, and (when enabled)
+  /// `.volition/layout.json` to [fs] (`[Wave G15]`).
+  Future<void> saveWorkspace({ProjectFileSystem? fs}) async {
+    final targetFs = fs ?? project.database.fs;
+    await saveActiveScene(targetFs, path: 'assets/scenes/main.scene.json');
+    await settings.save(targetFs);
+    if (settings.autoSaveLayout) {
+      await StudioLayoutPersistence.saveLayout(targetFs, layout);
+    }
+    console.log(
+      ConsoleLogLevel.info,
+      'Workspace saved (scene, settings, layout).',
+    );
+  }
+
+  /// Restores persisted settings, docking layout, AssetDatabase, and
+  /// `assets/scenes/main.scene.json` from [fs] (`[Wave G15]`).
+  Future<void> loadWorkspaceFromDisk(ProjectFileSystem fs) async {
+    await settings.load(fs);
+    gizmoInteractor.translateSnap = settings.translateSnap;
+    gizmoInteractor.rotateSnapDegrees = settings.rotateSnapDegrees;
+    sceneViewport.editorCamera.flySpeed = settings.cameraFlySpeed;
+
+    final savedLayout = await StudioLayoutPersistence.loadLayout(fs);
+    if (savedLayout != null) {
+      layout = savedLayout;
+    }
+
+    await project.database.refresh();
+
+    const mainScenePath = 'assets/scenes/main.scene.json';
+    if (await fs.exists(mainScenePath)) {
+      try {
+        final raw = await fs.readString(mainScenePath);
+        final loaded = SceneSerializer.fromJson(
+          jsonDecode(raw) as Map<String, Object?>,
+          registry: bridge.session.engine.registry,
+        );
+        bridge.session.engine.loadScene(loaded);
+        bridge.selectObjects(const []);
+        console.log(
+          ConsoleLogLevel.info,
+          'Loaded scene "${loaded.name}" from $mainScenePath.',
+        );
+      } on Object catch (e) {
+        console.log(
+          ConsoleLogLevel.warning,
+          'Failed to load $mainScenePath: $e',
+        );
+      }
+    }
+  }
+
   bool get isPlaying => bridge.playState == StudioPlayState.playing;
 
   void applyLayoutPreset(String preset) {
@@ -678,6 +731,24 @@ final class StudioWorkspaceShell {
       VoxRect(rx, y + 5, 62, 24),
       'Doctor',
       onClick: () => cli.execute(const ['doctor']),
+    );
+
+    rx -= 56;
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(rx, y + 5, 52, 24),
+      'Build',
+      onClick: () => openOrFocusPanel('build'),
+    );
+
+    rx -= 54;
+    _toolbarButton(
+      dl,
+      input,
+      VoxRect(rx, y + 5, 50, 24),
+      'Save',
+      onClick: () => saveWorkspace(),
     );
 
     rx -= 62;
@@ -1244,6 +1315,23 @@ final class StudioWorkspaceShell {
           active: console.showError,
           onClick: () => console.showError = !console.showError,
         );
+        // Quick CLI action pills inside Console toolbar
+        if (r.width > 430) {
+          _toolbarButton(
+            dl,
+            input,
+            VoxRect(r.x + 272, r.y + 4, 60, 18),
+            'Doctor',
+            onClick: () => cli.execute(const ['doctor']),
+          );
+          _toolbarButton(
+            dl,
+            input,
+            VoxRect(r.x + 336, r.y + 4, 68, 18),
+            'Codegen',
+            onClick: () => cli.execute(const ['codegen', '--check']),
+          );
+        }
         final entries = console.visibleEntries();
         var y = r.y + 28;
         if (entries.isEmpty) {
@@ -1524,7 +1612,7 @@ final class StudioWorkspaceShell {
                 targets[(activeBuildTarget.index + 1) % targets.length];
           },
         );
-        final planBtn = VoxRect(r.x + 166, r.y + 30, 110, 22);
+        final planBtn = VoxRect(r.x + 166, r.y + 30, 100, 22);
         _toolbarButton(
           dl,
           input,
@@ -1532,6 +1620,19 @@ final class StudioWorkspaceShell {
           'Plan Build',
           active: true,
           onClick: _runBuildPlan,
+        );
+        final runCliBtn = VoxRect(r.x + 272, r.y + 30, 118, 22);
+        _toolbarButton(
+          dl,
+          input,
+          runCliBtn,
+          'Run CLI Build',
+          onClick: () => cli.execute([
+            'build',
+            '--target',
+            activeBuildTarget.name,
+            '--dry-run',
+          ]),
         );
         final rep = lastBuildReport;
         if (rep != null) {
@@ -1677,9 +1778,14 @@ final class StudioWorkspaceShell {
     dl.addLine(0, y, width, y, UnityDarkTheme.border);
 
     final visibleConsole = console.visibleEntries();
+    final cliTag = cli.isRunning
+        ? '[CLI: ${cli.activeCommandLabel}] '
+        : (cli.lastResult != null
+              ? '[CLI exit ${cli.lastResult!.exitCode}] '
+              : '');
     final lastMsg = visibleConsole.isEmpty
-        ? 'Ready'
-        : visibleConsole.last.message;
+        ? '${cliTag}Ready'
+        : '$cliTag${visibleConsole.last.message}';
     dl.addText(lastMsg, 10, y + 5, color: UnityDarkTheme.textMuted, size: 11);
     final rightInfo =
         'Sel: ${bridge.session.selectedObjects.length} | '

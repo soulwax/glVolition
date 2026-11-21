@@ -7,6 +7,7 @@ import '../tool/cli_gui_server.dart';
 import '../tool/cli_service.dart';
 import '../tool/package_native.dart';
 import '../tool/codegen/spec_codegen.dart';
+import '../tool/studio/io_project_fs.dart';
 import '../tool/studio/studio_daemon.dart';
 import 'package:gl_volition/gl_volition_native.dart';
 import 'package:gl_volition/src/studio/studio.dart';
@@ -1011,12 +1012,18 @@ Future<void> _runGui(List<String> args) async {
     scene.createGameObject('MainCamera').addComponent(Camera());
     scene.createGameObject('Sun').addComponent(Light.directional());
     engine.loadScene(scene);
+    final projectRoot = Directory(projectDir ?? '.');
+    final diskFs = IoProjectFileSystem(projectRoot);
     final bridge = SessionEditorHostBridge(EditorSession(engine));
     final shell = StudioWorkspaceShell(
       bridge: bridge,
+      project: ProjectWindowModel(AssetDatabase(diskFs)),
       cliBridge: _NativeProcessCliBridge(dartExecutable: _dartExecutable),
       openWizardOnStart: openWizard || projectDir == null,
     );
+    if (projectDir != null && projectRoot.existsSync()) {
+      await shell.loadWorkspaceFromDisk(diskFs);
+    }
     final res = await Sdl3StudioRunner.tryLaunchHardware(
       shell: shell,
       title: shell.windowTitle,
