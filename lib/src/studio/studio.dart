@@ -43,6 +43,7 @@ export 'shell/dock_layout_solver.dart';
 export 'shell/studio_cli_bridge.dart';
 export 'shell/studio_command_palette_ui.dart';
 export 'shell/studio_graph_canvas_ui.dart';
+export 'shell/studio_material_panel_ui.dart';
 export 'shell/studio_project_wizard_ui.dart';
 export 'shell/studio_settings_panel_ui.dart';
 export 'shell/studio_shortcuts.dart';

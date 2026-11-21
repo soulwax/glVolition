@@ -12,6 +12,7 @@ import 'package:pixeldart/rendering/passes/exposure.dart';
 
 import '../../../gl_volition.dart';
 import '../assets/asset_database.dart';
+import '../assets/importers/material_importer.dart';
 import '../bridge/editor_host_bridge.dart';
 import '../build/build_profiles.dart';
 import '../commands/menu_registry.dart';
@@ -19,6 +20,7 @@ import '../console/console_model.dart';
 import '../graph/graph_model.dart';
 import '../hierarchy/hierarchy_model.dart';
 import '../inspector/inspector_model.dart';
+import '../inspector/material_inspector.dart';
 import '../modules/module_inventory.g.dart';
 import '../modules/module_registry.dart';
 import '../project/project_fs.dart';
@@ -36,6 +38,7 @@ import 'dock_layout_solver.dart';
 import 'studio_cli_bridge.dart';
 import 'studio_command_palette_ui.dart';
 import 'studio_graph_canvas_ui.dart';
+import 'studio_material_panel_ui.dart';
 import 'studio_project_wizard_ui.dart';
 import 'studio_settings_panel_ui.dart';
 import 'studio_shortcuts.dart';
@@ -96,17 +99,33 @@ final class StudioWorkspaceShell {
   final StudioGraphModel graphModel;
   final StudioTimelineModel timelineModel;
   final StudioSettingsModel settings;
+  late final MaterialInspectorModel materialInspector;
   late final StudioCliController cli;
   final StudioGraphCanvasController graphCanvas = StudioGraphCanvasController();
   final StudioTimelineCanvasController timelineCanvas =
       StudioTimelineCanvasController();
   final StudioSettingsPanelRenderer settingsPanel =
       StudioSettingsPanelRenderer();
+  final StudioMaterialPanelRenderer materialPanel =
+      StudioMaterialPanelRenderer();
   final StudioProjectWizardController projectWizard =
       StudioProjectWizardController();
   final StudioCommandPaletteController commandPalette =
       StudioCommandPaletteController();
   final SceneGizmoInteractor gizmoInteractor = SceneGizmoInteractor();
+
+  String? _toastMessage;
+  double _toastRemainingSeconds = 0.0;
+
+  /// Active toast notification message (or `null` when expired).
+  String? get activeToastMessage =>
+      _toastRemainingSeconds > 0 ? _toastMessage : null;
+
+  /// Displays a floating Unity-style toast notification in the bottom-right corner.
+  void showToast(String message, {double durationSeconds = 2.5}) {
+    _toastMessage = message;
+    _toastRemainingSeconds = durationSeconds;
+  }
 
   StudioDockLayout layout;
   String activeLayoutPreset = 'Default';
@@ -158,6 +177,7 @@ final class StudioWorkspaceShell {
     StudioGraphModel? graphModel,
     StudioTimelineModel? timelineModel,
     StudioSettingsModel? settings,
+    MaterialInspectorModel? materialInspector,
     StudioCliBridge? cliBridge,
     bool openWizardOnStart = false,
     StudioDockLayout? layout,
@@ -181,6 +201,23 @@ final class StudioWorkspaceShell {
        timelineModel = timelineModel ?? StudioTimelineModel(),
        settings = settings ?? StudioSettingsModel(),
        layout = layout ?? StudioDockLayout.defaultLayout() {
+    this.materialInspector =
+        materialInspector ??
+        MaterialInspectorModel(
+          importer: VmatImporter(this.project.database.fs),
+          initialAsset: VmatAsset(
+            guid: 'default_pbr',
+            name: 'DefaultPBR',
+            shaderId: 'lit_pbr',
+            properties: const {
+              'albedoR': 0.72,
+              'albedoG': 0.56,
+              'albedoB': 0.42,
+              'metallic': 0.2,
+              'roughness': 0.45,
+            },
+          ),
+        );
     cli = StudioCliController(
       bridge: cliBridge ?? SimulatedStudioCliBridge(),
       console: this.console,
@@ -219,6 +256,7 @@ final class StudioWorkspaceShell {
       ConsoleLogLevel.info,
       'Created & opened "${created.name}" (${projectWizard.cliTemplateFlag}).',
     );
+    showToast('Opened "${created.name}"');
     return created;
   }
 
@@ -236,6 +274,8 @@ final class StudioWorkspaceShell {
       ('build', 'Build Profiles'),
       ('graph', 'Node Graph'),
       ('timeline', 'Timeline'),
+      ('material', 'Material Editor'),
+      ('history', 'Undo History'),
       ('settings', 'Settings'),
     ];
     for (final (id, title) in windowPanels) {
@@ -313,6 +353,7 @@ final class StudioWorkspaceShell {
       ConsoleLogLevel.info,
       'Workspace saved (scene, settings, layout).',
     );
+    showToast('Workspace saved');
   }
 
   /// Restores persisted settings, docking layout, AssetDatabase, and
@@ -486,6 +527,34 @@ final class StudioWorkspaceShell {
         width: width,
         height: height,
       );
+    }
+
+    // 7. Timed bottom-right Toast notification banner
+    if (_toastRemainingSeconds > 0 && _toastMessage != null) {
+      _toastRemainingSeconds -= dtSeconds;
+      final msg = _toastMessage!;
+      final tw = (msg.length * 7.2 + 28.0).clamp(140.0, 380.0);
+      final tx = width - tw - 14;
+      final ty = height - statusBarHeight - 36;
+      topDl.addRectFilled(
+        tx,
+        ty,
+        tw,
+        28,
+        UnityDarkTheme.bgOverlay,
+        cornerRadius: 4,
+      );
+      topDl.addRectOutline(tx, ty, tw, 28, UnityDarkTheme.accentBlue);
+      topDl.addText(
+        msg,
+        tx + 12,
+        ty + 7,
+        color: UnityDarkTheme.textPrimary,
+        size: 11,
+      );
+      if (_toastRemainingSeconds <= 0) {
+        _toastMessage = null;
+      }
     }
 
     _lastSolved = solved;
@@ -1139,16 +1208,26 @@ final class StudioWorkspaceShell {
           );
           return;
         }
+        final primaryObj = selected.first;
         final sections = inspector.buildSections();
         var y = r.y + 8;
+        final activeBox = VoxRect(r.x + 8, y - 1, 20, 18);
+        _toolbarButton(
+          dl,
+          input,
+          activeBox,
+          primaryObj.activeSelf ? 'x' : ' ',
+          active: primaryObj.activeSelf,
+          onClick: () => primaryObj.setActive(!primaryObj.activeSelf),
+        );
         dl.addText(
-          '${selected.first.name} (${sections.length} components)',
-          r.x + 10,
-          y,
+          '${primaryObj.name} (${sections.length} components)',
+          r.x + 34,
+          y + 2,
           color: UnityDarkTheme.textPrimary,
           size: 12,
         );
-        y += 22;
+        y += 24;
         for (final comp in sections) {
           if (y > r.bottom - 28) break;
           dl.addRectFilled(
@@ -1166,6 +1245,34 @@ final class StudioWorkspaceShell {
             color: UnityDarkTheme.textPrimary,
             size: 11,
           );
+          if (comp.typeName == 'TransformComponent') {
+            _toolbarButton(
+              dl,
+              input,
+              VoxRect(r.right - 56, y + 1, 48, 18),
+              'Reset',
+              onClick: () {
+                primaryObj.transform.localPosition = Vec3.zero;
+                primaryObj.transform.localRotation = Quat.identity;
+                primaryObj.transform.localScale = 1.0;
+              },
+            );
+          } else {
+            _toolbarButton(
+              dl,
+              input,
+              VoxRect(r.right - 28, y + 1, 20, 18),
+              'X',
+              onClick: () {
+                for (final c in List<Component>.from(primaryObj.components)) {
+                  if (c.runtimeType.toString() == comp.typeName) {
+                    c.destroy();
+                    break;
+                  }
+                }
+              },
+            );
+          }
           y += 22;
           for (final f in comp.fields.take(6)) {
             if (y > r.bottom - 28) break;
@@ -1696,6 +1803,47 @@ final class StudioWorkspaceShell {
           input: input,
           bounds: r,
         );
+      case 'material':
+        materialPanel.render(
+          model: materialInspector,
+          fs: project.database.fs,
+          dl: dl,
+          input: input,
+          bounds: r,
+          onSaved: (path) => showToast('Saved $path'),
+        );
+      case 'history':
+        final snap = bridge.snapshot();
+        dl.addText(
+          'Undo / Redo History',
+          r.x + 10,
+          r.y + 8,
+          color: UnityDarkTheme.textPrimary,
+          size: 12,
+        );
+        _toolbarButton(
+          dl,
+          input,
+          VoxRect(r.x + 10, r.y + 30, 74, 22),
+          'Undo',
+          active: snap.canUndo,
+          onClick: () => bridge.session.undo(),
+        );
+        _toolbarButton(
+          dl,
+          input,
+          VoxRect(r.x + 90, r.y + 30, 74, 22),
+          'Redo',
+          active: snap.canRedo,
+          onClick: () => bridge.session.redo(),
+        );
+        dl.addText(
+          'Can Undo: ${snap.canUndo ? 'Yes' : 'No'}  |  Can Redo: ${snap.canRedo ? 'Yes' : 'No'}',
+          r.x + 10,
+          r.y + 62,
+          color: UnityDarkTheme.textMuted,
+          size: 11,
+        );
       default:
         dl.addText(
           _panelTitle(panelId),
@@ -2090,6 +2238,8 @@ final class StudioWorkspaceShell {
     'build' => 'Build',
     'graph' => 'Graph',
     'timeline' => 'Timeline',
+    'material' => 'Material',
+    'history' => 'History',
     'settings' => 'Settings',
     _ => id,
   };
