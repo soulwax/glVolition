@@ -7,6 +7,7 @@ library;
 import 'dart:typed_data';
 
 import 'package:pixeldart/rendering/webgl/device_api.dart';
+import 'package:pixeldart/rendering/webgl/state_cache.dart';
 import 'package:voxui/voxui.dart';
 
 /// Compact 5×7 ASCII (32..126) bitmap font rasterizer for zero-dependency AOT
@@ -68,20 +69,51 @@ abstract final class StudioBitmapFontAtlas {
     89: [17, 17, 10, 4, 4, 4, 4], // Y
     90: [31, 1, 2, 4, 8, 16, 31], // Z
     91: [14, 8, 8, 8, 8, 8, 14], // [
+    92: [16, 8, 8, 4, 2, 2, 1], // \
     93: [14, 2, 2, 2, 2, 2, 14], // ]
     95: [0, 0, 0, 0, 0, 0, 31], // _
+    60: [2, 4, 8, 16, 8, 4, 2], // <
+    61: [0, 0, 31, 0, 31, 0, 0], // =
+    62: [8, 4, 2, 1, 2, 4, 8], // >
+    63: [14, 17, 1, 2, 4, 0, 4], // ?
+    97: [0, 0, 14, 1, 15, 17, 15], // a
+    98: [16, 16, 22, 25, 17, 17, 30], // b
+    99: [0, 0, 14, 16, 16, 17, 14], // c
+    100: [1, 1, 13, 19, 17, 17, 15], // d
+    101: [0, 0, 14, 17, 31, 16, 14], // e
+    102: [6, 9, 8, 28, 8, 8, 8], // f
+    103: [0, 0, 15, 17, 15, 1, 14], // g
+    104: [16, 16, 22, 25, 17, 17, 17], // h
+    105: [4, 0, 12, 4, 4, 4, 14], // i
+    106: [2, 0, 6, 2, 2, 18, 12], // j
+    107: [16, 16, 18, 20, 24, 20, 18], // k
+    108: [12, 4, 4, 4, 4, 4, 14], // l
+    109: [0, 0, 26, 21, 21, 21, 17], // m
+    110: [0, 0, 22, 25, 17, 17, 17], // n
+    111: [0, 0, 14, 17, 17, 17, 14], // o
+    112: [0, 0, 30, 17, 30, 16, 16], // p
+    113: [0, 0, 13, 19, 15, 1, 1], // q
+    114: [0, 0, 22, 25, 16, 16, 16], // r
+    115: [0, 0, 14, 16, 14, 1, 30], // s
+    116: [8, 8, 28, 8, 8, 9, 6], // t
+    117: [0, 0, 17, 17, 17, 19, 13], // u
+    118: [0, 0, 17, 17, 17, 10, 4], // v
+    119: [0, 0, 17, 17, 21, 21, 10], // w
+    120: [0, 0, 17, 10, 4, 10, 17], // x
+    121: [0, 0, 17, 17, 15, 1, 14], // y
+    122: [0, 0, 31, 2, 4, 8, 31], // z
     124: [4, 4, 4, 4, 4, 4, 4], // |
   };
 
-  /// Rasterizes the 128×64 RGBA8 font atlas buffer.
+  /// Rasterizes the 128×64 RGBA8 font atlas buffer with distinct mixed-case
+  /// (`A-Z`, `a-z`), digits, and punctuation glyphs.
   static Uint8List buildRgba8Atlas() {
     final pixels = Uint8List(atlasWidth * atlasHeight * 4);
     for (var code = 32; code < 128; code++) {
       final idx = code - 32;
       final cx = (idx % cols) * cellW;
       final cy = (idx ~/ cols) * cellH;
-      final lookupCode = (code >= 97 && code <= 122) ? (code - 32) : code;
-      final rows = _glyphRows[lookupCode];
+      final rows = _glyphRows[code];
       if (rows == null) continue;
       for (var ry = 0; ry < 7; ry++) {
         final bits = rows[ry];
@@ -124,11 +156,13 @@ layout(location=2) in vec4 aColor;
 uniform vec2 uViewportSize;
 out vec2 vUv;
 out vec4 vColor;
+out vec2 vScreenPos;
 void main() {
   vec2 ndc = (aPos / max(uViewportSize, vec2(1.0))) * 2.0 - 1.0;
   gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
   vUv = aUv;
   vColor = aColor;
+  vScreenPos = aPos;
 }
 ''';
 
@@ -136,14 +170,29 @@ void main() {
 precision highp float;
 in vec2 vUv;
 in vec4 vColor;
+in vec2 vScreenPos;
 uniform sampler2D uTexture;
 uniform float uUseTexture;
+uniform vec4 uClipRect;
 layout(location=0) out vec4 oColor;
 void main() {
+  if (vScreenPos.x < uClipRect.x || vScreenPos.y < uClipRect.y ||
+      vScreenPos.x > uClipRect.z || vScreenPos.y > uClipRect.w) {
+    discard;
+  }
   vec4 tex = uUseTexture > 0.5 ? texture(uTexture, vUv) : vec4(1.0);
   oColor = vColor * tex;
 }
 ''';
+
+  static const DrawStateDescriptor _uiDrawState = DrawStateDescriptor(
+    depthTest: false,
+    depthWrite: false,
+    blendEnable: true,
+    blendSrc: BlendFactor.srcAlpha,
+    blendDst: BlendFactor.oneMinusSrcAlpha,
+    cullEnable: false,
+  );
 
   final GpuDevice _device;
   GpuObject? _program;
@@ -155,6 +204,7 @@ void main() {
   int lastSubmittedVertices = 0;
   int lastTextVertices = 0;
   int lastDrawCalls = 0;
+  int lastClipBatchCount = 0;
 
   VoxUiGlRenderer(this._device);
 
@@ -166,7 +216,7 @@ void main() {
       vertexSource: _vertSrc,
       fragmentSource: _fragSrc,
       requiredAttributes: const ['aPos', 'aUv', 'aColor'],
-      requiredUniforms: const ['uViewportSize', 'uUseTexture'],
+      requiredUniforms: const ['uViewportSize', 'uUseTexture', 'uClipRect'],
     );
     _vao ??= _device.createVertexArray();
     _vbo ??= _device.createBuffer(
@@ -175,6 +225,30 @@ void main() {
         usage: GpuBufferUsage.dynamicDraw,
         kind: GpuBufferKind.vertex,
       ),
+    );
+    _device.bindVertexArray(_vao!);
+    _device.bindArrayBuffer(_vbo!);
+    const stride = 8 * 4; // 2 pos + 2 uv + 4 color
+    _device.enableVertexAttribArray(0);
+    _device.vertexAttribPointer(
+      location: 0,
+      componentCount: 2,
+      strideBytes: stride,
+      offsetBytes: 0,
+    );
+    _device.enableVertexAttribArray(1);
+    _device.vertexAttribPointer(
+      location: 1,
+      componentCount: 2,
+      strideBytes: stride,
+      offsetBytes: 8,
+    );
+    _device.enableVertexAttribArray(2);
+    _device.vertexAttribPointer(
+      location: 2,
+      componentCount: 4,
+      strideBytes: stride,
+      offsetBytes: 16,
     );
     if (_fontAtlasTex == null) {
       _fontAtlasTex = _device.createTexture(
@@ -193,19 +267,84 @@ void main() {
     }
   }
 
-  /// Flushes [drawList] to the bound framebuffer at `[viewportWidth x viewportHeight]`.
+  /// Flushes [drawList] to the bound framebuffer at `[viewportWidth x viewportHeight]`
+  /// with exact clip-rect batching for `pushClip` / `popClip`.
   void render(
     DrawList drawList, {
     required int viewportWidth,
     required int viewportHeight,
+    bool resetStats = true,
   }) {
     _ensureResources();
-    lastSubmittedVertices = 0;
-    lastTextVertices = 0;
-    lastDrawCalls = 0;
+    if (resetStats) {
+      lastSubmittedVertices = 0;
+      lastTextVertices = 0;
+      lastDrawCalls = 0;
+      lastClipBatchCount = 0;
+    }
 
+    final fullClip = VoxRect(
+      0,
+      0,
+      viewportWidth.toDouble(),
+      viewportHeight.toDouble(),
+    );
+    final clipStack = <VoxRect>[fullClip];
     final solidVerts = <double>[];
     final textVerts = <double>[];
+
+    final vpUniform = UniformValue.float2(
+      Float32List.fromList([
+        viewportWidth.toDouble(),
+        viewportHeight.toDouble(),
+      ]),
+    );
+
+    void flushCurrentBatch() {
+      if (solidVerts.isEmpty && textVerts.isEmpty) return;
+      final activeClip = clipStack.last;
+      final clipUniform = UniformValue.float4(
+        Float32List.fromList([
+          activeClip.x,
+          activeClip.y,
+          activeClip.right,
+          activeClip.bottom,
+        ]),
+      );
+      _device.applyDrawState(_uiDrawState);
+      lastClipBatchCount++;
+
+      if (solidVerts.isNotEmpty) {
+        final data = Float32List.fromList(solidVerts);
+        final count = solidVerts.length ~/ 8;
+        lastSubmittedVertices += count;
+        _device.bindVertexArray(_vao!);
+        _device.uploadBuffer(_vbo!, data);
+        _device.useProgram(_program!);
+        _device.setUniform('uViewportSize', vpUniform);
+        _device.setUniform('uClipRect', clipUniform);
+        _device.setUniform('uUseTexture', const UniformValue.float1(0.0));
+        _device.drawArrays(first: 0, count: count);
+        lastDrawCalls++;
+        solidVerts.clear();
+      }
+
+      if (textVerts.isNotEmpty) {
+        final data = Float32List.fromList(textVerts);
+        final count = textVerts.length ~/ 8;
+        lastTextVertices += count;
+        _device.bindVertexArray(_vao!);
+        _device.uploadBuffer(_vbo!, data);
+        _device.useProgram(_program!);
+        _device.bindTexture(0, _fontAtlasTex!);
+        _device.setUniform('uViewportSize', vpUniform);
+        _device.setUniform('uClipRect', clipUniform);
+        _device.setUniform('uUseTexture', const UniformValue.float1(1.0));
+        _device.drawArrays(first: 0, count: count);
+        lastDrawCalls++;
+        textVerts.clear();
+      }
+    }
 
     for (final cmd in drawList.commands) {
       switch (cmd.type) {
@@ -271,42 +410,17 @@ void main() {
             }
           }
         case DrawCmdType.pushClip:
+          flushCurrentBatch();
+          clipStack.add(cmd.rect);
         case DrawCmdType.popClip:
-          break;
+          flushCurrentBatch();
+          if (clipStack.length > 1) {
+            clipStack.removeLast();
+          }
       }
     }
 
-    final vpUniform = UniformValue.float2(
-      Float32List.fromList([
-        viewportWidth.toDouble(),
-        viewportHeight.toDouble(),
-      ]),
-    );
-
-    if (solidVerts.isNotEmpty) {
-      final data = Float32List.fromList(solidVerts);
-      lastSubmittedVertices = solidVerts.length ~/ 8;
-      _device.bindVertexArray(_vao!);
-      _device.uploadBuffer(_vbo!, data);
-      _device.useProgram(_program!);
-      _device.setUniform('uViewportSize', vpUniform);
-      _device.setUniform('uUseTexture', const UniformValue.float1(0.0));
-      _device.drawArrays(first: 0, count: lastSubmittedVertices);
-      lastDrawCalls++;
-    }
-
-    if (textVerts.isNotEmpty) {
-      final data = Float32List.fromList(textVerts);
-      lastTextVertices = textVerts.length ~/ 8;
-      _device.bindVertexArray(_vao!);
-      _device.uploadBuffer(_vbo!, data);
-      _device.useProgram(_program!);
-      _device.bindTexture(0, _fontAtlasTex!);
-      _device.setUniform('uViewportSize', vpUniform);
-      _device.setUniform('uUseTexture', const UniformValue.float1(1.0));
-      _device.drawArrays(first: 0, count: lastTextVertices);
-      lastDrawCalls++;
-    }
+    flushCurrentBatch();
   }
 
   /// Composites an offscreen Viewport FBO color texture into [rect] inside the
@@ -321,6 +435,7 @@ void main() {
     final verts = <double>[];
     _pushQuad(verts, rect.x, rect.y, rect.width, rect.height, VoxColor.white);
     final data = Float32List.fromList(verts);
+    _device.applyDrawState(_uiDrawState);
     _device.bindVertexArray(_vao!);
     _device.uploadBuffer(_vbo!, data);
     _device.useProgram(_program!);
@@ -329,6 +444,17 @@ void main() {
       'uViewportSize',
       UniformValue.float2(
         Float32List.fromList([
+          viewportWidth.toDouble(),
+          viewportHeight.toDouble(),
+        ]),
+      ),
+    );
+    _device.setUniform(
+      'uClipRect',
+      UniformValue.float4(
+        Float32List.fromList([
+          0.0,
+          0.0,
           viewportWidth.toDouble(),
           viewportHeight.toDouble(),
         ]),

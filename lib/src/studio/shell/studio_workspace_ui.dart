@@ -148,13 +148,18 @@ final class StudioWorkspaceShell {
 
   /// Renders one complete Studio frame into [dl] for a native window of
   /// `[width x height]` pixels and processes mouse/keyboard interactions from
-  /// [input].
+  /// [input]. When [overlayDl] is provided, floating Scene/Game viewport
+  /// overlays, tab drag-drop previews, and menu dropdowns are emitted into
+  /// [overlayDl] so the native 3-pass compositor can draw them *on top* of the
+  /// live offscreen 3D viewport FBOs.
   SolvedDockWorkspace buildFrame({
     required DrawList dl,
+    DrawList? overlayDl,
     required VoxInput input,
     required double width,
     required double height,
   }) {
+    final topDl = overlayDl ?? dl;
     activeViewportSlots.clear();
 
     // 1. Background
@@ -185,7 +190,7 @@ final class StudioWorkspaceShell {
     _handleSplitterDrag(input, solved);
 
     for (final area in solved.areas) {
-      _renderDockArea(dl, input, area);
+      _renderDockArea(dl, topDl, input, area);
     }
 
     for (final s in solved.splitters) {
@@ -201,15 +206,15 @@ final class StudioWorkspaceShell {
       );
     }
 
-    // Tab drag-and-drop 5-zone preview & commit
-    _handleTabDragDrop(dl, input, solved);
+    // Tab drag-and-drop 5-zone preview & commit (always on top of FBOs)
+    _handleTabDragDrop(topDl, input, solved);
 
     // 5. Bottom Status Bar
     _renderStatusBar(dl, input, width, height);
 
-    // 6. Active top-level menu dropdown overlay
+    // 6. Active top-level menu dropdown overlay (always on top of FBOs)
     if (openTopMenu != null) {
-      _renderMenuDropdown(dl, input);
+      _renderMenuDropdown(topDl, input);
     }
 
     return solved;
@@ -457,7 +462,12 @@ final class StudioWorkspaceShell {
     }
   }
 
-  void _renderDockArea(DrawList dl, VoxInput input, SolvedDockArea area) {
+  void _renderDockArea(
+    DrawList dl,
+    DrawList overlayDl,
+    VoxInput input,
+    SolvedDockArea area,
+  ) {
     final r = area.bounds;
     dl.addRectFilled(r.x, r.y, r.width, r.height, UnityDarkTheme.bgPanel);
     dl.addRectFilled(
@@ -505,12 +515,13 @@ final class StudioWorkspaceShell {
     if (activePid == null) return;
 
     dl.pushClip(area.contentRect);
-    _renderPanelBody(dl, input, activePid, area.contentRect);
+    _renderPanelBody(dl, overlayDl, input, activePid, area.contentRect);
     dl.popClip();
   }
 
   void _renderPanelBody(
     DrawList dl,
+    DrawList overlayDl,
     VoxInput input,
     String panelId,
     VoxRect r,
@@ -542,12 +553,14 @@ final class StudioWorkspaceShell {
             );
           }
         }
-        // Floating Unity Scene/Game View Overlay bar with interactive pills
+        // Floating Unity Scene/Game View Overlay bar emitted to overlayDl
+        // so it renders crisply on top of the composited 3D FBO texture.
+        overlayDl.pushClip(r);
         if (panelId == 'scene') {
           const shadingModes = ['Lit', 'Wire', 'Albedo', 'Normals', 'Heatmap'];
           final shadeRect = VoxRect(r.x + 8, r.y + 8, 76, 22);
           _toolbarButton(
-            dl,
+            overlayDl,
             input,
             shadeRect,
             sceneShadingMode,
@@ -558,7 +571,7 @@ final class StudioWorkspaceShell {
           );
           final gridRect = VoxRect(r.x + 88, r.y + 8, 68, 22);
           _toolbarButton(
-            dl,
+            overlayDl,
             input,
             gridRect,
             sceneGridVisible ? 'Grid:On' : 'Grid:Off',
@@ -567,7 +580,7 @@ final class StudioWorkspaceShell {
           );
           final gizmoRect = VoxRect(r.x + 160, r.y + 8, 76, 22);
           _toolbarButton(
-            dl,
+            overlayDl,
             input,
             gizmoRect,
             sceneGizmosVisible ? 'Gizmo:On' : 'Gizmo:Off',
@@ -577,7 +590,7 @@ final class StudioWorkspaceShell {
         } else {
           final aspectRect = VoxRect(r.x + 8, r.y + 8, 124, 22);
           _toolbarButton(
-            dl,
+            overlayDl,
             input,
             aspectRect,
             'Aspect: ${gameViewport.aspectPreset.name}',
@@ -590,7 +603,7 @@ final class StudioWorkspaceShell {
             },
           );
           final modeRect = VoxRect(r.x + 136, r.y + 8, 72, 22);
-          dl.addRectFilled(
+          overlayDl.addRectFilled(
             modeRect.x,
             modeRect.y,
             modeRect.width,
@@ -598,7 +611,7 @@ final class StudioWorkspaceShell {
             isPlaying ? UnityDarkTheme.accentBlue : UnityDarkTheme.bgOverlay,
             cornerRadius: 3,
           );
-          dl.addText(
+          overlayDl.addText(
             isPlaying ? 'PLAYING' : 'Edit',
             modeRect.x + 8,
             modeRect.y + 5,
@@ -606,6 +619,7 @@ final class StudioWorkspaceShell {
             size: 11,
           );
         }
+        overlayDl.popClip();
       case 'hierarchy':
         final rows = hierarchy.visibleRows();
         var y = r.y + 4;
