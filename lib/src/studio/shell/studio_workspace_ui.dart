@@ -6,6 +6,8 @@
 /// [DrawList] — 100% platform-agnostic and unit-testable headlessly.
 library;
 
+import 'package:pixeldart/rendering/passes/exposure.dart';
+
 import '../../../gl_volition.dart';
 import '../assets/asset_database.dart';
 import '../bridge/editor_host_bridge.dart';
@@ -103,9 +105,11 @@ final class StudioWorkspaceShell {
   VoxRect _addComponentAnchor = const VoxRect(980, 320, 160, 22);
   SolvedDockWorkspace? _lastSolved;
 
-  // Interactive drag state
+  // Interactive drag & scroll state
   String? _draggingSplitterId;
   ({String areaId, String panelId})? _draggingTab;
+  GameObject? _draggingHierarchyObject;
+  final Map<String, double> panelScrollY = {};
 
   // Per-frame telemetry displayed in status bar
   double lastFps = 60.0;
@@ -732,32 +736,92 @@ final class StudioWorkspaceShell {
           }
         }
         final rows = hierarchy.visibleRows();
-        var y = r.y + 28;
-        for (var i = 0; i < rows.length && y < r.bottom; i++) {
+        final listRect = VoxRect(
+          r.x,
+          r.y + 28,
+          r.width,
+          (r.height - 28).clamp(0.0, double.infinity),
+        );
+        final scroll = _updatePanelScroll(
+          'hierarchy',
+          listRect,
+          input,
+          rows.length * 20.0,
+        );
+        var y = listRect.y - scroll;
+        for (var i = 0; i < rows.length; i++) {
           final row = rows[i];
-          final rr = VoxRect(r.x + 2, y, r.width - 4, 20);
-          dl.addRectFilled(
-            rr.x,
-            rr.y,
-            rr.width,
-            rr.height,
-            row.isSelected
-                ? UnityDarkTheme.bgRowSelected
-                : (i.isEven ? UnityDarkTheme.bgPanel : UnityDarkTheme.bgRowAlt),
-          );
-          dl.addText(
-            '${'  ' * row.depth}${row.object.name}',
-            rr.x + 8,
-            rr.y + 4,
-            color: UnityDarkTheme.textPrimary,
-            size: 11,
-          );
-          if (rr.contains(input.mouseX, input.mouseY) &&
-              input.wasMouseClicked) {
-            bridge.selectObjects([row.object]);
+          if (y + 20 >= listRect.y && y < listRect.bottom) {
+            final rr = VoxRect(r.x + 2, y, r.width - 10, 20);
+            final rowHov = rr.contains(input.mouseX, input.mouseY);
+            final isDropTarget =
+                _draggingHierarchyObject != null &&
+                _draggingHierarchyObject != row.object &&
+                rowHov;
+            dl.addRectFilled(
+              rr.x,
+              rr.y,
+              rr.width,
+              rr.height,
+              row.isSelected
+                  ? UnityDarkTheme.bgRowSelected
+                  : (i.isEven
+                        ? UnityDarkTheme.bgPanel
+                        : UnityDarkTheme.bgRowAlt),
+            );
+            if (isDropTarget) {
+              dl.addRectOutline(
+                rr.x,
+                rr.y,
+                rr.width,
+                rr.height,
+                UnityDarkTheme.accentBlue,
+                thickness: 2,
+              );
+            }
+            final indent = 8.0 + row.depth * 14.0;
+            if (row.hasChildren) {
+              final arrowRect = VoxRect(rr.x + indent, rr.y + 2, 16, 16);
+              dl.addText(
+                row.isExpanded ? 'v' : '>',
+                arrowRect.x + 3,
+                arrowRect.y + 2,
+                color: UnityDarkTheme.textMuted,
+                size: 11,
+              );
+              if (arrowRect.contains(input.mouseX, input.mouseY) &&
+                  input.wasMouseClicked) {
+                hierarchy.setExpanded(row.object.name, !row.isExpanded);
+                y += 20;
+                continue;
+              }
+            }
+            dl.addText(
+              row.object.name,
+              rr.x + indent + 16,
+              rr.y + 4,
+              color: UnityDarkTheme.textPrimary,
+              size: 11,
+            );
+            if (rowHov && input.wasMouseClicked) {
+              bridge.selectObjects([row.object]);
+              _draggingHierarchyObject = row.object;
+            }
+            if (isDropTarget && input.wasMouseReleased) {
+              final dragged = _draggingHierarchyObject!;
+              if (!_isAncestor(dragged, row.object)) {
+                dragged.setParent(row.object);
+                hierarchy.setExpanded(row.object.name, true);
+              }
+              _draggingHierarchyObject = null;
+            }
           }
           y += 20;
         }
+        if (input.wasMouseReleased) {
+          _draggingHierarchyObject = null;
+        }
+        _drawScrollbar(dl, listRect, scroll, rows.length * 20.0);
       case 'inspector':
         final selected = bridge.session.selectedObjects;
         if (selected.isEmpty) {
@@ -989,34 +1053,147 @@ final class StudioWorkspaceShell {
           }
         }
       case 'project':
+        // Two-column Unity Project browser (folders left, filtered assets right)
+        final treeW = (r.width * 0.28).clamp(90.0, 180.0);
+        dl.addRectFilled(
+          r.x,
+          r.y,
+          treeW,
+          r.height,
+          const VoxColor(46, 46, 46, 255),
+        );
+        dl.addLine(
+          r.x + treeW,
+          r.y,
+          r.x + treeW,
+          r.bottom,
+          UnityDarkTheme.border,
+        );
+        const folders = ['Assets', 'Assets/Scenes', 'Assets/Materials'];
+        for (var fi = 0; fi < folders.length; fi++) {
+          final fr = VoxRect(r.x + 4, r.y + 6 + fi * 22, treeW - 8, 20);
+          final active = project.currentFolder == folders[fi];
+          final hov = fr.contains(input.mouseX, input.mouseY);
+          if (active || hov) {
+            dl.addRectFilled(
+              fr.x,
+              fr.y,
+              fr.width,
+              fr.height,
+              active ? UnityDarkTheme.bgRowSelected : UnityDarkTheme.bgTabHover,
+              cornerRadius: 2,
+            );
+          }
+          dl.addText(
+            folders[fi],
+            fr.x + 6,
+            fr.y + 4,
+            color: UnityDarkTheme.textPrimary,
+            size: 11,
+          );
+          if (hov && input.wasMouseClicked) {
+            project.currentFolder = folders[fi];
+          }
+        }
+        final rightX = r.x + treeW + 8;
         final assets = project.visibleAssets();
         dl.addText(
-          'Assets / ${project.currentFolder} (${assets.length} items)',
-          r.x + 10,
+          '${project.currentFolder} (${assets.length} items)',
+          rightX,
           r.y + 8,
           color: UnityDarkTheme.textPrimary,
           size: 11,
         );
-        var py = r.y + 28;
-        for (final asset in assets.take(20)) {
-          if (py > r.bottom) break;
-          dl.addText(
-            '[${asset.importerId}] ${asset.path}',
-            r.x + 12,
-            py,
-            color: UnityDarkTheme.textMuted,
-            size: 11,
-          );
+        final projListRect = VoxRect(
+          rightX,
+          r.y + 28,
+          (r.right - rightX).clamp(40.0, double.infinity),
+          (r.height - 28).clamp(0.0, double.infinity),
+        );
+        final projScroll = _updatePanelScroll(
+          'project',
+          projListRect,
+          input,
+          assets.length * 18.0,
+        );
+        var py = projListRect.y - projScroll;
+        for (final asset in assets) {
+          if (py + 18 >= projListRect.y && py < projListRect.bottom) {
+            dl.addText(
+              '[${asset.importerId}] ${asset.path}',
+              rightX + 4,
+              py,
+              color: UnityDarkTheme.textMuted,
+              size: 11,
+            );
+          }
           py += 18;
         }
+        _drawScrollbar(dl, projListRect, projScroll, assets.length * 18.0);
       case 'lighting':
         dl.addText(
-          'EV100: ${lighting.exposureSettings.manualEv100.toStringAsFixed(2)} | '
-          'Tonemap: ${lighting.exposureSettings.tonemapper.name}',
+          'Lighting & Physical Exposure',
           r.x + 10,
-          r.y + 10,
+          r.y + 8,
+          color: UnityDarkTheme.textPrimary,
+          size: 12,
+        );
+        // Interactive EV100 drag-scrub bar
+        final evRect = VoxRect(r.x + 10, r.y + 32, 180, 22);
+        final evHov = evRect.contains(input.mouseX, input.mouseY);
+        dl.addRectFilled(
+          evRect.x,
+          evRect.y,
+          evRect.width,
+          evRect.height,
+          evHov ? UnityDarkTheme.bgTabHover : UnityDarkTheme.bgTabBar,
+          cornerRadius: 3,
+        );
+        dl.addRectOutline(
+          evRect.x,
+          evRect.y,
+          evRect.width,
+          evRect.height,
+          UnityDarkTheme.border,
+        );
+        dl.addText(
+          'EV100: ${lighting.exposureSettings.manualEv100.toStringAsFixed(2)} (drag)',
+          evRect.x + 8,
+          evRect.y + 5,
           color: UnityDarkTheme.textPrimary,
           size: 11,
+        );
+        if (evHov && input.isMouseDown && input.mouseDeltaX != 0.0) {
+          final nextEv =
+              (lighting.exposureSettings.manualEv100 + input.mouseDeltaX * 0.05)
+                  .clamp(-4.0, 16.0);
+          lighting.setExposure(manualEv100: nextEv);
+        }
+        // Interactive Tonemapper cycler
+        final tmRect = VoxRect(r.x + 10, r.y + 60, 180, 22);
+        _toolbarButton(
+          dl,
+          input,
+          tmRect,
+          'Tonemap: ${lighting.exposureSettings.tonemapper.name}',
+          onClick: () {
+            const vals = VrpTonemapper.values;
+            final next =
+                vals[(lighting.exposureSettings.tonemapper.index + 1) %
+                    vals.length];
+            lighting.setExposure(tonemapper: next);
+          },
+        );
+        // Interactive Auto-Exposure toggle
+        final aeRect = VoxRect(r.x + 10, r.y + 88, 180, 22);
+        final aeOn = lighting.exposureSettings.autoExposureEnabled;
+        _toolbarButton(
+          dl,
+          input,
+          aeRect,
+          'Auto Exposure: ${aeOn ? 'On' : 'Off'}',
+          active: aeOn,
+          onClick: () => lighting.setExposure(autoExposureEnabled: !aeOn),
         );
       case 'profiler':
         dl.addText(
@@ -1081,18 +1258,32 @@ final class StudioWorkspaceShell {
           color: UnityDarkTheme.textPrimary,
           size: 11,
         );
-        var my = r.y + 28;
-        for (final m in list.take(24)) {
-          if (my > r.bottom) break;
-          dl.addText(
-            '${m.package}  [${m.maturity.cliName}]',
-            r.x + 12,
-            my,
-            color: UnityDarkTheme.textMuted,
-            size: 11,
-          );
+        final modListRect = VoxRect(
+          r.x,
+          r.y + 28,
+          r.width,
+          (r.height - 28).clamp(0.0, double.infinity),
+        );
+        final modScroll = _updatePanelScroll(
+          'modules',
+          modListRect,
+          input,
+          list.length * 18.0,
+        );
+        var my = modListRect.y - modScroll;
+        for (final m in list) {
+          if (my + 18 >= modListRect.y && my < modListRect.bottom) {
+            dl.addText(
+              '${m.package}  [${m.maturity.cliName}]',
+              r.x + 12,
+              my,
+              color: UnityDarkTheme.textMuted,
+              size: 11,
+            );
+          }
           my += 18;
         }
+        _drawScrollbar(dl, modListRect, modScroll, list.length * 18.0);
       case 'build':
         dl.addText(
           'Build Profiles (AOT / Web)',
@@ -1551,6 +1742,66 @@ final class StudioWorkspaceShell {
         return;
       }
     }
+  }
+
+  double _updatePanelScroll(
+    String panelId,
+    VoxRect viewport,
+    VoxInput input,
+    double contentHeight,
+  ) {
+    final maxScroll = (contentHeight - viewport.height).clamp(
+      0.0,
+      double.infinity,
+    );
+    var cur = (panelScrollY[panelId] ?? 0.0).clamp(0.0, maxScroll);
+    if (viewport.contains(input.mouseX, input.mouseY) &&
+        input.scrollDeltaY != 0.0) {
+      cur = (cur - input.scrollDeltaY * 24.0).clamp(0.0, maxScroll);
+    }
+    panelScrollY[panelId] = cur;
+    return cur;
+  }
+
+  void _drawScrollbar(
+    DrawList dl,
+    VoxRect viewport,
+    double scrollY,
+    double contentHeight,
+  ) {
+    if (contentHeight <= viewport.height || viewport.height <= 8) return;
+    final trackX = viewport.right - 6;
+    dl.addRectFilled(
+      trackX,
+      viewport.y,
+      5,
+      viewport.height,
+      const VoxColor(34, 34, 34, 200),
+    );
+    final thumbH = ((viewport.height / contentHeight) * viewport.height).clamp(
+      18.0,
+      viewport.height,
+    );
+    final maxScroll = contentHeight - viewport.height;
+    final frac = maxScroll > 0 ? (scrollY / maxScroll).clamp(0.0, 1.0) : 0.0;
+    final thumbY = viewport.y + frac * (viewport.height - thumbH);
+    dl.addRectFilled(
+      trackX,
+      thumbY,
+      5,
+      thumbH,
+      UnityDarkTheme.textMuted,
+      cornerRadius: 2,
+    );
+  }
+
+  static bool _isAncestor(GameObject potentialAncestor, GameObject node) {
+    var cur = node.parent;
+    while (cur != null) {
+      if (cur == potentialAncestor) return true;
+      cur = cur.parent;
+    }
+    return false;
   }
 
   static String _panelTitle(String id) => switch (id) {
