@@ -263,15 +263,51 @@ void main() {
           b: b,
         );
       } else {
-        _emitShadedBox(
-          verts,
-          worldMatrix: worldMatrix,
-          halfExtent: halfExt,
-          r: r,
-          g: g,
-          b: b,
-          a: 1.0,
-        );
+        final lowerName = go.name.toLowerCase();
+        if (lowerName.contains('sphere') ||
+            lowerName.contains('probe') ||
+            (light != null && light.type == LightType.point)) {
+          _emitShadedSphere(
+            verts,
+            worldMatrix: worldMatrix,
+            radius: halfExt,
+            r: r,
+            g: g,
+            b: b,
+          );
+        } else if (lowerName.contains('plane') ||
+            lowerName.contains('ground')) {
+          _emitShadedPlane(
+            verts,
+            worldMatrix: worldMatrix,
+            halfExtent: 2.5,
+            r: r,
+            g: g,
+            b: b,
+          );
+        } else if (lowerName.contains('cylinder') ||
+            lowerName.contains('capsule') ||
+            lowerName.contains('player')) {
+          _emitShadedCylinder(
+            verts,
+            worldMatrix: worldMatrix,
+            radius: halfExt * 0.7,
+            halfHeight: halfExt * 1.4,
+            r: r,
+            g: g,
+            b: b,
+          );
+        } else {
+          _emitShadedBox(
+            verts,
+            worldMatrix: worldMatrix,
+            halfExtent: halfExt,
+            r: r,
+            g: g,
+            b: b,
+            a: 1.0,
+          );
+        }
       }
 
       if (isScene && shell.sceneGizmosVisible) {
@@ -809,6 +845,101 @@ void main() {
         final p1 = origin + Vec3(math.cos(a1) * rad, 0, math.sin(a1) * rad);
         _emitSegmentBeam(out, p0, p1, r: 1.0, g: 0.92, bl: 0.35);
       }
+    }
+  }
+
+  void _emitShadedPlane(
+    List<double> out, {
+    required Mat4 worldMatrix,
+    required double halfExtent,
+    required double r,
+    required double g,
+    required double b,
+  }) {
+    final s = halfExtent;
+    final p0 = worldMatrix.transformPoint(Vec3(-s, 0, -s));
+    final p1 = worldMatrix.transformPoint(Vec3(s, 0, -s));
+    final p2 = worldMatrix.transformPoint(Vec3(s, 0, s));
+    final p3 = worldMatrix.transformPoint(Vec3(-s, 0, s));
+    final n = worldMatrix.transformDir(const Vec3(0, 1, 0)).normalized;
+    _pushTri(out, p0, p1, p2, n, r, g, b, 1.0);
+    _pushTri(out, p0, p2, p3, n, r, g, b, 1.0);
+  }
+
+  void _emitShadedSphere(
+    List<double> out, {
+    required Mat4 worldMatrix,
+    required double radius,
+    required double r,
+    required double g,
+    required double b,
+    int stacks = 6,
+    int slices = 10,
+  }) {
+    for (var i = 0; i < stacks; i++) {
+      final phi0 = (i / stacks) * math.pi;
+      final phi1 = ((i + 1) / stacks) * math.pi;
+      for (var j = 0; j < slices; j++) {
+        final th0 = (j / slices) * math.pi * 2.0;
+        final th1 = ((j + 1) / slices) * math.pi * 2.0;
+        Vec3 pt(double phi, double th) => Vec3(
+          math.sin(phi) * math.cos(th) * radius,
+          math.cos(phi) * radius,
+          math.sin(phi) * math.sin(th) * radius,
+        );
+        final a = pt(phi0, th0);
+        final bPt = pt(phi1, th0);
+        final c = pt(phi1, th1);
+        final d = pt(phi0, th1);
+        final wa = worldMatrix.transformPoint(a);
+        final wb = worldMatrix.transformPoint(bPt);
+        final wc = worldMatrix.transformPoint(c);
+        final wd = worldMatrix.transformPoint(d);
+        final n = worldMatrix.transformDir((a + bPt + c).normalized).normalized;
+        _pushTri(out, wa, wb, wc, n, r, g, b, 1.0);
+        _pushTri(out, wa, wc, wd, n, r, g, b, 1.0);
+      }
+    }
+  }
+
+  void _emitShadedCylinder(
+    List<double> out, {
+    required Mat4 worldMatrix,
+    required double radius,
+    required double halfHeight,
+    required double r,
+    required double g,
+    required double b,
+    int segments = 10,
+  }) {
+    final topCenter = worldMatrix.transformPoint(Vec3(0, halfHeight, 0));
+    final botCenter = worldMatrix.transformPoint(Vec3(0, -halfHeight, 0));
+    final nTop = worldMatrix.transformDir(const Vec3(0, 1, 0)).normalized;
+    final nBot = worldMatrix.transformDir(const Vec3(0, -1, 0)).normalized;
+    for (var i = 0; i < segments; i++) {
+      final a0 = (i / segments) * math.pi * 2.0;
+      final a1 = ((i + 1) / segments) * math.pi * 2.0;
+      final t0 = worldMatrix.transformPoint(
+        Vec3(math.cos(a0) * radius, halfHeight, math.sin(a0) * radius),
+      );
+      final t1 = worldMatrix.transformPoint(
+        Vec3(math.cos(a1) * radius, halfHeight, math.sin(a1) * radius),
+      );
+      final b0 = worldMatrix.transformPoint(
+        Vec3(math.cos(a0) * radius, -halfHeight, math.sin(a0) * radius),
+      );
+      final b1 = worldMatrix.transformPoint(
+        Vec3(math.cos(a1) * radius, -halfHeight, math.sin(a1) * radius),
+      );
+      final nSide = worldMatrix
+          .transformDir(
+            Vec3(math.cos((a0 + a1) * 0.5), 0, math.sin((a0 + a1) * 0.5)),
+          )
+          .normalized;
+      _pushTri(out, b0, b1, t1, nSide, r, g, b, 1.0);
+      _pushTri(out, b0, t1, t0, nSide, r, g, b, 1.0);
+      _pushTri(out, topCenter, t0, t1, nTop, r, g, b, 1.0);
+      _pushTri(out, botCenter, b1, b0, nBot, r, g, b, 1.0);
     }
   }
 

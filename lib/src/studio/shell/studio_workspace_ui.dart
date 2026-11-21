@@ -34,6 +34,7 @@ import 'app_launcher_model.dart';
 import 'dock_layout.dart';
 import 'dock_layout_solver.dart';
 import 'studio_cli_bridge.dart';
+import 'studio_command_palette_ui.dart';
 import 'studio_graph_canvas_ui.dart';
 import 'studio_project_wizard_ui.dart';
 import 'studio_settings_panel_ui.dart';
@@ -103,6 +104,8 @@ final class StudioWorkspaceShell {
       StudioSettingsPanelRenderer();
   final StudioProjectWizardController projectWizard =
       StudioProjectWizardController();
+  final StudioCommandPaletteController commandPalette =
+      StudioCommandPaletteController();
   final SceneGizmoInteractor gizmoInteractor = SceneGizmoInteractor();
 
   StudioDockLayout layout;
@@ -208,6 +211,7 @@ final class StudioWorkspaceShell {
       created.location,
       DateTime.now().millisecondsSinceEpoch,
     );
+    await launcher.saveRecent(targetFs);
     lastOpenedProjectPath = created.location;
     lastRequestedTemplate = projectWizard.cliTemplateFlag;
     projectHubOpen = false;
@@ -471,6 +475,16 @@ final class StudioWorkspaceShell {
           console.log(ConsoleLogLevel.info, 'Opened project: ${entry.name}');
         },
         onClose: () => projectHubOpen = false,
+      );
+    }
+    if (commandPalette.isOpen) {
+      commandPalette.render(
+        shell: this,
+        dl: topDl,
+        input: input,
+        keyboard: keyboard,
+        width: width,
+        height: height,
       );
     }
 
@@ -1812,6 +1826,24 @@ final class StudioWorkspaceShell {
         'Create Cube',
         () => bridge.session.executeCommand(
           CreateGameObjectStudioCommand(objectName: 'Cube'),
+        ),
+      ),
+      (
+        'Create Sphere',
+        () => bridge.session.executeCommand(
+          CreateGameObjectStudioCommand(objectName: 'Sphere'),
+        ),
+      ),
+      (
+        'Create Plane',
+        () => bridge.session.executeCommand(
+          CreateGameObjectStudioCommand(objectName: 'Plane'),
+        ),
+      ),
+      (
+        'Create Cylinder',
+        () => bridge.session.executeCommand(
+          CreateGameObjectStudioCommand(objectName: 'Cylinder'),
         ),
       ),
       (

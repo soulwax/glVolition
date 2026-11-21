@@ -123,6 +123,21 @@ abstract final class StudioShortcutDispatcher {
     // Hold Ctrl for gizmo grid snapping
     shell.gizmoInteractor.snapEnabled = keyboard.ctrl;
 
+    // Quick Search / Command Palette (Ctrl+K)
+    if (keyboard.ctrl && keyboard.wasPressed('k')) {
+      if (shell.commandPalette.isOpen) {
+        shell.commandPalette.close();
+      } else {
+        shell.commandPalette.open();
+      }
+      return;
+    }
+
+    // While Command Palette is open, let it consume keyboard navigation/typing
+    if (shell.commandPalette.isOpen) {
+      return;
+    }
+
     // Escape closes any open popup or top menu
     if (keyboard.wasPressed('escape')) {
       shell.openTopMenu = null;

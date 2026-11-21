@@ -1,6 +1,10 @@
 /// Volition Studio Standalone App Mode & First-Run Project Picker (`[S8-C]`):
 library;
 
+import 'dart:convert';
+
+import '../project/project_fs.dart';
+
 enum StudioWindowLaunchMode { nativeWebView, browserAppMode, browserTab }
 
 /// Recent project entry shown in the first-run Project Picker (`[S8-C]`).
@@ -60,6 +64,46 @@ final class StudioAppLauncherModel {
     );
     if (_recent.length > maxRecent) {
       _recent.removeRange(maxRecent, _recent.length);
+    }
+  }
+
+  static const String defaultRecentPath = '.volition/recent_projects.json';
+
+  /// Persists the MRU recent-projects list to [fs] (`[Wave G16]`).
+  Future<void> saveRecent(
+    ProjectFileSystem fs, {
+    String path = defaultRecentPath,
+  }) async {
+    final jsonText = const JsonEncoder.withIndent('  ').convert({
+      'recent': [for (final e in _recent) e.toJson()],
+    });
+    await fs.writeString(path, jsonText);
+  }
+
+  /// Restores the MRU recent-projects list from [fs] (`[Wave G16]`).
+  Future<bool> loadRecent(
+    ProjectFileSystem fs, {
+    String path = defaultRecentPath,
+  }) async {
+    if (!await fs.exists(path)) return false;
+    try {
+      final raw = await fs.readString(path);
+      final map = jsonDecode(raw) as Map<String, Object?>;
+      final list = (map['recent'] as List?) ?? const [];
+      _recent
+        ..clear()
+        ..addAll(
+          list
+              .take(maxRecent)
+              .map(
+                (e) => RecentProjectEntry.fromJson(
+                  (e as Map).cast<String, Object?>(),
+                ),
+              ),
+        );
+      return true;
+    } on Object {
+      return false;
     }
   }
 }
